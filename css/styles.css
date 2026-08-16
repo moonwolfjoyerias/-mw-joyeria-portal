@@ -1,0 +1,188 @@
+/* ===================================================
+   MW JOYERÍA — Hoja de estilos compartida
+   Todas las páginas del sitio (público + portal) cargan
+   este archivo. Un cambio aquí se refleja en todo el sitio.
+   =================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Poppins:wght@300;400;500;600&display=swap');
+
+:root {
+  /* Paleta de marca */
+  --mw-purple: #5E1A8A;
+  --mw-purple-dark: #43125F;
+  --mw-lilac: #B597E5;
+  --mw-lilac-soft: #F1EBFA;
+  --mw-cream: #FCFAF8;
+  --mw-gold: #C9A227;
+  --mw-gold-soft: #F3E9C7;
+  --mw-text: #2A2230;
+  --mw-text-muted: #6B6270;
+  --mw-border: #E7E1EE;
+
+  /* Tipografía */
+  --font-heading: 'Cinzel', serif;
+  --font-body: 'Poppins', sans-serif;
+
+  /* Espaciado / forma */
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow-card: 0 2px 10px rgba(94, 26, 138, 0.08);
+  --shadow-hover: 0 6px 20px rgba(94, 26, 138, 0.14);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--mw-cream);
+  color: var(--mw-text);
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+  color: var(--mw-purple);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0 0 0.5em;
+}
+
+a { color: var(--mw-purple); text-decoration: none; }
+a:hover { color: var(--mw-gold); }
+
+/* ---------- Botones ---------- */
+.btn {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: 0.7em 1.6em;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:focus-visible {
+  outline: 3px solid var(--mw-gold);
+  outline-offset: 2px;
+}
+.btn-primary {
+  background: var(--mw-purple);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--mw-purple-dark); transform: translateY(-1px); }
+.btn-gold {
+  background: var(--mw-gold);
+  color: #fff;
+}
+.btn-gold:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); }
+.btn-outline {
+  background: transparent;
+  color: var(--mw-purple);
+  border: 1.5px solid var(--mw-purple);
+}
+.btn-outline:hover { background: var(--mw-lilac-soft); }
+
+/* ---------- Tarjetas (estilo Notion, compactas) ---------- */
+.card {
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+/* ---------- Barra superior (sitio público) ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: var(--mw-cream);
+  border-bottom: 1px solid var(--mw-border);
+}
+.topbar .logo {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  color: var(--mw-purple);
+}
+.topbar nav a {
+  margin-left: 1.5rem;
+  font-size: 0.95rem;
+  color: var(--mw-text);
+}
+.topbar nav a:hover { color: var(--mw-purple); }
+.topbar nav { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0; }
+
+/* ---------- Sidebar (portal privado) ---------- */
+.layout-portal {
+  display: flex;
+  min-height: 100vh;
+}
+.sidebar {
+  width: 230px;
+  flex-shrink: 0;
+  background: var(--mw-purple);
+  color: #fff;
+  padding: 1.5rem 1rem;
+}
+.sidebar .brand {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  display: block;
+  color: #fff;
+}
+.sidebar a {
+  display: block;
+  color: var(--mw-lilac-soft);
+  padding: 0.6em 0.8em;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.25rem;
+  font-size: 0.92rem;
+}
+.sidebar a:hover, .sidebar a.active {
+  background: var(--mw-purple-dark);
+  color: #fff;
+}
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  background: var(--mw-cream);
+}
+
+/* ---------- Utilidades ---------- */
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25em 0.7em;
+  border-radius: 999px;
+  background: var(--mw-gold-soft);
+  color: var(--mw-purple-dark);
+}
+.text-muted { color: var(--mw-text-muted); }
+.container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+  .layout-portal { flex-direction: column; }
+  .sidebar { width: 100%; }
+  .topbar { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  .topbar nav a { margin-left: 0; margin-right: 0.9rem; }
+  .topbar nav a.btn { margin-top: 0.3rem; }
+}
+
+/* Respeta reduce-motion */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
