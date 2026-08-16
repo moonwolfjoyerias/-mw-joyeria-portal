@@ -102,6 +102,14 @@ a:hover { color: var(--mw-gold); }
 }
 
 /* ---------- Barra superior (sitio público) ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 2rem;
+  background: var(--mw-purple-dark);
+  border-bottom: none;
+}
 .topbar .logo {
   font-family: var(--font-heading);
   line-height: 1.05;
@@ -119,6 +127,30 @@ a:hover { color: var(--mw-gold); }
   display: flex;
   flex-direction: column;
 }
+.topbar .logo .logo-main {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.topbar .logo .logo-sub {
+  font-size: 0.58rem;
+  font-family: var(--font-body);
+  letter-spacing: 0.32em;
+  color: var(--mw-lilac-soft);
+}
+.topbar nav a {
+  margin-left: 1.5rem;
+  font-size: 0.95rem;
+  color: var(--mw-lilac-soft);
+}
+.topbar nav a:hover, .topbar nav a.active { color: var(--mw-gold); }
+.topbar nav { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0; }
+.topbar .btn-outline {
+  border-color: var(--mw-gold);
+  color: var(--mw-gold);
+}
+.topbar .btn-outline:hover { background: var(--mw-gold); color: var(--mw-purple-dark); }
 
 /* ---------- Hero (sitio público) ---------- */
 .hero {
