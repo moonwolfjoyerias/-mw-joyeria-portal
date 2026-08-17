@@ -487,6 +487,144 @@ a:hover { color: var(--mw-gold); }
   .footer-grid { grid-template-columns: 1fr; gap: 1.8rem; text-align: left; }
 }
 
+/* ---------- Página Ventajas del Plan MW ---------- */
+.section-eyebrow-center {
+  text-align: center;
+  color: var(--mw-gold);
+  font-size: 0.82rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin: 0 auto 1.6rem;
+  padding: 0 2rem;
+  max-width: 1280px;
+  display: block;
+}
+
+.benefit-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.2rem;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem 3.5rem;
+}
+.benefit-card {
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.3rem;
+  box-shadow: var(--shadow-card);
+}
+.benefit-card .icon-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--mw-lilac-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.9rem;
+}
+.benefit-card .icon-circle svg { width: 24px; height: 24px; color: var(--mw-purple); }
+.benefit-card h3 { font-size: 1.05rem; margin-bottom: 0.5rem; }
+.benefit-card .stat-big {
+  font-family: var(--font-heading);
+  font-size: 2.3rem;
+  color: var(--mw-gold);
+  font-weight: 700;
+  line-height: 1;
+  display: block;
+}
+.benefit-card .stat-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mw-text-muted);
+  display: block;
+  margin: 0.3rem 0 0.7rem;
+}
+.benefit-card p { font-size: 0.85rem; color: var(--mw-text-muted); margin: 0; line-height: 1.45; }
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  max-width: 900px;
+  margin: 0 auto 2.5rem;
+  padding: 0 1rem;
+}
+.rank-item { display: flex; flex-direction: column; align-items: center; gap: 0.55rem; width: 100px; }
+.rank-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mw-lilac-soft);
+}
+.rank-circle svg { width: 30px; height: 30px; }
+.rank-circle.sin-rango { background: transparent; border: 1.5px dashed var(--mw-border); }
+.rank-item .rank-label { font-family: var(--font-heading); color: var(--mw-purple); font-size: 0.85rem; font-weight: 600; text-align: center; }
+.rank-arrow { color: var(--mw-gold); font-size: 1.4rem; margin-top: -1.6rem; }
+
+@media (max-width: 700px) {
+  .rank-arrow { display: none; }
+  .rank-row { gap: 1.4rem 1rem; }
+}
+
+.rank-benefits {
+  max-width: 640px;
+  margin: 0 auto 3.5rem;
+  padding: 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  list-style: none;
+}
+.rank-benefits li { display: flex; align-items: flex-start; gap: 0.7rem; font-size: 0.95rem; color: var(--mw-text); }
+.rank-benefits li svg { width: 19px; height: 19px; color: var(--mw-gold); flex-shrink: 0; margin-top: 2px; }
+
+.rewards-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  align-items: center;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1rem 2rem 3.5rem;
+}
+.rewards-section h2 { font-size: 1.9rem; margin-bottom: 0.8rem; }
+.rewards-section p { color: var(--mw-text-muted); font-size: 1.02rem; line-height: 1.65; }
+.rewards-photo-placeholder {
+  aspect-ratio: 4/3;
+  border-radius: var(--radius);
+  border: 1px dashed var(--mw-purple);
+  background: linear-gradient(155deg, var(--mw-gold-soft) 0%, var(--mw-cream) 50%, var(--mw-lilac-soft) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--mw-purple-dark);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 860px) {
+  .rewards-section { grid-template-columns: 1fr; }
+  .benefit-cards { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  .benefit-cards { grid-template-columns: 1fr; }
+}
+
+.plan-cta { text-align: center; padding: 0.5rem 2rem 4rem; }
+.plan-cta h2 { font-size: 1.7rem; margin-bottom: 0.6rem; }
+.plan-cta p { color: var(--mw-text-muted); margin-bottom: 1.4rem; }
+
 /* ---------- Sidebar (portal privado) ---------- */
 .layout-portal {
   display: flex;
