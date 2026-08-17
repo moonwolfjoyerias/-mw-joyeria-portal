@@ -420,6 +420,73 @@ a:hover { color: var(--mw-gold); }
   .product-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* ---------- Footer (todas las páginas) ---------- */
+.site-footer {
+  background: var(--mw-purple-dark);
+  color: var(--mw-lilac-soft);
+  padding: 3rem 2rem 0;
+  margin-top: 2rem;
+}
+.footer-grid {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 0.8fr 1fr 1.3fr;
+  gap: 2rem;
+  padding-bottom: 2.5rem;
+}
+.footer-logo { display: inline-block; }
+.footer-logo img { height: 46px; width: auto; opacity: 0.95; }
+.footer-logo:hover img { opacity: 1; }
+
+.footer-nav { display: flex; flex-direction: column; gap: 0.6rem; }
+.footer-nav a { color: var(--mw-lilac-soft); font-size: 0.9rem; }
+.footer-nav a:hover { color: var(--mw-gold); }
+
+.footer-contact { display: flex; flex-direction: column; gap: 0.8rem; }
+.footer-contact .contact-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  color: var(--mw-lilac-soft);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+.footer-contact .contact-line:hover { color: #fff; }
+.footer-contact .contact-line svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--mw-gold);
+}
+
+.footer-social { display: flex; gap: 0.7rem; margin-top: 0.2rem; }
+.footer-social a {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mw-gold);
+}
+.footer-social a:hover { background: var(--mw-gold); color: var(--mw-purple-dark); border-color: var(--mw-gold); }
+.footer-social svg { width: 16px; height: 16px; }
+
+.footer-bottom {
+  border-top: 1px solid rgba(255,255,255,0.15);
+  text-align: center;
+  padding: 1.1rem 0;
+  font-size: 0.78rem;
+  color: var(--mw-lilac-soft);
+}
+
+@media (max-width: 860px) {
+  .footer-grid { grid-template-columns: 1fr; gap: 1.8rem; text-align: left; }
+}
+
 /* ---------- Sidebar (portal privado) ---------- */
 .layout-portal {
   display: flex;
