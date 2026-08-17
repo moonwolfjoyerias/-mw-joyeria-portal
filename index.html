@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MW Joyería y Accesorios</title>
   <meta name="description" content="Joyería de oro laminado y acero inoxidable. Descubre nuestras colecciones y el Plan MW para emprendedoras.">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body>
 
@@ -30,14 +30,14 @@
   <section class="hero">
     <div>
       <span class="eyebrow">Bienvenida a</span>
-      <h1>MW<br>Joyería</h1>
+      <h1>MOONWOLF<br>Joyería</h1>
       <p class="lede">
         Joyería de <strong>oro laminado</strong> y acero inoxidable que realza tu
         esencia y te acompaña siempre.
       </p>
       <div class="hero-actions">
         <a href="catalogo-publico.html" class="btn btn-primary">Ver catálogo</a>
-        <a href="nosotros.html" class="btn btn-outline" style="color:var(--mw-purple); border-color:var(--mw-purple);">Conoce MW</a>
+        <a href="ventajas-plan.html" class="btn btn-outline" style="color:var(--mw-purple); border-color:var(--mw-purple);">Ver Plan MW</a>
       </div>
 
       <div class="trust-badges">
@@ -61,35 +61,32 @@
     </div>
 
     <div class="hero-visual">
-      <img src="assets/images/isotipo-morado.png" alt="">
-      <div class="swap-note">📷 Reemplazar con fotografía real del catálogo</div>
+      <div class="swap-note">📷 Placeholders — reemplazar con fotos reales del catálogo</div>
+      <div class="carousel">
+        <div class="carousel-slide active" style="background:linear-gradient(155deg, var(--mw-lilac-soft) 0%, var(--mw-cream) 55%, var(--mw-gold-soft) 100%);">
+          <img src="assets/images/isotipo-morado.png" alt="">
+        </div>
+        <div class="carousel-slide" style="background:linear-gradient(155deg, var(--mw-gold-soft) 0%, var(--mw-cream) 55%, var(--mw-lilac-soft) 100%);">
+          <img src="assets/images/isotipo-morado.png" alt="">
+        </div>
+        <div class="carousel-slide" style="background:linear-gradient(155deg, var(--mw-cream) 0%, var(--mw-lilac-soft) 55%, var(--mw-gold-soft) 100%);">
+          <img src="assets/images/isotipo-morado.png" alt="">
+        </div>
+        <button class="carousel-arrow prev" aria-label="Imagen anterior">‹</button>
+        <button class="carousel-arrow next" aria-label="Imagen siguiente">›</button>
+        <div class="carousel-dots">
+          <button class="dot active" aria-label="Ir a imagen 1"></button>
+          <button class="dot" aria-label="Ir a imagen 2"></button>
+          <button class="dot" aria-label="Ir a imagen 3"></button>
+        </div>
+      </div>
     </div>
   </section>
-
-  <main class="container" style="padding-bottom:4rem;">
-    <section class="card-grid" style="margin-top:1rem;">
-      <article class="card">
-        <span class="badge">Colección</span>
-        <h3 style="font-size:1.1rem; margin-top:0.6rem;">Oro Laminado</h3>
-        <p class="text-muted" style="font-size:0.9rem;">Piezas bañadas en oro, resistentes y de brillo duradero.</p>
-      </article>
-      <article class="card">
-        <span class="badge">Colección</span>
-        <h3 style="font-size:1.1rem; margin-top:0.6rem;">Acero Inoxidable</h3>
-        <p class="text-muted" style="font-size:0.9rem;">Diseños contemporáneos, hipoalergénicos y para uso diario.</p>
-      </article>
-      <article class="card">
-        <span class="badge">Emprendedoras</span>
-        <h3 style="font-size:1.1rem; margin-top:0.6rem;">Plan MW</h3>
-        <p class="text-muted" style="font-size:0.9rem;">Conoce cómo crecer tu propio negocio con nosotras.</p>
-        <a href="ventajas-plan.html" style="font-size:0.9rem;">Ver ventajas →</a>
-      </article>
-    </section>
-  </main>
 
   <footer class="container text-muted" style="padding:2rem 1.5rem; font-size:0.85rem; text-align:center;">
     MW Joyería y Accesorios · San Luis Potosí, México
   </footer>
 
+  <script src="js/carousel.js"></script>
 </body>
 </html>
