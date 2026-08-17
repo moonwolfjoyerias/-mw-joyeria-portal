@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Colecciones — MW Joyería</title>
   <meta name="description" content="Explora nuestras colecciones de oro laminado, acero inoxidable, exhibidores y souvenirs MW Joyería.">
-  <link rel="stylesheet" href="css/styles.css?v=3">
+  <link rel="stylesheet" href="css/styles.css?v=4">
 </head>
 <body>
 
@@ -27,13 +27,34 @@
     </nav>
   </header>
 
-  <div class="page-header">
-    <div class="eyebrow-line">
-      <span style="color:var(--mw-gold); font-size:0.85rem; letter-spacing:0.18em; text-transform:uppercase; font-weight:600;">Nuestras piezas</span>
+  <section class="page-hero">
+    <div>
+      <span class="eyebrow">Nuestras piezas</span>
+      <h1>Colecciones</h1>
+      <p>Una probadita de lo más querido de cada colección. Descubre el catálogo completo y encuentra tu próxima pieza favorita.</p>
     </div>
-    <h1>Colecciones</h1>
-    <p>Una probadita de lo más querido de cada colección. Descubre el catálogo completo y encuentra tu próxima pieza favorita.</p>
-  </div>
+
+    <div class="page-hero-visual">
+      <div class="carousel">
+        <div class="carousel-slide active" style="background:linear-gradient(155deg, var(--mw-lilac-soft) 0%, var(--mw-cream) 55%, var(--mw-gold-soft) 100%);">
+          <img src="assets/images/isotipo-morado.png" alt="">
+        </div>
+        <div class="carousel-slide" style="background:linear-gradient(155deg, var(--mw-gold-soft) 0%, var(--mw-cream) 55%, var(--mw-lilac-soft) 100%);">
+          <img src="assets/images/isotipo-morado.png" alt="">
+        </div>
+        <div class="carousel-slide" style="background:linear-gradient(155deg, var(--mw-cream) 0%, var(--mw-lilac-soft) 55%, var(--mw-gold-soft) 100%);">
+          <img src="assets/images/isotipo-morado.png" alt="">
+        </div>
+        <button class="carousel-arrow prev" aria-label="Imagen anterior">‹</button>
+        <button class="carousel-arrow next" aria-label="Imagen siguiente">›</button>
+        <div class="carousel-dots">
+          <button class="dot active" aria-label="Ir a imagen 1"></button>
+          <button class="dot" aria-label="Ir a imagen 2"></button>
+          <button class="dot" aria-label="Ir a imagen 3"></button>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <section class="collection-block">
     <div class="collection-header">
@@ -73,5 +94,6 @@
 
   <script src="js/productos-ejemplo.js"></script>
   <script src="js/colecciones.js"></script>
+  <script src="js/carousel.js"></script>
 </body>
 </html>
