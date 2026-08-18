@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi portal — Emprendedora MW</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="../css/styles.css?v=9">
+</head>
+<body>
+
+  <div class="layout-portal">
+    <aside class="sidebar">
+      <a href="../index.html" class="brand-link">
+        <img src="../assets/images/isotipo-blanco.png" alt="MOONWOLF Joyería">
+        <span>
+          <span class="logo-main">MOONWOLF</span>
+          <span class="logo-sub">JOYERÍA</span>
+        </span>
+      </a>
+      <nav>
+        <a href="emprendedora.html" class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+          Inicio
+        </a>
+        <a href="catalogo.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg>
+          Catálogo de mayoreo
+        </a>
+        <a href="apartados.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
+          Mis apartados
+        </a>
+        <a href="lista-deseos.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
+          Lista de deseos
+        </a>
+        <a href="calendario.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          Calendario
+        </a>
+        <a href="mi-cuenta.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+          Mi cuenta
+        </a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header class="portal-header">
+        <div>
+          <h1>Bienvenida, Emprendedora ✦</h1>
+          <p class="portal-sub">Un gusto verte de nuevo.</p>
+        </div>
+
+        <div class="portal-header-actions">
+          <button class="notif-bell" id="notifBell" aria-label="Notificaciones">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span class="notif-badge" id="notifBadge">0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel"></div>
+
+          <button class="profile-btn" id="profileBtn">
+            <span class="profile-avatar">E</span>
+            <span class="profile-info">
+              <strong>Emprendedora</strong>
+              <span class="profile-role">Emprendedora MW</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" data-modal="telefono">Cambiar teléfono</a>
+            <a href="#" data-modal="foto">Cambiar foto de perfil</a>
+            <a href="../login.html" class="danger">Cerrar sesión</a>
+          </div>
+        </div>
+      </header>
+
+      <section class="stat-cards">
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
+          </div>
+          <div>
+            <h4>Piezas apartadas</h4>
+            <span class="stat-num">12</span>
+            <a class="stat-link" href="apartados.html">Ver mis apartados →</a>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          </div>
+          <div>
+            <h4>Próximos vencimientos</h4>
+            <span class="stat-num">3</span>
+            <a class="stat-link" href="apartados.html">Ver detalles →</a>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
+          </div>
+          <div>
+            <h4>Lista de deseos</h4>
+            <span class="stat-num">28</span>
+            <a class="stat-link" href="lista-deseos.html">Ver mi lista →</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="promo-banner">
+        <div class="carousel">
+          <div class="carousel-slide active" style="background:linear-gradient(155deg, var(--mw-lilac-soft) 0%, var(--mw-cream) 55%, var(--mw-gold-soft) 100%);">
+            <img src="../assets/images/isotipo-morado.png" alt="" style="position:absolute; right:6%; width:34%; opacity:0.14; filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg);">
+          </div>
+          <div class="carousel-slide" style="background:linear-gradient(155deg, var(--mw-gold-soft) 0%, var(--mw-cream) 55%, var(--mw-lilac-soft) 100%);">
+            <img src="../assets/images/isotipo-morado.png" alt="" style="position:absolute; right:6%; width:34%; opacity:0.14; filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg);">
+          </div>
+          <div class="carousel-slide" style="background:linear-gradient(155deg, var(--mw-cream) 0%, var(--mw-lilac-soft) 55%, var(--mw-gold-soft) 100%);">
+            <img src="../assets/images/isotipo-morado.png" alt="" style="position:absolute; right:6%; width:34%; opacity:0.14; filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg);">
+          </div>
+        </div>
+        <div class="promo-content">
+          <span class="badge">Recién llegado</span>
+          <h2>Nuevas piezas</h2>
+          <p>Descubre lo último en oro laminado y acero inoxidable, recién llegado al catálogo.</p>
+          <a href="catalogo.html" class="btn btn-primary">Ver catálogo ✦</a>
+        </div>
+      </section>
+
+      <section>
+        <div class="events-section-header">
+          <h2>Tus próximos eventos ✦</h2>
+          <a href="calendario.html" class="ver-todo-cal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="15" height="15"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+            Ver calendario completo
+          </a>
+        </div>
+        <div class="events-row-wrap">
+          <div class="events-row" id="eventsRow"></div>
+          <button class="events-scroll-btn" id="eventsScrollBtn" aria-label="Ver más eventos">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box" id="modalBox"></div>
+  </div>
+
+  <script src="../js/carousel.js"></script>
+  <script src="../js/notificaciones-ejemplo.js"></script>
+  <script src="../js/eventos-ejemplo.js"></script>
+  <script src="../js/portal-common.js"></script>
+</body>
+</html>
