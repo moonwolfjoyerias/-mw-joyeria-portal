@@ -305,6 +305,7 @@ a:hover { color: var(--mw-gold); }
   .trust-badges { max-width: 100%; }
 }
 
+
 /* ---------- Encabezado estándar de páginas internas (título + carrusel chico) ---------- */
 .page-hero {
   display: grid;
@@ -792,6 +793,245 @@ a:hover { color: var(--mw-gold); }
 .role-btn .role-icon svg { width: 18px; height: 18px; color: var(--mw-purple); }
 .role-btn strong { display: block; font-family: var(--font-heading); color: var(--mw-purple); font-size: 0.95rem; }
 .role-btn .role-desc { font-size: 0.78rem; color: var(--mw-text-muted); }
+
+/* ---------- Portal privado: sidebar con logo e íconos ---------- */
+.sidebar .brand-link { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 2rem; }
+.sidebar .brand-link img { height: 30px; width: auto; }
+.sidebar .brand-link .logo-main { font-size: 1rem; font-weight: 600; letter-spacing: 0.05em; color: #fff; display: block; }
+.sidebar .brand-link .logo-sub { font-size: 0.55rem; letter-spacing: 0.28em; color: var(--mw-lilac-soft); }
+.sidebar nav a { display: flex; align-items: center; gap: 0.7rem; }
+.sidebar nav a svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* ---------- Encabezado del portal (bienvenida + campana + perfil) ---------- */
+.portal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.8rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.portal-header h1 { font-size: 1.9rem; margin-bottom: 0.2rem; }
+.portal-header .portal-sub { color: var(--mw-text-muted); font-size: 0.95rem; margin: 0; }
+.portal-header-actions { display: flex; align-items: center; gap: 0.9rem; position: relative; }
+
+.notif-bell {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.notif-bell svg { width: 19px; height: 19px; color: var(--mw-purple); }
+.notif-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: var(--mw-purple);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-panel {
+  position: absolute;
+  top: 52px;
+  right: 118px;
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-hover);
+  width: 300px;
+  max-height: 360px;
+  overflow-y: auto;
+  display: none;
+  z-index: 30;
+}
+.notif-panel.open { display: block; }
+.notif-panel .notif-item {
+  display: block;
+  padding: 0.8em 1em;
+  border-bottom: 1px solid var(--mw-border);
+  font-size: 0.85rem;
+  color: var(--mw-text);
+  line-height: 1.4;
+}
+.notif-panel .notif-item:last-child { border-bottom: none; }
+.notif-panel .notif-item:hover { background: var(--mw-lilac-soft); }
+.notif-panel .notif-empty { padding: 1.2em 1em; text-align: center; color: var(--mw-text-muted); font-size: 0.85rem; }
+.notif-panel .notif-header { padding: 0.7em 1em; font-family: var(--font-heading); font-size: 0.85rem; color: var(--mw-purple); border-bottom: 1px solid var(--mw-border); }
+
+.profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  border-radius: 999px;
+  padding: 0.32em 0.9em 0.32em 0.32em;
+  cursor: pointer;
+}
+.profile-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--mw-lilac-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mw-purple);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+.profile-btn .profile-info { text-align: left; line-height: 1.15; }
+.profile-btn strong { display: block; font-size: 0.85rem; color: var(--mw-purple); font-family: var(--font-heading); }
+.profile-btn .profile-role { font-size: 0.7rem; color: var(--mw-text-muted); }
+.profile-btn svg { width: 14px; height: 14px; color: var(--mw-text-muted); flex-shrink: 0; }
+
+.profile-menu {
+  position: absolute;
+  top: 52px;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-hover);
+  width: 220px;
+  display: none;
+  z-index: 30;
+  overflow: hidden;
+}
+.profile-menu.open { display: block; }
+.profile-menu a, .profile-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.75em 1em;
+  font-size: 0.88rem;
+  color: var(--mw-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.profile-menu a:hover, .profile-menu button:hover { background: var(--mw-lilac-soft); color: var(--mw-purple); }
+.profile-menu .danger { color: #B3312C; }
+.profile-menu .danger:hover { background: #FBEAEA; }
+
+/* ---------- Tarjetas de estadística ---------- */
+.stat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; margin-bottom: 1.8rem; }
+.stat-card { background: #fff; border: 1px solid var(--mw-border); border-radius: var(--radius); padding: 1.3rem; display: flex; gap: 1rem; align-items: flex-start; box-shadow: var(--shadow-card); }
+.stat-card .icon-circle { width: 46px; height: 46px; border-radius: 50%; background: var(--mw-lilac-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stat-card .icon-circle svg { width: 22px; height: 22px; color: var(--mw-purple); }
+.stat-card h4 { font-size: 0.85rem; font-family: var(--font-body); font-weight: 500; color: var(--mw-text-muted); margin: 0 0 0.3rem; }
+.stat-card .stat-num { font-family: var(--font-heading); font-size: 1.9rem; color: var(--mw-purple); font-weight: 700; display: block; margin-bottom: 0.3rem; }
+.stat-card a.stat-link { font-size: 0.8rem; color: var(--mw-purple); display: inline-flex; align-items: center; gap: 0.3rem; }
+.stat-card a.stat-link:hover { color: var(--mw-gold); }
+
+/* ---------- Banner "Nuevas piezas" ---------- */
+.promo-banner {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-hover);
+}
+.promo-banner .carousel { position: absolute; inset: 0; }
+.promo-banner .promo-content { position: relative; z-index: 2; padding: 2.2rem 2.5rem; max-width: 420px; }
+.promo-banner .badge-tag { margin-bottom: 0.8rem; }
+.promo-banner h2 { font-size: 2.2rem; margin-bottom: 0.6rem; }
+.promo-banner p { color: var(--mw-text-muted); margin-bottom: 1.2rem; }
+
+/* ---------- Próximos eventos ---------- */
+.events-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.6rem; }
+.events-section-header h2 { font-size: 1.3rem; margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+.events-section-header .ver-todo-cal { font-size: 0.85rem; color: var(--mw-purple); display: inline-flex; align-items: center; gap: 0.4rem; }
+
+.events-row-wrap { position: relative; }
+.events-row { display: flex; gap: 1.1rem; overflow-x: auto; scroll-behavior: smooth; padding-bottom: 0.5rem; scrollbar-width: none; }
+.events-row::-webkit-scrollbar { display: none; }
+.event-card { flex: 0 0 300px; background: #fff; border: 1px solid var(--mw-border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-card); display: flex; }
+.event-date-box { background: var(--mw-lilac-soft); width: 66px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0.6rem 0; }
+.event-date-box .mes { font-size: 0.68rem; letter-spacing: 0.08em; color: var(--mw-purple); font-weight: 600; }
+.event-date-box .dia { font-family: var(--font-heading); font-size: 1.5rem; color: var(--mw-purple); font-weight: 700; line-height: 1; }
+.event-date-box .dia-semana { font-size: 0.62rem; color: var(--mw-text-muted); }
+.event-photo { width: 66px; flex-shrink: 0; background: linear-gradient(155deg, var(--mw-gold-soft), var(--mw-lilac-soft)); }
+.event-body { padding: 0.8rem 0.9rem; flex: 1; min-width: 0; }
+.event-body h4 { font-size: 0.92rem; margin: 0 0 0.4rem; }
+.event-body .event-meta { font-size: 0.76rem; color: var(--mw-text-muted); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; }
+.event-body .event-meta svg { width: 13px; height: 13px; flex-shrink: 0; }
+.event-body a.event-link { font-size: 0.8rem; color: var(--mw-purple); display: inline-block; margin-top: 0.3rem; }
+
+.events-scroll-btn {
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--mw-purple);
+  z-index: 2;
+}
+
+/* ---------- Modal (cambiar teléfono / foto) ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(42, 34, 48, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1.5rem;
+}
+.modal-overlay.open { display: flex; }
+.modal-box { background: #fff; border-radius: var(--radius); padding: 2rem; max-width: 400px; width: 100%; box-shadow: var(--shadow-hover); position: relative; }
+.modal-box h3 { font-size: 1.25rem; margin-bottom: 0.3rem; }
+.modal-box .modal-sub { color: var(--mw-text-muted); font-size: 0.85rem; margin-bottom: 1.2rem; }
+.modal-box label { display: block; font-size: 0.82rem; color: var(--mw-purple); font-family: var(--font-heading); margin-bottom: 0.4rem; }
+.modal-box input[type="text"], .modal-box input[type="tel"], .modal-box input[type="file"] {
+  width: 100%;
+  padding: 0.65em 0.8em;
+  border: 1.5px solid var(--mw-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  margin-bottom: 1.1rem;
+  box-sizing: border-box;
+}
+.modal-close { position: absolute; top: 0.9rem; right: 1rem; background: none; border: none; font-size: 1.4rem; color: var(--mw-text-muted); cursor: pointer; line-height: 1; }
+.modal-note { font-size: 0.76rem; color: var(--mw-purple-dark); background: var(--mw-lilac-soft); padding: 0.6em 0.8em; border-radius: var(--radius-sm); margin-bottom: 1.1rem; }
+
+@media (max-width: 900px) {
+  .stat-cards { grid-template-columns: 1fr; }
+  .promo-banner { min-height: 240px; }
+  .notif-panel { right: 0; }
+}
 
 /* ---------- Sidebar (portal privado) ---------- */
 .layout-portal {
