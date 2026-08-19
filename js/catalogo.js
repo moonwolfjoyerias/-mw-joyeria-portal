@@ -20,7 +20,7 @@ const filtro = {
 // ⚠️ TEMPORAL: simula si la persona ya tiene un depósito/ventana activa.
 // En Fase 3 esto se consulta a Firestore. Cámbialo a "true" para probar
 // el flujo de "ya tiene depósito" (se agrega directo a Mis apartados).
-let usuarioTieneDepositoActivo = true;
+let usuarioTieneDepositoActivo = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   renderFiltroMateriales();
