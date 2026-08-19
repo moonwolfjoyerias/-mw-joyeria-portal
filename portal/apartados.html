@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Catálogo — Portal MW</title>
+  <title>Mis apartados — Portal MW</title>
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="../css/styles.css?v=10">
 </head>
@@ -23,11 +23,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
           Inicio
         </a>
-        <a href="catalogo.html" class="active">
+        <a href="catalogo.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg>
           Catálogo
         </a>
-        <a href="apartados.html">
+        <a href="apartados.html" class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
           Mis apartados
         </a>
@@ -49,8 +49,8 @@
     <main class="main-content">
       <header class="portal-header">
         <div>
-          <h1>Catálogo</h1>
-          <p class="portal-sub">Precio de mayoreo ya con tu descuento aplicado.</p>
+          <h1>Mis apartados</h1>
+          <p class="portal-sub">Revisa, edita o paga las piezas que has apartado.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -76,47 +76,33 @@
         </div>
       </header>
 
-      <div class="catalog-layout">
-        <aside class="filter-panel">
-          <div class="filter-panel-header">
-            <h3>Filtros</h3>
-            <button id="clearFiltersBtn">Limpiar</button>
-          </div>
-
-          <div class="filter-group">
-            <h4>Material</h4>
-            <div id="filterMateriales"></div>
-          </div>
-
-          <div class="filter-group">
-            <h4>Categoría</h4>
-            <div id="filterCategorias"></div>
-          </div>
-
-          <div class="filter-group conditional visible">
-            <h4>Calidad (Oro Laminado)</h4>
-            <div id="filterCalidad"></div>
-          </div>
-
-          <div class="filter-group conditional visible">
-            <h4>Color de oro</h4>
-            <div id="filterColorOro"></div>
-          </div>
-
-          <div class="filter-group">
-            <h4>Talla (Anillos / Cadenas)</h4>
-            <select id="filterTalla"></select>
-          </div>
-        </aside>
-
-        <div class="catalog-grid-wrap">
-          <div class="catalog-toolbar">
-            <span class="result-count" id="resultCount"></span>
-          </div>
-          <div class="catalog-product-grid" id="catalogGrid"></div>
+      <div class="countdown-box">
+        <div class="countdown-label">Tu ventana de depósito vence en</div>
+        <div class="countdown-timer">
+          <div class="unit"><span class="num" id="cdDias">00</span><span class="lbl">Días</span></div>
+          <div class="unit"><span class="num" id="cdHoras">00</span><span class="lbl">Horas</span></div>
+          <div class="unit"><span class="num" id="cdMin">00</span><span class="lbl">Min</span></div>
+          <div class="unit"><span class="num" id="cdSeg">00</span><span class="lbl">Seg</span></div>
         </div>
+        <div class="countdown-note">Paga en este plazo o pasa a tienda por tus piezas — de lo contrario se liberan.</div>
+      </div>
+
+      <div id="apartadosWrap">
+        <div class="apartados-list" id="apartadosList"></div>
+      </div>
+      <div id="apartadosEmpty" style="display:none; text-align:center; padding:3rem 1rem; color:var(--mw-text-muted);">
+        No tienes piezas apartadas en este momento.
+        <br><a href="catalogo.html" style="color:var(--mw-purple); font-weight:600;">Ir al catálogo →</a>
       </div>
     </main>
+  </div>
+
+  <div class="cart-summary-bar">
+    <div class="summary-total">
+      <span id="summaryCount">0 piezas seleccionadas</span>
+      <strong id="summaryTotal">$0 MXN</strong>
+    </div>
+    <button class="btn btn-primary" id="pagarSeleccionadasBtn" disabled>Pagar seleccionadas</button>
   </div>
 
   <div class="modal-overlay" id="modalOverlay">
@@ -127,7 +113,6 @@
   <script src="../js/eventos-ejemplo.js"></script>
   <script src="../js/portal-common.js"></script>
   <script src="../js/apartados-ejemplo.js"></script>
-  <script src="../js/catalogo-productos-ejemplo.js"></script>
-  <script src="../js/catalogo.js"></script>
+  <script src="../js/apartados.js"></script>
 </body>
 </html>

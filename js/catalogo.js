@@ -17,6 +17,11 @@ const filtro = {
   talla: '',
 };
 
+// ⚠️ TEMPORAL: simula si la persona ya tiene un depósito/ventana activa.
+// En Fase 3 esto se consulta a Firestore. Cámbialo a "true" para probar
+// el flujo de "ya tiene depósito" (se agrega directo a Mis apartados).
+let usuarioTieneDepositoActivo = false;
+
 document.addEventListener('DOMContentLoaded', () => {
   renderFiltroMateriales();
   renderFiltroCategorias();
@@ -185,12 +190,50 @@ function abrirModalApartar(nombreProducto) {
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
-  box.innerHTML = `
-    <button class="modal-close" data-close>&times;</button>
-    <h3>Apartar: ${nombreProducto}</h3>
-    <p class="modal-sub">Esta pieza quedaría reservada bajo tu ventana de depósito.</p>
-    <div class="modal-note">⚠️ Vista de prueba: el sistema de apartados todavía no está conectado. Esta acción no reserva la pieza de verdad todavía.</div>
-    <button class="btn btn-primary" style="width:100%;" data-close>Entendido</button>
-  `;
+
+  if (usuarioTieneDepositoActivo) {
+    box.innerHTML = `
+      <button class="modal-close" data-close>&times;</button>
+      <h3>Apartar: ${nombreProducto}</h3>
+      <p class="modal-sub">Esta pieza se agregó a tu ventana activa — no necesitas volver a depositar.</p>
+      <div class="modal-note">⚠️ Vista de prueba: el sistema de apartados todavía no está conectado. Esta acción no reserva la pieza de verdad todavía.</div>
+      <button class="btn btn-primary" style="width:100%;" data-close>Entendido</button>
+    `;
+  } else {
+    const mensajeWa = encodeURIComponent('¡Hola! Te envío mi comprobante de pago');
+    box.innerHTML = `
+      <button class="modal-close" data-close>&times;</button>
+      <h3>Necesitas depositar $50</h3>
+      <p class="modal-sub">Para apartar "<strong>${nombreProducto}</strong>", primero confirma tu depósito de $50. Esto abre tu ventana para apartar piezas sin pagar de nuevo.</p>
+
+      <div class="bank-details-box">
+        <div class="copy-field">
+          <span><span class="cf-label">Banco</span><span class="cf-value">${DATOS_BANCARIOS_EJEMPLO.banco}</span></span>
+        </div>
+        <div class="copy-field">
+          <span><span class="cf-label">Titular</span><span class="cf-value">${DATOS_BANCARIOS_EJEMPLO.titular}</span></span>
+        </div>
+        <div class="copy-field">
+          <span><span class="cf-label">CLABE</span><span class="cf-value">${DATOS_BANCARIOS_EJEMPLO.clabe}</span></span>
+          <button data-copy="${DATOS_BANCARIOS_EJEMPLO.clabe}">Copiar</button>
+        </div>
+      </div>
+
+      <p class="whatsapp-note">
+        Manda tu comprobante a este WhatsApp:<br>
+        <a href="https://wa.me/524448100805?text=${mensajeWa}" target="_blank" rel="noopener">444 810 0805</a>
+      </p>
+
+      <button class="btn btn-primary" style="width:100%;" data-close>Pagar depósito</button>
+    `;
+    box.querySelectorAll('[data-copy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        navigator.clipboard?.writeText(btn.getAttribute('data-copy'));
+        const original = btn.textContent;
+        btn.textContent = 'Copiado ✓';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+      });
+    });
+  }
   overlay.classList.add('open');
 }
