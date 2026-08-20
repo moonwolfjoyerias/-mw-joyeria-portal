@@ -148,3 +148,18 @@ function initEventsScroll() {
     row.scrollBy({ left: 320, behavior: 'smooth' });
   });
 }
+
+// ---------- Toast (aviso flotante reutilizable) ----------
+function mostrarToast(mensaje) {
+  let toast = document.getElementById('appToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'appToast';
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = mensaje;
+  toast.classList.add('show');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.classList.remove('show'), 3000);
+}
