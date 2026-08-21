@@ -111,17 +111,38 @@ function initModal() {
   });
 }
 
+// ---------- Utilidad de fechas (compartida) ----------
+const MESES_CORTOS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+const DIAS_CORTOS = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+
+function formatearFechaCorta(fechaISO) {
+  const [y, m, d] = fechaISO.split('-').map(Number);
+  const fecha = new Date(y, m - 1, d);
+  return {
+    dia: String(d).padStart(2, '0'),
+    mes: MESES_CORTOS[m - 1],
+    diaSemana: DIAS_CORTOS[fecha.getDay()],
+  };
+}
+
 // ---------- Próximos eventos ----------
 function renderEventos() {
   const row = document.getElementById('eventsRow');
   if (!row || typeof EVENTOS_EJEMPLO === 'undefined') return;
 
-  row.innerHTML = EVENTOS_EJEMPLO.map((ev) => `
+  const hoyStr = new Date().toISOString().slice(0, 10);
+  const proximos = EVENTOS_EJEMPLO
+    .filter(ev => ev.fecha >= hoyStr)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  row.innerHTML = proximos.map((ev) => {
+    const { dia, mes, diaSemana } = formatearFechaCorta(ev.fecha);
+    return `
     <div class="event-card">
       <div class="event-date-box">
-        <span class="mes">${ev.mes}</span>
-        <span class="dia">${ev.dia}</span>
-        <span class="dia-semana">${ev.diaSemana}</span>
+        <span class="mes">${mes}</span>
+        <span class="dia">${dia}</span>
+        <span class="dia-semana">${diaSemana}</span>
       </div>
       <div class="event-photo"></div>
       <div class="event-body">
@@ -132,12 +153,13 @@ function renderEventos() {
         </div>
         <div class="event-meta">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-7.58 7-12a7 7 0 10-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
-          ${ev.lugar}
+          ${ev.lugarTexto}
         </div>
-        <a class="event-link" href="${ev.link}">Ver detalles →</a>
+        <a class="event-link" href="calendario.html">Ver detalles →</a>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function initEventsScroll() {
