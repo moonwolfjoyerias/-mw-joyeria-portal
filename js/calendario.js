@@ -70,9 +70,11 @@ function renderCalendario() {
   const celdasHtml = celdas.map(c => `
     <div class="calendar-day ${c.otroMes ? 'other-month' : ''} ${c.esHoy ? 'is-today' : ''}">
       <span class="day-num">${c.dia}</span>
-      ${(c.eventos || []).map(ev => `
-        <button class="calendar-event-pill ${ev.tipo}" data-evento="${ev.id}">${ev.titulo}</button>
-      `).join('')}
+      ${(c.eventos && c.eventos.length) ? `
+        <div class="day-events-dots">
+          ${c.eventos.map(ev => `<button class="event-dot ${ev.tipo}" data-evento="${ev.id}" title="${ev.titulo}" aria-label="${ev.titulo}"></button>`).join('')}
+        </div>
+      ` : ''}
     </div>
   `).join('');
 
