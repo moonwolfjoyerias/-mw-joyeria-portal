@@ -1325,6 +1325,59 @@ a:hover { color: var(--mw-gold); }
 @media (max-width: 1000px) { .calendar-page-layout { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .calendar-grid { grid-auto-rows: 68px; } .day-events-dots { gap: 3px; } .event-dot { width: 7px; height: 7px; } }
 
+/* ---------- Página Mi cuenta ---------- */
+.account-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.8rem; align-items: start; }
+
+.profile-card { background: #fff; border: 1px solid var(--mw-border); border-radius: var(--radius); padding: 1.8rem; box-shadow: var(--shadow-card); text-align: center; }
+.profile-photo-wrap { position: relative; width: 96px; height: 96px; margin: 0 auto 1rem; }
+.profile-photo-lg {
+  width: 96px; height: 96px; border-radius: 50%; background: var(--mw-lilac-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-heading); font-size: 2rem; color: var(--mw-purple); font-weight: 700;
+}
+.change-photo-btn {
+  position: absolute; bottom: -2px; right: -2px; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--mw-purple); color: #fff; display: flex; align-items: center; justify-content: center;
+  border: 2px solid #fff; cursor: pointer;
+}
+.change-photo-btn svg { width: 13px; height: 13px; }
+.profile-card h2 { font-size: 1.15rem; margin-bottom: 0.2rem; }
+.profile-card .profile-team { font-size: 0.85rem; color: var(--mw-text-muted); margin-bottom: 1.2rem; }
+
+.profile-field { text-align: left; padding: 0.8rem 0; border-top: 1px solid var(--mw-border); }
+.profile-field label { display: block; font-size: 0.7rem; color: var(--mw-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+.profile-field .field-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.profile-field .field-value { font-size: 0.92rem; color: var(--mw-text); }
+.profile-field button.change-link { font-size: 0.76rem; color: var(--mw-purple); background: none; border: none; cursor: pointer; flex-shrink: 0; }
+.profile-field button.change-link:hover { color: var(--mw-gold); }
+
+.benefits-col { display: flex; flex-direction: column; gap: 1.6rem; }
+.benefit-panel { background: #fff; border: 1px solid var(--mw-border); border-radius: var(--radius); padding: 1.6rem 1.8rem; box-shadow: var(--shadow-card); }
+.benefit-panel h3 { font-size: 1.1rem; margin-bottom: 0.3rem; }
+.benefit-panel .bp-sub { font-size: 0.85rem; color: var(--mw-text-muted); margin-bottom: 1.2rem; }
+
+.progress-track { height: 14px; background: var(--mw-lilac-soft); border-radius: 999px; overflow: hidden; margin-bottom: 0.6rem; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--mw-purple), var(--mw-gold)); border-radius: 999px; transition: width 0.4s ease; }
+.progress-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--mw-text-muted); margin-bottom: 0.9rem; }
+.progress-message { font-size: 0.88rem; color: var(--mw-purple-dark); background: var(--mw-lilac-soft); padding: 0.7em 1em; border-radius: var(--radius-sm); }
+
+.timeline-wrap { margin: 1.8rem 0 0.6rem; }
+.timeline-track { position: relative; height: 6px; background: var(--mw-border); border-radius: 999px; margin: 0 26px; }
+.timeline-fill { position: absolute; top: 0; left: 0; height: 100%; background: linear-gradient(90deg, var(--mw-purple), var(--mw-gold)); border-radius: 999px; }
+.timeline-nodes { display: flex; justify-content: space-between; margin-top: -19px; position: relative; }
+.timeline-node { display: flex; flex-direction: column; align-items: center; width: 60px; }
+.timeline-node .node-circle { width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 2.5px solid var(--mw-border); display: flex; align-items: center; justify-content: center; color: var(--mw-text-muted); }
+.timeline-node.reached .node-circle { border-color: var(--mw-gold); background: var(--mw-gold-soft); color: var(--mw-gold); }
+.timeline-node .node-circle svg { width: 17px; height: 17px; }
+.timeline-node .node-label { font-size: 0.68rem; color: var(--mw-text-muted); margin-top: 0.5rem; text-align: center; line-height: 1.25; }
+.timeline-node.reached .node-label { color: var(--mw-purple); font-weight: 600; }
+
+.month-progress { margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid var(--mw-border); }
+.month-progress .mp-label { font-size: 0.85rem; color: var(--mw-text-muted); margin-bottom: 0.5rem; }
+
+@media (max-width: 900px) { .account-layout { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .timeline-node { width: 46px; } .timeline-node .node-label { font-size: 0.6rem; } }
+
 /* ---------- Sidebar (portal privado) ---------- */
 .layout-portal {
   display: flex;
