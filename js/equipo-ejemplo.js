@@ -13,12 +13,12 @@ const EQUIPO_ARBOL_EJEMPLO = [
   { id: 'a1', nombre: 'Aranza Sapphira Gloria Vázquez', leaderId: 'yo', puntos: 1900 },
 
   // Nivel 2
-  { id: 'k1', nombre: 'Karla T.', leaderId: 'm1', puntos: 2200 },
-  { id: 'd1', nombre: 'Diana L.', leaderId: 's1', puntos: 1750 },
+  { id: 'k1', nombre: 'Emmanuel Isidro Pérez Castillo', leaderId: 'm1', puntos: 2200 },
+  { id: 'd1', nombre: 'Rodrigo Cruz Tellez', leaderId: 's1', puntos: 1750 },
 
   // Nivel 3
-  { id: 'r1', nombre: 'Renata S.', leaderId: 'k1', puntos: 980 },
+  { id: 'r1', nombre: 'Renata López Gonzáles', leaderId: 'k1', puntos: 980 },
 
   // Nivel 4
-  { id: 'x1', nombre: 'Ximena C.', leaderId: 'r1', puntos: 600 },
+  { id: 'x1', nombre: 'Ximena del Carmen Acosta López', leaderId: 'r1', puntos: 600 },
 ];
