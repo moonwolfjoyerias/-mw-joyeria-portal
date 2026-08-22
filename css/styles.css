@@ -1529,6 +1529,7 @@ a:hover { color: var(--mw-gold); }
 }
 .main-content {
   flex: 1;
+  min-width: 0;
   padding: 2rem;
   background: var(--mw-cream);
 }
