@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Catálogo — Portal MW</title>
+  <title>Lista de deseos — Portal MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../css/styles.css?v=10">
+  <link rel="stylesheet" href="../css/styles.css?v=11">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
           Inicio
         </a>
-        <a href="emprendedora- catalogo.html">
+        <a href="emprendedora-catalogo.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg>
           Catálogo
         </a>
@@ -31,15 +31,15 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
           Mis apartados
         </a>
-        <a href="emprendedora- lista-deseos.html">
+        <a href="emprendedora-lista-deseos.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
           Lista de deseos
         </a>
-        <a href="emprendedora- calendario.html" class="active">
+        <a href="emprendedora-calendario.html" class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
           Calendario
         </a>
-        <a href="emprendedora- mi-cuenta.html">
+        <a href="emprendedora-mi-cuenta.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
           Mi cuenta
         </a>
@@ -49,8 +49,8 @@
     <main class="main-content">
       <header class="portal-header">
         <div>
-          <h1>Catálogo</h1>
-          <p class="portal-sub">Precio de mayoreo ya con tu descuento aplicado.</p>
+          <h1>Mi lista de deseos ✦</h1>
+          <p class="portal-sub">Cuéntanos qué pieza estás buscando.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -76,46 +76,42 @@
         </div>
       </header>
 
-      <div class="catalog-layout">
-        <aside class="filter-panel">
-          <div class="filter-panel-header">
-            <h3>Filtros</h3>
-            <button id="clearFiltersBtn">Limpiar</button>
+      <div class="wishlist-hero">
+        <div class="wishlist-hero-head">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
           </div>
-
-          <div class="filter-group">
-            <h4>Material</h4>
-            <div id="filterMateriales"></div>
+          <div>
+            <h2>¿Buscas una pieza que no encuentras en el catálogo? ✦</h2>
+            <p>Nuestro equipo revisará tu solicitud cuando lleguen nuevas piezas.</p>
           </div>
-
-          <div class="filter-group">
-            <h4>Categoría</h4>
-            <div id="filterCategorias"></div>
-          </div>
-
-          <div class="filter-group conditional visible">
-            <h4>Calidad (Oro Laminado)</h4>
-            <div id="filterCalidad"></div>
-          </div>
-
-          <div class="filter-group conditional visible">
-            <h4>Color de oro</h4>
-            <div id="filterColorOro"></div>
-          </div>
-
-          <div class="filter-group">
-            <h4>Talla (Anillos / Cadenas)</h4>
-            <select id="filterTalla"></select>
-          </div>
-        </aside>
-
-        <div class="catalog-grid-wrap">
-          <div class="catalog-toolbar">
-            <span class="result-count" id="resultCount"></span>
-          </div>
-          <div class="catalog-product-grid" id="catalogGrid"></div>
         </div>
+
+        <form id="deseoForm">
+          <div class="wishlist-form-grid">
+            <div>
+              <label for="deseoDescripcion">Describe la pieza que buscas *</label>
+              <textarea id="deseoDescripcion" maxlength="500" placeholder="Ej. Collar con dije de corazón mediano, acabado dorado, diseño minimalista..." required></textarea>
+              <div class="char-counter" id="charCounter">0/500</div>
+            </div>
+            <div>
+              <label>Agrega una foto de referencia (opcional)</label>
+              <label class="dropzone" for="deseoFoto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5.5-5.5L4 21"/></svg>
+                <span class="dz-main" id="dzText">Arrastra tu imagen aquí o da clic para seleccionar</span>
+                <span class="dz-sub">Formatos: JPG, PNG. Máx. 5MB</span>
+                <input type="file" id="deseoFoto" accept="image/*">
+              </label>
+            </div>
+            <div class="submit-row">
+              <button type="submit" class="btn btn-primary">Enviar solicitud ✦</button>
+            </div>
+          </div>
+        </form>
       </div>
+
+      <h2 class="solicitudes-heading">Mis solicitudes ✦</h2>
+      <div class="solicitudes-grid" id="solicitudesGrid"></div>
     </main>
   </div>
 
@@ -126,8 +122,7 @@
   <script src="../js/notificaciones-ejemplo.js"></script>
   <script src="../js/eventos-ejemplo.js"></script>
   <script src="../js/portal-common.js"></script>
-  <script src="../js/apartados-ejemplo.js"></script>
-  <script src="../js/catalogo-productos-ejemplo.js"></script>
-  <script src="../js/catalogo.js"></script>
+  <script src="../js/deseos-ejemplo.js"></script>
+  <script src="../js/deseos.js"></script>
 </body>
 </html>
