@@ -18,6 +18,6 @@ const APARTADOS_EJEMPLO = [
 const DATOS_BANCARIOS_EJEMPLO = {
   banco: 'BBVA (ejemplo)',
   titular: 'MW Joyería y Accesorios',
-  clabe: '012 180 0123 4567 89',
-  cuenta: '0123 4567 89',
+  clabe: '0121800123456789',
+  cuenta: '0123456789',
 };
