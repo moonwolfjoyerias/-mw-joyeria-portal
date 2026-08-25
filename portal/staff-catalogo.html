@@ -45,3 +45,98 @@
         </a>
       </nav>
     </aside>
+    <main class="main-content">
+      <header class="portal-header">
+        <div>
+          <h1>Catálogo</h1>
+          <p class="portal-sub">Precio de mayoreo ya con tu descuento aplicado.</p>
+        </div>
+
+        <div class="portal-header-actions">
+          <button class="notif-bell" id="notifBell" aria-label="Notificaciones">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span class="notif-badge" id="notifBadge">0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel"></div>
+
+          <button class="profile-btn" id="profileBtn">
+            <span class="profile-avatar">E</span>
+            <span class="profile-info">
+              <strong>Staff</strong>
+              <span class="profile-role">Staff MW</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" data-modal="foto">Cambiar foto de perfil</a>
+            <a href="../login.html" class="danger">Cerrar sesión</a>
+          </div>
+        </div>
+      </header>
+
+      <div class="catalog-layout">
+        <aside class="filter-panel">
+          <div class="filter-panel-header">
+            <h3>Filtros</h3>
+            <button id="clearFiltersBtn">Limpiar</button>
+          </div>
+
+          <div class="filter-group">
+            <h4>Material</h4>
+            <div id="filterMateriales"></div>
+          </div>
+
+          <div class="filter-group">
+            <h4>Categoría</h4>
+            <div id="filterCategorias"></div>
+          </div>
+
+          <div class="filter-group conditional visible">
+            <h4>Calidad (Oro Laminado)</h4>
+            <div id="filterCalidad"></div>
+          </div>
+
+          <div class="filter-group conditional visible">
+            <h4>Color de oro</h4>
+            <div id="filterColorOro"></div>
+          </div>
+
+          <div class="filter-group">
+            <h4>Talla (Anillos / Cadenas)</h4>
+            <select id="filterTalla"></select>
+          </div>
+        </aside>
+
+        <div class="catalog-grid-wrap">
+          <div class="catalog-toolbar">
+            <span class="result-count" id="resultCount"></span>
+          </div>
+          <div class="catalog-product-grid" id="catalogGrid"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box" id="modalBox"></div>
+  </div>
+
+  <script src="../js/notificaciones-ejemplo.js"></script>
+  <script src="../js/eventos-ejemplo.js"></script>
+  <script>
+  const PORTAL_LINKS = {
+    inicio: 'lider-portal.html',
+    catalogo: 'lider-catalogo.html',
+    apartados: 'lider-apartados.html',
+    equipo: 'lider-mi-equipo.html',
+    deseos: 'lider-lista-deseos.html',
+    calendario: 'lider-calendario.html',
+    cuenta: 'lider-mi-cuenta.html',
+  };
+  </script>
+  <script src="../js/portal-common.js"></script>
+  <script src="../js/apartados-ejemplo.js"></script>
+  <script src="../js/catalogo-productos-ejemplo.js"></script>
+  <script src="../js/catalogo.js"></script>
+</body>
+</html>
