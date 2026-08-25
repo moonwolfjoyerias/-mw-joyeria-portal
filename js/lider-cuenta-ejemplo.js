@@ -1,0 +1,34 @@
+// MW JOYERÍA — Mi cuenta (Líder): datos de ejemplo
+// ⚠️ TEMPORAL: se reemplaza por Firestore en Fase 3.
+
+const PERFIL_LIDER_EJEMPLO = {
+  nombre: 'Líder',
+  telefono: '444 987 6543',
+  correo: 'lider@example.com',
+};
+
+const RIFA_LIDER_EJEMPLO = {
+  montoAcumuladoMes: 3400, // ejemplo: ya pasó la meta, para ver el caso de boletos extra
+  meta: 3000,
+};
+
+const CONSTANCIA_LIDER_EJEMPLO = {
+  mesesCumplidos: 10,
+  montoMesActual: 6200,
+  metaMes: 8000,
+  hitos: [
+    { meses: 6, premio: 'Tablet' },
+    { meses: 8, premio: 'Pantalla 43"' },
+    { meses: 10, premio: 'Laptop' },
+    { meses: 12, premio: 'Viaje x2' },
+  ],
+};
+
+// % de comisión por nivel, según el rango vigente — Fase 1, Sección 7.3 (valores reales, no inventar otros)
+const COMISIONES_PCT = {
+  sin_rango: [10, 5, 0, 0, 0],
+  plata:     [10, 10, 0, 0, 0],
+  oro:       [10, 10, 5, 0, 0],
+  diamante:  [10, 10, 5, 2, 0],
+  corona:    [10, 10, 5, 3, 1],
+};
