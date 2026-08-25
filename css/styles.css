@@ -1412,6 +1412,9 @@ a:hover { color: var(--mw-gold); }
 .check-item .check-label { flex: 1; }
 .check-item .check-values { font-size: 0.78rem; color: var(--mw-lilac-soft); white-space: nowrap; }
 
+.check-item.light { background: var(--mw-lilac-soft); }
+.check-item.light .check-values { color: var(--mw-text-muted); }
+
 .next-rank-panel { background: #fff; border: 2px solid var(--mw-gold); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow-card); }
 .next-rank-panel .icon-circle { width: 52px; height: 52px; border-radius: 50%; background: var(--mw-gold-soft); display: flex; align-items: center; justify-content: center; margin-bottom: 0.9rem; }
 .next-rank-panel .icon-circle svg { width: 25px; height: 25px; color: var(--mw-gold); }
@@ -1495,6 +1498,36 @@ a:hover { color: var(--mw-gold); }
 .equipo-modal-row:last-child { border-bottom: none; }
 .equipo-modal-row .em-puntos { color: var(--mw-purple); font-weight: 600; font-family: var(--font-heading); }
 .equipo-modal-empty { text-align: center; color: var(--mw-text-muted); font-size: 0.88rem; padding: 1.5rem 0; }
+
+/* ---------- Ticket de comisiones (Mi cuenta Líder) ---------- */
+.commission-ticket {
+  background: #fff;
+  border: 1.5px dashed var(--mw-border);
+  border-radius: var(--radius-sm);
+  padding: 1.3rem 1.5rem;
+}
+.commission-ticket .ct-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6em 0;
+  border-bottom: 1px dashed var(--mw-border);
+}
+.commission-ticket .ct-row:last-of-type { border-bottom: none; }
+.commission-ticket .ct-level { font-size: 0.9rem; color: var(--mw-text); }
+.commission-ticket .ct-detail { font-size: 0.74rem; color: var(--mw-text-muted); display: block; margin-top: 0.15rem; }
+.commission-ticket .ct-amount { font-family: var(--font-heading); font-weight: 600; color: var(--mw-purple); font-size: 0.95rem; white-space: nowrap; }
+.commission-ticket .ct-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 2px solid var(--mw-purple);
+}
+.commission-ticket .ct-total span { font-family: var(--font-heading); color: var(--mw-purple); font-size: 1rem; }
+.commission-ticket .ct-total strong { font-family: var(--font-heading); color: var(--mw-purple); font-size: 1.5rem; }
+.commission-ticket .ct-note { font-size: 0.75rem; color: var(--mw-text-muted); margin-top: 0.8rem; text-align: center; }
 
 /* ---------- Sidebar (portal privado) ---------- */
 .layout-portal {
