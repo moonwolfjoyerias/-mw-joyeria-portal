@@ -45,3 +45,89 @@
         </a>
       </nav>
     </aside>
+
+    <main class="main-content">
+      <header class="portal-header">
+        <div>
+          <h1>Calendario MW ✦</h1>
+          <p class="portal-sub">Asegúrate de confirmar con Administración cualquier cambio</p>
+        </div>
+
+        <div class="portal-header-actions">
+          <button class="notif-bell" id="notifBell" aria-label="Notificaciones">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span class="notif-badge" id="notifBadge">0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel"></div>
+
+          <button class="profile-btn" id="profileBtn">
+            <span class="profile-avatar">E</span>
+            <span class="profile-info">
+              <strong>Staff</strong>
+              <span class="profile-role">Staff MW</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" data-modal="foto">Cambiar foto de perfil</a>
+            <a href="../login.html" class="danger">Cerrar sesión</a>
+          </div>
+        </div>
+      </header>
+
+      <div class="calendar-page-layout">
+        <div class="calendar-main">
+          <div class="calendar-nav">
+            <button id="mesAnteriorBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+              Mes anterior
+            </button>
+            <h2 id="mesTitulo"></h2>
+            <div class="nav-buttons">
+              <button class="today-btn" id="hoyBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+                Hoy
+              </button>
+              <button id="mesSiguienteBtn">
+                Mes siguiente
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="calendar-grid" id="calendarGrid"></div>
+
+          <div class="calendar-legend">
+            <span class="legend-item"><span class="dot presencial"></span> Presencial</span>
+            <span class="legend-item"><span class="dot virtual"></span> Virtual</span>
+          </div>
+        </div>
+
+        <div class="upcoming-panel">
+          <h3>Próximos eventos ✦</h3>
+          <div id="upcomingList"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box" id="modalBox"></div>
+  </div>
+
+  <script src="../js/notificaciones-ejemplo.js"></script>
+  <script src="../js/eventos-ejemplo.js"></script>
+  <script>
+  const PORTAL_LINKS = {
+    inicio: 'staff-portal.html',
+    catalogo: 'staff-catalogo.html',
+    apartados: 'staff-apartados.html',
+    deseos: 'staff-lista-deseos.html',
+    calendario: 'staff-calendario.html',
+    notificaciones: 'staff-notificaciones.html',
+  };
+  </script>
+  <script src="../js/portal-common.js"></script>
+  <script src="../js/calendario.js"></script>
+</body>
+</html>
