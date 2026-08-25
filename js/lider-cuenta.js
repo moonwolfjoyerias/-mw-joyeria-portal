@@ -192,3 +192,22 @@ function renderTicketComisiones() {
   setText('ticketTotal', fmtMoney(total));
   setText('ticketRango', RANGOS_MW[idxRango(LIDER_EJEMPLO.rangoActualKey)].label);
 }
+// ---------- Próxima fecha de pago ----------
+const MESES_PAGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function renderProximoPago() {
+  const hoy = new Date();
+  const dia = hoy.getDate();
+  let mes = hoy.getMonth();
+  let anio = hoy.getFullYear();
+  let fechaPago;
+
+  if (dia <= 20) {
+    fechaPago = new Date(anio, mes, 20);
+  } else {
+    mes += 1;
+    if (mes > 11) { mes = 0; anio += 1; }
+    fechaPago = new Date(anio, mes, 5);
+  }
+  setText('proximoPago', `${fechaPago.getDate()} de ${MESES_PAGO[fechaPago.getMonth()]}`);
+}
