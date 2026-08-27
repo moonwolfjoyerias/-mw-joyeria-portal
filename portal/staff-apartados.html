@@ -75,3 +75,38 @@
         </div>
       </header>
 
+
+
+      <div class="section-head"><h2>Resumen operativo</h2><div class="date-pill"><span>▣</span><span id="summaryDate">12 de mayo de 2025</span></div></div>
+      <section class="summary-grid">
+        <article class="summary-card"><div class="summary-icon">◇</div><div><small>Productos</small><strong id="summaryProducts">1,248</strong><p>activos en catálogo</p><a href="staff-catalogo.html">Ver detalle →</a></div></article>
+        <article class="summary-card"><div class="summary-icon">♧</div><div><small>Apartados activos</small><strong id="summaryActive">86</strong><p>apartados en curso</p><a href="#">Ver detalle →</a></div></article>
+        <article class="summary-card"><div class="summary-icon">◷</div><div><small>Pendientes de depósito</small><strong id="summaryPending">24</strong><p>esperando confirmación</p><a href="#" data-filter="pendiente_deposito">Ver detalle →</a></div></article>
+        <article class="summary-card"><div class="summary-icon">▣</div><div><small>Apartados por vencer</small><strong id="summaryExpiring">18</strong><p>en los próximos 3 días</p><a href="staff-apartados-vencidos.html">Ver detalle →</a></div></article>
+      </section>
+
+      <div class="section-head"><h2>Solicitudes de apartado recientes</h2></div>
+      <div class="toolbar"><select class="filter-select" id="statusSelect"><option value="todos">Todos los estados</option><option value="pendiente_deposito">Pendiente de depósito</option><option value="deposito_confirmado">Depósito confirmado</option><option value="activo">Apartado activo</option><option value="vencido">Vencido</option><option value="cancelado">Desapartado</option></select><input class="search" id="searchInput" placeholder="⌕  Buscar por cliente o pieza..." type="search"></div>
+
+      <section class="table-card">
+        <div class="table-wrap"><table><thead><tr><th>Emprendedora</th><th>Pieza</th><th>Variante</th><th>Fecha de solicitud</th><th>Depósito</th><th>Estado</th><th>Acciones</th><th>Última acción</th></tr></thead><tbody id="apartadosTableBody"></tbody></table></div>
+        <div class="table-footer"><span id="resultCount">Mostrando resultados</span><div class="pagination" id="pagination"></div><span>Filas por página: <strong>6</strong></span></div>
+      </section>
+
+      <section class="guide">
+        <div class="guide-title">Guía de estados</div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#e6b439"></i>Pendiente de depósito</strong><small>Esperando confirmación de depósito</small></div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#7185c7"></i>Depósito confirmado</strong><small>Listo para confirmar apartado</small></div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#76ad50"></i>Apartado activo</strong><small>Depósito confirmado</small></div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#e67575"></i>Vencido</strong><small>El tiempo de apartado ha vencido</small></div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#aa8ad1"></i>Desapartado</strong><small>Pieza liberada por el Staff</small></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay"><div class="modal-box" id="modalBox"></div></div>
+
+  <script src="staff-apartados-ejemplo.js"></script>
+  <script src="staff-apartados.js"></script>
+</body>
+</html>
