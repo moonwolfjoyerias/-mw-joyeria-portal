@@ -1,24 +1,16 @@
-// ============================================================
-// MW JOYERÍA — Panel de Staff — Apartados
-// Depende de:
-//   - staff-apartados-ejemplo.js
-//
-// ⚠️ TEMPORAL:
-// La información y autenticación serán reemplazadas por
-// Firestore + Firebase Authentication en producción.
-// ============================================================
+// MW JOYERÍA — Staff: Apartados
+// Manejo de apartados, filtros, búsqueda y autorización de acciones.
+// ⚠️ TEMPORAL: utiliza datos de staff-apartados-ejemplo.js.
 
-
-let apartadosStaff = [];
-
-let filtroEstado = 'todos';
-
-let busquedaActual = '';
-
+let apartados = [];
 let paginaActual = 1;
+let filtroEstado = "todos";
+let terminoBusqueda = "";
 
-let filasPorPagina = 10;
+const filasPorPagina =
+  CONFIG_STAFF_APARTADOS_EJEMPLO?.filasPorPagina || 6;
 
+let apartadoSeleccionado = null;
 let accionPendiente = null;
 
 
@@ -26,313 +18,207 @@ let accionPendiente = null;
 // INICIO
 // ============================================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
 
-  apartadosStaff = APARTADOS_STAFF_EJEMPLO.map(apartado => ({
-    ...apartado
+  // Copiar datos de ejemplo
+  apartados = APARTADOS_STAFF_EJEMPLO.map(apartado => ({
+    ...apartado,
+    ultimaAccion: apartado.ultimaAccion
+      ? { ...apartado.ultimaAccion }
+      : null
   }));
 
-  filasPorPagina =
-    CONFIG_STAFF_APARTADOS_EJEMPLO.filasPorPagina || 10;
-
-  renderApartadosStaff();
-
-  inicializarEventos();
+  actualizarResumen();
+  renderTabla();
+  configurarEventos();
 
 });
 
 
 // ============================================================
-// EVENTOS GENERALES
+// EVENTOS
 // ============================================================
 
-function inicializarEventos() {
+function configurarEventos() {
 
-  const filtro = document.getElementById('estadoFilter');
+  const statusSelect = document.getElementById("statusSelect");
 
-  if (filtro) {
-
-    filtro.addEventListener('change', () => {
-
-      filtroEstado = filtro.value;
-
+  if (statusSelect) {
+    statusSelect.addEventListener("change", () => {
+      filtroEstado = statusSelect.value;
       paginaActual = 1;
-
-      renderApartadosStaff();
-
+      renderTabla();
     });
-
   }
 
 
-  const buscador = document.getElementById('buscarApartado');
+  const searchInput = document.getElementById("searchInput");
 
-  if (buscador) {
-
-    buscador.addEventListener('input', () => {
-
-      busquedaActual = buscador.value
-        .trim()
-        .toLowerCase();
-
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      terminoBusqueda = searchInput.value.trim().toLowerCase();
       paginaActual = 1;
-
-      renderApartadosStaff();
-
+      renderTabla();
     });
-
   }
 
 
-  const cerrarModal = document.querySelectorAll('[data-close]');
-
-  cerrarModal.forEach(btn => {
-
-    btn.addEventListener('click', cerrarModalStaff);
-
-  });
-
-
-  const overlay = document.getElementById('modalOverlay');
+  // Cerrar modal haciendo click fuera
+  const overlay = document.getElementById("modalOverlay");
 
   if (overlay) {
+    overlay.addEventListener("click", event => {
 
-    overlay.addEventListener('click', (e) => {
-
-      if (e.target === overlay) {
-
-        cerrarModalStaff();
-
+      if (event.target === overlay) {
+        cerrarModal();
       }
 
     });
-
   }
 
 }
 
 
 // ============================================================
-// RENDER PRINCIPAL
+// TABLA
 // ============================================================
 
-function renderApartadosStaff() {
+function renderTabla() {
 
-  const tbody =
-    document.getElementById('apartadosTableBody');
+  const tbody = document.getElementById("apartadosTableBody");
 
   if (!tbody) return;
 
-
   const filtrados = obtenerApartadosFiltrados();
 
-
-  const totalPaginas =
-    Math.max(
-      1,
-      Math.ceil(filtrados.length / filasPorPagina)
-    );
-
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(filtrados.length / filasPorPagina)
+  );
 
   if (paginaActual > totalPaginas) {
-
     paginaActual = totalPaginas;
-
   }
 
+  const inicio = (paginaActual - 1) * filasPorPagina;
 
-  const inicio =
-    (paginaActual - 1) * filasPorPagina;
-
-
-  const pagina =
-    filtrados.slice(
-      inicio,
-      inicio + filasPorPagina
-    );
+  const pagina = filtrados.slice(
+    inicio,
+    inicio + filasPorPagina
+  );
 
 
   if (pagina.length === 0) {
 
     tbody.innerHTML = `
       <tr>
-        <td colspan="9" class="empty-table">
-          No se encontraron apartados.
+        <td colspan="8" class="empty-cell">
+          <div class="empty-state">
+            <div class="empty-icon">✦</div>
+            <strong>No se encontraron apartados</strong>
+            <span>Prueba con otro filtro o búsqueda.</span>
+          </div>
         </td>
       </tr>
     `;
 
   } else {
 
-    tbody.innerHTML =
-      pagina.map(renderFilaApartado).join('');
+    tbody.innerHTML = pagina
+      .map(apartado => crearFila(apartado))
+      .join("");
 
   }
 
 
-  actualizarResumen(filtrados);
-
+  actualizarContador(filtrados.length);
   renderPaginacion(totalPaginas);
 
-  conectarBotonesAcciones();
+  agregarEventosAcciones();
 
 }
 
 
 // ============================================================
-// FILTROS
+// CREAR FILA
 // ============================================================
 
-function obtenerApartadosFiltrados() {
+function crearFila(apartado) {
 
-  return apartadosStaff.filter(apartado => {
+  const estado = obtenerEstado(apartado.estado);
 
-    const coincideEstado =
-      filtroEstado === 'todos' ||
-      apartado.estado === filtroEstado;
+  const deposito = obtenerDeposito(apartado.deposito);
 
-
-    const texto =
-      [
-        apartado.cliente.nombre,
-        apartado.cliente.id,
-        apartado.pieza.nombre,
-        apartado.pieza.codigo,
-        apartado.pieza.variante
-      ]
-      .join(' ')
-      .toLowerCase();
-
-
-    const coincideBusqueda =
-      !busquedaActual ||
-      texto.includes(busquedaActual);
-
-
-    return coincideEstado && coincideBusqueda;
-
-  });
-
-}
-
-
-// ============================================================
-// FILA DE TABLA
-// ============================================================
-
-function renderFilaApartado(apartado) {
-
-  const estado =
-    obtenerConfiguracionEstado(apartado.estado);
-
-
-  const acciones =
-    renderAcciones(apartado);
+  const acciones = obtenerAcciones(apartado);
 
 
   return `
-    <tr data-apartado-id="${apartado.id}">
+    <tr>
 
       <!-- EMPRENDEDORA -->
       <td>
+        <div class="client-cell">
 
-        <div class="staff-client">
-
-          <div class="staff-avatar">
-            ${escaparHTML(apartado.cliente.iniciales)}
+          <div class="avatar">
+            ${apartado.iniciales}
           </div>
 
           <div>
-
-            <strong>
-              ${escaparHTML(apartado.cliente.nombre)}
-            </strong>
-
-            <span>
-              ID: ${escaparHTML(apartado.cliente.id)}
-            </span>
-
+            <strong>${apartado.emprendedora}</strong>
+            <small>${apartado.telefono}</small>
           </div>
 
         </div>
-
       </td>
 
 
       <!-- PIEZA -->
       <td>
+        <div class="piece-cell">
 
-        <div class="staff-product">
-
-          <div class="staff-product-image">
-
-            <img
-              src="${escaparHTML(apartado.pieza.imagen)}"
-              alt=""
-            >
-
+          <div class="piece-thumb">
+            MW
           </div>
 
           <div>
-
-            <strong>
-              ${escaparHTML(apartado.pieza.nombre)}
-            </strong>
-
-            <span>
-              ${escaparHTML(apartado.pieza.codigo)}
-            </span>
-
+            <strong>${apartado.pieza}</strong>
+            <small>$${apartado.precio.toLocaleString("es-MX")} MXN</small>
           </div>
 
         </div>
-
       </td>
 
 
       <!-- VARIANTE -->
       <td>
-        ${escaparHTML(apartado.pieza.variante)}
+        ${apartado.variante}
       </td>
 
 
       <!-- FECHA -->
       <td>
+        <div class="date-cell">
 
-        <div class="staff-date">
+          <strong>${apartado.fechaSolicitud}</strong>
 
-          <strong>
-            ${escaparHTML(apartado.fechaSolicitud)}
-          </strong>
-
-          <span>
-            ${escaparHTML(apartado.horaSolicitud)}
-          </span>
+          <small>${apartado.horaSolicitud}</small>
 
         </div>
-
       </td>
 
 
       <!-- DEPÓSITO -->
       <td>
 
-        <div class="deposit-status ${apartado.deposito.estado}">
+        <div class="deposit-cell">
 
-          <span class="status-dot"></span>
+          <span class="dot ${deposito.dot}"></span>
 
           <div>
-
-            <strong>
-              ${apartado.deposito.estado === 'confirmado'
-                ? 'Confirmado'
-                : 'Pendiente'}
-            </strong>
-
-            <span>
-              $${apartado.deposito.monto} MXN
-            </span>
-
+            <strong>${deposito.texto}</strong>
+            <small>
+              ${deposito.descripcion}
+            </small>
           </div>
 
         </div>
@@ -343,7 +229,7 @@ function renderFilaApartado(apartado) {
       <!-- ESTADO -->
       <td>
 
-        <span class="staff-status ${estado.clase}">
+        <span class="status ${estado.clase}">
           ${estado.texto}
         </span>
 
@@ -353,9 +239,17 @@ function renderFilaApartado(apartado) {
       <!-- ACCIONES -->
       <td>
 
-        <div class="staff-actions">
+        <div class="actions-stack">
 
           ${acciones}
+
+          <button
+            class="action-btn detail-action"
+            data-action="detalle"
+            data-id="${apartado.id}">
+            <span>⌕</span>
+            Ver detalle
+          </button>
 
         </div>
 
@@ -367,33 +261,17 @@ function renderFilaApartado(apartado) {
 
         <div class="last-action">
 
-          <div class="last-action-avatar">
-            ${obtenerIniciales(
-              apartado.ultimaAccion.nombre
-            )}
-          </div>
+          <strong>
+            ${apartado.ultimaAccion?.texto || "—"}
+          </strong>
 
-          <div>
+          <small>
+            ${apartado.ultimaAccion?.usuario || ""}
+          </small>
 
-            <strong>
-              ${escaparHTML(
-                apartado.ultimaAccion.nombre
-              )}
-            </strong>
-
-            <span>
-              ${escaparHTML(
-                apartado.ultimaAccion.fecha
-              )}
-            </span>
-
-            <span>
-              ${escaparHTML(
-                apartado.ultimaAccion.hora
-              )}
-            </span>
-
-          </div>
+          <small>
+            ${apartado.ultimaAccion?.fecha || ""}
+          </small>
 
         </div>
 
@@ -401,78 +279,26 @@ function renderFilaApartado(apartado) {
 
     </tr>
   `;
-
 }
 
 
 // ============================================================
-// ESTADOS
+// ACCIONES DISPONIBLES
 // ============================================================
 
-function obtenerConfiguracionEstado(estado) {
+function obtenerAcciones(apartado) {
 
-  const estados = {
-
-    'pendiente-deposito': {
-      texto: 'Pendiente de depósito',
-      clase: 'status-pending'
-    },
-
-    'deposito-confirmado': {
-      texto: 'Depósito confirmado',
-      clase: 'status-confirmed'
-    },
-
-    'apartado-activo': {
-      texto: 'Apartado activo',
-      clase: 'status-active'
-    },
-
-    'vencido': {
-      texto: 'Vencido',
-      clase: 'status-expired'
-    },
-
-    'desapartado': {
-      texto: 'Desapartado',
-      clase: 'status-cancelled'
-    }
-
-  };
+  let html = "";
 
 
-  return estados[estado] || {
-
-    texto: 'Sin estado',
-
-    clase: ''
-
-  };
-
-}
-
-
-// ============================================================
-// BOTONES DE ACCIONES
-// ============================================================
-
-function renderAcciones(apartado) {
-
-  let html = '';
-
-
-  // ----------------------------------------------------------
-  // CONFIRMAR DEPÓSITO
-  // ----------------------------------------------------------
-
-  if (apartado.estado === 'pendiente-deposito') {
+  // PENDIENTE DE DEPÓSITO
+  if (apartado.estado === "pendiente_deposito") {
 
     html += `
       <button
-        class="staff-btn staff-btn-primary"
+        class="action-btn primary-action"
         data-action="confirmar-deposito"
-        data-id="${apartado.id}"
-      >
+        data-id="${apartado.id}">
         <span>✓</span>
         Confirmar depósito
       </button>
@@ -481,19 +307,14 @@ function renderAcciones(apartado) {
   }
 
 
-  // ----------------------------------------------------------
-  // CONFIRMAR APARTADO
-  // Solo disponible cuando el depósito ya está confirmado.
-  // ----------------------------------------------------------
-
-  if (apartado.estado === 'deposito-confirmado') {
+  // DEPÓSITO CONFIRMADO
+  if (apartado.estado === "deposito_confirmado") {
 
     html += `
       <button
-        class="staff-btn staff-btn-primary"
+        class="action-btn primary-action"
         data-action="confirmar-apartado"
-        data-id="${apartado.id}"
-      >
+        data-id="${apartado.id}">
         <span>✓</span>
         Confirmar apartado
       </button>
@@ -502,23 +323,14 @@ function renderAcciones(apartado) {
   }
 
 
-  // ----------------------------------------------------------
-  // DESAPARTAR
-  // Disponible para apartados que todavía pueden liberarse.
-  // ----------------------------------------------------------
-
-  if (
-    apartado.estado === 'pendiente-deposito' ||
-    apartado.estado === 'deposito-confirmado' ||
-    apartado.estado === 'apartado-activo'
-  ) {
+  // APARTADO ACTIVO
+  if (apartado.estado === "activo") {
 
     html += `
       <button
-        class="staff-btn staff-btn-danger"
+        class="action-btn danger-action"
         data-action="desapartar"
-        data-id="${apartado.id}"
-      >
+        data-id="${apartado.id}">
         <span>×</span>
         Desapartar
       </button>
@@ -527,47 +339,66 @@ function renderAcciones(apartado) {
   }
 
 
-  // ----------------------------------------------------------
-  // VER DETALLE
-  // ----------------------------------------------------------
+  // DEPÓSITO CONFIRMADO TAMBIÉN PUEDE DESAPARTARSE
+  if (apartado.estado === "deposito_confirmado") {
 
-  html += `
-    <button
-      class="staff-btn staff-btn-outline"
-      data-action="detalle"
-      data-id="${apartado.id}"
-    >
-      <span>◉</span>
-      Ver detalle
-    </button>
-  `;
+    html += `
+      <button
+        class="action-btn danger-action"
+        data-action="desapartar"
+        data-id="${apartado.id}">
+        <span>×</span>
+        Desapartar
+      </button>
+    `;
+
+  }
 
 
   return html;
-
 }
 
 
 // ============================================================
-// CONECTAR BOTONES
+// EVENTOS DE BOTONES
 // ============================================================
 
-function conectarBotonesAcciones() {
+function agregarEventosAcciones() {
 
   document
-    .querySelectorAll('[data-action]')
-    .forEach(btn => {
+    .querySelectorAll("[data-action]")
+    .forEach(button => {
 
-      btn.addEventListener('click', () => {
+      button.addEventListener("click", () => {
 
-        const accion =
-          btn.getAttribute('data-action');
+        const id = button.dataset.id;
+        const accion = button.dataset.action;
 
-        const id =
-          btn.getAttribute('data-id');
+        const apartado = apartados.find(
+          item => item.id === id
+        );
 
+        if (!apartado) return;
 
-        manejarAccion(accion, id);
+        if (accion === "detalle") {
+          abrirDetalle(apartado);
+          return;
+        }
+
+        if (accion === "confirmar-deposito") {
+          abrirAutorizacion(apartado, "confirmar-deposito");
+          return;
+        }
+
+        if (accion === "confirmar-apartado") {
+          abrirAutorizacion(apartado, "confirmar-apartado");
+          return;
+        }
+
+        if (accion === "desapartar") {
+          abrirAutorizacion(apartado, "desapartar");
+          return;
+        }
 
       });
 
@@ -577,162 +408,143 @@ function conectarBotonesAcciones() {
 
 
 // ============================================================
-// MANEJAR ACCIÓN
-// ============================================================
-
-function manejarAccion(accion, id) {
-
-  const apartado =
-    apartadosStaff.find(
-      item => item.id === id
-    );
-
-
-  if (!apartado) return;
-
-
-  switch (accion) {
-
-    case 'confirmar-deposito':
-
-      abrirModalAutorizacion(
-        'confirmar-deposito',
-        apartado
-      );
-
-      break;
-
-
-    case 'confirmar-apartado':
-
-      abrirModalAutorizacion(
-        'confirmar-apartado',
-        apartado
-      );
-
-      break;
-
-
-    case 'desapartar':
-
-      abrirModalAutorizacion(
-        'desapartar',
-        apartado
-      );
-
-      break;
-
-
-    case 'detalle':
-
-      abrirModalDetalle(apartado);
-
-      break;
-
-  }
-
-}
-
-
-// ============================================================
 // MODAL DE AUTORIZACIÓN
 // ============================================================
 
-function abrirModalAutorizacion(accion, apartado) {
+function abrirAutorizacion(apartado, accion) {
 
-  const overlay =
-    document.getElementById('modalOverlay');
+  apartadoSeleccionado = apartado;
+  accionPendiente = accion;
 
-  const box =
-    document.getElementById('modalBox');
-
+  const overlay = document.getElementById("modalOverlay");
+  const box = document.getElementById("modalBox");
 
   if (!overlay || !box) return;
 
 
-  accionPendiente = {
-
-    accion,
-    apartadoId: apartado.id
-
-  };
+  let titulo = "";
+  let descripcion = "";
+  let icono = "✓";
+  let claseIcono = "";
 
 
-  const configuracion =
-    obtenerTextoAccion(accion);
+  if (accion === "confirmar-deposito") {
+
+    titulo = "Confirmar depósito";
+
+    descripcion =
+      "Confirma que el depósito de $50 MXN fue recibido antes de continuar.";
+
+  }
+
+
+  if (accion === "confirmar-apartado") {
+
+    titulo = "Confirmar apartado";
+
+    descripcion =
+      "El apartado pasará a estado “Apartado activo”.";
+
+  }
+
+
+  if (accion === "desapartar") {
+
+    titulo = "Desapartar pieza";
+
+    descripcion =
+      "La pieza será liberada nuevamente para su venta.";
+
+    icono = "×";
+    claseIcono = "danger";
+
+  }
 
 
   box.innerHTML = `
 
     <button
       class="modal-close"
-      data-close
-      aria-label="Cerrar"
-    >
+      onclick="cerrarModal()">
       ×
     </button>
 
 
-    <div class="authorization-icon">
-
-      <span>🔐</span>
-
+    <div class="auth-icon ${claseIcono}">
+      ${icono}
     </div>
 
 
-    <h3>
-      ${configuracion.titulo}
-    </h3>
-
+    <h3>${titulo}</h3>
 
     <p class="modal-sub">
-
-      ${configuracion.descripcion}
-
+      ${descripcion}
     </p>
 
 
-    <div class="authorization-target">
+    <div class="modal-context">
 
-      <strong>
-        ${escaparHTML(apartado.cliente.nombre)}
-      </strong>
+      <span>Emprendedora</span>
+      <strong>${apartado.emprendedora}</strong>
 
-      <span>
-        ${escaparHTML(apartado.pieza.nombre)}
-      </span>
+      <span>Pieza</span>
+      <strong>${apartado.pieza}</strong>
 
-    </div>
+      <span>Variante</span>
+      <strong>${apartado.variante}</strong>
 
-
-    <div class="form-group">
-
-      <label for="staffUsuario">
-        Usuario del personal
-      </label>
-
-      <input
-        type="text"
-        id="staffUsuario"
-        autocomplete="username"
-        placeholder="Ej. staff.sofia"
-      >
+      <span>Apartado</span>
+      <strong>${apartado.id}</strong>
 
     </div>
 
 
-    <div class="form-group">
+    <div class="auth-warning">
 
-      <label for="staffPassword">
-        Contraseña
-      </label>
+      <span>⚠</span>
+
+      <div>
+
+        <strong>Autorización de personal</strong>
+
+        <small>
+          Ingresa tus credenciales para registrar esta acción.
+        </small>
+
+      </div>
+
+    </div>
+
+
+    <label for="authUsuario">
+      Usuario del personal
+    </label>
+
+    <input
+      id="authUsuario"
+      type="text"
+      autocomplete="off"
+      placeholder="Ej. staff01"
+    >
+
+
+    <label for="authPassword">
+      Contraseña
+    </label>
+
+    <div class="password-wrap">
 
       <input
+        id="authPassword"
         type="password"
-        id="staffPassword"
-        autocomplete="current-password"
-        placeholder="Ingresa tu contraseña"
+        placeholder="Contraseña"
       >
+
+      <button
+        type="button"
+        onclick="togglePassword()">
+        Mostrar
+      </button>
 
     </div>
 
@@ -740,78 +552,44 @@ function abrirModalAutorizacion(accion, apartado) {
     <div
       id="authError"
       class="auth-error"
-      style="display:none;"
-    >
-      Usuario o contraseña incorrectos.
+      style="display:none;">
     </div>
 
 
     <button
-      class="btn btn-primary authorization-submit"
-      id="autorizarAccionBtn"
-    >
+      class="btn ${
+        accion === "desapartar"
+          ? "btn-danger"
+          : "btn-primary"
+      }"
+      style="width:100%;"
+      id="autorizarBtn">
+
       Autorizar acción
+
     </button>
 
 
-    <button
-      class="btn btn-secondary"
-      data-close
-    >
-      Cancelar
-    </button>
+    <p class="demo-note">
+      DEMO · Usuario: staff01 · Contraseña: 1234
+    </p>
 
   `;
 
 
-  overlay.classList.add('open');
+  overlay.classList.add("open");
 
 
-  box
-    .querySelectorAll('[data-close]')
-    .forEach(btn => {
-
-      btn.addEventListener(
-        'click',
-        cerrarModalStaff
-      );
-
-    });
-
-
-  const usuarioInput =
-    document.getElementById('staffUsuario');
-
-  const passwordInput =
-    document.getElementById('staffPassword');
-
-  const autorizarBtn =
-    document.getElementById('autorizarAccionBtn');
-
-
-  autorizarBtn.addEventListener(
-    'click',
-    validarAutorizacion
-  );
-
-
-  passwordInput.addEventListener(
-    'keydown',
-    event => {
-
-      if (event.key === 'Enter') {
-
-        validarAutorizacion();
-
-      }
-
-    }
-  );
+  document
+    .getElementById("autorizarBtn")
+    .addEventListener("click", validarAutorizacion);
 
 
   setTimeout(() => {
 
-    usuarioInput.focus();
+    document
+      .getElementById("authUsuario")
+      ?.focus();
 
   }, 100);
 
@@ -819,107 +597,50 @@ function abrirModalAutorizacion(accion, apartado) {
 
 
 // ============================================================
-// TEXTOS DE ACCIONES
-// ============================================================
-
-function obtenerTextoAccion(accion) {
-
-  const textos = {
-
-    'confirmar-deposito': {
-
-      titulo: 'Confirmar depósito',
-
-      descripcion:
-        'Autoriza esta acción ingresando tus credenciales de personal.'
-
-    },
-
-    'confirmar-apartado': {
-
-      titulo: 'Confirmar apartado',
-
-      descripcion:
-        'El apartado pasará a estado “Apartado activo”.'
-
-    },
-
-    'desapartar': {
-
-      titulo: 'Desapartar pieza',
-
-      descripcion:
-        'La pieza será liberada y el apartado quedará cancelado.'
-
-    }
-
-  };
-
-
-  return textos[accion] || {
-
-    titulo: 'Autorizar acción',
-
-    descripcion:
-      'Ingresa tus credenciales para continuar.'
-
-  };
-
-}
-
-
-// ============================================================
-// VALIDAR CREDENCIALES
+// VALIDAR USUARIO / CONTRASEÑA
 // ============================================================
 
 function validarAutorizacion() {
 
-  if (!accionPendiente) return;
-
-
-  const usuarioInput =
-    document.getElementById('staffUsuario');
-
-  const passwordInput =
-    document.getElementById('staffPassword');
-
-  const error =
-    document.getElementById('authError');
-
-
   const usuario =
-    usuarioInput.value.trim();
+    document
+      .getElementById("authUsuario")
+      ?.value
+      .trim();
 
   const password =
-    passwordInput.value;
+    document
+      .getElementById("authPassword")
+      ?.value;
+
+
+  const error =
+    document.getElementById("authError");
 
 
   const personal =
-    PERSONAL_EJEMPLO.find(
-      staff =>
-        staff.usuario === usuario &&
-        staff.password === password
+    PERSONAL_EJEMPLO.find(persona =>
+      persona.usuario === usuario &&
+      persona.password === password
     );
 
 
   if (!personal) {
 
-    error.style.display = 'block';
+    if (error) {
 
-    passwordInput.value = '';
+      error.style.display = "block";
 
-    passwordInput.focus();
+      error.textContent =
+        "Usuario o contraseña incorrectos.";
+
+    }
 
     return;
-
   }
 
 
-  ejecutarAccionAutorizada(
-    accionPendiente.accion,
-    accionPendiente.apartadoId,
-    personal
-  );
+  ejecutarAccion(personal);
 
 }
 
@@ -928,190 +649,337 @@ function validarAutorizacion() {
 // EJECUTAR ACCIÓN
 // ============================================================
 
-function ejecutarAccionAutorizada(
-  accion,
-  apartadoId,
-  personal
-) {
+function ejecutarAccion(personal) {
 
-  const apartado =
-    apartadosStaff.find(
-      item => item.id === apartadoId
-    );
+  if (!apartadoSeleccionado) return;
 
 
-  if (!apartado) return;
+  const ahora = new Date();
 
 
-  const ahora =
-    obtenerFechaHoraActual();
+  const fecha = ahora.toLocaleDateString(
+    "es-MX",
+    {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    }
+  );
 
 
-  // ----------------------------------------------------------
+  const hora = ahora.toLocaleTimeString(
+    "es-MX",
+    {
+      hour: "numeric",
+      minute: "2-digit"
+    }
+  );
+
+
+  // --------------------------------------------
   // CONFIRMAR DEPÓSITO
-  // ----------------------------------------------------------
+  // --------------------------------------------
 
-  if (accion === 'confirmar-deposito') {
+  if (accionPendiente === "confirmar-deposito") {
 
-    if (
-      apartado.estado !==
-      'pendiente-deposito'
-    ) {
+    apartadoSeleccionado.deposito = "confirmado";
 
-      mostrarError(
-        'Este apartado ya no está pendiente de depósito.'
-      );
+    apartadoSeleccionado.estado =
+      "deposito_confirmado";
 
-      return;
+    apartadoSeleccionado.ultimaAccion = {
 
-    }
+      texto: "Depósito confirmado",
 
+      fecha: `${fecha} · ${hora}`,
 
-    apartado.deposito.estado =
-      'confirmado';
+      usuario: personal.nombre
 
-    apartado.estado =
-      'deposito-confirmado';
+    };
 
-
-    registrarUltimaAccion(
-      apartado,
-      personal,
-      ahora
-    );
-
-
-    cerrarModalStaff();
-
-
-    renderApartadosStaff();
-
+    cerrarModal();
 
     mostrarToast(
-      'Depósito confirmado correctamente.'
+      `Depósito confirmado por ${personal.nombre}`
     );
-
-
-    return;
 
   }
 
 
-  // ----------------------------------------------------------
+  // --------------------------------------------
   // CONFIRMAR APARTADO
-  // ----------------------------------------------------------
+  // --------------------------------------------
 
-  if (accion === 'confirmar-apartado') {
+  if (accionPendiente === "confirmar-apartado") {
 
-    if (
-      apartado.estado !==
-      'deposito-confirmado'
-    ) {
+    apartadoSeleccionado.estado = "activo";
 
-      mostrarError(
-        'Primero debes confirmar el depósito.'
-      );
+    apartadoSeleccionado.ultimaAccion = {
 
-      return;
+      texto: "Apartado confirmado",
 
-    }
+      fecha: `${fecha} · ${hora}`,
 
+      usuario: personal.nombre
 
-    apartado.estado =
-      'apartado-activo';
+    };
 
-
-    registrarUltimaAccion(
-      apartado,
-      personal,
-      ahora
-    );
-
-
-    cerrarModalStaff();
-
-
-    renderApartadosStaff();
-
+    cerrarModal();
 
     mostrarToast(
-      'Apartado confirmado y activado.'
+      `Apartado activo · ${personal.nombre}`
     );
-
-
-    return;
 
   }
 
 
-  // ----------------------------------------------------------
+  // --------------------------------------------
   // DESAPARTAR
-  // ----------------------------------------------------------
+  // --------------------------------------------
 
-  if (accion === 'desapartar') {
+  if (accionPendiente === "desapartar") {
 
-    if (
-      apartado.estado ===
-      'desapartado'
-    ) {
+    apartadoSeleccionado.estado = "cancelado";
 
-      mostrarError(
-        'Este apartado ya fue desapartado.'
-      );
+    apartadoSeleccionado.ultimaAccion = {
 
-      return;
+      texto: "Desapartado",
 
-    }
+      fecha: `${fecha} · ${hora}`,
 
+      usuario: personal.nombre
 
-    apartado.estado =
-      'desapartado';
+    };
 
-
-    registrarUltimaAccion(
-      apartado,
-      personal,
-      ahora
-    );
-
-
-    cerrarModalStaff();
-
-
-    renderApartadosStaff();
-
+    cerrarModal();
 
     mostrarToast(
-      'La pieza fue desapartada correctamente.'
+      `Pieza desapartada por ${personal.nombre}`
     );
 
-
-    return;
-
   }
+
+
+  renderTabla();
+  actualizarResumen();
+
+  apartadoSeleccionado = null;
+  accionPendiente = null;
 
 }
 
 
 // ============================================================
-// REGISTRAR ÚLTIMA ACCIÓN
+// DETALLE
 // ============================================================
 
-function registrarUltimaAccion(
-  apartado,
-  personal,
-  ahora
-) {
+function abrirDetalle(apartado) {
 
-  apartado.ultimaAccion = {
+  const overlay = document.getElementById("modalOverlay");
+  const box = document.getElementById("modalBox");
 
-    usuario: personal.usuario,
+  if (!overlay || !box) return;
 
-    nombre: personal.nombre,
 
-    fecha: ahora.fecha,
+  const estado = obtenerEstado(apartado.estado);
 
-    hora: ahora.hora
+
+  box.innerHTML = `
+
+    <button
+      class="modal-close"
+      onclick="cerrarModal()">
+      ×
+    </button>
+
+
+    <span class="eyebrow">
+      ${apartado.id}
+    </span>
+
+
+    <h3 style="margin-top:5px;">
+      Detalle del apartado
+    </h3>
+
+
+    <div class="detail-grid">
+
+      <div>
+        <span>Emprendedora</span>
+        <strong>
+          ${apartado.emprendedora}
+        </strong>
+      </div>
+
+
+      <div>
+        <span>Estado</span>
+        <span class="status ${estado.clase}">
+          ${estado.texto}
+        </span>
+      </div>
+
+
+      <div>
+        <span>Pieza</span>
+        <strong>
+          ${apartado.pieza}
+        </strong>
+      </div>
+
+
+      <div>
+        <span>Variante</span>
+        <strong>
+          ${apartado.variante}
+        </strong>
+      </div>
+
+
+      <div>
+        <span>Precio</span>
+        <strong>
+          $${apartado.precio.toLocaleString("es-MX")} MXN
+        </strong>
+      </div>
+
+
+      <div>
+        <span>Depósito</span>
+        <strong>
+          ${apartado.deposito === "confirmado"
+            ? "Confirmado"
+            : "Pendiente"
+          }
+        </strong>
+      </div>
+
+
+      <div>
+        <span>Fecha de solicitud</span>
+        <strong>
+          ${apartado.fechaSolicitud}
+        </strong>
+      </div>
+
+
+      <div>
+        <span>Hora</span>
+        <strong>
+          ${apartado.horaSolicitud}
+        </strong>
+      </div>
+
+    </div>
+
+
+    <div class="log-box">
+
+      <span>ÚLTIMA ACCIÓN</span>
+
+      <strong>
+        ${apartado.ultimaAccion?.texto || "Sin acciones"}
+      </strong>
+
+      <small>
+        ${apartado.ultimaAccion?.fecha || ""}
+        ·
+        ${apartado.ultimaAccion?.usuario || ""}
+      </small>
+
+    </div>
+
+
+    <button
+      class="btn btn-outline"
+      style="width:100%;"
+      onclick="cerrarModal()">
+
+      Cerrar
+
+    </button>
+
+  `;
+
+
+  overlay.classList.add("open");
+
+}
+
+
+// ============================================================
+// ESTADOS
+// ============================================================
+
+function obtenerEstado(estado) {
+
+  const estados = {
+
+    pendiente_deposito: {
+      texto: "Pendiente de depósito",
+      clase: "status-pending"
+    },
+
+    deposito_confirmado: {
+      texto: "Depósito confirmado",
+      clase: "status-deposit"
+    },
+
+    activo: {
+      texto: "Apartado activo",
+      clase: "status-active"
+    },
+
+    vencido: {
+      texto: "Vencido",
+      clase: "status-expired"
+    },
+
+    cancelado: {
+      texto: "Desapartado",
+      clase: "status-cancelled"
+    }
+
+  };
+
+
+  return estados[estado] || {
+    texto: "Desconocido",
+    clase: ""
+  };
+
+}
+
+
+// ============================================================
+// DEPÓSITO
+// ============================================================
+
+function obtenerDeposito(deposito) {
+
+  if (deposito === "confirmado") {
+
+    return {
+
+      texto: "Confirmado",
+
+      descripcion: "Depósito recibido",
+
+      dot: "dot-blue"
+
+    };
+
+  }
+
+
+  return {
+
+    texto: "Pendiente",
+
+    descripcion: "Esperando depósito",
+
+    dot: "dot-yellow"
 
   };
 
@@ -1119,141 +987,41 @@ function registrarUltimaAccion(
 
 
 // ============================================================
-// MODAL DETALLE
+// FILTROS
 // ============================================================
 
-function abrirModalDetalle(apartado) {
+function obtenerApartadosFiltrados() {
 
-  const overlay =
-    document.getElementById('modalOverlay');
+  return apartados.filter(apartado => {
 
-  const box =
-    document.getElementById('modalBox');
-
-
-  if (!overlay || !box) return;
+    const coincideEstado =
+      filtroEstado === "todos" ||
+      apartado.estado === filtroEstado;
 
 
-  const estado =
-    obtenerConfiguracionEstado(
-      apartado.estado
-    );
+    const texto = [
+
+      apartado.emprendedora,
+
+      apartado.pieza,
+
+      apartado.variante,
+
+      apartado.id
+
+    ]
+      .join(" ")
+      .toLowerCase();
 
 
-  box.innerHTML = `
-
-    <button
-      class="modal-close"
-      data-close
-    >
-      ×
-    </button>
+    const coincideBusqueda =
+      !terminoBusqueda ||
+      texto.includes(terminoBusqueda);
 
 
-    <h3>
-      Detalle del apartado
-    </h3>
+    return coincideEstado && coincideBusqueda;
 
-
-    <p class="modal-sub">
-      ${escaparHTML(apartado.id)}
-    </p>
-
-
-    <div class="detail-section">
-
-      <h4>Emprendedora</h4>
-
-      <p>
-        <strong>
-          ${escaparHTML(apartado.cliente.nombre)}
-        </strong>
-        <br>
-        ID:
-        ${escaparHTML(apartado.cliente.id)}
-        <br>
-        Tel:
-        ${escaparHTML(apartado.cliente.telefono)}
-      </p>
-
-    </div>
-
-
-    <div class="detail-section">
-
-      <h4>Pieza</h4>
-
-      <p>
-        <strong>
-          ${escaparHTML(apartado.pieza.nombre)}
-        </strong>
-        <br>
-        Código:
-        ${escaparHTML(apartado.pieza.codigo)}
-        <br>
-        Variante:
-        ${escaparHTML(apartado.pieza.variante)}
-      </p>
-
-    </div>
-
-
-    <div class="detail-section">
-
-      <h4>Estado</h4>
-
-      <span class="staff-status ${estado.clase}">
-        ${estado.texto}
-      </span>
-
-    </div>
-
-
-    <div class="detail-section">
-
-      <h4>Última acción</h4>
-
-      <p>
-        ${escaparHTML(
-          apartado.ultimaAccion.nombre
-        )}
-        <br>
-        ${escaparHTML(
-          apartado.ultimaAccion.fecha
-        )}
-        ·
-        ${escaparHTML(
-          apartado.ultimaAccion.hora
-        )}
-      </p>
-
-    </div>
-
-
-    <button
-      class="btn btn-primary"
-      style="width:100%;"
-      data-close
-    >
-      Cerrar
-    </button>
-
-  `;
-
-
-  overlay.classList.add('open');
-
-
-  box
-    .querySelectorAll('[data-close]')
-    .forEach(btn => {
-
-      btn.addEventListener(
-        'click',
-        cerrarModalStaff
-      );
-
-    });
+  });
 
 }
 
@@ -1264,33 +1032,38 @@ function abrirModalDetalle(apartado) {
 
 function renderPaginacion(totalPaginas) {
 
-  const container =
-    document.getElementById('pagination');
+  const pagination =
+    document.getElementById("pagination");
 
-  if (!container) return;
-
-
-  if (totalPaginas <= 1) {
-
-    container.innerHTML = '';
-
-    return;
-
-  }
+  if (!pagination) return;
 
 
-  let html = '';
+  pagination.innerHTML = "";
 
 
-  html += `
-    <button
-      class="pagination-btn"
-      ${paginaActual === 1 ? 'disabled' : ''}
-      data-page="${paginaActual - 1}"
-    >
-      ←
-    </button>
-  `;
+  const anterior = document.createElement("button");
+
+  anterior.className = "page-btn";
+
+  anterior.textContent = "‹";
+
+  anterior.disabled = paginaActual === 1;
+
+
+  anterior.addEventListener("click", () => {
+
+    if (paginaActual > 1) {
+
+      paginaActual--;
+
+      renderTabla();
+
+    }
+
+  });
+
+
+  pagination.appendChild(anterior);
 
 
   for (
@@ -1299,138 +1072,174 @@ function renderPaginacion(totalPaginas) {
     i++
   ) {
 
-    html += `
-      <button
-        class="pagination-btn ${i === paginaActual ? 'active' : ''}"
-        data-page="${i}"
-      >
-        ${i}
-      </button>
-    `;
+    const btn =
+      document.createElement("button");
+
+    btn.className =
+      "page-btn" +
+      (i === paginaActual ? " active" : "");
+
+    btn.textContent = i;
+
+
+    btn.addEventListener("click", () => {
+
+      paginaActual = i;
+
+      renderTabla();
+
+    });
+
+
+    pagination.appendChild(btn);
 
   }
 
 
-  html += `
-    <button
-      class="pagination-btn"
-      ${paginaActual === totalPaginas ? 'disabled' : ''}
-      data-page="${paginaActual + 1}"
-    >
-      →
-    </button>
-  `;
+  const siguiente =
+    document.createElement("button");
+
+  siguiente.className = "page-btn";
+
+  siguiente.textContent = "›";
+
+  siguiente.disabled =
+    paginaActual === totalPaginas;
 
 
-  container.innerHTML = html;
+  siguiente.addEventListener("click", () => {
+
+    if (paginaActual < totalPaginas) {
+
+      paginaActual++;
+
+      renderTabla();
+
+    }
+
+  });
 
 
-  container
-    .querySelectorAll('[data-page]')
-    .forEach(btn => {
-
-      btn.addEventListener(
-        'click',
-        () => {
-
-          const pagina =
-            Number(
-              btn.getAttribute('data-page')
-            );
-
-
-          if (
-            pagina < 1 ||
-            pagina > totalPaginas
-          ) {
-
-            return;
-
-          }
-
-
-          paginaActual = pagina;
-
-          renderApartadosStaff();
-
-        }
-      );
-
-    });
+  pagination.appendChild(siguiente);
 
 }
 
 
 // ============================================================
-// RESUMEN
+// CONTADOR
 // ============================================================
 
-function actualizarResumen(apartados) {
+function actualizarContador(total) {
 
-  const total =
-    apartados.length;
+  const resultCount =
+    document.getElementById("resultCount");
 
-
-  const pendientes =
-    apartados.filter(
-      a =>
-        a.estado ===
-        'pendiente-deposito'
-    ).length;
+  if (!resultCount) return;
 
 
-  const depositoConfirmado =
-    apartados.filter(
-      a =>
-        a.estado ===
-        'deposito-confirmado'
-    ).length;
+  if (total === 0) {
 
+    resultCount.textContent =
+      "No se encontraron resultados";
+
+    return;
+
+  }
+
+
+  const inicio =
+    (paginaActual - 1) *
+    filasPorPagina + 1;
+
+
+  const fin =
+    Math.min(
+      paginaActual * filasPorPagina,
+      total
+    );
+
+
+  resultCount.textContent =
+    `Mostrando ${inicio}-${fin} de ${total} apartados`;
+
+}
+
+
+// ============================================================
+// RESUMEN OPERATIVO
+// ============================================================
+
+function actualizarResumen() {
 
   const activos =
     apartados.filter(
-      a =>
-        a.estado ===
-        'apartado-activo'
+      item => item.estado === "activo"
     ).length;
 
 
   const vencidos =
     apartados.filter(
-      a =>
-        a.estado ===
-        'vencido'
+      item => item.estado === "vencido"
     ).length;
 
 
-  setText(
-    'totalApartados',
-    total
-  );
+  const pendientes =
+    apartados.filter(
+      item => item.estado === "pendiente_deposito"
+    ).length;
 
 
-  setText(
-    'pendientesDeposito',
-    pendientes
-  );
+  const depositoConfirmado =
+    apartados.filter(
+      item => item.estado === "deposito_confirmado"
+    ).length;
 
 
-  setText(
-    'depositosConfirmados',
-    depositoConfirmado
-  );
+  const tarjetas =
+    document.querySelectorAll(".stat-card");
 
 
-  setText(
-    'apartadosActivos',
-    activos
-  );
+  // En tu HTML:
+  // 0 = catálogo
+  // 1 = apartados activos
+  // 2 = vencidos
+  // 3 = pendientes de depósito
 
 
-  setText(
-    'apartadosVencidos',
-    vencidos
-  );
+  if (tarjetas[1]) {
+
+    const numero =
+      tarjetas[1].querySelector(".stat-num");
+
+    if (numero) {
+      numero.textContent = activos;
+    }
+
+  }
+
+
+  if (tarjetas[2]) {
+
+    const numero =
+      tarjetas[2].querySelector(".stat-num");
+
+    if (numero) {
+      numero.textContent = vencidos;
+    }
+
+  }
+
+
+  if (tarjetas[3]) {
+
+    const numero =
+      tarjetas[3].querySelector(".stat-num");
+
+    if (numero) {
+      numero.textContent = pendientes;
+    }
+
+  }
 
 }
 
@@ -1439,20 +1248,53 @@ function actualizarResumen(apartados) {
 // CERRAR MODAL
 // ============================================================
 
-function cerrarModalStaff() {
+function cerrarModal() {
 
   const overlay =
-    document.getElementById('modalOverlay');
-
+    document.getElementById("modalOverlay");
 
   if (overlay) {
 
-    overlay.classList.remove('open');
+    overlay.classList.remove("open");
 
   }
 
+}
 
-  accionPendiente = null;
+
+// ============================================================
+// MOSTRAR / OCULTAR PASSWORD
+// ============================================================
+
+function togglePassword() {
+
+  const input =
+    document.getElementById("authPassword");
+
+  const button =
+    document.querySelector(".password-wrap button");
+
+
+  if (!input) return;
+
+
+  if (input.type === "password") {
+
+    input.type = "text";
+
+    if (button) {
+      button.textContent = "Ocultar";
+    }
+
+  } else {
+
+    input.type = "password";
+
+    if (button) {
+      button.textContent = "Mostrar";
+    }
+
+  }
 
 }
 
@@ -1464,21 +1306,16 @@ function cerrarModalStaff() {
 function mostrarToast(mensaje) {
 
   let toast =
-    document.getElementById(
-      'staffToast'
-    );
+    document.getElementById("mwToast");
 
 
   if (!toast) {
 
-    toast =
-      document.createElement('div');
+    toast = document.createElement("div");
 
-    toast.id =
-      'staffToast';
+    toast.id = "mwToast";
 
-    toast.className =
-      'staff-toast';
+    toast.className = "mw-toast";
 
     document.body.appendChild(toast);
 
@@ -1487,152 +1324,13 @@ function mostrarToast(mensaje) {
 
   toast.textContent = mensaje;
 
-  toast.classList.add('show');
+  toast.classList.add("show");
 
 
   setTimeout(() => {
 
-    toast.classList.remove('show');
+    toast.classList.remove("show");
 
   }, 3000);
-
-}
-
-
-// ============================================================
-// ERROR
-// ============================================================
-
-function mostrarError(mensaje) {
-
-  mostrarToast(
-    mensaje
-  );
-
-}
-
-
-// ============================================================
-// FECHA Y HORA
-// ============================================================
-
-function obtenerFechaHoraActual() {
-
-  const ahora =
-    new Date();
-
-
-  const dia =
-    String(
-      ahora.getDate()
-    ).padStart(2, '0');
-
-
-  const mes =
-    String(
-      ahora.getMonth() + 1
-    ).padStart(2, '0');
-
-
-  const año =
-    ahora.getFullYear();
-
-
-  let horas =
-    ahora.getHours();
-
-
-  const minutos =
-    String(
-      ahora.getMinutes()
-    ).padStart(2, '0');
-
-
-  const ampm =
-    horas >= 12
-      ? 'p.m.'
-      : 'a.m.';
-
-
-  horas =
-    horas % 12 || 12;
-
-
-  return {
-
-    fecha:
-      `${dia}/${mes}/${año}`,
-
-    hora:
-      `${horas}:${minutos} ${ampm}`
-
-  };
-
-}
-
-
-// ============================================================
-// INICIALES
-// ============================================================
-
-function obtenerIniciales(nombre) {
-
-  if (!nombre) return 'MW';
-
-
-  return nombre
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(
-      palabra =>
-        palabra.charAt(0)
-    )
-    .join('')
-    .toUpperCase();
-
-}
-
-
-// ============================================================
-// TEXTO SEGURO
-// ============================================================
-
-function escaparHTML(valor) {
-
-  if (valor === null ||
-      valor === undefined) {
-
-    return '';
-
-  }
-
-
-  return String(valor)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-
-}
-
-
-// ============================================================
-// SET TEXT
-// ============================================================
-
-function setText(id, valor) {
-
-  const elemento =
-    document.getElementById(id);
-
-
-  if (elemento) {
-
-    elemento.textContent =
-      valor;
-
-  }
 
 }

@@ -1,372 +1,171 @@
-// ============================================================
-// MW JOYERÍA — Panel de Staff — Apartados: datos de ejemplo
-// ⚠️ TEMPORAL: se reemplaza por Firestore/Auth en Fase 3.
-// ============================================================
-
-// ------------------------------------------------------------
-// CREDENCIALES DE PERSONAL — SOLO DEMO
-// En producción NUNCA deben almacenarse contraseñas aquí.
-// ------------------------------------------------------------
+// MW JOYERÍA — Apartados Staff
+// DATOS DE EJEMPLO
+// ⚠️ TEMPORAL: estos datos serán reemplazados por Firestore en Fase 3.
 
 const PERSONAL_EJEMPLO = [
   {
-    usuario: 'staff.sofia',
-    password: 'MW2025',
-    nombre: 'Staff Sofía',
-    rol: 'Vendedora'
+    usuario: "staff01",
+    nombre: "Ana López",
+    password: "1234"
   },
   {
-    usuario: 'staff.mariana',
-    password: 'MW2025',
-    nombre: 'Staff Mariana',
-    rol: 'Vendedora'
+    usuario: "staff02",
+    nombre: "Mariana Torres",
+    password: "1234"
   },
   {
-    usuario: 'admin.mw',
-    password: 'MW2025',
-    nombre: 'Admin MW',
-    rol: 'Administrador'
+    usuario: "admin01",
+    nombre: "Claudia",
+    password: "1234"
   }
 ];
-
-
-// ------------------------------------------------------------
-// DATOS DE APARTADOS DE EJEMPLO
-// ------------------------------------------------------------
 
 const APARTADOS_STAFF_EJEMPLO = [
-
-  // ==========================================================
-  // PENDIENTE DE DEPÓSITO
-  // ==========================================================
-
   {
-    id: 'APT-0001',
+    id: "AP-001",
+    emprendedora: "María Fernanda",
+    iniciales: "MF",
+    telefono: "444 123 4567",
 
-    cliente: {
-      nombre: 'Ana Martínez',
-      id: 'CLI-00245',
-      iniciales: 'AM',
-      telefono: '444 123 4567'
-    },
+    pieza: "Anillo Corazón",
+    variante: "Talla 6 · Rosa",
+    precio: 690,
 
-    pieza: {
-      nombre: 'Collar Corazón',
-      codigo: 'AN0123',
-      variante: 'Dorado · 45 cm',
-      imagen: '../assets/images/isotipo-morado.png'
-    },
+    fechaSolicitud: "12 mayo 2025",
+    horaSolicitud: "10:42 AM",
 
-    fechaSolicitud: '12/05/2025',
-    horaSolicitud: '10:24 a.m.',
+    deposito: "pendiente",
 
-    deposito: {
-      monto: 50,
-      estado: 'pendiente'
-    },
-
-    estado: 'pendiente-deposito',
+    estado: "pendiente_deposito",
 
     ultimaAccion: {
-      usuario: 'staff.sofia',
-      nombre: 'Staff Sofía',
-      fecha: '12/05/2025',
-      hora: '10:24 a.m.'
+      texto: "Solicitud creada",
+      fecha: "12 mayo 2025 · 10:42 AM",
+      usuario: "Sistema"
     }
   },
 
-
   {
-    id: 'APT-0002',
+    id: "AP-002",
+    emprendedora: "Sofía Hernández",
+    iniciales: "SH",
+    telefono: "444 234 5678",
 
-    cliente: {
-      nombre: 'Carmen López',
-      id: 'CLI-00246',
-      iniciales: 'CL',
-      telefono: '444 222 3344'
-    },
+    pieza: "Cadena Fina",
+    variante: "45 cm · Amarillo",
+    precio: 650,
 
-    pieza: {
-      nombre: 'Arracadas Lisas',
-      codigo: 'AR0098',
-      variante: 'Dorado · Medianas',
-      imagen: '../assets/images/isotipo-morado.png'
-    },
+    fechaSolicitud: "12 mayo 2025",
+    horaSolicitud: "09:18 AM",
 
-    fechaSolicitud: '11/05/2025',
-    horaSolicitud: '06:45 p.m.',
+    deposito: "confirmado",
 
-    deposito: {
-      monto: 50,
-      estado: 'pendiente'
-    },
-
-    estado: 'pendiente-deposito',
+    estado: "deposito_confirmado",
 
     ultimaAccion: {
-      usuario: 'staff.sofia',
-      nombre: 'Staff Sofía',
-      fecha: '11/05/2025',
-      hora: '06:45 p.m.'
+      texto: "Depósito confirmado",
+      fecha: "12 mayo 2025 · 11:05 AM",
+      usuario: "Ana López"
     }
   },
 
-
-  // ==========================================================
-  // DEPÓSITO CONFIRMADO
-  // ==========================================================
-
   {
-    id: 'APT-0003',
+    id: "AP-003",
+    emprendedora: "Valeria Ramírez",
+    iniciales: "VR",
+    telefono: "444 345 6789",
 
-    cliente: {
-      nombre: 'Laura Rodríguez',
-      id: 'CLI-00244',
-      iniciales: 'LR',
-      telefono: '444 333 4455'
-    },
+    pieza: "Huggies Pequeños",
+    variante: "Blanco",
+    precio: 430,
 
-    pieza: {
-      nombre: 'Anillo Brillante',
-      codigo: 'AN0456',
-      variante: 'Dorado · Talla 7',
-      imagen: '../assets/images/isotipo-morado.png'
-    },
+    fechaSolicitud: "11 mayo 2025",
+    horaSolicitud: "04:35 PM",
 
-    fechaSolicitud: '12/05/2025',
-    horaSolicitud: '09:15 a.m.',
+    deposito: "confirmado",
 
-    deposito: {
-      monto: 50,
-      estado: 'confirmado'
-    },
-
-    estado: 'deposito-confirmado',
+    estado: "activo",
 
     ultimaAccion: {
-      usuario: 'staff.mariana',
-      nombre: 'Staff Mariana',
-      fecha: '12/05/2025',
-      hora: '09:18 a.m.'
+      texto: "Apartado confirmado",
+      fecha: "11 mayo 2025 · 05:10 PM",
+      usuario: "Mariana Torres"
     }
   },
 
-
   {
-    id: 'APT-0004',
+    id: "AP-004",
+    emprendedora: "Daniela Martínez",
+    iniciales: "DM",
+    telefono: "444 456 7890",
 
-    cliente: {
-      nombre: 'Fernanda Torres',
-      id: 'CLI-00247',
-      iniciales: 'FT',
-      telefono: '444 444 5566'
-    },
+    pieza: "Pulsera Eslabón",
+    variante: "17 cm · Dorado",
+    precio: 790,
 
-    pieza: {
-      nombre: 'Cadena Fina',
-      codigo: 'CA0234',
-      variante: 'Dorado · 50 cm',
-      imagen: '../assets/images/isotipo-morado.png'
-    },
+    fechaSolicitud: "10 mayo 2025",
+    horaSolicitud: "01:25 PM",
 
-    fechaSolicitud: '12/05/2025',
-    horaSolicitud: '08:42 a.m.',
+    deposito: "confirmado",
 
-    deposito: {
-      monto: 50,
-      estado: 'confirmado'
-    },
-
-    estado: 'deposito-confirmado',
+    estado: "activo",
 
     ultimaAccion: {
-      usuario: 'staff.sofia',
-      nombre: 'Staff Sofía',
-      fecha: '12/05/2025',
-      hora: '08:50 a.m.'
+      texto: "Apartado confirmado",
+      fecha: "10 mayo 2025 · 02:02 PM",
+      usuario: "Ana López"
     }
   },
 
-
-  // ==========================================================
-  // APARTADO ACTIVO
-  // ==========================================================
-
   {
-    id: 'APT-0005',
+    id: "AP-005",
+    emprendedora: "Paola González",
+    iniciales: "PG",
+    telefono: "444 567 8901",
 
-    cliente: {
-      nombre: 'Julia García',
-      id: 'CLI-00242',
-      iniciales: 'JG',
-      telefono: '444 555 6677'
-    },
+    pieza: "Dije Luna",
+    variante: "Mediano · Dorado",
+    precio: 520,
 
-    pieza: {
-      nombre: 'Pulsera Figaro',
-      codigo: 'PU0234',
-      variante: 'Dorado · 18 cm',
-      imagen: '../assets/images/isotipo-morado.png'
-    },
+    fechaSolicitud: "9 mayo 2025",
+    horaSolicitud: "11:20 AM",
 
-    fechaSolicitud: '11/05/2025',
-    horaSolicitud: '03:30 p.m.',
+    deposito: "confirmado",
 
-    deposito: {
-      monto: 50,
-      estado: 'confirmado'
-    },
-
-    estado: 'apartado-activo',
+    estado: "vencido",
 
     ultimaAccion: {
-      usuario: 'staff.mariana',
-      nombre: 'Staff Mariana',
-      fecha: '11/05/2025',
-      hora: '03:32 p.m.'
+      texto: "Apartado vencido",
+      fecha: "12 mayo 2025 · 11:20 AM",
+      usuario: "Sistema"
     }
   },
 
-
   {
-    id: 'APT-0006',
+    id: "AP-006",
+    emprendedora: "Andrea Castillo",
+    iniciales: "AC",
+    telefono: "444 678 9012",
 
-    cliente: {
-      nombre: 'Mariana Sánchez',
-      id: 'CLI-00248',
-      iniciales: 'MS',
-      telefono: '444 666 7788'
-    },
+    pieza: "Aretes Flor",
+    variante: "Pequeños · Rosa",
+    precio: 480,
 
-    pieza: {
-      nombre: 'Dije Estrella',
-      codigo: 'DI0567',
-      variante: 'Dorado',
-      imagen: '../assets/images/isotipo-morado.png'
-    },
+    fechaSolicitud: "8 mayo 2025",
+    horaSolicitud: "03:50 PM",
 
-    fechaSolicitud: '10/05/2025',
-    horaSolicitud: '01:20 p.m.',
+    deposito: "confirmado",
 
-    deposito: {
-      monto: 50,
-      estado: 'confirmado'
-    },
-
-    estado: 'apartado-activo',
+    estado: "cancelado",
 
     ultimaAccion: {
-      usuario: 'staff.sofia',
-      nombre: 'Staff Sofía',
-      fecha: '10/05/2025',
-      hora: '01:25 p.m.'
-    }
-  },
-
-
-  // ==========================================================
-  // VENCIDO
-  // ==========================================================
-
-  {
-    id: 'APT-0007',
-
-    cliente: {
-      nombre: 'Paola Hernández',
-      id: 'CLI-00249',
-      iniciales: 'PH',
-      telefono: '444 777 8899'
-    },
-
-    pieza: {
-      nombre: 'Aretes Perla',
-      codigo: 'AR0789',
-      variante: 'Blanco · Medianos',
-      imagen: '../assets/images/isotipo-morado.png'
-    },
-
-    fechaSolicitud: '08/05/2025',
-    horaSolicitud: '11:10 a.m.',
-
-    deposito: {
-      monto: 50,
-      estado: 'confirmado'
-    },
-
-    estado: 'vencido',
-
-    ultimaAccion: {
-      usuario: 'staff.sofia',
-      nombre: 'Staff Sofía',
-      fecha: '11/05/2025',
-      hora: '11:10 a.m.'
-    }
-  },
-
-
-  // ==========================================================
-  // DESAPARTADO / CANCELADO
-  // ==========================================================
-
-  {
-    id: 'APT-0008',
-
-    cliente: {
-      nombre: 'Daniela Ramírez',
-      id: 'CLI-00250',
-      iniciales: 'DR',
-      telefono: '444 888 9900'
-    },
-
-    pieza: {
-      nombre: 'Anillo Luna',
-      codigo: 'AN0890',
-      variante: 'Dorado · Talla 6',
-      imagen: '../assets/images/isotipo-morado.png'
-    },
-
-    fechaSolicitud: '07/05/2025',
-    horaSolicitud: '04:15 p.m.',
-
-    deposito: {
-      monto: 50,
-      estado: 'confirmado'
-    },
-
-    estado: 'desapartado',
-
-    ultimaAccion: {
-      usuario: 'staff.mariana',
-      nombre: 'Staff Mariana',
-      fecha: '09/05/2025',
-      hora: '05:20 p.m.'
+      texto: "Desapartado",
+      fecha: "9 mayo 2025 · 10:30 AM",
+      usuario: "Mariana Torres"
     }
   }
-
 ];
 
-
-// ------------------------------------------------------------
-// OPCIONES GENERALES DEL PANEL
-// ------------------------------------------------------------
-
 const CONFIG_STAFF_APARTADOS_EJEMPLO = {
-
-  nombrePanel: 'Panel de Staff',
-
-  titulo: 'Apartados',
-
-  descripcion:
-    'Gestiona las solicitudes, depósitos y apartados de las emprendedoras.',
-
-  depositoInicial: 50,
-
-  diasResguardo: 3,
-
-  moneda: 'MXN',
-
-  paginaActual: 1,
-
-  filasPorPagina: 10
-
+  filasPorPagina: 6
 };
