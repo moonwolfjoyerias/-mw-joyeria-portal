@@ -13,14 +13,14 @@ const RIFA_LIDER_EJEMPLO = {
 };
 
 const CONSTANCIA_LIDER_EJEMPLO = {
-  mesesCumplidos: 10,
+  comprasCumplidas: 10,
   montoMesActual: 6200,
   metaMes: 8000,
   hitos: [
-    { meses: 6, premio: 'Tablet' },
-    { meses: 8, premio: 'Pantalla 43"' },
-    { meses: 10, premio: 'Laptop' },
-    { meses: 12, premio: 'Viaje x2' },
+    { compras: 6, premio: 'Tablet' },
+    { compras: 8, premio: 'Pantalla 43"' },
+    { compras: 10, premio: 'Laptop' },
+    { compras: 12, premio: 'Viaje x2' },
   ],
 };
 

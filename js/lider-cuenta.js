@@ -56,35 +56,35 @@ function renderRifaLider() {
 
 // ---------- Reto de Constancia ----------
 function renderConstanciaLider() {
-  const { mesesCumplidos, montoMesActual, metaMes, hitos } = CONSTANCIA_LIDER_EJEMPLO;
-  const puntosLinea = [0, ...hitos.map(h => h.meses)];
+  const { comprasCumplidas, montoMesActual, metaMes, hitos } = CONSTANCIA_LIDER_EJEMPLO;
+  const puntosLinea = [0, ...hitos.map(h => h.compras)];
   let segmentoActual = puntosLinea.length - 2;
   for (let i = 0; i < puntosLinea.length - 1; i++) {
-    if (mesesCumplidos <= puntosLinea[i + 1]) { segmentoActual = i; break; }
+    if (comprasCumplidas <= puntosLinea[i + 1]) { segmentoActual = i; break; }
   }
   const inicioSeg = puntosLinea[segmentoActual];
   const finSeg = puntosLinea[segmentoActual + 1];
-  const fracSeg = finSeg > inicioSeg ? (mesesCumplidos - inicioSeg) / (finSeg - inicioSeg) : 1;
+  const fracSeg = finSeg > inicioSeg ? (comprasCumplidas - inicioSeg) / (finSeg - inicioSeg) : 1;
   const pctGeneral = Math.min(100, ((segmentoActual + fracSeg) / (puntosLinea.length - 1)) * 100);
   document.getElementById('constanciaFill').style.width = `${pctGeneral}%`;
 
   document.getElementById('constanciaNodes').innerHTML = hitos.map(h => {
-    const alcanzado = mesesCumplidos >= h.meses;
+    const alcanzado = comprasCumplidas >= h.compras;
     return `
       <div class="timeline-node ${alcanzado ? 'reached' : ''}">
         <div class="node-circle">
-          ${alcanzado ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>' : `<span style="font-family:var(--font-heading); font-weight:700; font-size:0.85rem;">${h.meses}</span>`}
+          ${alcanzado ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>' : `<span style="font-family:var(--font-heading); font-weight:700; font-size:0.85rem;">${h.compras}</span>`}
         </div>
-        <span class="node-label">${h.meses}° mes<br>${h.premio}</span>
+        <span class="node-label">${h.compras}° compra<br>${h.premio}</span>
       </div>
     `;
   }).join('');
 
-  setText('constanciaResumen', `Llevas ${mesesCumplidos} meses cumplidos de por vida.`);
-  const siguienteHito = hitos.find(h => h.meses > mesesCumplidos);
+  setText('constanciaResumen', `Llevas ${comprasCumplidas} compras cumplidas.`);
+  const siguienteHito = hitos.find(h => h.compras > comprasCumplidas);
   const nota = document.getElementById('constanciaNota');
   nota.textContent = siguienteHito
-    ? `Te falta${siguienteHito.meses - mesesCumplidos === 1 ? '' : 'n'} ${siguienteHito.meses - mesesCumplidos} mes${siguienteHito.meses - mesesCumplidos === 1 ? '' : 'es'} cumplido${siguienteHito.meses - mesesCumplidos === 1 ? '' : 's'} para tu siguiente recompensa: ${siguienteHito.premio}.`
+    ? `Te falta${siguienteHito.compras - comprasCumplidas === 1 ? '' : 'n'} ${siguienteHito.compras - comprasCumplidas} compra${siguienteHito.compras - comprasCumplidas === 1 ? '' : 's'} para tu siguiente recompensa: ${siguienteHito.premio}.`
     : '¡Has alcanzado todas las recompensas! Pronto habrá una nueva categoría.';
 
   const pctMes = Math.min(100, (montoMesActual / metaMes) * 100);
