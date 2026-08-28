@@ -1592,3 +1592,532 @@ a:hover { color: var(--mw-gold); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* =========================================================
+   MW JOYERÍA — STAFF CATÁLOGO
+   ========================================================= */
+
+.catalog-section-head {
+  margin-top: 28px;
+}
+
+.catalog-add-btn {
+  border: 0;
+  background: #3e096c;
+  color: #fff;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 7px 18px rgba(62,9,108,.15);
+}
+
+.catalog-add-btn:hover {
+  background: #53128b;
+}
+
+.catalog-add-btn span {
+  font-size: 18px;
+}
+
+.catalog-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.catalog-toolbar select {
+  height: 40px;
+  border: 1px solid #ddd5e3;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 12px;
+  color: #4a3d60;
+}
+
+.catalog-search {
+  height: 40px;
+  width: 300px;
+  background: #fff;
+  border: 1px solid #ddd5e3;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  color: #816f90;
+}
+
+.catalog-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #342047;
+}
+
+.catalog-search input::placeholder {
+  color: #aaa2b1;
+}
+
+
+/* GRID */
+
+.staff-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.staff-product-card {
+  background: #fff;
+  border: 1px solid #e9e3eb;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(45,18,79,.05);
+  transition: .2s ease;
+}
+
+.staff-product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(45,18,79,.09);
+}
+
+
+/* IMAGEN */
+
+.staff-product-image {
+  height: 230px;
+  position: relative;
+  background: linear-gradient(145deg,#fff,#f5eee6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.staff-product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 18px;
+}
+
+.product-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border-radius: 20px;
+  padding: 6px 10px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.status-available {
+  background: #eef7e8;
+  color: #4f8532;
+}
+
+.status-unavailable {
+  background: #fff0f0;
+  color: #bd4c4c;
+}
+
+
+/* BODY */
+
+.staff-product-body {
+  padding: 17px;
+}
+
+.product-code {
+  color: #9477a6;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.staff-product-body h3 {
+  margin: 0;
+  color: #32135f;
+  font: 600 17px Cinzel,serif;
+}
+
+.product-description {
+  color: #786f82;
+  font-size: 10px;
+  line-height: 1.5;
+  margin: 8px 0 12px;
+  min-height: 30px;
+}
+
+.product-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.product-meta span {
+  background: #f5f0f8;
+  color: #684581;
+  border-radius: 5px;
+  padding: 5px 7px;
+  font-size: 9px;
+}
+
+.product-bottom {
+  border-top: 1px solid #eee9ef;
+  margin-top: 15px;
+  padding-top: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.product-bottom small {
+  display: block;
+  color: #8b8293;
+  font-size: 9px;
+}
+
+.product-bottom strong {
+  display: block;
+  color: #32135f;
+  font: 600 16px Cinzel,serif;
+  margin-top: 3px;
+}
+
+.product-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.product-action-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #ddd4e3;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  color: #5d3973;
+}
+
+.product-action-btn:hover {
+  background: #f7f1fa;
+}
+
+.product-action-btn.delete {
+  color: #b74e4e;
+  border-color: #e7bbbb;
+}
+
+
+/* EMPTY */
+
+.catalog-empty {
+  grid-column: 1/-1;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid #e9e3eb;
+  border-radius: 12px;
+  color: #7d7386;
+}
+
+.catalog-empty strong {
+  color: #422361;
+}
+
+.catalog-empty-icon {
+  color: #c9a227;
+  font-size: 30px;
+}
+
+
+/* MODAL */
+
+.catalog-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(24,10,43,.48);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 80;
+  backdrop-filter: blur(3px);
+}
+
+.catalog-modal-overlay.open {
+  display: flex;
+}
+
+.catalog-modal {
+  position: relative;
+  width: min(720px,100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 25px 70px rgba(26,7,48,.25);
+}
+
+.catalog-modal-close {
+  position: absolute;
+  right: 17px;
+  top: 13px;
+  border: 0;
+  background: transparent;
+  color: #776c82;
+  font-size: 27px;
+  cursor: pointer;
+}
+
+.catalog-modal-heading {
+  margin-bottom: 22px;
+}
+
+.catalog-modal-heading h3 {
+  margin: 4px 0;
+  color: #2e1155;
+  font: 600 22px Cinzel,serif;
+}
+
+.catalog-modal-heading p {
+  margin: 5px 0 0;
+  color: #71677f;
+  font-size: 11px;
+}
+
+
+/* IMAGEN UPLOAD */
+
+.image-upload-area {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 14px;
+  border: 1px solid #e9e1ed;
+  background: #faf8fb;
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+
+.image-preview {
+  width: 105px;
+  height: 105px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e5dce9;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+}
+
+.image-upload-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.image-upload-info strong {
+  color: #40215e;
+  font-size: 12px;
+}
+
+.image-upload-info small {
+  color: #84798d;
+  font-size: 9px;
+}
+
+.upload-image-btn {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 7px;
+  padding: 8px 12px;
+  border: 1px solid #cdbcdc;
+  border-radius: 6px;
+  color: #551b7c;
+  background: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+
+/* FORM */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-field.full {
+  margin-top: 13px;
+}
+
+.form-field label {
+  color: #3b2a54;
+  font-size: 10px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  border: 1px solid #ddd5e3;
+  border-radius: 7px;
+  padding: 9px 11px;
+  background: #fff;
+  color: #312044;
+  outline: none;
+}
+
+.form-field input,
+.form-field select {
+  height: 40px;
+}
+
+.form-field textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: #8b55ad;
+  box-shadow: 0 0 0 3px #8b55ad14;
+}
+
+.price-input {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd5e3;
+  border-radius: 7px;
+  height: 40px;
+  overflow: hidden;
+}
+
+.price-input span {
+  padding: 0 10px;
+  color: #7b6d85;
+  font-size: 10px;
+}
+
+.price-input input {
+  border: 0;
+  height: 100%;
+  box-shadow: none !important;
+}
+
+
+/* DISPONIBILIDAD */
+
+.availability-check {
+  margin-top: 17px;
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #f7f2fa;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.availability-check input {
+  margin-top: 3px;
+}
+
+.availability-check strong {
+  display: block;
+  color: #482364;
+  font-size: 10px;
+}
+
+.availability-check small {
+  display: block;
+  color: #82778c;
+  font-size: 9px;
+  margin-top: 3px;
+}
+
+
+/* BOTONES MODAL */
+
+.catalog-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 20px;
+}
+
+.catalog-form-actions .btn {
+  margin-top: 0;
+}
+
+
+/* RESPONSIVE */
+
+@media(max-width:1100px) {
+
+  .staff-catalog-grid {
+    grid-template-columns: repeat(2,1fr);
+  }
+
+}
+
+@media(max-width:800px) {
+
+  .catalog-toolbar {
+    flex-direction: column;
+  }
+
+  .catalog-search {
+    width: 100%;
+  }
+
+  .staff-catalog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-add-btn {
+    padding: 0 13px;
+  }
+
+  .image-upload-area {
+    align-items: flex-start;
+  }
+
+}

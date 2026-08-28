@@ -75,52 +75,146 @@
         </div>
       </header>
 
-      <div class="catalog-layout">
-        <aside class="filter-panel">
-          <div class="filter-panel-header">
-            <h3>Filtros</h3>
-            <button id="clearFiltersBtn">Limpiar</button>
-          </div>
+  <!-- RESUMEN -->
+  <div class="section-head">
+    <h2>Resumen del catálogo</h2>
+  </div>
 
-          <div class="filter-group">
-            <h4>Material</h4>
-            <div id="filterMateriales"></div>
-          </div>
+  <section class="stat-cards">
 
-          <div class="filter-group">
-            <h4>Categoría</h4>
-            <div id="filterCategorias"></div>
-          </div>
-
-          <div class="filter-group conditional visible">
-            <h4>Calidad (Oro Laminado)</h4>
-            <div id="filterCalidad"></div>
-          </div>
-
-          <div class="filter-group conditional visible">
-            <h4>Color de oro</h4>
-            <div id="filterColorOro"></div>
-          </div>
-
-          <div class="filter-group">
-            <h4>Talla (Anillos / Cadenas)</h4>
-            <select id="filterTalla"></select>
-          </div>
-        </aside>
-
-        <div class="catalog-grid-wrap">
-          <div class="catalog-toolbar">
-            <span class="result-count" id="resultCount"></span>
-          </div>
-          <div class="catalog-product-grid" id="catalogGrid"></div>
-        </div>
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M6 7h12l1 13H5L6 7z"/>
+          <path d="M9 7a3 3 0 016 0"/>
+        </svg>
       </div>
-    </main>
+
+      <div>
+        <h4>Total de productos</h4>
+        <span class="stat-num" id="totalProductos">0</span>
+        <span class="stat-link">Productos registrados</span>
+      </div>
+    </div>
+
+
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M20 7L10 17l-5-5"/>
+          <path d="M4 4h16v16H4z"/>
+        </svg>
+      </div>
+
+      <div>
+        <h4>Disponibles</h4>
+        <span class="stat-num" id="productosDisponibles">0</span>
+        <span class="stat-link">Visibles para emprendedoras</span>
+      </div>
+    </div>
+
+
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M4 6h16"/>
+          <path d="M4 12h16"/>
+          <path d="M4 18h16"/>
+        </svg>
+      </div>
+
+      <div>
+        <h4>Oro Laminado</h4>
+        <span class="stat-num" id="productosOro">0</span>
+        <span class="stat-link">Productos</span>
+      </div>
+    </div>
+
+
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M12 3v18"/>
+          <path d="M17 7.5c0-2-2-3.5-5-3.5S7 5.5 7 7.5 9 11 12 11s5 1.5 5 3.5S15 18 12 18s-5-1.5-5-3.5"/>
+        </svg>
+      </div>
+
+      <div>
+        <h4>Precio promedio</h4>
+        <span class="stat-num" id="precioPromedio">$0</span>
+        <span class="stat-link">Precio de mayoreo</span>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ACCIONES -->
+  <div class="section-head catalog-section-head">
+    <h2>Productos del catálogo</h2>
+
+    <button class="catalog-add-btn" id="nuevoProductoBtn">
+      <span>＋</span>
+      Agregar producto
+    </button>
   </div>
 
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal-box" id="modalBox"></div>
+
+  <!-- FILTROS -->
+  <div class="catalog-toolbar">
+
+    <div class="catalog-search">
+      <span>⌕</span>
+      <input
+        type="search"
+        id="catalogSearch"
+        placeholder="Buscar por nombre, categoría o código..."
+      >
+    </div>
+
+    <select id="catalogMaterialFilter">
+      <option value="">Todos los materiales</option>
+      <option value="oro-laminado">Oro Laminado</option>
+      <option value="acero-inoxidable">Acero Inoxidable</option>
+      <option value="exhibidores">Exhibidores</option>
+      <option value="souvenirs">Souvenirs</option>
+    </select>
+
+    <select id="catalogAvailabilityFilter">
+      <option value="">Todas las disponibilidades</option>
+      <option value="disponible">Disponible</option>
+      <option value="no-disponible">No disponible</option>
+    </select>
+
   </div>
+
+
+  <!-- PRODUCTOS -->
+  <section class="staff-catalog-grid" id="staffCatalogGrid">
+    <!-- JS -->
+  </section>
+
+
+  <!-- MODAL -->
+  <div class="catalog-modal-overlay" id="catalogModalOverlay">
+
+    <div class="catalog-modal">
+
+      <button
+        class="catalog-modal-close"
+        id="catalogModalClose"
+        type="button"
+      >
+        ×
+      </button>
+
+      <div id="catalogModalContent"></div>
+
+    </div>
+
+  </div>
+
+</main>
 
   <script src="../js/notificaciones-ejemplo.js"></script>
   <script src="../js/eventos-ejemplo.js"></script>
