@@ -12,6 +12,7 @@ const filasPorPagina =
 
 let apartadoSeleccionado = null;
 let accionPendiente = null;
+let datosDepositoPendiente = null;
 const APARTADOS_STORAGE_KEY = "mw-staff-apartados-v2";
 const MENSAJE_WHATSAPP_VENCIDO = "Tu apartado ya venció. Por favor, contáctanos para revisar las opciones disponibles.";
 
@@ -606,6 +607,19 @@ function abrirAutorizacion(apartado, accion) {
 
     </div>
 
+    ${accion === "confirmar-deposito" ? `
+      <label for="depositoMonto">Monto recibido</label>
+      <input id="depositoMonto" type="number" min="50" step="0.01" placeholder="Ej. 50">
+      <label for="depositoMetodo">Método de pago</label>
+      <select id="depositoMetodo" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+        <option value="">Selecciona una opción</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="local">Pago en local</option>
+      </select>
+      <label for="depositoReferencia">Número de referencia</label>
+      <input id="depositoReferencia" type="text" placeholder="Obligatoria para transferencia">
+    ` : ""}
+
 
     <div class="auth-warning">
 
@@ -710,6 +724,25 @@ function abrirAutorizacion(apartado, accion) {
 
 function validarAutorizacion() {
 
+  if (accionPendiente === "confirmar-deposito") {
+    const monto = Number(document.getElementById("depositoMonto")?.value);
+    const metodo = document.getElementById("depositoMetodo")?.value;
+    const referencia = document.getElementById("depositoReferencia")?.value.trim();
+    const errorDeposito = document.getElementById("authError");
+
+    if (!Number.isFinite(monto) || monto < 50 || !metodo || (metodo === "transferencia" && !referencia)) {
+      if (errorDeposito) {
+        errorDeposito.style.display = "block";
+        errorDeposito.textContent = metodo === "transferencia" && !referencia
+          ? "La referencia es obligatoria para una transferencia."
+          : "Captura un monto válido y selecciona el método de pago.";
+      }
+      return;
+    }
+
+    datosDepositoPendiente = { monto, metodo, referencia: referencia || null };
+  }
+
   const usuario =
     document
       .getElementById("authUsuario")
@@ -790,7 +823,12 @@ function ejecutarAccion(personal) {
 
   if (accionPendiente === "confirmar-deposito") {
 
-    apartadoSeleccionado.deposito = "confirmado";
+    apartadoSeleccionado.deposito = apartadoSeleccionado.categoria === "vip" ? "no_requiere" : "confirmado";
+    apartadoSeleccionado.montoDeposito = datosDepositoPendiente?.monto || 50;
+    apartadoSeleccionado.metodoDeposito = datosDepositoPendiente?.metodo || "local";
+    apartadoSeleccionado.referenciaDeposito = datosDepositoPendiente?.referencia || null;
+    apartadoSeleccionado.fechaDepositoConfirmado = ahora.toISOString();
+    apartadoSeleccionado.excedente = Math.max(0, apartadoSeleccionado.montoDeposito - 50);
 
     apartadoSeleccionado.estado =
       "deposito_confirmado";
@@ -888,6 +926,7 @@ function ejecutarAccion(personal) {
 
   apartadoSeleccionado = null;
   accionPendiente = null;
+  datosDepositoPendiente = null;
 
 }
 
@@ -978,6 +1017,16 @@ function abrirDetalle(apartado) {
         <strong>
           ${apartado.deposito === "no_requiere" ? "No requiere" : apartado.deposito === "confirmado" ? "Confirmado" : "Pendiente"}
         </strong>
+      </div>
+
+      <div>
+        <span>Monto recibido</span>
+        <strong>${apartado.montoDeposito ? `$${Number(apartado.montoDeposito).toLocaleString("es-MX")} MXN` : "—"}</strong>
+      </div>
+
+      <div>
+        <span>Método / referencia</span>
+        <strong>${apartado.deposito === "no_requiere" ? "No requiere" : `${apartado.metodoDeposito === "transferencia" ? "Transferencia" : apartado.metodoDeposito === "local" ? "Pago en local" : "—"}${apartado.referenciaDeposito ? ` · ${apartado.referenciaDeposito}` : ""}`}</strong>
       </div>
 
 

@@ -31,6 +31,7 @@
 
     .section-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 13px}.section-head h2{margin:0;font:500 19px Cinzel,serif;color:#32135f}.section-head h2:after{content:'✦';color:var(--gold);font-size:12px;margin-left:10px}.date-pill{border:1px solid #decdb4;background:#fff;border-radius:9px;padding:9px 15px;color:#4e416a}.date-pill span{margin-right:9px;color:#7b5d2e}
     .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-bottom:28px}.summary-card{background:#fff;border:1px solid #eee8ee;border-radius:11px;min-height:145px;padding:20px 18px;display:flex;gap:15px;box-shadow:var(--shadow)}.summary-icon{width:67px;height:67px;flex:0 0 67px;border-radius:50%;background:#eee5f5;color:#4b1974;display:grid;place-items:center;font-size:29px}.summary-card small{font-size:13px;color:#4a3d6a}.summary-card strong{display:block;font:400 32px Cinzel,serif;color:#29104f;margin:4px 0 2px}.summary-card p{margin:0;color:#77708a;font-size:11px;line-height:1.35}.summary-card a{display:inline-block;margin-top:13px;color:#4b0c84;text-decoration:none;font-size:11px;font-weight:600}
+    .apartados-summary{grid-template-columns:repeat(4,minmax(0,1fr));gap:0.8rem;margin-bottom:1.25rem}.apartados-summary .stat-card{min-height:86px;padding:0.8rem 0.9rem;gap:0.7rem;align-items:center}.apartados-summary .icon-circle{width:34px;height:34px}.apartados-summary .icon-circle svg{width:17px;height:17px}.apartados-summary h4{font-size:0.72rem;margin-bottom:0.1rem}.apartados-summary .stat-num{font-size:1.35rem;margin-bottom:0.1rem}.apartados-summary .stat-link{font-size:0.68rem}
 
     .toolbar{display:flex;justify-content:flex-end;gap:12px;margin-bottom:9px}.filter-select,.search{height:39px;border:1px solid #ddd6e2;background:#fff;border-radius:8px;color:#4f4663}.filter-select{padding:0 32px 0 12px}.search{width:290px;padding:0 14px}.search::placeholder{color:#a19aa9}.quick-filters{display:none}
     .table-card{background:#fff;border:1px solid #eae4eb;border-radius:12px;box-shadow:var(--shadow);overflow:hidden}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1120px}thead{background:#fff}th{height:45px;text-align:left;padding:0 15px;border-bottom:1px solid #eee8ed;color:#371467;font-size:11px;font-weight:600;white-space:nowrap}td{padding:12px 15px;border-bottom:1px solid #f0ecf0;color:#40375a;vertical-align:middle;font-size:11px}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#fcf9fd}
@@ -115,7 +116,7 @@
 
 
       <div class="section-head"><h2>Resumen operativo</h2><div class="date-pill"><span>▣</span><span id="summaryDate">12 de mayo de 2025</span></div></div>
-      <section class="stat-cards">
+      <section class="stat-cards apartados-summary">
         <div class="stat-card">
           <div class="icon-circle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
@@ -180,6 +181,7 @@
 
   <div class="modal-overlay" id="modalOverlay"><div class="modal-box" id="modalBox"></div></div>
 
+  <script src="../../js/apartados-modelo.js"></script>
   <script src="../../js/apartados-ejemplo.js"></script>
   <script src="../../js/staff-apartados-ejemplo.js"></script>
   <script src="../../js/staff-apartados.js"></script>
