@@ -26,6 +26,7 @@ const APARTADOS_STAFF_EJEMPLO = [
     emprendedora: "María Fernanda",
     iniciales: "MF",
     telefono: "444 123 4567",
+    categoria: "normal",
 
     pieza: "Anillo Corazón",
     variante: "Talla 6 · Rosa",
@@ -33,6 +34,7 @@ const APARTADOS_STAFF_EJEMPLO = [
 
     fechaSolicitud: "12 mayo 2025",
     horaSolicitud: "10:42 AM",
+    fechaConfirmacion: null,
 
     deposito: "pendiente",
 
@@ -50,6 +52,7 @@ const APARTADOS_STAFF_EJEMPLO = [
     emprendedora: "Sofía Hernández",
     iniciales: "SH",
     telefono: "444 234 5678",
+    categoria: "foranea",
 
     pieza: "Cadena Fina",
     variante: "45 cm · Amarillo",
@@ -57,6 +60,7 @@ const APARTADOS_STAFF_EJEMPLO = [
 
     fechaSolicitud: "12 mayo 2025",
     horaSolicitud: "09:18 AM",
+    fechaConfirmacion: "2025-05-12T11:05:00",
 
     deposito: "confirmado",
 
@@ -74,6 +78,7 @@ const APARTADOS_STAFF_EJEMPLO = [
     emprendedora: "Valeria Ramírez",
     iniciales: "VR",
     telefono: "444 345 6789",
+    categoria: "vip",
 
     pieza: "Huggies Pequeños",
     variante: "Blanco",
@@ -81,6 +86,7 @@ const APARTADOS_STAFF_EJEMPLO = [
 
     fechaSolicitud: "11 mayo 2025",
     horaSolicitud: "04:35 PM",
+    fechaConfirmacion: "2025-05-11T17:10:00",
 
     deposito: "confirmado",
 
@@ -98,6 +104,7 @@ const APARTADOS_STAFF_EJEMPLO = [
     emprendedora: "Daniela Martínez",
     iniciales: "DM",
     telefono: "444 456 7890",
+    categoria: "normal",
 
     pieza: "Pulsera Eslabón",
     variante: "17 cm · Dorado",
@@ -105,6 +112,7 @@ const APARTADOS_STAFF_EJEMPLO = [
 
     fechaSolicitud: "10 mayo 2025",
     horaSolicitud: "01:25 PM",
+    fechaConfirmacion: "2025-05-10T14:02:00",
 
     deposito: "confirmado",
 
@@ -122,6 +130,7 @@ const APARTADOS_STAFF_EJEMPLO = [
     emprendedora: "Paola González",
     iniciales: "PG",
     telefono: "444 567 8901",
+    categoria: "normal",
 
     pieza: "Dije Luna",
     variante: "Mediano · Dorado",
@@ -129,6 +138,7 @@ const APARTADOS_STAFF_EJEMPLO = [
 
     fechaSolicitud: "9 mayo 2025",
     horaSolicitud: "11:20 AM",
+    fechaConfirmacion: "2025-05-09T11:20:00",
 
     deposito: "confirmado",
 
@@ -146,6 +156,7 @@ const APARTADOS_STAFF_EJEMPLO = [
     emprendedora: "Andrea Castillo",
     iniciales: "AC",
     telefono: "444 678 9012",
+    categoria: "vip",
 
     pieza: "Aretes Flor",
     variante: "Pequeños · Rosa",
@@ -153,6 +164,7 @@ const APARTADOS_STAFF_EJEMPLO = [
 
     fechaSolicitud: "8 mayo 2025",
     horaSolicitud: "03:50 PM",
+    fechaConfirmacion: "2025-05-08T15:50:00",
 
     deposito: "confirmado",
 

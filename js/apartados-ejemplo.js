@@ -9,9 +9,9 @@ const VENTANA_EJEMPLO = {
 
 // variante: texto libre para mostrar (ej. "Talla 6 · Rosa")
 const APARTADOS_EJEMPLO = [
-  { id: 'a1', nombre: 'Anillo Corazón', variante: 'Talla 6 · Rosa', precioPublico: 690, precioEmprendedora: 410 },
-  { id: 'a2', nombre: 'Cadena Fina 45cm', variante: '45cm · Amarillo', precioPublico: 650, precioEmprendedora: 390 },
-  { id: 'a3', nombre: 'Huggies Pequeños', variante: 'Blanco', precioPublico: 430, precioEmprendedora: 260 },
+  { id: 'a1', nombre: 'Anillo Corazón', variante: 'Talla 6 · Rosa', precioPublico: 690, precioEmprendedora: 410, emprendedora: 'María Fernanda', categoria: 'normal', telefono: '444 123 4567' },
+  { id: 'a2', nombre: 'Cadena Fina 45cm', variante: '45cm · Amarillo', precioPublico: 650, precioEmprendedora: 390, emprendedora: 'Sofía Hernández', categoria: 'foranea', telefono: '444 234 5678' },
+  { id: 'a3', nombre: 'Huggies Pequeños', variante: 'Blanco', precioPublico: 430, precioEmprendedora: 260, emprendedora: 'Valeria Ramírez', categoria: 'vip', telefono: '444 345 6789' },
 ];
 
 // Datos bancarios de ejemplo — reemplazar por los reales de MW Joyería

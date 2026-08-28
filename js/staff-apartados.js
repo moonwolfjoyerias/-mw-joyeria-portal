@@ -12,6 +12,8 @@ const filasPorPagina =
 
 let apartadoSeleccionado = null;
 let accionPendiente = null;
+const APARTADOS_STORAGE_KEY = "mw-staff-apartados-v2";
+const MENSAJE_WHATSAPP_VENCIDO = "Tu apartado ya venció. Por favor, contáctanos para revisar las opciones disponibles.";
 
 
 // ============================================================
@@ -20,19 +22,68 @@ let accionPendiente = null;
 
 document.addEventListener("DOMContentLoaded", () => {
 
-  // Copiar datos de ejemplo
-  apartados = APARTADOS_STAFF_EJEMPLO.map(apartado => ({
+  const apartadosEjemploCompartidos = (typeof APARTADOS_EJEMPLO === "undefined" ? [] : APARTADOS_EJEMPLO).map((apartado, index) => ({
+    id: `EJ-${apartado.id || index + 1}`,
+    emprendedora: apartado.emprendedora || "Usuario de ejemplo",
+    iniciales: obtenerIniciales(apartado.emprendedora || "Usuario de ejemplo"),
+    telefono: apartado.telefono || "",
+    categoria: apartado.categoria || "normal",
+    pieza: apartado.nombre,
+    variante: apartado.variante,
+    precio: apartado.precioEmprendedora,
+    fechaSolicitud: "12 mayo 2025",
+    horaSolicitud: "09:00 AM",
+    fechaConfirmacion: new Date().toISOString(),
+    deposito: apartado.categoria === "vip" ? "no_requiere" : "confirmado",
+    estado: "activo",
+    ultimaAccion: { texto: "Apartado confirmado", fecha: "12 mayo 2025 · 09:00 AM", usuario: "Sistema" }
+  }));
+
+  const datosIniciales = [...APARTADOS_STAFF_EJEMPLO, ...apartadosEjemploCompartidos];
+  apartados = cargarApartados() || datosIniciales.map(apartado => ({
     ...apartado,
     ultimaAccion: apartado.ultimaAccion
       ? { ...apartado.ultimaAccion }
       : null
   }));
 
+  actualizarVencimientos();
+
   actualizarResumen();
   renderTabla();
   configurarEventos();
 
 });
+
+function obtenerIniciales(nombre) {
+  return nombre.split(" ").map(parte => parte[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function cargarApartados() {
+  try {
+    const guardados = JSON.parse(localStorage.getItem(APARTADOS_STORAGE_KEY));
+    return Array.isArray(guardados) ? guardados : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function guardarApartados() {
+  localStorage.setItem(APARTADOS_STORAGE_KEY, JSON.stringify(apartados));
+}
+
+function diasPermitidos(categoria) {
+  return categoria === "foranea" ? 15 : 3;
+}
+
+function actualizarVencimientos() {
+  const ahora = Date.now();
+  apartados.forEach(apartado => {
+    if (apartado.estado !== "activo" || apartado.categoria === "vip" || apartado.deposito !== "confirmado" || !apartado.fechaConfirmacion) return;
+    const limite = new Date(apartado.fechaConfirmacion).getTime() + diasPermitidos(apartado.categoria) * 24 * 60 * 60 * 1000;
+    if (ahora >= limite) apartado.estado = "vencido";
+  });
+}
 
 
 // ============================================================
@@ -112,7 +163,7 @@ function renderTabla() {
 
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" class="empty-cell">
+        <td colspan="9" class="empty-cell">
           <div class="empty-state">
             <div class="empty-icon">✦</div>
             <strong>No se encontraron apartados</strong>
@@ -166,9 +217,15 @@ function crearFila(apartado) {
           <div>
             <strong>${apartado.emprendedora}</strong>
             <small>${apartado.telefono}</small>
+            <small>${obtenerCategoria(apartado.categoria)}</small>
           </div>
 
         </div>
+      </td>
+
+      <!-- CATEGORÍA -->
+      <td>
+        <span class="status status-cancelled">${obtenerCategoria(apartado.categoria)}</span>
       </td>
 
 
@@ -344,6 +401,19 @@ function obtenerAcciones(apartado) {
 
     html += `
       <button
+        class="action-btn primary-action"
+        data-action="contactar-whatsapp"
+        data-id="${apartado.id}">
+        <span>↗</span>
+        Contactar por Whatsapp
+      </button>
+    `;
+
+  }
+
+  if (apartado.estado === "contactada_whatsapp") {
+    html += `
+      <button
         class="action-btn danger-action"
         data-action="desapartar"
         data-id="${apartado.id}">
@@ -351,7 +421,6 @@ function obtenerAcciones(apartado) {
         Desapartar
       </button>
     `;
-
   }
 
 
@@ -400,10 +469,44 @@ function agregarEventosAcciones() {
           return;
         }
 
+        if (accion === "contactar-whatsapp") {
+          abrirContactoWhatsapp(apartado);
+          return;
+        }
+
       });
 
     });
 
+}
+
+function abrirContactoWhatsapp(apartado) {
+  const overlay = document.getElementById("modalOverlay");
+  const box = document.getElementById("modalBox");
+  if (!overlay || !box) return;
+
+  const numero = (apartado.telefono || "").replace(/\D/g, "");
+  const enlace = numero ? `https://wa.me/${numero}?text=${encodeURIComponent(MENSAJE_WHATSAPP_VENCIDO)}` : "#";
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModal()">×</button>
+    <div class="auth-icon">↗</div>
+    <h3>Contactar por Whatsapp</h3>
+    <p class="modal-sub">Abre la conversación con ${apartado.emprendedora} y confirma el contacto para habilitar la acción de desapartar.</p>
+    <div class="modal-context">
+      <span>Emprendedora</span><strong>${apartado.emprendedora}</strong>
+      <span>Teléfono</span><strong>${apartado.telefono || "Sin teléfono"}</strong>
+      <span>Mensaje</span><strong>${MENSAJE_WHATSAPP_VENCIDO}</strong>
+    </div>
+    ${numero ? `<a class="btn btn-primary" style="width:100%;display:grid;place-items:center;text-decoration:none;" href="${enlace}" target="_blank" rel="noopener">Abrir Whatsapp</a>` : '<p class="auth-error">Este apartado no tiene un número de teléfono válido.</p>'}
+    <button class="btn btn-outline" style="width:100%;" id="confirmarWhatsappBtn">Confirmar contacto por Whatsapp</button>
+  `;
+
+  overlay.classList.add("open");
+  document.getElementById("confirmarWhatsappBtn")?.addEventListener("click", () => {
+    cerrarModal();
+    abrirAutorizacion(apartado, "confirmar-whatsapp");
+  });
 }
 
 
@@ -458,6 +561,11 @@ function abrirAutorizacion(apartado, accion) {
     icono = "×";
     claseIcono = "danger";
 
+  }
+
+  if (accion === "confirmar-whatsapp") {
+    titulo = "Confirmar contacto por Whatsapp";
+    descripcion = "Después de autorizar, el apartado quedará listo para desapartar.";
   }
 
 
@@ -713,6 +821,7 @@ function ejecutarAccion(personal) {
   if (accionPendiente === "confirmar-apartado") {
 
     apartadoSeleccionado.estado = "activo";
+    apartadoSeleccionado.fechaConfirmacion = ahora.toISOString();
 
     apartadoSeleccionado.ultimaAccion = {
 
@@ -730,6 +839,18 @@ function ejecutarAccion(personal) {
       `Apartado activo · ${personal.nombre}`
     );
 
+  }
+
+  if (accionPendiente === "confirmar-whatsapp") {
+    apartadoSeleccionado.estado = "contactada_whatsapp";
+    apartadoSeleccionado.ultimaAccion = {
+      texto: "Contactada por Whatsapp",
+      fecha: `${fecha} · ${hora}`,
+      usuario: personal.nombre
+    };
+    guardarApartados();
+    cerrarModal();
+    mostrarToast(`Contacto por Whatsapp registrado por ${personal.nombre}`);
   }
 
 
@@ -758,6 +879,8 @@ function ejecutarAccion(personal) {
     );
 
   }
+
+  guardarApartados();
 
 
   renderTabla();
@@ -820,6 +943,11 @@ function abrirDetalle(apartado) {
         </span>
       </div>
 
+      <div>
+        <span>Categoría</span>
+        <strong>${obtenerCategoria(apartado.categoria)}</strong>
+      </div>
+
 
       <div>
         <span>Pieza</span>
@@ -848,10 +976,7 @@ function abrirDetalle(apartado) {
       <div>
         <span>Depósito</span>
         <strong>
-          ${apartado.deposito === "confirmado"
-            ? "Confirmado"
-            : "Pendiente"
-          }
+          ${apartado.deposito === "no_requiere" ? "No requiere" : apartado.deposito === "confirmado" ? "Confirmado" : "Pendiente"}
         </strong>
       </div>
 
@@ -931,6 +1056,11 @@ function obtenerEstado(estado) {
       clase: "status-active"
     },
 
+    contactada_whatsapp: {
+      texto: "Contactada por Whatsapp",
+      clase: "status-cancelled"
+    },
+
     vencido: {
       texto: "Vencido",
       clase: "status-expired"
@@ -958,6 +1088,14 @@ function obtenerEstado(estado) {
 
 function obtenerDeposito(deposito) {
 
+  if (deposito === "no_requiere") {
+    return {
+      texto: "No requiere",
+      descripcion: "Categoría VIP",
+      dot: "dot-purple"
+    };
+  }
+
   if (deposito === "confirmado") {
 
     return {
@@ -983,6 +1121,15 @@ function obtenerDeposito(deposito) {
 
   };
 
+}
+
+function obtenerCategoria(categoria) {
+  const categorias = {
+    vip: "VIP",
+    foranea: "Foránea",
+    normal: "Normal"
+  };
+  return categorias[categoria] || "Normal";
 }
 
 
