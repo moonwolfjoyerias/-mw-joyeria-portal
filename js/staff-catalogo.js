@@ -169,6 +169,8 @@ function renderCatalogo() {
 
   if (!grid) return;
 
+  actualizarResumenCatalogo();
+
 
   const search =
     document.getElementById('searchInput')?.value
@@ -235,13 +237,13 @@ function renderCatalogo() {
 
 
   if (!productos.length) {
-
     grid.innerHTML = `
-      <div class="catalog-empty">
-        <div style="font-size:35px;">◇</div>
-        <strong>No encontramos productos</strong>
-        <span>Prueba con otros filtros o agrega un nuevo artículo.</span>
-      </div>
+      <tr>
+        <td colspan="11" class="catalog-empty-cell">
+          <strong>No encontramos productos</strong>
+          <span>Prueba con otros filtros o agrega un nuevo artículo.</span>
+        </td>
+      </tr>
     `;
 
     return;
@@ -300,6 +302,27 @@ function renderCatalogo() {
 
 }
 
+function actualizarResumenCatalogo() {
+  const total = catalogoStaff.length;
+  const disponibles = catalogoStaff.filter(producto => producto.stock > 0).length;
+  const oro = catalogoStaff.filter(producto => producto.material === 'oro-laminado').length;
+  const promedio = total
+    ? catalogoStaff.reduce((suma, producto) => suma + Number(producto.precioMayoreo || 0), 0) / total
+    : 0;
+
+  const valores = {
+    totalProductos: total,
+    productosDisponibles: disponibles,
+    productosOro: oro,
+    precioPromedio: `$${formatearPrecio(promedio)}`
+  };
+
+  Object.entries(valores).forEach(([id, valor]) => {
+    const elemento = document.getElementById(id);
+    if (elemento) elemento.textContent = valor;
+  });
+}
+
 
 // ============================================================
 // TARJETA DEL PRODUCTO
@@ -328,127 +351,37 @@ function renderProducto(p) {
   }
 
 
+  const imagen = p.imagen?.startsWith('../assets/')
+    ? `../../${p.imagen.slice(3)}`
+    : (p.imagen || '../../assets/images/isotipo-morado.png');
+  const disponibilidad = p.stock > 0 ? 'Disponible' : 'Agotado';
+  const colorTalla = [p.colorOro, p.talla].filter(Boolean).join(' · ') || 'No aplica';
+
   return `
-
-    <article class="staff-product-card">
-
-      <div class="staff-product-image">
-
-        <img
-          src="${p.imagen || '../assets/images/isotipo-morado.png'}"
-          alt="${escapeHTML(p.nombre)}"
-        >
-
-        <span class="product-material">
-          ${escapeHTML(material)}
-        </span>
-
-      </div>
-
-
-      <div class="staff-product-body">
-
-        <div class="product-top">
-
-          <div>
-
-            <h3>
-              ${escapeHTML(p.nombre)}
-            </h3>
-
-            <span class="product-category">
-              ${escapeHTML(p.categoria || 'Sin categoría')}
-            </span>
-
-          </div>
-
-          <span class="product-quality">
-            ${p.calidad === 'premium' ? 'Premium' : 'Estándar'}
-          </span>
-
+    <tr>
+      <td><span class="catalog-product-id">${escapeHTML(p.id)}</span></td>
+      <td>
+        <div class="catalog-product-cell">
+          <img src="${imagen}" alt="${escapeHTML(p.nombre)}">
+          <strong>${escapeHTML(p.nombre)}</strong>
         </div>
-
-
-        <p class="product-description">
-          ${escapeHTML(p.descripcion || 'Sin descripción')}
-        </p>
-
-
-        <div class="product-data">
-
-          <div>
-            <small>Mayoreo</small>
-            <strong>
-              $${formatearPrecio(p.precioMayoreo)} MXN
-            </strong>
-          </div>
-
-          <div>
-            <small>Precio público</small>
-            <strong>
-              $${formatearPrecio(p.precioPublico)} MXN
-            </strong>
-          </div>
-
-          <div class="stock-box ${stockClass}">
-
-            <small>Existencia</small>
-
-            <strong>
-              ${stockText}
-            </strong>
-
-          </div>
-
+      </td>
+      <td><span class="catalog-description">${escapeHTML(p.descripcion || 'Sin descripción')}</span></td>
+      <td>${escapeHTML(p.categoria || 'Sin categoría')}</td>
+      <td>${escapeHTML(material)}</td>
+      <td>${p.calidad === 'premium' ? 'Premium' : 'Estándar'}</td>
+      <td>${escapeHTML(colorTalla)}</td>
+      <td><strong>$${formatearPrecio(p.precioMayoreo)} MXN</strong></td>
+      <td>$${formatearPrecio(p.precioPublico)} MXN</td>
+      <td><span class="catalog-stock ${stockClass}">${stockText}<small>${disponibilidad}</small></span></td>
+      <td>
+        <div class="catalog-actions">
+          <button class="action-btn primary-action" data-editar="${p.id}"><span>✎</span> Editar</button>
+          <button class="action-btn detail-action" data-stock="${p.id}"><span>◇</span> Existencia</button>
+          <button class="action-btn danger-action" data-eliminar="${p.id}"><span>×</span> Eliminar</button>
         </div>
-
-
-        <div class="product-meta">
-
-          ${p.colorOro
-            ? `<span>Color: ${escapeHTML(p.colorOro)}</span>`
-            : ''
-          }
-
-          ${p.talla
-            ? `<span>Talla: ${escapeHTML(p.talla)}</span>`
-            : ''
-          }
-
-        </div>
-
-
-        <div class="product-actions">
-
-          <button
-            class="catalog-action edit"
-            data-editar="${p.id}"
-          >
-            ✎ Editar
-          </button>
-
-
-          <button
-            class="catalog-action stock"
-            data-stock="${p.id}"
-          >
-            ◇ Existencia
-          </button>
-
-
-          <button
-            class="catalog-action delete"
-            data-eliminar="${p.id}"
-          >
-            × Eliminar
-          </button>
-
-        </div>
-
-      </div>
-
-    </article>
-
+      </td>
+    </tr>
   `;
 
 }

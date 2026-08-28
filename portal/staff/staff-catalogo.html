@@ -80,7 +80,7 @@
     <h2>Resumen del catálogo</h2>
   </div>
 
-  <section class="stat-cards">
+  <section class="stat-cards catalog-summary">
 
     <div class="stat-card">
       <div class="icon-circle">
@@ -190,15 +190,34 @@
 
 
   <!-- PRODUCTOS -->
-  <section class="staff-catalog-grid" id="catalogGrid">
-    <!-- JS -->
+  <section class="catalog-table-card">
+    <div class="catalog-table-wrap">
+      <table class="catalog-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Producto</th>
+            <th>Descripción</th>
+            <th>Categoría</th>
+            <th>Material</th>
+            <th>Calidad</th>
+            <th>Color / talla</th>
+            <th>Mayoreo</th>
+            <th>Público</th>
+            <th>Existencia</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="catalogGrid"></tbody>
+      </table>
+    </div>
   </section>
 
 
   <!-- MODAL -->
   <div class="catalog-modal-overlay" id="modalOverlay">
 
-    <div class="catalog-modal" id="modalBox">
+    <div class="catalog-modal modal-box" id="modalBox">
 
       <button
         class="catalog-modal-close"
