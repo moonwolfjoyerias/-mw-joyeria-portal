@@ -13,7 +13,7 @@ const filasPorPagina =
 let apartadoSeleccionado = null;
 let accionPendiente = null;
 let datosDepositoPendiente = null;
-const APARTADOS_STORAGE_KEY = "mw-staff-apartados-v2";
+const APARTADOS_STORAGE_KEY = "mw-staff-apartados-v3";
 const MENSAJE_WHATSAPP_VENCIDO = "Tu apartado ya venció. Por favor, contáctanos para revisar las opciones disponibles.";
 
 
@@ -348,6 +348,18 @@ function obtenerAcciones(apartado) {
 
   let html = "";
 
+  if (apartado.estado !== "cancelado") {
+    html += `
+      <button
+        class="action-btn primary-action"
+        data-action="pago-total"
+        data-id="${apartado.id}">
+        <span>✓</span>
+        Pagó en su totalidad
+      </button>
+    `;
+  }
+
 
   // PENDIENTE DE DEPÓSITO
   if (apartado.estado === "pendiente_deposito") {
@@ -475,6 +487,11 @@ function agregarEventosAcciones() {
           return;
         }
 
+        if (accion === "pago-total") {
+          abrirAutorizacion(apartado, "pago-total");
+          return;
+        }
+
       });
 
     });
@@ -567,6 +584,11 @@ function abrirAutorizacion(apartado, accion) {
   if (accion === "confirmar-whatsapp") {
     titulo = "Confirmar contacto por Whatsapp";
     descripcion = "Después de autorizar, el apartado quedará listo para desapartar.";
+  }
+
+  if (accion === "pago-total") {
+    titulo = "Registrar pago total";
+    descripcion = "La pieza quedará liquidada y se registrará el pago completo.";
   }
 
 
@@ -891,6 +913,27 @@ function ejecutarAccion(personal) {
     mostrarToast(`Contacto por Whatsapp registrado por ${personal.nombre}`);
   }
 
+  if (accionPendiente === "pago-total") {
+    const total = Number(apartadoSeleccionado.total || apartadoSeleccionado.precio || 0);
+    const pagado = Number(apartadoSeleccionado.pagado || 0);
+    const saldo = Math.max(0, total - pagado);
+    apartadoSeleccionado.total = total;
+    apartadoSeleccionado.pagado = total;
+    apartadoSeleccionado.saldo = 0;
+    apartadoSeleccionado.pagos = [
+      ...(Array.isArray(apartadoSeleccionado.pagos) ? apartadoSeleccionado.pagos : []),
+      { monto: saldo, tipo: "liquidacion", fecha: ahora.toISOString() }
+    ];
+    apartadoSeleccionado.estado = "liquidado";
+    apartadoSeleccionado.ultimaAccion = {
+      texto: "Pago total registrado",
+      fecha: `${fecha} · ${hora}`,
+      usuario: personal.nombre
+    };
+    cerrarModal();
+    mostrarToast(`Pago total registrado por ${personal.nombre}`);
+  }
+
 
   // --------------------------------------------
   // DESAPARTAR
@@ -1011,6 +1054,21 @@ function abrirDetalle(apartado) {
         </strong>
       </div>
 
+      <div>
+        <span>Total de la pieza</span>
+        <strong>$${Number(apartado.total || apartado.precio || 0).toLocaleString("es-MX")} MXN</strong>
+      </div>
+
+      <div>
+        <span>Pagado</span>
+        <strong>$${Number(apartado.pagado || 0).toLocaleString("es-MX")} MXN</strong>
+      </div>
+
+      <div>
+        <span>Saldo</span>
+        <strong>$${Number(apartado.saldo ?? ((apartado.total || apartado.precio || 0) - (apartado.pagado || 0))).toLocaleString("es-MX")} MXN</strong>
+      </div>
+
 
       <div>
         <span>Depósito</span>
@@ -1027,6 +1085,11 @@ function abrirDetalle(apartado) {
       <div>
         <span>Método / referencia</span>
         <strong>${apartado.deposito === "no_requiere" ? "No requiere" : `${apartado.metodoDeposito === "transferencia" ? "Transferencia" : apartado.metodoDeposito === "local" ? "Pago en local" : "—"}${apartado.referenciaDeposito ? ` · ${apartado.referenciaDeposito}` : ""}`}</strong>
+      </div>
+
+      <div>
+        <span>Liquidación</span>
+        <strong>${apartado.estado === "liquidado" ? "Pagó en su totalidad" : "Pendiente"}</strong>
       </div>
 
 
@@ -1108,6 +1171,11 @@ function obtenerEstado(estado) {
     contactada_whatsapp: {
       texto: "Contactada por Whatsapp",
       clase: "status-cancelled"
+    },
+
+    liquidado: {
+      texto: "Liquidada",
+      clase: "status-active"
     },
 
     vencido: {

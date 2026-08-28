@@ -176,6 +176,67 @@ const APARTADOS_STAFF_EJEMPLO = [
       usuario: "Mariana Torres"
     }
   }
+  ,
+  {
+    id: "AP-007",
+    emprendedora: "Camila Rojas",
+    iniciales: "CR",
+    telefono: "444 789 0123",
+    categoria: "foranea",
+    pieza: "Dije Estrella",
+    variante: "Grande · Dorado",
+    precio: 580,
+    fechaSolicitud: "12 mayo 2025",
+    horaSolicitud: "08:45 AM",
+    fechaConfirmacion: null,
+    deposito: "pendiente",
+    estado: "pendiente_deposito",
+    ultimaAccion: {
+      texto: "Solicitud creada",
+      fecha: "12 mayo 2025 · 08:45 AM",
+      usuario: "Sistema"
+    }
+  },
+  {
+    id: "AP-008",
+    emprendedora: "Laura Méndez",
+    iniciales: "LM",
+    telefono: "444 890 1234",
+    categoria: "normal",
+    pieza: "Anillo Solitario",
+    variante: "Talla 7 · Blanco",
+    precio: 720,
+    fechaSolicitud: "12 mayo 2025",
+    horaSolicitud: "08:12 AM",
+    fechaConfirmacion: null,
+    deposito: "pendiente",
+    estado: "pendiente_deposito",
+    ultimaAccion: {
+      texto: "Solicitud creada",
+      fecha: "12 mayo 2025 · 08:12 AM",
+      usuario: "Sistema"
+    }
+  },
+  {
+    id: "AP-009",
+    emprendedora: "Nadia Torres",
+    iniciales: "NT",
+    telefono: "444 901 2345",
+    categoria: "vip",
+    pieza: "Pulsera Estrella",
+    variante: "18 cm · Rosa",
+    precio: 860,
+    fechaSolicitud: "11 mayo 2025",
+    horaSolicitud: "06:30 PM",
+    fechaConfirmacion: null,
+    deposito: "no_requiere",
+    estado: "deposito_confirmado",
+    ultimaAccion: {
+      texto: "Solicitud creada",
+      fecha: "11 mayo 2025 · 06:30 PM",
+      usuario: "Sistema"
+    }
+  }
 ];
 
 const CONFIG_STAFF_APARTADOS_EJEMPLO = {
