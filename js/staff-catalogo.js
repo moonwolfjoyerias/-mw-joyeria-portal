@@ -193,7 +193,9 @@ function renderCatalogo() {
     if (
       search &&
       !p.nombre.toLowerCase().includes(search) &&
-      !p.descripcion.toLowerCase().includes(search)
+      !p.descripcion.toLowerCase().includes(search) &&
+      !(p.id || '').toLowerCase().includes(search) &&
+      !(p.categoria || '').toLowerCase().includes(search)
     ) {
       return false;
     }

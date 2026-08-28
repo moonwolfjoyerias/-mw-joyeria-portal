@@ -153,7 +153,7 @@
   <div class="section-head catalog-section-head">
     <h2>Productos del catálogo</h2>
 
-    <button class="catalog-add-btn" id="nuevoProductoBtn">
+    <button class="catalog-add-btn" id="agregarProductoBtn">
       <span>＋</span>
       Agregar producto
     </button>
@@ -167,12 +167,12 @@
       <span>⌕</span>
       <input
         type="search"
-        id="catalogSearch"
+        id="searchInput"
         placeholder="Buscar por nombre, categoría o código..."
       >
     </div>
 
-    <select id="catalogMaterialFilter">
+    <select id="filterMaterial">
       <option value="">Todos los materiales</option>
       <option value="oro-laminado">Oro Laminado</option>
       <option value="acero-inoxidable">Acero Inoxidable</option>
@@ -180,25 +180,25 @@
       <option value="souvenirs">Souvenirs</option>
     </select>
 
-    <select id="catalogAvailabilityFilter">
+    <select id="filterEstado">
       <option value="">Todas las disponibilidades</option>
       <option value="disponible">Disponible</option>
-      <option value="no-disponible">No disponible</option>
+      <option value="agotado">No disponible</option>
     </select>
 
   </div>
 
 
   <!-- PRODUCTOS -->
-  <section class="staff-catalog-grid" id="staffCatalogGrid">
+  <section class="staff-catalog-grid" id="catalogGrid">
     <!-- JS -->
   </section>
 
 
   <!-- MODAL -->
-  <div class="catalog-modal-overlay" id="catalogModalOverlay">
+  <div class="catalog-modal-overlay" id="modalOverlay">
 
-    <div class="catalog-modal">
+    <div class="catalog-modal" id="modalBox">
 
       <button
         class="catalog-modal-close"
@@ -207,8 +207,6 @@
       >
         ×
       </button>
-
-      <div id="catalogModalContent"></div>
 
     </div>
 
