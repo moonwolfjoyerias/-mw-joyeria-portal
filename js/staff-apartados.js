@@ -308,8 +308,8 @@ function obtenerAcciones(apartado) {
 
 
   // DEPÓSITO CONFIRMADO
+  
   if (apartado.estado === "deposito_confirmado") {
-
     html += `
       <button
         class="action-btn primary-action"
@@ -325,7 +325,7 @@ function obtenerAcciones(apartado) {
 
   // APARTADO ACTIVO
   if (apartado.estado === "activo") {
-
+    
     html += `
       <button
         class="action-btn danger-action"
@@ -339,8 +339,8 @@ function obtenerAcciones(apartado) {
   }
 
 
-  // DEPÓSITO CONFIRMADO TAMBIÉN PUEDE DESAPARTARSE
-  if (apartado.estado === "deposito_confirmado") {
+  // APARTADO VENCIDO
+  if (apartado.estado === "vencido") {
 
     html += `
       <button
