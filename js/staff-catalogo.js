@@ -1,66 +1,120 @@
 // MW JOYERÍA — Catálogo Staff
-// Administra el catálogo de forma local.
-// ⚠️ TEMPORAL: en Fase 3 los datos se conectarán con Firestore.
+//
+// Permite:
+// - Ver productos
+// - Agregar productos
+// - Editar productos
+// - Eliminar productos
+// - Modificar existencia
+// - Subir imágenes en modo demo
+// - Registrar qué empleado hizo cada modificación
+//
+// ⚠️ TEMPORAL:
+// localStorage simula la base de datos.
+// En Fase 3 será reemplazado por Firestore.
 
-let productos = [];
-let productoEditando = null;
+let catalogoStaff = [];
+let accionPendiente = null;
+let imagenTemporal = '';
 
-
-// ======================================================
-// INICIO
-// ======================================================
+const STORAGE_KEY = 'mw_staff_catalogo_demo';
+const LOG_KEY = 'mw_staff_catalogo_logs';
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  productos = CATALOGO_STAFF_EJEMPLO.map(producto => ({
-    ...producto
-  }));
+  cargarCatalogo();
+
+  renderFiltros();
 
   renderCatalogo();
-  actualizarResumen();
 
-  const nuevoBtn = document.getElementById('nuevoProductoBtn');
+  inicializarEventos();
 
-  if (nuevoBtn) {
-    nuevoBtn.addEventListener('click', () => abrirModalProducto());
+});
+
+
+// ============================================================
+// CARGAR / GUARDAR
+// ============================================================
+
+function cargarCatalogo() {
+
+  const guardado = localStorage.getItem(STORAGE_KEY);
+
+  if (guardado) {
+    try {
+      catalogoStaff = JSON.parse(guardado);
+    } catch (error) {
+      catalogoStaff = CATALOGO_EJEMPLO.map(p => ({ ...p }));
+    }
+  } else {
+    catalogoStaff = CATALOGO_EJEMPLO.map(p => ({ ...p }));
+    guardarCatalogo();
+  }
+
+}
+
+
+function guardarCatalogo() {
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(catalogoStaff)
+  );
+
+}
+
+
+// ============================================================
+// EVENTOS
+// ============================================================
+
+function inicializarEventos() {
+
+  const addBtn = document.getElementById('agregarProductoBtn');
+
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      abrirModalProducto();
+    });
   }
 
 
-  const search = document.getElementById('catalogSearch');
+  const search = document.getElementById('searchInput');
 
   if (search) {
     search.addEventListener('input', renderCatalogo);
   }
 
 
-  const material = document.getElementById('catalogMaterialFilter');
+  const material = document.getElementById('filterMaterial');
 
   if (material) {
     material.addEventListener('change', renderCatalogo);
   }
 
 
-  const availability = document.getElementById('catalogAvailabilityFilter');
+  const categoria = document.getElementById('filterCategoria');
 
-  if (availability) {
-    availability.addEventListener('change', renderCatalogo);
+  if (categoria) {
+    categoria.addEventListener('change', renderCatalogo);
   }
 
 
-  const closeBtn = document.getElementById('catalogModalClose');
+  const estado = document.getElementById('filterEstado');
 
-  if (closeBtn) {
-    closeBtn.addEventListener('click', cerrarModal);
+  if (estado) {
+    estado.addEventListener('change', renderCatalogo);
   }
 
 
-  const overlay = document.getElementById('catalogModalOverlay');
+  const overlay = document.getElementById('modalOverlay');
 
   if (overlay) {
 
-    overlay.addEventListener('click', (event) => {
+    overlay.addEventListener('click', (e) => {
 
-      if (event.target === overlay) {
+      if (e.target === overlay) {
         cerrarModal();
       }
 
@@ -68,71 +122,123 @@ document.addEventListener('DOMContentLoaded', () => {
 
   }
 
-});
+}
 
 
-// ======================================================
-// RENDER
-// ======================================================
+// ============================================================
+// FILTROS
+// ============================================================
+
+function renderFiltros() {
+
+  const material = document.getElementById('filterMaterial');
+
+  if (material) {
+
+    material.innerHTML =
+      `<option value="">Todos los materiales</option>` +
+      MATERIALES_STAFF.map(m =>
+        `<option value="${m.key}">${m.label}</option>`
+      ).join('');
+
+  }
+
+
+  const categoria = document.getElementById('filterCategoria');
+
+  if (categoria) {
+
+    categoria.innerHTML =
+      `<option value="">Todas las categorías</option>` +
+      CATEGORIAS_STAFF.map(c =>
+        `<option value="${c}">${c}</option>`
+      ).join('');
+
+  }
+
+}
+
+
+// ============================================================
+// RENDER DEL CATÁLOGO
+// ============================================================
 
 function renderCatalogo() {
 
-  const grid = document.getElementById('staffCatalogGrid');
+  const grid = document.getElementById('catalogGrid');
 
   if (!grid) return;
 
 
-  const texto = (
-    document.getElementById('catalogSearch')?.value || ''
-  ).toLowerCase().trim();
+  const search =
+    document.getElementById('searchInput')?.value
+      .toLowerCase()
+      .trim() || '';
 
 
-  const material = (
-    document.getElementById('catalogMaterialFilter')?.value || ''
-  );
+  const material =
+    document.getElementById('filterMaterial')?.value || '';
 
 
-  const disponibilidad = (
-    document.getElementById('catalogAvailabilityFilter')?.value || ''
-  );
+  const categoria =
+    document.getElementById('filterCategoria')?.value || '';
 
 
-  const filtrados = productos.filter(producto => {
-
-    const coincideTexto =
-      !texto ||
-      producto.nombre.toLowerCase().includes(texto) ||
-      producto.categoria.toLowerCase().includes(texto) ||
-      producto.codigo.toLowerCase().includes(texto);
+  const estado =
+    document.getElementById('filterEstado')?.value || '';
 
 
-    const coincideMaterial =
-      !material ||
-      producto.material === material;
+  const productos = catalogoStaff.filter(p => {
+
+    if (
+      search &&
+      !p.nombre.toLowerCase().includes(search) &&
+      !p.descripcion.toLowerCase().includes(search)
+    ) {
+      return false;
+    }
 
 
-    const coincideDisponibilidad =
-      !disponibilidad ||
-      (disponibilidad === 'disponible' && producto.disponible) ||
-      (disponibilidad === 'no-disponible' && !producto.disponible);
+    if (material && p.material !== material) {
+      return false;
+    }
 
 
-    return (
-      coincideTexto &&
-      coincideMaterial &&
-      coincideDisponibilidad
-    );
+    if (categoria && p.categoria !== categoria) {
+      return false;
+    }
+
+
+    if (estado === 'disponible' && p.stock <= 0) {
+      return false;
+    }
+
+
+    if (estado === 'agotado' && p.stock > 0) {
+      return false;
+    }
+
+
+    return true;
 
   });
 
 
-  if (filtrados.length === 0) {
+  const count = document.getElementById('resultCount');
+
+  if (count) {
+    count.textContent =
+      `${productos.length} producto${productos.length === 1 ? '' : 's'}`;
+  }
+
+
+  if (!productos.length) {
 
     grid.innerHTML = `
       <div class="catalog-empty">
-        <div class="catalog-empty-icon">✦</div>
-        <strong>No se encontraron productos</strong>
-        <span>Prueba con otros filtros o agrega un nuevo producto.</span>
+        <div style="font-size:35px;">◇</div>
+        <strong>No encontramos productos</strong>
+        <span>Prueba con otros filtros o agrega un nuevo artículo.</span>
       </div>
     `;
 
@@ -140,155 +246,51 @@ function renderCatalogo() {
   }
 
 
-  grid.innerHTML = filtrados.map(producto => {
-
-    const materialLabel = obtenerMaterialLabel(producto.material);
-
-    return `
-      <article class="staff-product-card">
-
-        <div class="staff-product-image">
-
-          <img
-            src="${producto.imagen || '../assets/images/isotipo-morado.png'}"
-            alt="${escapeHtml(producto.nombre)}"
-          >
-
-          <span class="product-status ${
-            producto.disponible
-              ? 'status-available'
-              : 'status-unavailable'
-          }">
-
-            ${producto.disponible ? 'Disponible' : 'No disponible'}
-
-          </span>
-
-        </div>
+  grid.innerHTML = productos.map(renderProducto).join('');
 
 
-        <div class="staff-product-body">
-
-          <div class="product-code">
-            ${escapeHtml(producto.codigo)}
-          </div>
-
-          <h3>
-            ${escapeHtml(producto.nombre)}
-          </h3>
-
-          <p class="product-description">
-            ${escapeHtml(producto.descripcion || 'Sin descripción')}
-          </p>
-
-
-          <div class="product-meta">
-
-            <span>
-              ${escapeHtml(materialLabel)}
-            </span>
-
-            <span>
-              ${escapeHtml(producto.categoria)}
-            </span>
-
-            ${
-              producto.colorOro
-                ? `<span>${escapeHtml(producto.colorOro)}</span>`
-                : ''
-            }
-
-            ${
-              producto.talla
-                ? `<span>Talla ${escapeHtml(producto.talla)}</span>`
-                : ''
-            }
-
-          </div>
-
-
-          <div class="product-bottom">
-
-            <div>
-              <small>Precio de mayoreo</small>
-
-              <strong>
-                $${formatearPrecio(producto.precioMayoreo)} MXN
-              </strong>
-            </div>
-
-
-            <div class="product-actions">
-
-              <button
-                class="product-action-btn edit"
-                data-edit="${producto.id}"
-                title="Editar"
-              >
-                ✎
-              </button>
-
-
-              <button
-                class="product-action-btn toggle"
-                data-toggle="${producto.id}"
-                title="${
-                  producto.disponible
-                    ? 'Marcar no disponible'
-                    : 'Marcar disponible'
-                }"
-              >
-                ${producto.disponible ? '◉' : '○'}
-              </button>
-
-
-              <button
-                class="product-action-btn delete"
-                data-delete="${producto.id}"
-                title="Eliminar"
-              >
-                ×
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </article>
-    `;
-
-  }).join('');
-
-
-  grid.querySelectorAll('[data-edit]').forEach(btn => {
+  grid.querySelectorAll('[data-editar]').forEach(btn => {
 
     btn.addEventListener('click', () => {
 
-      abrirModalProducto(btn.getAttribute('data-edit'));
+      const id = btn.dataset.editar;
+
+      solicitarAutorizacion(
+        'editar',
+        id
+      );
 
     });
 
   });
 
 
-  grid.querySelectorAll('[data-toggle]').forEach(btn => {
+  grid.querySelectorAll('[data-eliminar]').forEach(btn => {
 
     btn.addEventListener('click', () => {
 
-      cambiarDisponibilidad(btn.getAttribute('data-toggle'));
+      const id = btn.dataset.eliminar;
+
+      solicitarAutorizacion(
+        'eliminar',
+        id
+      );
 
     });
 
   });
 
 
-  grid.querySelectorAll('[data-delete]').forEach(btn => {
+  grid.querySelectorAll('[data-stock]').forEach(btn => {
 
     btn.addEventListener('click', () => {
 
-      eliminarProducto(btn.getAttribute('data-delete'));
+      const id = btn.dataset.stock;
+
+      solicitarAutorizacion(
+        'stock',
+        id
+      );
 
     });
 
@@ -297,406 +299,441 @@ function renderCatalogo() {
 }
 
 
-// ======================================================
-// MODAL AGREGAR / EDITAR
-// ======================================================
+// ============================================================
+// TARJETA DEL PRODUCTO
+// ============================================================
 
-function abrirModalProducto(id = null) {
+function renderProducto(p) {
 
-  const overlay = document.getElementById('catalogModalOverlay');
-  const content = document.getElementById('catalogModalContent');
-
-  if (!overlay || !content) return;
-
-
-  productoEditando = id
-    ? productos.find(p => p.id === id)
-    : null;
+  const material =
+    MATERIALES_STAFF.find(m => m.key === p.material)?.label ||
+    p.material ||
+    '';
 
 
-  const p = productoEditando || {
+  let stockClass = 'stock-ok';
+  let stockText = `${p.stock} piezas`;
 
-    codigo: '',
-    nombre: '',
-    descripcion: '',
-    material: 'oro-laminado',
-    categoria: 'Anillos',
-    calidad: 'estandar',
-    colorOro: 'Amarillo',
-    talla: '',
-    precioMayoreo: '',
-    disponible: true,
-    imagen: '../assets/images/isotipo-morado.png'
+  if (p.stock <= 0) {
 
-  };
+    stockClass = 'stock-empty';
+    stockText = 'Agotado';
+
+  } else if (p.stock <= 5) {
+
+    stockClass = 'stock-low';
+
+  }
 
 
-  content.innerHTML = `
+  return `
 
-    <div class="catalog-modal-heading">
+    <article class="staff-product-card">
 
-      <span class="eyebrow">
-        ${productoEditando ? 'Editar producto' : 'Nuevo producto'}
-      </span>
+      <div class="staff-product-image">
 
-      <h3>
-        ${productoEditando
-          ? 'Editar pieza'
-          : 'Agregar al catálogo'}
-      </h3>
+        <img
+          src="${p.imagen || '../assets/images/isotipo-morado.png'}"
+          alt="${escapeHTML(p.nombre)}"
+        >
 
-      <p>
-        ${
-          productoEditando
-            ? 'Actualiza la información de esta pieza.'
-            : 'Agrega una nueva pieza para que esté disponible en el catálogo de mayoreo.'
-        }
-      </p>
-
-    </div>
-
-
-    <form id="productoForm">
-
-
-      <!-- IMAGEN -->
-
-      <div class="image-upload-area">
-
-        <div class="image-preview" id="imagePreview">
-
-          <img
-            src="${p.imagen}"
-            alt="Vista previa"
-            id="previewImage"
-          >
-
-        </div>
-
-
-        <div class="image-upload-info">
-
-          <strong>Imagen del producto</strong>
-
-          <small>
-            Sube una imagen clara de la pieza.
-          </small>
-
-
-          <label class="upload-image-btn">
-
-            Seleccionar imagen
-
-            <input
-              type="file"
-              id="productoImagen"
-              accept="image/*"
-              hidden
-            >
-
-          </label>
-
-        </div>
+        <span class="product-material">
+          ${escapeHTML(material)}
+        </span>
 
       </div>
 
 
-      <div class="form-grid">
+      <div class="staff-product-body">
 
+        <div class="product-top">
 
-        <!-- CÓDIGO -->
+          <div>
 
-        <div class="form-field">
+            <h3>
+              ${escapeHTML(p.nombre)}
+            </h3>
 
-          <label for="productoCodigo">
-            Código del producto
-          </label>
+            <span class="product-category">
+              ${escapeHTML(p.categoria || 'Sin categoría')}
+            </span>
 
-          <input
-            type="text"
-            id="productoCodigo"
-            value="${escapeAttribute(p.codigo)}"
-            placeholder="Ej. MW-007"
-            required
-          >
+          </div>
 
-        </div>
-
-
-        <!-- NOMBRE -->
-
-        <div class="form-field">
-
-          <label for="productoNombre">
-            Nombre
-          </label>
-
-          <input
-            type="text"
-            id="productoNombre"
-            value="${escapeAttribute(p.nombre)}"
-            placeholder="Ej. Anillo Corazón"
-            required
-          >
+          <span class="product-quality">
+            ${p.calidad === 'premium' ? 'Premium' : 'Estándar'}
+          </span>
 
         </div>
 
 
-        <!-- MATERIAL -->
-
-        <div class="form-field">
-
-          <label for="productoMaterial">
-            Material
-          </label>
-
-          <select id="productoMaterial">
-
-            <option value="oro-laminado"
-              ${p.material === 'oro-laminado' ? 'selected' : ''}>
-              Oro Laminado
-            </option>
-
-            <option value="acero-inoxidable"
-              ${p.material === 'acero-inoxidable' ? 'selected' : ''}>
-              Acero Inoxidable
-            </option>
-
-            <option value="exhibidores"
-              ${p.material === 'exhibidores' ? 'selected' : ''}>
-              Exhibidores
-            </option>
-
-            <option value="souvenirs"
-              ${p.material === 'souvenirs' ? 'selected' : ''}>
-              Souvenirs
-            </option>
-
-          </select>
-
-        </div>
+        <p class="product-description">
+          ${escapeHTML(p.descripcion || 'Sin descripción')}
+        </p>
 
 
-        <!-- CATEGORÍA -->
+        <div class="product-data">
 
-        <div class="form-field">
+          <div>
+            <small>Mayoreo</small>
+            <strong>
+              $${formatearPrecio(p.precioMayoreo)} MXN
+            </strong>
+          </div>
 
-          <label for="productoCategoria">
-            Categoría
-          </label>
+          <div>
+            <small>Precio público</small>
+            <strong>
+              $${formatearPrecio(p.precioPublico)} MXN
+            </strong>
+          </div>
 
-          <select id="productoCategoria">
+          <div class="stock-box ${stockClass}">
 
-            <option ${p.categoria === 'Anillos' ? 'selected' : ''}>
-              Anillos
-            </option>
+            <small>Existencia</small>
 
-            <option ${p.categoria === 'Cadenas' ? 'selected' : ''}>
-              Cadenas
-            </option>
-
-            <option ${p.categoria === 'Collares' ? 'selected' : ''}>
-              Collares
-            </option>
-
-            <option ${p.categoria === 'Pulseras' ? 'selected' : ''}>
-              Pulseras
-            </option>
-
-            <option ${p.categoria === 'Aretes' ? 'selected' : ''}>
-              Aretes
-            </option>
-
-            <option ${p.categoria === 'Dijes' ? 'selected' : ''}>
-              Dijes
-            </option>
-
-            <option ${p.categoria === 'Exhibidores' ? 'selected' : ''}>
-              Exhibidores
-            </option>
-
-            <option ${p.categoria === 'Souvenirs' ? 'selected' : ''}>
-              Souvenirs
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <!-- CALIDAD -->
-
-        <div class="form-field">
-
-          <label for="productoCalidad">
-            Calidad
-          </label>
-
-          <select id="productoCalidad">
-
-            <option value="estandar"
-              ${p.calidad === 'estandar' ? 'selected' : ''}>
-              Estándar
-            </option>
-
-            <option value="premium"
-              ${p.calidad === 'premium' ? 'selected' : ''}>
-              Premium
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <!-- COLOR -->
-
-        <div class="form-field">
-
-          <label for="productoColor">
-            Color de oro
-          </label>
-
-          <select id="productoColor">
-
-            <option value="">
-              No aplica
-            </option>
-
-            <option value="Amarillo"
-              ${p.colorOro === 'Amarillo' ? 'selected' : ''}>
-              Amarillo
-            </option>
-
-            <option value="Rosa"
-              ${p.colorOro === 'Rosa' ? 'selected' : ''}>
-              Rosa
-            </option>
-
-            <option value="Blanco"
-              ${p.colorOro === 'Blanco' ? 'selected' : ''}>
-              Blanco
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <!-- TALLA -->
-
-        <div class="form-field">
-
-          <label for="productoTalla">
-            Talla / medida
-          </label>
-
-          <input
-            type="text"
-            id="productoTalla"
-            value="${escapeAttribute(p.talla)}"
-            placeholder="Ej. 6 / 18 cm / 45 cm"
-          >
-
-        </div>
-
-
-        <!-- PRECIO -->
-
-        <div class="form-field">
-
-          <label for="productoPrecio">
-            Precio de mayoreo
-          </label>
-
-          <div class="price-input">
-
-            <span>$</span>
-
-            <input
-              type="number"
-              id="productoPrecio"
-              value="${p.precioMayoreo}"
-              min="0"
-              step="1"
-              placeholder="410"
-              required
-            >
-
-            <span>MXN</span>
+            <strong>
+              ${stockText}
+            </strong>
 
           </div>
 
         </div>
 
+
+        <div class="product-meta">
+
+          ${p.colorOro
+            ? `<span>Color: ${escapeHTML(p.colorOro)}</span>`
+            : ''
+          }
+
+          ${p.talla
+            ? `<span>Talla: ${escapeHTML(p.talla)}</span>`
+            : ''
+          }
+
+        </div>
+
+
+        <div class="product-actions">
+
+          <button
+            class="catalog-action edit"
+            data-editar="${p.id}"
+          >
+            ✎ Editar
+          </button>
+
+
+          <button
+            class="catalog-action stock"
+            data-stock="${p.id}"
+          >
+            ◇ Existencia
+          </button>
+
+
+          <button
+            class="catalog-action delete"
+            data-eliminar="${p.id}"
+          >
+            × Eliminar
+          </button>
+
+        </div>
+
       </div>
 
+    </article>
 
-      <!-- DESCRIPCIÓN -->
+  `;
 
-      <div class="form-field full">
-
-        <label for="productoDescripcion">
-          Descripción
-        </label>
-
-        <textarea
-          id="productoDescripcion"
-          rows="4"
-          placeholder="Describe brevemente la pieza..."
-        >${escapeHtml(p.descripcion)}</textarea>
-
-      </div>
+}
 
 
-      <!-- DISPONIBILIDAD -->
+// ============================================================
+// MODAL DE PRODUCTO
+// ============================================================
 
-      <label class="availability-check">
+function abrirModalProducto(producto = null) {
 
-        <input
-          type="checkbox"
-          id="productoDisponible"
-          ${p.disponible ? 'checked' : ''}
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+
+  if (!overlay || !box) return;
+
+
+  const editando = !!producto;
+
+
+  imagenTemporal =
+    producto?.imagen ||
+    '../assets/images/isotipo-morado.png';
+
+
+  box.innerHTML = `
+
+    <button
+      class="modal-close"
+      data-close
+    >
+      ×
+    </button>
+
+
+    <div class="auth-icon">
+      ${editando ? '✎' : '+'}
+    </div>
+
+
+    <h3>
+      ${editando ? 'Editar producto' : 'Agregar producto'}
+    </h3>
+
+
+    <p class="modal-sub">
+
+      ${editando
+        ? 'Modifica la información del artículo.'
+        : 'Agrega un nuevo artículo al catálogo de MW Joyería.'
+      }
+
+    </p>
+
+
+    <div class="product-image-upload">
+
+      <div
+        class="image-preview"
+        id="imagePreview"
+      >
+
+        <img
+          src="${imagenTemporal}"
+          id="previewImage"
+          alt=""
         >
 
-        <span>
+      </div>
 
-          <strong>Producto disponible</strong>
 
-          <small>
-            Si está activo, las emprendedoras podrán verlo como disponible.
-          </small>
+      <label class="upload-image-btn">
 
-        </span>
+        <span>📷</span>
+
+        Seleccionar imagen
+
+        <input
+          type="file"
+          id="productoImagen"
+          accept="image/*"
+          hidden
+        >
 
       </label>
 
+      <small>
+        JPG, PNG o WEBP · Vista de demostración
+      </small>
 
-      <div class="catalog-form-actions">
+    </div>
 
-        <button
-          type="button"
-          class="btn btn-outline"
-          id="cancelarProductoBtn"
+
+    <div class="form-grid">
+
+      <div class="form-field full">
+
+        <label>Nombre del artículo *</label>
+
+        <input
+          id="productoNombre"
+          type="text"
+          placeholder="Ej. Anillo Corazón"
+          value="${escapeAttribute(producto?.nombre || '')}"
         >
-          Cancelar
-        </button>
-
-        <button
-          type="submit"
-          class="btn btn-primary"
-        >
-          ${
-            productoEditando
-              ? 'Guardar cambios'
-              : 'Agregar producto'
-          }
-        </button>
 
       </div>
 
 
-    </form>
+      <div class="form-field full">
+
+        <label>Descripción *</label>
+
+        <textarea
+          id="productoDescripcion"
+          rows="3"
+          placeholder="Describe el artículo..."
+        >${escapeHTML(producto?.descripcion || '')}</textarea>
+
+      </div>
+
+
+      <div class="form-field">
+
+        <label>Material *</label>
+
+        <select id="productoMaterial">
+
+          ${MATERIALES_STAFF.map(m => `
+            <option
+              value="${m.key}"
+              ${producto?.material === m.key ? 'selected' : ''}
+            >
+              ${m.label}
+            </option>
+          `).join('')}
+
+        </select>
+
+      </div>
+
+
+      <div class="form-field">
+
+        <label>Categoría *</label>
+
+        <select id="productoCategoria">
+
+          ${CATEGORIAS_STAFF.map(c => `
+            <option
+              value="${c}"
+              ${producto?.categoria === c ? 'selected' : ''}
+            >
+              ${c}
+            </option>
+          `).join('')}
+
+        </select>
+
+      </div>
+
+
+      <div class="form-field">
+
+        <label>Calidad</label>
+
+        <select id="productoCalidad">
+
+          ${CALIDADES_STAFF.map(c => `
+            <option
+              value="${c.key}"
+              ${producto?.calidad === c.key ? 'selected' : ''}
+            >
+              ${c.label}
+            </option>
+          `).join('')}
+
+        </select>
+
+      </div>
+
+
+      <div class="form-field">
+
+        <label>Color del oro</label>
+
+        <select id="productoColor">
+
+          <option value="">No aplica</option>
+
+          ${COLORES_ORO_STAFF.map(c => `
+            <option
+              value="${c}"
+              ${producto?.colorOro === c ? 'selected' : ''}
+            >
+              ${c}
+            </option>
+          `).join('')}
+
+        </select>
+
+      </div>
+
+
+      <div class="form-field">
+
+        <label>Talla / variante</label>
+
+        <input
+          id="productoTalla"
+          type="text"
+          placeholder="Ej. 6"
+          value="${escapeAttribute(producto?.talla || '')}"
+        >
+
+      </div>
+
+
+      <div class="form-field">
+
+        <label>Existencia *</label>
+
+        <input
+          id="productoStock"
+          type="number"
+          min="0"
+          step="1"
+          value="${producto?.stock ?? 0}"
+        >
+
+        <small class="field-help">
+          Esta cantidad solo es visible para Staff, RH y Admin.
+        </small>
+
+      </div>
+
+
+      <div class="form-field">
+
+        <label>Precio mayoreo *</label>
+
+        <input
+          id="productoMayoreo"
+          type="number"
+          min="0"
+          step="1"
+          value="${producto?.precioMayoreo ?? ''}"
+        >
+
+      </div>
+
+
+      <div class="form-field">
+
+        <label>Precio público *</label>
+
+        <input
+          id="productoPublico"
+          type="number"
+          min="0"
+          step="1"
+          value="${producto?.precioPublico ?? ''}"
+        >
+
+      </div>
+
+    </div>
+
+
+    <div class="modal-note">
+
+      <strong>Importante:</strong>
+      al guardar este producto se solicitará nuevamente
+      la autenticación del empleado que realizó el cambio.
+
+    </div>
+
+
+    <button
+      class="btn btn-primary"
+      id="guardarProductoBtn"
+      style="width:100%;"
+    >
+
+      ${editando ? 'Guardar cambios' : 'Agregar al catálogo'}
+
+    </button>
 
   `;
 
@@ -704,389 +741,874 @@ function abrirModalProducto(id = null) {
   overlay.classList.add('open');
 
 
-  // PREVIEW IMAGEN
+  document
+    .getElementById('productoImagen')
+    ?.addEventListener('change', manejarImagen);
 
-  const imageInput = document.getElementById('productoImagen');
-  const preview = document.getElementById('previewImage');
-
-
-  imageInput.addEventListener('change', () => {
-
-    const file = imageInput.files[0];
-
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onload = (event) => {
-
-      preview.src = event.target.result;
-
-    };
-
-    reader.readAsDataURL(file);
-
-  });
-
-
-  // CANCELAR
 
   document
-    .getElementById('cancelarProductoBtn')
-    .addEventListener('click', cerrarModal);
+    .getElementById('guardarProductoBtn')
+    ?.addEventListener('click', () => {
+
+      const datos = obtenerDatosProducto();
+
+      if (!datos) return;
 
 
-  // GUARDAR
+      cerrarModal();
 
-  document
-    .getElementById('productoForm')
-    .addEventListener('submit', guardarProducto);
+
+      // Toda modificación requiere autenticación
+      solicitarAutorizacion(
+        editando ? 'guardar-edicion' : 'agregar',
+        producto?.id || null,
+        datos
+      );
+
+    });
+
+
+  box.querySelector('[data-close]')
+    ?.addEventListener('click', cerrarModal);
 
 }
 
 
-// ======================================================
-// GUARDAR
-// ======================================================
+// ============================================================
+// IMAGEN
+// ============================================================
 
-function guardarProducto(event) {
+function manejarImagen(e) {
 
-  event.preventDefault();
+  const archivo = e.target.files?.[0];
 
-
-  const codigo =
-    document.getElementById('productoCodigo').value.trim();
+  if (!archivo) return;
 
 
-  const nombre =
-    document.getElementById('productoNombre').value.trim();
+  if (!archivo.type.startsWith('image/')) {
 
-
-  const descripcion =
-    document.getElementById('productoDescripcion').value.trim();
-
-
-  const material =
-    document.getElementById('productoMaterial').value;
-
-
-  const categoria =
-    document.getElementById('productoCategoria').value;
-
-
-  const calidad =
-    document.getElementById('productoCalidad').value;
-
-
-  const colorOro =
-    document.getElementById('productoColor').value;
-
-
-  const talla =
-    document.getElementById('productoTalla').value.trim();
-
-
-  const precioMayoreo =
-    Number(document.getElementById('productoPrecio').value);
-
-
-  const disponible =
-    document.getElementById('productoDisponible').checked;
-
-
-  const preview =
-    document.getElementById('previewImage');
-
-
-  const imagen =
-    preview?.src ||
-    '../assets/images/isotipo-morado.png';
-
-
-  if (!codigo || !nombre || !precioMayoreo) {
-
-    alert('Completa los campos obligatorios.');
+    mostrarToast('Selecciona una imagen válida.');
 
     return;
 
   }
 
 
-  if (productoEditando) {
+  const reader = new FileReader();
 
-    productoEditando.codigo = codigo;
-    productoEditando.nombre = nombre;
-    productoEditando.descripcion = descripcion;
-    productoEditando.material = material;
-    productoEditando.categoria = categoria;
-    productoEditando.calidad = calidad;
-    productoEditando.colorOro = colorOro;
-    productoEditando.talla = talla;
-    productoEditando.precioMayoreo = precioMayoreo;
-    productoEditando.disponible = disponible;
-    productoEditando.imagen = imagen;
 
+  reader.onload = function(event) {
 
-    mostrarToast('Producto actualizado correctamente.');
+    imagenTemporal = event.target.result;
 
-  } else {
 
-    productos.unshift({
+    const preview =
+      document.getElementById('previewImage');
 
-      id: 'p' + Date.now(),
-
-      codigo,
-      nombre,
-      descripcion,
-
-      material,
-      categoria,
-      calidad,
-      colorOro,
-      talla,
-
-      precioMayoreo,
-
-      disponible,
-
-      imagen
-
-    });
-
-
-    mostrarToast('Producto agregado al catálogo.');
-
-  }
-
-
-  cerrarModal();
-
-  renderCatalogo();
-
-  actualizarResumen();
-
-}
-
-
-// ======================================================
-// DISPONIBILIDAD
-// ======================================================
-
-function cambiarDisponibilidad(id) {
-
-  const producto =
-    productos.find(p => p.id === id);
-
-
-  if (!producto) return;
-
-
-  producto.disponible =
-    !producto.disponible;
-
-
-  mostrarToast(
-    producto.disponible
-      ? 'Producto marcado como disponible.'
-      : 'Producto marcado como no disponible.'
-  );
-
-
-  renderCatalogo();
-
-  actualizarResumen();
-
-}
-
-
-// ======================================================
-// ELIMINAR
-// ======================================================
-
-function eliminarProducto(id) {
-
-  const producto =
-    productos.find(p => p.id === id);
-
-
-  if (!producto) return;
-
-
-  const confirmar = confirm(
-    `¿Seguro que deseas eliminar "${producto.nombre}" del catálogo?`
-  );
-
-
-  if (!confirmar) return;
-
-
-  productos =
-    productos.filter(p => p.id !== id);
-
-
-  mostrarToast('Producto eliminado del catálogo.');
-
-
-  renderCatalogo();
-
-  actualizarResumen();
-
-}
-
-
-// ======================================================
-// RESUMEN
-// ======================================================
-
-function actualizarResumen() {
-
-  const total =
-    productos.length;
-
-
-  const disponibles =
-    productos.filter(p => p.disponible).length;
-
-
-  const oro =
-    productos.filter(
-      p => p.material === 'oro-laminado'
-    ).length;
-
-
-  const promedio =
-    total
-      ? productos.reduce(
-          (sum, p) => sum + Number(p.precioMayoreo || 0),
-          0
-        ) / total
-      : 0;
-
-
-  setText('totalProductos', total);
-
-  setText(
-    'productosDisponibles',
-    disponibles
-  );
-
-  setText(
-    'productosOro',
-    oro
-  );
-
-  setText(
-    'precioPromedio',
-    '$' + Math.round(promedio)
-  );
-
-}
-
-
-// ======================================================
-// CERRAR MODAL
-// ======================================================
-
-function cerrarModal() {
-
-  const overlay =
-    document.getElementById('catalogModalOverlay');
-
-
-  if (overlay) {
-
-    overlay.classList.remove('open');
-
-  }
-
-
-  productoEditando = null;
-
-}
-
-
-// ======================================================
-// HELPERS
-// ======================================================
-
-function obtenerMaterialLabel(material) {
-
-  const labels = {
-
-    'oro-laminado': 'Oro Laminado',
-
-    'acero-inoxidable': 'Acero Inoxidable',
-
-    'exhibidores': 'Exhibidores',
-
-    'souvenirs': 'Souvenirs'
+    if (preview) {
+      preview.src = imagenTemporal;
+    }
 
   };
 
 
-  return labels[material] || material;
+  reader.readAsDataURL(archivo);
 
 }
 
 
-function formatearPrecio(numero) {
+// ============================================================
+// OBTENER DATOS
+// ============================================================
 
-  return Number(numero || 0).toLocaleString(
-    'es-MX'
+function obtenerDatosProducto() {
+
+  const nombre =
+    document.getElementById('productoNombre')?.value.trim();
+
+
+  const descripcion =
+    document.getElementById('productoDescripcion')?.value.trim();
+
+
+  const material =
+    document.getElementById('productoMaterial')?.value;
+
+
+  const categoria =
+    document.getElementById('productoCategoria')?.value;
+
+
+  const calidad =
+    document.getElementById('productoCalidad')?.value;
+
+
+  const colorOro =
+    document.getElementById('productoColor')?.value;
+
+
+  const talla =
+    document.getElementById('productoTalla')?.value.trim();
+
+
+  const stock =
+    Number(document.getElementById('productoStock')?.value);
+
+
+  const precioMayoreo =
+    Number(document.getElementById('productoMayoreo')?.value);
+
+
+  const precioPublico =
+    Number(document.getElementById('productoPublico')?.value);
+
+
+  if (!nombre) {
+
+    mostrarToast('Escribe el nombre del producto.');
+
+    return null;
+
+  }
+
+
+  if (!descripcion) {
+
+    mostrarToast('Agrega una descripción.');
+
+    return null;
+
+  }
+
+
+  if (Number.isNaN(stock) || stock < 0) {
+
+    mostrarToast('La existencia no es válida.');
+
+    return null;
+
+  }
+
+
+  if (Number.isNaN(precioMayoreo) || precioMayoreo < 0) {
+
+    mostrarToast('El precio de mayoreo no es válido.');
+
+    return null;
+
+  }
+
+
+  if (Number.isNaN(precioPublico) || precioPublico < 0) {
+
+    mostrarToast('El precio público no es válido.');
+
+    return null;
+
+  }
+
+
+  return {
+
+    nombre,
+    descripcion,
+    material,
+    categoria,
+    calidad,
+    colorOro,
+    talla,
+    stock,
+    precioMayoreo,
+    precioPublico,
+    disponible: stock > 0,
+    imagen: imagenTemporal
+
+  };
+
+}
+
+
+// ============================================================
+// AUTENTICACIÓN PARA ACCIONES
+// ============================================================
+
+function solicitarAutorizacion(tipo, id, datos = null) {
+
+  accionPendiente = {
+    tipo,
+    id,
+    datos
+  };
+
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+
+  if (!overlay || !box) return;
+
+
+  let titulo = 'Autorizar acción';
+  let descripcion =
+    'Ingresa tus credenciales para registrar quién realizó este cambio.';
+  let boton = 'Autorizar y continuar';
+
+
+  if (tipo === 'agregar') {
+
+    titulo = 'Autorizar nuevo producto';
+    descripcion =
+      'Confirma tus credenciales para agregar este artículo al catálogo.';
+
+  }
+
+
+  if (tipo === 'guardar-edicion') {
+
+    titulo = 'Autorizar cambios';
+    descripcion =
+      'Confirma tus credenciales para guardar las modificaciones.';
+
+  }
+
+
+  if (tipo === 'editar') {
+
+    titulo = 'Autorizar edición';
+    descripcion =
+      'Por seguridad, necesitamos identificar al empleado que realizará esta modificación.';
+
+  }
+
+
+  if (tipo === 'eliminar') {
+
+    titulo = 'Autorizar eliminación';
+    descripcion =
+      'Esta acción eliminará el artículo del catálogo. Ingresa tus credenciales para continuar.';
+    boton = 'Autorizar eliminación';
+
+  }
+
+
+  if (tipo === 'stock') {
+
+    titulo = 'Modificar existencia';
+    descripcion =
+      'Ingresa tus credenciales para modificar la cantidad disponible.';
+
+  }
+
+
+  box.innerHTML = `
+
+    <button
+      class="modal-close"
+      data-close
+    >
+      ×
+    </button>
+
+
+    <div class="auth-icon ${tipo === 'eliminar' ? 'danger' : ''}">
+      ${tipo === 'eliminar' ? '!' : '✓'}
+    </div>
+
+
+    <h3>${titulo}</h3>
+
+
+    <p class="modal-sub">
+      ${descripcion}
+    </p>
+
+
+    <div class="auth-warning">
+
+      <span>🔐</span>
+
+      <div>
+
+        <strong>
+          Acción registrada
+        </strong>
+
+        <small>
+          El sistema guardará el usuario, fecha y hora de esta modificación.
+        </small>
+
+      </div>
+
+    </div>
+
+
+    <label for="staffUsuario">
+      Usuario de empleado
+    </label>
+
+    <input
+      id="staffUsuario"
+      type="text"
+      autocomplete="username"
+      placeholder="Ej. staff01"
+    >
+
+
+    <label for="staffPassword">
+      Contraseña
+    </label>
+
+    <div class="password-wrap">
+
+      <input
+        id="staffPassword"
+        type="password"
+        autocomplete="current-password"
+        placeholder="Contraseña"
+      >
+
+      <button
+        type="button"
+        id="mostrarPassword"
+      >
+        Ver
+      </button>
+
+    </div>
+
+
+    <div
+      id="authError"
+      style="display:none;"
+      class="auth-error"
+    ></div>
+
+
+    <button
+      class="btn ${tipo === 'eliminar' ? 'btn-danger' : 'btn-primary'}"
+      id="autorizarBtn"
+      style="width:100%;"
+    >
+      ${boton}
+    </button>
+
+
+    <p class="demo-note">
+      Demo: usuario <strong>staff01</strong> · contraseña <strong>1234</strong>
+    </p>
+
+  `;
+
+
+  overlay.classList.add('open');
+
+
+  document
+    .getElementById('mostrarPassword')
+    ?.addEventListener('click', () => {
+
+      const input =
+        document.getElementById('staffPassword');
+
+      if (!input) return;
+
+      input.type =
+        input.type === 'password'
+          ? 'text'
+          : 'password';
+
+    });
+
+
+  document
+    .getElementById('autorizarBtn')
+    ?.addEventListener('click', validarAutorizacion);
+
+
+  box.querySelector('[data-close]')
+    ?.addEventListener('click', () => {
+
+      accionPendiente = null;
+
+      cerrarModal();
+
+    });
+
+}
+
+
+// ============================================================
+// VALIDAR CREDENCIALES
+// ============================================================
+
+function validarAutorizacion() {
+
+  const usuario =
+    document.getElementById('staffUsuario')
+      ?.value.trim();
+
+
+  const password =
+    document.getElementById('staffPassword')
+      ?.value;
+
+
+  const error =
+    document.getElementById('authError');
+
+
+  const empleado =
+    STAFF_USUARIOS_EJEMPLO.find(
+      u =>
+        u.usuario === usuario &&
+        u.password === password
+    );
+
+
+  if (!empleado) {
+
+    if (error) {
+
+      error.style.display = 'block';
+
+      error.textContent =
+        'Usuario o contraseña incorrectos.';
+
+    }
+
+    return;
+
+  }
+
+
+  const accion = accionPendiente;
+
+
+  registrarAccion(
+    empleado,
+    accion
   );
 
+
+  ejecutarAccion(
+    accion,
+    empleado
+  );
+
+
+  accionPendiente = null;
+
 }
 
 
-function setText(id, value) {
+// ============================================================
+// EJECUTAR ACCIÓN
+// ============================================================
 
-  const element =
-    document.getElementById(id);
+function ejecutarAccion(accion, empleado) {
+
+  if (!accion) return;
 
 
-  if (element) {
+  // ----------------------------------------------------------
+  // AGREGAR
+  // ----------------------------------------------------------
 
-    element.textContent = value;
+  if (accion.tipo === 'agregar') {
+
+    const nuevoProducto = {
+
+      id:
+        'prod-' +
+        Date.now(),
+
+      ...accion.datos,
+
+      ultimaAccion: {
+        tipo: 'Agregado',
+        empleado: empleado.nombre,
+        fecha: new Date().toISOString()
+      }
+
+    };
+
+
+    catalogoStaff.unshift(nuevoProducto);
+
+    guardarCatalogo();
+
+    cerrarModal();
+
+    renderCatalogo();
+
+    mostrarToast(
+      `Producto agregado por ${empleado.nombre}.`
+    );
+
+    return;
+
+  }
+
+
+  // ----------------------------------------------------------
+  // GUARDAR EDICIÓN
+  // ----------------------------------------------------------
+
+  if (accion.tipo === 'guardar-edicion') {
+
+    const producto =
+      catalogoStaff.find(
+        p => p.id === accion.id
+      );
+
+
+    if (!producto) return;
+
+
+    Object.assign(
+      producto,
+      accion.datos
+    );
+
+
+    producto.ultimaAccion = {
+
+      tipo: 'Editado',
+
+      empleado:
+        empleado.nombre,
+
+      fecha:
+        new Date().toISOString()
+
+    };
+
+
+    guardarCatalogo();
+
+    cerrarModal();
+
+    renderCatalogo();
+
+    mostrarToast(
+      `Cambios guardados por ${empleado.nombre}.`
+    );
+
+    return;
+
+  }
+
+
+  // ----------------------------------------------------------
+  // EDITAR
+  // ----------------------------------------------------------
+
+  if (accion.tipo === 'editar') {
+
+    const producto =
+      catalogoStaff.find(
+        p => p.id === accion.id
+      );
+
+
+    if (!producto) return;
+
+
+    cerrarModal();
+
+    abrirModalProducto(producto);
+
+    return;
+
+  }
+
+
+  // ----------------------------------------------------------
+  // ELIMINAR
+  // ----------------------------------------------------------
+
+  if (accion.tipo === 'eliminar') {
+
+    const producto =
+      catalogoStaff.find(
+        p => p.id === accion.id
+      );
+
+
+    if (!producto) return;
+
+
+    catalogoStaff =
+      catalogoStaff.filter(
+        p => p.id !== accion.id
+      );
+
+
+    guardarCatalogo();
+
+    cerrarModal();
+
+    renderCatalogo();
+
+    mostrarToast(
+      `"${producto.nombre}" fue eliminado por ${empleado.nombre}.`
+    );
+
+    return;
+
+  }
+
+
+  // ----------------------------------------------------------
+  // EXISTENCIA
+  // ----------------------------------------------------------
+
+  if (accion.tipo === 'stock') {
+
+    const producto =
+      catalogoStaff.find(
+        p => p.id === accion.id
+      );
+
+
+    if (!producto) return;
+
+
+    cerrarModal();
+
+    abrirModalStock(
+      producto,
+      empleado
+    );
 
   }
 
 }
 
 
-function escapeHtml(value) {
+// ============================================================
+// MODIFICAR EXISTENCIA
+// ============================================================
 
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+function abrirModalStock(producto, empleado) {
+
+  const overlay =
+    document.getElementById('modalOverlay');
+
+  const box =
+    document.getElementById('modalBox');
+
+
+  box.innerHTML = `
+
+    <button
+      class="modal-close"
+      data-close
+    >
+      ×
+    </button>
+
+
+    <div class="auth-icon">
+      ◇
+    </div>
+
+
+    <h3>
+      Modificar existencia
+    </h3>
+
+
+    <p class="modal-sub">
+      ${escapeHTML(producto.nombre)}
+    </p>
+
+
+    <div class="modal-context">
+
+      <span>Existencia actual</span>
+
+      <strong>
+        ${producto.stock} piezas
+      </strong>
+
+
+      <span>Último cambio</span>
+
+      <strong>
+        ${producto.ultimaAccion?.empleado || 'Sin registro'}
+      </strong>
+
+    </div>
+
+
+    <label for="nuevoStock">
+      Nueva existencia
+    </label>
+
+
+    <input
+      type="number"
+      id="nuevoStock"
+      min="0"
+      step="1"
+      value="${producto.stock}"
+    >
+
+
+    <p class="demo-note">
+      Esta información es privada para Staff, RH y Admin.
+    </p>
+
+
+    <button
+      class="btn btn-primary"
+      id="guardarStockBtn"
+      style="width:100%;"
+    >
+      Guardar existencia
+    </button>
+
+  `;
+
+
+  overlay.classList.add('open');
+
+
+  box.querySelector('[data-close]')
+    ?.addEventListener('click', cerrarModal);
+
+
+  document
+    .getElementById('guardarStockBtn')
+    ?.addEventListener('click', () => {
+
+      const nuevoStock =
+        Number(
+          document.getElementById('nuevoStock')?.value
+        );
+
+
+      if (
+        Number.isNaN(nuevoStock) ||
+        nuevoStock < 0
+      ) {
+
+        mostrarToast(
+          'La existencia no es válida.'
+        );
+
+        return;
+
+      }
+
+
+      producto.stock =
+        Math.floor(nuevoStock);
+
+
+      producto.disponible =
+        producto.stock > 0;
+
+
+      producto.ultimaAccion = {
+
+        tipo: 'Existencia modificada',
+
+        empleado:
+          empleado.nombre,
+
+        fecha:
+          new Date().toISOString()
+
+      };
+
+
+      guardarCatalogo();
+
+      cerrarModal();
+
+      renderCatalogo();
+
+
+      mostrarToast(
+        `Existencia actualizada por ${empleado.nombre}.`
+      );
+
+    });
 
 }
 
 
-function escapeAttribute(value) {
+// ============================================================
+// REGISTRO DE ACCIONES
+// ============================================================
 
-  return escapeHtml(value);
+function registrarAccion(empleado, accion) {
+
+  const logs =
+    JSON.parse(
+      localStorage.getItem(LOG_KEY) || '[]'
+    );
+
+
+  logs.unshift({
+
+    id: Date.now(),
+
+    usuario:
+      empleado.usuario,
+
+    empleado:
+      empleado.nombre,
+
+    accion:
+      accion.tipo,
+
+    productoId:
+      accion.id || null,
+
+    fecha:
+      new Date().toISOString()
+
+  });
+
+
+  localStorage.setItem(
+    LOG_KEY,
+    JSON.stringify(logs)
+  );
 
 }
 
 
-// ======================================================
-// TOAST
-// ======================================================
+// ============================================================
+// UTILIDADES
+// ============================================================
+
+function cerrarModal() {
+
+  const overlay =
+    document.getElementById('modalOverlay');
+
+  if (overlay) {
+    overlay.classList.remove('open');
+  }
+
+}
+
 
 function mostrarToast(mensaje) {
 
   let toast =
-    document.getElementById('mwCatalogToast');
+    document.getElementById('mwToast');
 
 
   if (!toast) {
 
-    toast = document.createElement('div');
+    toast =
+      document.createElement('div');
 
-    toast.id = 'mwCatalogToast';
+    toast.id = 'mwToast';
 
     toast.className = 'mw-toast';
 
@@ -1104,6 +1626,33 @@ function mostrarToast(mensaje) {
 
     toast.classList.remove('show');
 
-  }, 2200);
+  }, 2800);
+
+}
+
+
+function formatearPrecio(numero) {
+
+  return Number(numero || 0)
+    .toLocaleString('es-MX');
+
+}
+
+
+function escapeHTML(texto) {
+
+  return String(texto ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+}
+
+
+function escapeAttribute(texto) {
+
+  return escapeHTML(texto);
 
 }
