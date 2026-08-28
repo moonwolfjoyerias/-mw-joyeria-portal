@@ -135,7 +135,7 @@ function abrirModalEvento(id) {
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     ${ev.tieneFoto ? `
-      <div class="event-modal-photo"><img src="../assets/images/isotipo-morado.png" alt=""></div>
+      <div class="event-modal-photo"><img src="../../assets/images/isotipo-morado.png" alt=""></div>
     ` : ''}
     <h3>${ev.titulo}</h3>
     <div class="event-modal-meta">

@@ -60,7 +60,7 @@ function renderApartados() {
   list.innerHTML = apartadosActuales.map(p => `
     <div class="apartado-row" data-id="${p.id}">
       <input type="checkbox" data-check="${p.id}" ${seleccionados.has(p.id) ? 'checked' : ''}>
-      <div class="apartado-photo"><img src="../assets/images/isotipo-morado.png" alt=""></div>
+      <div class="apartado-photo"><img src="../../assets/images/isotipo-morado.png" alt=""></div>
       <div class="apartado-info">
         <h4>${p.nombre}</h4>
         <span class="variant">${p.variante}</span>

@@ -168,7 +168,7 @@ function renderProductos(productos) {
   grid.innerHTML = productos.map((p) => `
     <div class="catalog-product-card">
       <div class="cp-photo">
-        <img src="../assets/images/isotipo-morado.png" alt="">
+        <img src="../../assets/images/isotipo-morado.png" alt="">
       </div>
       <div class="cp-body">
         <h4>${p.nombre}</h4>

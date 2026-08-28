@@ -92,7 +92,7 @@ function renderSolicitudes() {
           </div>
         </div>
         ${s.tieneFoto ? `
-          <div class="sc-photo"><img src="../assets/images/isotipo-morado.png" alt=""></div>
+          <div class="sc-photo"><img src="../../assets/images/isotipo-morado.png" alt=""></div>
         ` : ''}
         <div class="sc-body">
           <h4>${s.titulo}</h4>
@@ -103,7 +103,7 @@ function renderSolicitudes() {
           </div>
           <div class="sc-status-line">
             <span>${cfg.mensaje}</span>
-            ${cfg.cta ? `<a class="mini-btn" href="catalogo.html">Ver en catálogo</a>` : ''}
+            ${cfg.cta ? `<a class="mini-btn" href="${typeof PORTAL_LINKS !== 'undefined' ? PORTAL_LINKS.catalogo : '../catalogo.html'}">Ver en catálogo</a>` : ''}
           </div>
         </div>
       </div>
