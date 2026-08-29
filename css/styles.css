@@ -2517,3 +2517,74 @@ a:hover { color: var(--mw-gold); }
   }
 
 }
+
+/* =========================================================
+   MW JOYERÍA — CALENDARIO (Staff / RH / Admin)
+   Reutiliza los estilos de Catálogo (.catalog-*, .action-btn,
+   .stat-cards, .btn, .form-grid, etc.) — solo se agrega lo
+   específico de esta tabla: la insignia de tipo de evento y el
+   enlace de ubicación / videollamada.
+   ========================================================= */
+
+.calendar-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.calendar-type-badge.presencial {
+  background: #eef7e8;
+  color: #4f8532;
+}
+
+.calendar-type-badge.virtual {
+  background: #eef2ff;
+  color: #4f659f;
+}
+
+.calendar-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--mw-purple);
+  text-decoration: none;
+}
+
+.calendar-link:hover {
+  text-decoration: underline;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 13px;
+}
+
+.section-head h2 {
+  margin: 0;
+  font: 500 19px Cinzel, serif;
+  color: #32135f;
+}
+
+.section-head h2:after {
+  content: '✦';
+  color: var(--mw-gold);
+  font-size: 12px;
+  margin-left: 10px;
+}
+
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 15px;
+  border-top: 1px solid #eee8ed;
+  color: #6e657e;
+  font-size: 0.7rem;
+}

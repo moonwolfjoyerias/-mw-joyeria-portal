@@ -1,6 +1,8 @@
-// MW JOYERÍA — Calendario
+// MW JOYERÍA — Calendario (solo lectura: Emprendedora / Líder)
 // Depende de EVENTOS_EJEMPLO (eventos-ejemplo.js) y de formatearFechaCorta
-// (definida en portal-common.js).
+// (definida en portal-common.js). Si eventos-modelo.js está cargado, lee
+// el calendario compartido (editado por Staff/RH/Admin) en vez de la
+// semilla de ejemplo.
 
 const DIAS_SEMANA_LARGO = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const MESES_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -9,7 +11,13 @@ const hoy = new Date();
 const mesActualIdx = hoy.getFullYear() * 12 + hoy.getMonth(); // índice absoluto de mes, para acotar navegación
 let mesMostradoIdx = mesActualIdx;
 
+let EVENTOS_ACTUALES = [];
+
 document.addEventListener('DOMContentLoaded', () => {
+  EVENTOS_ACTUALES = typeof cargarEventosCompartidos === 'function'
+    ? cargarEventosCompartidos()
+    : (typeof EVENTOS_EJEMPLO === 'undefined' ? [] : EVENTOS_EJEMPLO);
+
   renderCalendario();
   renderProximosEventos();
 
@@ -44,7 +52,7 @@ function renderCalendario() {
   const diasMesAnterior = new Date(year, month, 0).getDate();
 
   const eventosPorFecha = {};
-  EVENTOS_EJEMPLO.forEach(ev => {
+  EVENTOS_ACTUALES.forEach(ev => {
     (eventosPorFecha[ev.fecha] = eventosPorFecha[ev.fecha] || []).push(ev);
   });
 
@@ -89,7 +97,7 @@ function renderProximosEventos() {
   const wrap = document.getElementById('upcomingList');
   if (!wrap) return;
   const hoyStr = hoy.toISOString().slice(0, 10);
-  const proximos = EVENTOS_EJEMPLO
+  const proximos = EVENTOS_ACTUALES
     .filter(ev => ev.fecha >= hoyStr)
     .sort((a, b) => a.fecha.localeCompare(b.fecha))
     .slice(0, 6);
@@ -123,7 +131,7 @@ function renderProximosEventos() {
 }
 
 function abrirModalEvento(id) {
-  const ev = EVENTOS_EJEMPLO.find(e => e.id === id);
+  const ev = EVENTOS_ACTUALES.find(e => e.id === id);
   if (!ev) return;
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
