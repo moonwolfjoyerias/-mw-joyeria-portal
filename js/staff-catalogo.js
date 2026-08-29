@@ -351,9 +351,7 @@ function renderProducto(p) {
   }
 
 
-  const imagen = p.imagen?.startsWith('../assets/')
-    ? `../../${p.imagen.slice(3)}`
-    : (p.imagen || '../../assets/images/isotipo-morado.png');
+  const imagen = normalizarImagenProducto(p.imagen);
   const disponibilidad = p.stock > 0 ? 'Disponible' : 'Agotado';
   const colorTalla = [p.colorOro, p.talla].filter(Boolean).join(' · ') || 'No aplica';
 
@@ -402,9 +400,7 @@ function abrirModalProducto(producto = null) {
   const editando = !!producto;
 
 
-  imagenTemporal =
-    producto?.imagen ||
-    '../assets/images/isotipo-morado.png';
+  imagenTemporal = normalizarImagenProducto(producto?.imagen);
 
 
   box.innerHTML = `
@@ -453,24 +449,30 @@ function abrirModalProducto(producto = null) {
       </div>
 
 
-      <label class="upload-image-btn">
+      <div class="image-upload-info">
 
-        <span>📷</span>
+        <strong>Foto del artículo</strong>
 
-        Seleccionar imagen
+        <label class="upload-image-btn">
 
-        <input
-          type="file"
-          id="productoImagen"
-          accept="image/*"
-          hidden
-        >
+          <span>📷</span>
 
-      </label>
+          Seleccionar imagen
 
-      <small>
-        JPG, PNG o WEBP · Vista de demostración
-      </small>
+          <input
+            type="file"
+            id="productoImagen"
+            accept="image/*"
+            hidden
+          >
+
+        </label>
+
+        <small>
+          JPG, PNG o WEBP · Vista de demostración
+        </small>
+
+      </div>
 
     </div>
 
@@ -1582,6 +1584,21 @@ function formatearPrecio(numero) {
 
   return Number(numero || 0)
     .toLocaleString('es-MX');
+
+}
+
+
+function normalizarImagenProducto(imagen) {
+
+  if (!imagen) return '../../assets/images/isotipo-morado.png';
+
+  // Datos de ejemplo antiguos guardan la ruta relativa a /portal/ (un
+  // nivel), pero esta página vive en /portal/staff/ (dos niveles).
+  if (imagen.startsWith('../assets/')) {
+    return `../../${imagen.slice(3)}`;
+  }
+
+  return imagen;
 
 }
 
