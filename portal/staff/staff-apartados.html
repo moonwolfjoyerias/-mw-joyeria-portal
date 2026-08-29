@@ -47,6 +47,11 @@
     @media(max-width:1180px){.summary-grid{grid-template-columns:repeat(2,1fr)}.main{padding:25px}.guide{grid-template-columns:1fr 1fr 1fr}.guide-title{grid-column:1/-1;margin-bottom:10px}.guide-item{margin-top:4px}}
     @media(max-width:800px){.layout{grid-template-columns:1fr}.sidebar{display:none}.header{height:auto}.profile-info{display:none}.main{padding:20px 15px}.summary-grid{grid-template-columns:1fr}.toolbar{justify-content:stretch;flex-direction:column}.search{width:100%}.table-footer{gap:10px;flex-direction:column}.guide{grid-template-columns:1fr}.guide-item{border-left:0;border-top:1px solid #e4dce8;padding:10px 0 0}.guide-title{grid-column:auto}.modal-box{padding:25px 20px}}
     .portal-header .profile-avatar{width:34px;height:34px;font-size:0.9rem}
+
+    .expand-toggle{width:24px;height:24px;border:1px solid #ddd1e4;background:#fff;border-radius:6px;color:#5b1689;font-size:11px;display:flex;align-items:center;justify-content:center}
+    .expand-row td{background:#faf8fc}
+    .expand-row table{min-width:0;width:100%}
+    .expand-row .log-box:last-child{margin-bottom:0}
   </style>
 
   <div class="layout-portal">
@@ -116,26 +121,25 @@
       </header>
 
 
-      <div class="section-head"><h2>Resumen operativo</h2><div class="date-pill"><span>▣</span><span id="summaryDate">12 de mayo de 2025</span></div></div>
+      <div class="section-head"><h2>Resumen operativo</h2><div class="date-pill"><span>▣</span><span id="summaryDate"></span></div></div>
       <section class="stat-cards apartados-summary">
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
-          </div>
-          <div>
-            <h4>Productos en el catálogo</h4>
-            <span class="stat-num">2,345</span>
-            <a class="stat-link" href="../staff/staff-catalogo.html">Ver catálogo →</a>
-          </div>
-        </div>
-
         <div class="stat-card">
           <div class="icon-circle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
           </div>
           <div>
-            <h4>Apartados activos</h4>
-            <span class="stat-num">41</span>
+            <h4>Ventanas activas</h4>
+            <span class="stat-num">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
+          </div>
+          <div>
+            <h4>Piezas activas</h4>
+            <span class="stat-num">0</span>
           </div>
         </div>
 
@@ -144,38 +148,39 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
           </div>
           <div>
-            <h4>Apartados vencidos</h4>
-            <span class="stat-num">4</span>
+            <h4>Ventanas vencidas</h4>
+            <span class="stat-num">0</span>
           </div>
         </div>
 
         <div class="stat-card">
           <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
           </div>
           <div>
             <h4>Pendientes de depósito</h4>
-            <span class="stat-num">4</span>
+            <span class="stat-num">0</span>
           </div>
         </div>
       </section>
 
-      <div class="section-head"><h2>Solicitudes de apartado recientes</h2></div>
-      <div class="toolbar"><select class="filter-select" id="statusSelect"><option value="todos">Todos los estados</option><option value="pendiente_deposito">Pendiente de depósito</option><option value="deposito_confirmado">Depósito confirmado</option><option value="activo">Apartado activo</option><option value="vencido">Vencido</option><option value="contactada_whatsapp">Contactada por Whatsapp</option><option value="liquidado">Liquidada</option><option value="cancelado">Desapartado</option></select><input class="search" id="searchInput" placeholder="⌕  Buscar por cliente o pieza..." type="search"></div>
+      <div class="section-head">
+        <h2>Ventanas de apartado</h2>
+        <button class="action-btn primary-action" style="width:auto;padding:0 16px;height:36px;" id="nuevaVentanaBtn"><span>+</span> Nueva ventana de apartado</button>
+      </div>
+      <div class="toolbar"><select class="filter-select" id="statusSelect"><option value="todos">Todos los estados</option><option value="pendiente_deposito">Pendiente de depósito</option><option value="activa">Activa</option><option value="vencida">Vencida</option><option value="cerrada">Cerrada</option></select><input class="search" id="searchInput" placeholder="⌕  Buscar por nombre o pieza..." type="search"></div>
 
       <section class="table-card">
-        <div class="table-wrap"><table><thead><tr><th>Emprendedora / Líder</th><th>Categoría</th><th>Pieza</th><th>Variante</th><th>Fecha de solicitud</th><th>Depósito</th><th>Estado</th><th>Acciones</th><th>Última acción</th></tr></thead><tbody id="apartadosTableBody"></tbody></table></div>
-        <div class="table-footer"><span id="resultCount">Mostrando resultados</span><div class="pagination" id="pagination"></div><span>Filas por página: <strong>6</strong></span></div>
+        <div class="table-wrap"><table><thead><tr><th></th><th>Emprendedora / Líder</th><th>Categoría</th><th>Depósito disponible</th><th>Piezas</th><th>Estado de ventana</th><th>Vence</th><th>Acciones</th></tr></thead><tbody id="apartadosTableBody"></tbody></table></div>
+        <div class="table-footer"><span id="resultCount">Mostrando resultados</span></div>
       </section>
 
       <section class="guide">
-        <div class="guide-title">Guía de estados</div>
-        <div class="guide-item"><strong><i class="guide-dot" style="background:#e6b439"></i>Pendiente de depósito</strong><small>Esperando confirmación de depósito</small></div>
-        <div class="guide-item"><strong><i class="guide-dot" style="background:#7185c7"></i>Depósito confirmado</strong><small>Listo para confirmar apartado</small></div>
-        <div class="guide-item"><strong><i class="guide-dot" style="background:#76ad50"></i>Apartado activo</strong><small>Depósito confirmado</small></div>
-        <div class="guide-item"><strong><i class="guide-dot" style="background:#e67575"></i>Vencido</strong><small>El tiempo de apartado ha vencido</small></div>
-        <div class="guide-item"><strong><i class="guide-dot" style="background:#aa8ad1"></i>Contactada por Whatsapp</strong><small>La emprendedora ya fue avisada</small></div>
-        <div class="guide-item"><strong><i class="guide-dot" style="background:#aa8ad1"></i>Desapartado</strong><small>Pieza liberada por el Staff</small></div>
+        <div class="guide-title">Guía del depósito</div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#e6b439"></i>Pendiente de depósito</strong><small>Esperando los $50 para abrir la ventana</small></div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#76ad50"></i>Activa</strong><small>Puede apartar varias piezas sin pagar de nuevo</small></div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#e67575"></i>Vencida</strong><small>Piezas canceladas, depósito perdido</small></div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#aa8ad1"></i>Cerrada</strong><small>Sin piezas activas: depósito aplicado o guardado como crédito</small></div>
       </section>
     </main>
   </div>
@@ -183,7 +188,6 @@
   <div class="modal-overlay" id="modalOverlay"><div class="modal-box" id="modalBox"></div></div>
 
   <script src="../../js/apartados-modelo.js"></script>
-  <script src="../../js/apartados-ejemplo.js"></script>
   <script src="../../js/staff-apartados-ejemplo.js"></script>
   <script src="../../js/staff-apartados.js"></script>
   <script src="../../js/portal-common.js"></script>

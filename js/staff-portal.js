@@ -18,8 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function actualizarResumenInicio() {
 
-  const apartados = typeof calcularApartadosStaffActuales === 'function'
-    ? calcularApartadosStaffActuales()
+  const ventanas = typeof calcularVentanasStaffActuales === 'function'
+    ? calcularVentanasStaffActuales()
     : [];
 
   const deseos = typeof cargarDeseosStaffActuales === 'function'
@@ -27,8 +27,8 @@ function actualizarResumenInicio() {
     : [];
 
   const valores = {
-    inicioPendientesApartar: apartados.filter(a => a.estado === 'pendiente_deposito').length,
-    inicioApartadosVencidos: apartados.filter(a => a.estado === 'vencido').length,
+    inicioPendientesApartar: ventanas.filter(v => v.estado === 'pendiente_deposito').length,
+    inicioApartadosVencidos: ventanas.filter(v => v.estado === 'vencida').length,
     inicioTotalDeseos: deseos.length
   };
 
