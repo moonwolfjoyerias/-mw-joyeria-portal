@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Staff MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=9">
+  <link rel="stylesheet" href="../../css/styles.css?v=17">
 </head>
 <body>
 
@@ -45,3 +45,157 @@
         </a>
       </nav>
     </aside>
+
+    <main class="main-content">
+      <header class="portal-header">
+        <div>
+          <h1>Lista de deseos ✦</h1>
+          <p class="portal-sub">Revisa las piezas que buscan las emprendedoras y actualiza el estado de cada solicitud.</p>
+        </div>
+
+        <div class="portal-header-actions">
+          <button class="notif-bell" id="notifBell" aria-label="Notificaciones">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span class="notif-badge" id="notifBadge">0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel"></div>
+
+          <button class="profile-btn" id="profileBtn">
+            <span class="profile-avatar">E</span>
+            <span class="profile-info">
+              <strong>Staff</strong>
+              <span class="profile-role">Staff MW</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" data-modal="foto">Cambiar foto de perfil</a>
+            <a href="../../login.html" class="danger">Cerrar sesión</a>
+          </div>
+        </div>
+      </header>
+
+      <!-- RESUMEN -->
+      <div class="section-head">
+        <h2>Resumen de solicitudes</h2>
+      </div>
+
+      <section class="stat-cards catalog-summary">
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
+          </div>
+          <div>
+            <h4>Total de solicitudes</h4>
+            <span class="stat-num" id="totalDeseos">0</span>
+            <span class="stat-link">Registradas en la lista</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+          </div>
+          <div>
+            <h4>Pendientes</h4>
+            <span class="stat-num" id="deseosPendientes">0</span>
+            <span class="stat-link">Sin revisar</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg>
+          </div>
+          <div>
+            <h4>En revisión</h4>
+            <span class="stat-num" id="deseosEnRevision">0</span>
+            <span class="stat-link">Buscando coincidencia</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 7L10 17l-5-5"/><path d="M4 4h16v16H4z"/></svg>
+          </div>
+          <div>
+            <h4>Disponibles</h4>
+            <span class="stat-num" id="deseosDisponibles">0</span>
+            <span class="stat-link">Listas para notificar</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ACCIONES -->
+      <div class="section-head catalog-section-head">
+        <h2>Solicitudes de emprendedoras</h2>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="catalog-toolbar">
+
+        <div class="catalog-search">
+          <span>⌕</span>
+          <input type="search" id="searchInput" placeholder="Buscar por emprendedora o pieza...">
+        </div>
+
+        <select id="filterEstado">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="en_revision">En revisión</option>
+          <option value="bingo">¡Bingo!</option>
+          <option value="disponible">Disponible</option>
+        </select>
+
+      </div>
+
+      <!-- TABLA -->
+      <section class="catalog-table-card">
+        <div class="catalog-table-wrap">
+          <table class="catalog-table">
+            <thead>
+              <tr>
+                <th>Emprendedora</th>
+                <th>Pieza deseada</th>
+                <th>Descripción</th>
+                <th>Foto de referencia</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+                <th>Última acción</th>
+              </tr>
+            </thead>
+            <tbody id="deseosTableBody"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="resultCount">Mostrando resultados</span>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="catalog-modal-overlay" id="modalOverlay">
+    <div class="catalog-modal modal-box" id="modalBox"></div>
+  </div>
+
+  <script src="../../js/notificaciones-ejemplo.js"></script>
+  <script src="../../js/eventos-ejemplo.js"></script>
+  <script>
+  const PORTAL_LINKS = {
+    inicio: '../staff/staff-portal.html',
+    catalogo: '../staff/staff-catalogo.html',
+    apartados: '../staff/staff-apartados.html',
+    deseos: '../staff/staff-lista-deseos.html',
+    calendario: '../staff/staff-calendario.html',
+    notificaciones: '../staff/staff-mi-cuenta.html',
+  };
+  </script>
+  <script src="../../js/portal-common.js"></script>
+  <script src="../../js/staff-deseos-ejemplo.js"></script>
+  <script src="../../js/staff-lista-deseos.js"></script>
+</body>
+</html>

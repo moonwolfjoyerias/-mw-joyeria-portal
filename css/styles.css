@@ -2559,6 +2559,36 @@ a:hover { color: var(--mw-gold); }
   text-decoration: underline;
 }
 
+.wishlist-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.wishlist-status.pendiente {
+  background: #fff5df;
+  color: #9a6716;
+}
+
+.wishlist-status.en_revision {
+  background: #eef2ff;
+  color: #4f659f;
+}
+
+.wishlist-status.bingo {
+  background: var(--mw-gold-soft);
+  color: #8a6a1f;
+}
+
+.wishlist-status.disponible {
+  background: #eef7e8;
+  color: #4f8532;
+}
+
 .section-head {
   display: flex;
   align-items: center;
