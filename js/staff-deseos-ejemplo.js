@@ -83,3 +83,20 @@ const ESTADOS_DESEOS_STAFF = {
   bingo: { label: '¡Bingo!', clase: 'bingo' },
   disponible: { label: 'Disponible', clase: 'disponible' }
 };
+
+const DESEOS_STAFF_STORAGE_KEY = 'mw-staff-deseos-v1';
+
+// Fuente única de verdad para la lista de deseos: la usan tanto la
+// página de Lista de deseos como el resumen de Inicio.
+function cargarDeseosStaffActuales() {
+
+  try {
+    const guardados = JSON.parse(localStorage.getItem(DESEOS_STAFF_STORAGE_KEY));
+    if (Array.isArray(guardados)) return guardados;
+  } catch (error) {
+    // localStorage inválido: seguimos con la semilla de ejemplo.
+  }
+
+  return DESEOS_STAFF_EJEMPLO.map(d => ({ ...d }));
+
+}

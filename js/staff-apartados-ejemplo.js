@@ -242,3 +242,65 @@ const APARTADOS_STAFF_EJEMPLO = [
 const CONFIG_STAFF_APARTADOS_EJEMPLO = {
   filasPorPagina: 6
 };
+
+const APARTADOS_STORAGE_KEY = "mw-staff-apartados-v3";
+
+function obtenerIniciales(nombre) {
+  return nombre.split(" ").map(parte => parte[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function diasPermitidosApartado(categoria) {
+  return categoria === "foranea" ? 15 : 3;
+}
+
+// Fuente única de verdad para "cuántos apartados hay y en qué estado":
+// la usan tanto la página de Apartados como el resumen de Inicio, para
+// que ambas muestren siempre los mismos números.
+function calcularApartadosStaffActuales() {
+
+  const apartadosEjemploCompartidos = (typeof APARTADOS_EJEMPLO === "undefined" ? [] : APARTADOS_EJEMPLO).map((apartado, index) => ({
+    id: `EJ-${apartado.id || index + 1}`,
+    emprendedora: apartado.emprendedora || "Usuario de ejemplo",
+    iniciales: obtenerIniciales(apartado.emprendedora || "Usuario de ejemplo"),
+    telefono: apartado.telefono || "",
+    categoria: apartado.categoria || "normal",
+    pieza: apartado.nombre,
+    variante: apartado.variante,
+    precio: apartado.precioEmprendedora,
+    fechaSolicitud: "12 mayo 2025",
+    horaSolicitud: "09:00 AM",
+    fechaConfirmacion: new Date().toISOString(),
+    deposito: apartado.categoria === "vip" ? "no_requiere" : "confirmado",
+    estado: "activo",
+    ultimaAccion: { texto: "Apartado confirmado", fecha: "12 mayo 2025 · 09:00 AM", usuario: "Sistema" }
+  }));
+
+  const datosIniciales = [...APARTADOS_STAFF_EJEMPLO, ...apartadosEjemploCompartidos];
+
+  let apartados;
+
+  try {
+    const guardados = JSON.parse(localStorage.getItem(APARTADOS_STORAGE_KEY));
+    apartados = Array.isArray(guardados) ? guardados : null;
+  } catch (error) {
+    apartados = null;
+  }
+
+  if (!apartados) {
+    apartados = datosIniciales.map(apartado => ({
+      ...apartado,
+      ultimaAccion: apartado.ultimaAccion ? { ...apartado.ultimaAccion } : null
+    }));
+  }
+
+  const ahora = Date.now();
+
+  apartados.forEach(apartado => {
+    if (apartado.estado !== "activo" || apartado.categoria === "vip" || apartado.deposito !== "confirmado" || !apartado.fechaConfirmacion) return;
+    const limite = new Date(apartado.fechaConfirmacion).getTime() + diasPermitidosApartado(apartado.categoria) * 24 * 60 * 60 * 1000;
+    if (ahora >= limite) apartado.estado = "vencido";
+  });
+
+  return apartados;
+
+}

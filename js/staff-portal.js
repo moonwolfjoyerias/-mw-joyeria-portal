@@ -1,0 +1,132 @@
+// MW JOYERÍA — Staff: Inicio
+//
+// Conecta el resumen operativo con los mismos datos que usan Apartados
+// y Lista de deseos (misma fuente compartida, ver *-ejemplo.js), y
+// muestra los eventos del calendario que caen en la semana actual.
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  actualizarResumenInicio();
+  renderEventosSemana();
+
+});
+
+
+// ============================================================
+// RESUMEN OPERATIVO
+// ============================================================
+
+function actualizarResumenInicio() {
+
+  const apartados = typeof calcularApartadosStaffActuales === 'function'
+    ? calcularApartadosStaffActuales()
+    : [];
+
+  const deseos = typeof cargarDeseosStaffActuales === 'function'
+    ? cargarDeseosStaffActuales()
+    : [];
+
+  const valores = {
+    inicioPendientesApartar: apartados.filter(a => a.estado === 'pendiente_deposito').length,
+    inicioApartadosVencidos: apartados.filter(a => a.estado === 'vencido').length,
+    inicioTotalDeseos: deseos.length
+  };
+
+  Object.entries(valores).forEach(([id, valor]) => {
+    const elemento = document.getElementById(id);
+    if (elemento) elemento.textContent = valor;
+  });
+
+}
+
+
+// ============================================================
+// EVENTOS DE ESTA SEMANA
+// ============================================================
+
+function renderEventosSemana() {
+
+  const wrap = document.getElementById('weekEventsRow');
+
+  if (!wrap) return;
+
+  const eventos = typeof cargarEventosCompartidos === 'function'
+    ? cargarEventosCompartidos()
+    : (typeof EVENTOS_EJEMPLO === 'undefined' ? [] : EVENTOS_EJEMPLO);
+
+  const { inicioSemana, finSemana } = obtenerRangoSemanaActual();
+
+  const eventosSemana = eventos
+    .filter(ev => ev.fecha >= inicioSemana && ev.fecha <= finSemana)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  if (!eventosSemana.length) {
+    wrap.innerHTML = '<p class="upcoming-empty">No hay eventos programados esta semana.</p>';
+    return;
+  }
+
+  wrap.innerHTML = eventosSemana.map(ev => {
+
+    const { dia, mes, diaSemana } = formatearFechaCorta(ev.fecha);
+
+    return `
+      <div class="event-card">
+        <div class="event-date-box">
+          <span class="mes">${mes}</span>
+          <span class="dia">${dia}</span>
+          <span class="dia-semana">${diaSemana}</span>
+        </div>
+        <div class="event-photo"></div>
+        <div class="event-body">
+          <h4>${escapeHTML(ev.titulo)}</h4>
+          <div class="event-meta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+            ${escapeHTML(ev.hora || '')}
+          </div>
+          <div class="event-meta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-7.58 7-12a7 7 0 10-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            ${escapeHTML(ev.lugarTexto || '')}
+          </div>
+          <a class="event-link" href="../staff/staff-calendario.html">Ver calendario →</a>
+        </div>
+      </div>
+    `;
+
+  }).join('');
+
+}
+
+
+function obtenerRangoSemanaActual() {
+
+  const hoy = new Date();
+  const diaSemana = hoy.getDay(); // 0 = domingo
+  const offsetLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() + offsetLunes);
+
+  const domingo = new Date(lunes);
+  domingo.setDate(lunes.getDate() + 6);
+
+  return {
+    inicioSemana: formatearFechaISO(lunes),
+    finSemana: formatearFechaISO(domingo)
+  };
+
+}
+
+
+function formatearFechaISO(fecha) {
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+}
+
+
+function escapeHTML(texto) {
+  return String(texto ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
