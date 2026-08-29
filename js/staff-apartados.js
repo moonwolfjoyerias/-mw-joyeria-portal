@@ -348,7 +348,7 @@ function obtenerAcciones(apartado) {
 
   let html = "";
 
-  if (apartado.estado !== "cancelado") {
+  if (!["cancelado", "liquidado"].includes(apartado.estado)) {
     html += `
       <button
         class="action-btn primary-action"
@@ -629,9 +629,9 @@ function abrirAutorizacion(apartado, accion) {
 
     </div>
 
-    ${accion === "confirmar-deposito" ? `
+    ${["confirmar-deposito", "pago-total"].includes(accion) ? `
       <label for="depositoMonto">Monto recibido</label>
-      <input id="depositoMonto" type="number" min="50" step="0.01" placeholder="Ej. 50">
+      <input id="depositoMonto" type="number" min="0" step="0.01" value="${accion === "pago-total" ? Number(apartado.saldo ?? apartado.total ?? apartado.precio ?? 0) : ""}" placeholder="Ej. ${accion === "pago-total" ? Number(apartado.saldo ?? apartado.total ?? apartado.precio ?? 0).toLocaleString("es-MX") : "50"}">
       <label for="depositoMetodo">Método de pago</label>
       <select id="depositoMetodo" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
         <option value="">Selecciona una opción</option>
@@ -746,18 +746,24 @@ function abrirAutorizacion(apartado, accion) {
 
 function validarAutorizacion() {
 
-  if (accionPendiente === "confirmar-deposito") {
+  if (["confirmar-deposito", "pago-total"].includes(accionPendiente)) {
     const monto = Number(document.getElementById("depositoMonto")?.value);
     const metodo = document.getElementById("depositoMetodo")?.value;
     const referencia = document.getElementById("depositoReferencia")?.value.trim();
     const errorDeposito = document.getElementById("authError");
+    const saldo = Number(apartadoSeleccionado?.saldo ?? apartadoSeleccionado?.total ?? apartadoSeleccionado?.precio ?? 0);
+    const montoInvalido = accionPendiente === "pago-total"
+      ? !Number.isFinite(monto) || monto !== saldo
+      : !Number.isFinite(monto) || monto < 50;
 
-    if (!Number.isFinite(monto) || monto < 50 || !metodo || (metodo === "transferencia" && !referencia)) {
+    if (montoInvalido || !metodo || (metodo === "transferencia" && !referencia)) {
       if (errorDeposito) {
         errorDeposito.style.display = "block";
         errorDeposito.textContent = metodo === "transferencia" && !referencia
           ? "La referencia es obligatoria para una transferencia."
-          : "Captura un monto válido y selecciona el método de pago.";
+          : accionPendiente === "pago-total"
+            ? `El monto debe ser exactamente el saldo pendiente: $${saldo.toLocaleString("es-MX")} MXN.`
+            : "Captura un monto válido y selecciona el método de pago.";
       }
       return;
     }
@@ -922,8 +928,16 @@ function ejecutarAccion(personal) {
     apartadoSeleccionado.saldo = 0;
     apartadoSeleccionado.pagos = [
       ...(Array.isArray(apartadoSeleccionado.pagos) ? apartadoSeleccionado.pagos : []),
-      { monto: saldo, tipo: "liquidacion", fecha: ahora.toISOString() }
+      {
+        monto: saldo,
+        tipo: "liquidacion",
+        metodo: datosDepositoPendiente?.metodo || null,
+        referencia: datosDepositoPendiente?.referencia || null,
+        fecha: ahora.toISOString()
+      }
     ];
+    apartadoSeleccionado.metodoPagoTotal = datosDepositoPendiente?.metodo || null;
+    apartadoSeleccionado.referenciaPagoTotal = datosDepositoPendiente?.referencia || null;
     apartadoSeleccionado.estado = "liquidado";
     apartadoSeleccionado.ultimaAccion = {
       texto: "Pago total registrado",
@@ -1090,6 +1104,11 @@ function abrirDetalle(apartado) {
       <div>
         <span>Liquidación</span>
         <strong>${apartado.estado === "liquidado" ? "Pagó en su totalidad" : "Pendiente"}</strong>
+      </div>
+
+      <div>
+        <span>Método / referencia de liquidación</span>
+        <strong>${apartado.metodoPagoTotal === "transferencia" ? "Transferencia" : apartado.metodoPagoTotal === "local" ? "Pago en local" : "—"}${apartado.referenciaPagoTotal ? ` · ${apartado.referenciaPagoTotal}` : ""}</strong>
       </div>
 
 
