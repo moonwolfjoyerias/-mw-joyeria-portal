@@ -886,6 +886,8 @@ function solicitarAutorizacion(tipo, id, datos = null) {
   let descripcion =
     'Ingresa tus credenciales para registrar quién realizó este cambio.';
   let boton = 'Autorizar y continuar';
+  const productoSeleccionado = id ? catalogoStaff.find(p => p.id === id) : null;
+  const detalleAccion = productoSeleccionado ? productoSeleccionado.nombre : 'Producto nuevo';
 
 
   if (tipo === 'agregar') {
@@ -956,6 +958,16 @@ function solicitarAutorizacion(tipo, id, datos = null) {
       ${descripcion}
     </p>
 
+    <div class="modal-context">
+      <span>Acción</span>
+      <strong>${titulo}</strong>
+
+      <span>Detalle</span>
+      <strong>${detalleAccion}</strong>
+
+      <span>Tipo</span>
+      <strong>${tipo === 'eliminar' ? 'Eliminación' : tipo === 'stock' ? 'Existencia' : tipo === 'agregar' ? 'Alta de producto' : tipo === 'guardar-edicion' ? 'Edición' : 'Modificación'}</strong>
+    </div>
 
     <div class="auth-warning">
 
