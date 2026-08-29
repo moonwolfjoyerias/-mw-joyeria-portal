@@ -161,7 +161,9 @@ const MATERIALES_STAFF = [
   { key: 'oro-laminado', label: 'Oro Laminado' },
   { key: 'acero-inoxidable', label: 'Acero Inoxidable' },
   { key: 'exhibidores', label: 'Exhibidores' },
-  { key: 'souvenirs', label: 'Souvenirs' }
+  { key: 'souvenirs', label: 'Souvenirs' },
+  { key: 'fantasia', label: 'Fantasía' },
+  { key: 'otros', label: 'Otros' }
 ];
 
 const CATEGORIAS_STAFF = [
@@ -172,6 +174,7 @@ const CATEGORIAS_STAFF = [
   'Dijes',
   'Exhibidores',
   'Souvenirs',
+  'Fantasía',
   'Otros'
 ];
 

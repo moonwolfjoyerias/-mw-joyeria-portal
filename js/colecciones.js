@@ -4,7 +4,7 @@
 // { id, nombre, categoria, precioEtiqueta, destacado }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const categorias = ['oro-laminado', 'acero-inoxidable', 'exhibidores', 'souvenirs'];
+  const categorias = ['oro-laminado', 'acero-inoxidable', 'exhibidores', 'souvenirs', 'fantasia', 'otros'];
 
   categorias.forEach((categoria) => {
     const grid = document.querySelector(`.product-grid[data-categoria="${categoria}"]`);

@@ -3,7 +3,7 @@
 // del código (catalogo.js) no necesita cambiar — solo espera un array de
 // objetos con esta misma forma.
 //
-// material: 'oro-laminado' | 'acero-inoxidable' | 'exhibidores' | 'souvenirs'
+// material: 'oro-laminado' | 'acero-inoxidable' | 'exhibidores' | 'souvenirs' | 'fantasia' | 'otros'
 // categoria: tipo de pieza (Aretes, Pulseras, etc.) — solo aplica a oro-laminado y acero-inoxidable
 // calidad: 'estandar' | 'premium' — SOLO aplica a oro-laminado (no afecta precio, es descriptivo)
 // colorOro: 'blanco'|'amarillo'|'dorado'|'rosa'|'negro' — SOLO aplica a oro-laminado
@@ -35,4 +35,6 @@ const CATALOGO_EJEMPLO = [
   { id: 'c14', nombre: 'Pulsera Acero Minimal', material: 'acero-inoxidable', categoria: 'Pulseras', precioMayoreo: 220, disponible: true },
   { id: 'c15', nombre: 'Caja Regalo Dorada', material: 'exhibidores', precioMayoreo: 99, disponible: true },
   { id: 'c16', nombre: 'Playera MW Bordada', material: 'souvenirs', precioMayoreo: 249, disponible: true },
+  { id: 'c17', nombre: 'Set de fantasía floral', material: 'fantasia', categoria: 'Fantasía', precioMayoreo: 280, disponible: true },
+  { id: 'c18', nombre: 'Pulsera de regalo especial', material: 'otros', categoria: 'Otros', precioMayoreo: 310, disponible: true },
 ];
