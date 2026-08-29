@@ -199,7 +199,7 @@ function crearFila(apartado) {
 
   const estado = obtenerEstado(apartado.estado);
 
-  const deposito = obtenerDeposito(apartado.deposito);
+  const deposito = obtenerDeposito(apartado.deposito, apartado.estado);
 
   const acciones = obtenerAcciones(apartado);
 
@@ -1087,7 +1087,7 @@ function abrirDetalle(apartado) {
       <div>
         <span>Depósito</span>
         <strong>
-          ${apartado.deposito === "no_requiere" ? "No requiere" : apartado.deposito === "confirmado" ? "Confirmado" : "Pendiente"}
+          ${apartado.estado === "liquidado" ? "Confirmado" : apartado.deposito === "no_requiere" ? "No requiere" : apartado.deposito === "confirmado" ? "Confirmado" : "Pendiente"}
         </strong>
       </div>
 
@@ -1222,7 +1222,15 @@ function obtenerEstado(estado) {
 // DEPÓSITO
 // ============================================================
 
-function obtenerDeposito(deposito) {
+function obtenerDeposito(deposito, estado = "") {
+
+  if (estado === "liquidado") {
+    return {
+      texto: "Confirmado",
+      descripcion: "Depósito recibido",
+      dot: "dot-blue"
+    };
+  }
 
   if (deposito === "no_requiere") {
     return {
