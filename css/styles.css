@@ -2589,6 +2589,80 @@ a:hover { color: var(--mw-gold); }
   color: #4f8532;
 }
 
+/* =========================================================
+   MW JOYERÍA — MI CUENTA (Staff): directorio + nómina
+   ========================================================= */
+
+.employee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.employee-card {
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 1.5rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.employee-card .employee-avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 1.15rem;
+  margin-bottom: 4px;
+}
+
+.employee-card strong {
+  color: var(--mw-text);
+  font-size: 0.95rem;
+}
+
+.employee-card .btn {
+  width: 100%;
+  margin-top: 10px;
+  font-size: 0.78rem;
+}
+
+.eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #8c5ca6;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.detail-grid > div {
+  background: #faf8fb;
+  border: 1px solid #eee7f0;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.detail-grid span:not(.status) {
+  display: block;
+  color: #887e91;
+  font-size: 9px;
+  margin-bottom: 4px;
+}
+
+.detail-grid strong {
+  font-size: 11px;
+  color: #39224f;
+}
+
 .section-head {
   display: flex;
   align-items: center;

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Staff MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=9">
+  <link rel="stylesheet" href="../../css/styles.css?v=18">
 </head>
 <body>
 
@@ -45,3 +45,64 @@
         </a>
       </nav>
     </aside>
+
+    <main class="main-content">
+      <header class="portal-header">
+        <div>
+          <h1>Mi cuenta ✦</h1>
+          <p class="portal-sub">Encuentra tu usuario en la lista y consulta tu recibo de nómina de la semana actual.</p>
+        </div>
+
+        <div class="portal-header-actions">
+          <button class="notif-bell" id="notifBell" aria-label="Notificaciones">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span class="notif-badge" id="notifBadge">0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel"></div>
+
+          <button class="profile-btn" id="profileBtn">
+            <span class="profile-avatar">E</span>
+            <span class="profile-info">
+              <strong>Staff</strong>
+              <span class="profile-role">Staff MW</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" data-modal="foto">Cambiar foto de perfil</a>
+            <a href="../../login.html" class="danger">Cerrar sesión</a>
+          </div>
+        </div>
+      </header>
+
+      <div class="section-head">
+        <h2>Personal de Staff</h2>
+      </div>
+      <p class="portal-sub" style="margin-top:-8px;">Solo puedes ver tu propio recibo de nómina, nunca el de otra persona.</p>
+
+      <section class="employee-grid" id="employeeGrid"></section>
+
+    </main>
+  </div>
+
+  <div class="catalog-modal-overlay" id="modalOverlay">
+    <div class="catalog-modal modal-box" id="modalBox"></div>
+  </div>
+
+  <script src="../../js/notificaciones-ejemplo.js"></script>
+  <script src="../../js/eventos-ejemplo.js"></script>
+  <script>
+  const PORTAL_LINKS = {
+    inicio: '../staff/staff-portal.html',
+    catalogo: '../staff/staff-catalogo.html',
+    apartados: '../staff/staff-apartados.html',
+    deseos: '../staff/staff-lista-deseos.html',
+    calendario: '../staff/staff-calendario.html',
+    notificaciones: '../staff/staff-mi-cuenta.html',
+  };
+  </script>
+  <script src="../../js/portal-common.js"></script>
+  <script src="../../js/staff-mi-cuenta-ejemplo.js"></script>
+  <script src="../../js/staff-mi-cuenta.js"></script>
+</body>
+</html>
