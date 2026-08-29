@@ -14,11 +14,13 @@
 let deseosStaff = [];
 let accionDeseoPendiente = null;
 
-const DESEOS_STAFF_STORAGE_KEY = 'mw-staff-deseos-v1';
+// La carga inicial (semilla + localStorage) vive en
+// cargarDeseosStaffActuales() (staff-deseos-ejemplo.js) para que
+// Inicio y Lista de deseos siempre muestren los mismos datos.
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  cargarDeseosStaff();
+  deseosStaff = cargarDeseosStaffActuales();
   renderResumenDeseos();
   renderTablaDeseos();
   inicializarEventosDeseos();
@@ -27,24 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ============================================================
-// CARGAR / GUARDAR
+// GUARDAR
 // ============================================================
-
-function cargarDeseosStaff() {
-
-  try {
-    const guardados = JSON.parse(localStorage.getItem(DESEOS_STAFF_STORAGE_KEY));
-    deseosStaff = Array.isArray(guardados) ? guardados : DESEOS_STAFF_EJEMPLO.map(d => ({ ...d }));
-  } catch (error) {
-    deseosStaff = DESEOS_STAFF_EJEMPLO.map(d => ({ ...d }));
-  }
-
-  if (!localStorage.getItem(DESEOS_STAFF_STORAGE_KEY)) {
-    guardarDeseosStaff();
-  }
-
-}
-
 
 function guardarDeseosStaff() {
   localStorage.setItem(DESEOS_STAFF_STORAGE_KEY, JSON.stringify(deseosStaff));
