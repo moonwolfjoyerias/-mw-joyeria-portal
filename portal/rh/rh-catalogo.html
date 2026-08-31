@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal — RH MW</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="../../css/styles.css?v=9">
+</head>
+<body>
+
+  <div class="layout-portal">
+    <aside class="sidebar">
+      <a href="../../index.html" class="brand-link">
+        <img src="../../assets/images/isotipo-blanco.png" alt="MOONWOLF Joyería">
+        <span>
+          <span class="logo-main">MOONWOLF</span>
+          <span class="logo-sub">JOYERÍA</span>
+        </span>
+      </a>
+      <nav>
+        <a href="../rh/rh-portal.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+          Inicio
+        </a>
+        <a href="../rh/rh-catalogo.html" class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg>
+          Catálogo
+        </a>
+        <a href="../rh/rh-apartados.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
+          Apartados
+        </a>
+        <a href="../rh/rh-calendario.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          Calendario
+        </a>
+        <a href="../rh/rh-lista-deseos.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
+          Lista de deseos
+        </a>
+        <a href="../rh/rh-nomina.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>
+          Nómina
+        </a>
+        <a href="../rh/rh-mi-cuenta.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+          Mi cuenta
+        </a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header class="portal-header">
+        <div>
+          <h1>Catálogo</h1>
+          <p class="portal-sub">Precio de mayoreo ya con tu descuento aplicado.</p>
+        </div>
+
+        <div class="portal-header-actions">
+          <button class="notif-bell" id="notifBell" aria-label="Notificaciones">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span class="notif-badge" id="notifBadge">0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel"></div>
+
+          <button class="profile-btn" id="profileBtn">
+            <span class="profile-avatar">R</span>
+            <span class="profile-info">
+              <strong>Recursos Humanos</strong>
+              <span class="profile-role">RH MW</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" data-modal="foto">Cambiar foto de perfil</a>
+            <a href="../../login.html" class="danger">Cerrar sesión</a>
+          </div>
+        </div>
+      </header>
+
+  <!-- RESUMEN -->
+  <div class="section-head">
+    <h2>Resumen del catálogo</h2>
+  </div>
+
+  <section class="stat-cards catalog-summary">
+
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M6 7h12l1 13H5L6 7z"/>
+          <path d="M9 7a3 3 0 016 0"/>
+        </svg>
+      </div>
+
+      <div>
+        <h4>Total de productos</h4>
+        <span class="stat-num" id="totalProductos">0</span>
+        <span class="stat-link">Productos registrados</span>
+      </div>
+    </div>
+
+
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M20 7L10 17l-5-5"/>
+          <path d="M4 4h16v16H4z"/>
+        </svg>
+      </div>
+
+      <div>
+        <h4>Disponibles</h4>
+        <span class="stat-num" id="productosDisponibles">0</span>
+        <span class="stat-link">Visibles para emprendedoras</span>
+      </div>
+    </div>
+
+
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M4 6h16"/>
+          <path d="M4 12h16"/>
+          <path d="M4 18h16"/>
+        </svg>
+      </div>
+
+      <div>
+        <h4>Oro Laminado</h4>
+        <span class="stat-num" id="productosOro">0</span>
+        <span class="stat-link">Productos</span>
+      </div>
+    </div>
+
+
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M12 3v18"/>
+          <path d="M17 7.5c0-2-2-3.5-5-3.5S7 5.5 7 7.5 9 11 12 11s5 1.5 5 3.5S15 18 12 18s-5-1.5-5-3.5"/>
+        </svg>
+      </div>
+
+      <div>
+        <h4>Precio promedio</h4>
+        <span class="stat-num" id="precioPromedio">$0</span>
+        <span class="stat-link">Precio de mayoreo</span>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ACCIONES -->
+  <div class="section-head catalog-section-head">
+    <h2>Productos del catálogo</h2>
+
+    <button class="catalog-add-btn" id="agregarProductoBtn">
+      <span>＋</span>
+      Agregar producto
+    </button>
+  </div>
+
+
+  <!-- FILTROS -->
+  <div class="catalog-toolbar">
+
+    <div class="catalog-search">
+      <span>⌕</span>
+      <input
+        type="search"
+        id="searchInput"
+        placeholder="Buscar por nombre, categoría o código..."
+      >
+    </div>
+
+    <select id="filterMaterial">
+      <option value="">Todos los materiales</option>
+      <option value="oro-laminado">Oro Laminado</option>
+      <option value="acero-inoxidable">Acero Inoxidable</option>
+      <option value="exhibidores">Exhibidores</option>
+      <option value="souvenirs">Souvenirs</option>
+    </select>
+
+    <select id="filterEstado">
+      <option value="">Todas las disponibilidades</option>
+      <option value="disponible">Disponible</option>
+      <option value="agotado">No disponible</option>
+    </select>
+
+  </div>
+
+
+  <!-- PRODUCTOS -->
+  <section class="catalog-table-card">
+    <div class="catalog-table-wrap">
+      <table class="catalog-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Producto</th>
+            <th>Descripción</th>
+            <th>Categoría</th>
+            <th>Material</th>
+            <th>Calidad</th>
+            <th>Color / talla</th>
+            <th>Mayoreo</th>
+            <th>Público</th>
+            <th>Existencia</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="catalogGrid"></tbody>
+      </table>
+    </div>
+  </section>
+
+
+  <!-- MODAL -->
+  <div class="catalog-modal-overlay" id="modalOverlay">
+
+    <div class="catalog-modal modal-box" id="modalBox">
+
+      <button
+        class="catalog-modal-close"
+        id="catalogModalClose"
+        type="button"
+      >
+        ×
+      </button>
+
+    </div>
+
+  </div>
+
+</main>
+  </div>
+
+  <script src="../../js/notificaciones-ejemplo.js"></script>
+  <script src="../../js/eventos-ejemplo.js"></script>
+  <script>
+  const PORTAL_LINKS = {
+    inicio: '../rh/rh-portal.html',
+    catalogo: '../rh/rh-catalogo.html',
+    apartados: '../rh/rh-apartados.html',
+    deseos: '../rh/rh-lista-deseos.html',
+    calendario: '../rh/rh-calendario.html',
+    notificaciones: '../rh/rh-mi-cuenta.html',
+  };
+  </script>
+  <script src="../../js/portal-common.js"></script>
+  <script src="../../js/staff-catalogo-ejemplo.js"></script>
+  <script src="../../js/rh-comun.js"></script>
+  <script src="../../js/rh-catalogo.js"></script>
+</body>
+</html>

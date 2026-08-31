@@ -82,7 +82,7 @@
           </div>
           <div>
             <h4>Pendientes por apartar</h4>
-            <span class="stat-num">12</span>
+            <span class="stat-num" id="inicioPendientesApartar">0</span>
             <a class="stat-link" href="../staff/staff-apartados.html">Ver apartados →</a>
           </div>
         </div>
@@ -93,7 +93,7 @@
           </div>
           <div>
             <h4>Apartados vencidos</h4>
-            <span class="stat-num">6</span>
+            <span class="stat-num" id="inicioApartadosVencidos">0</span>
             <a class="stat-link" href="../staff/staff-apartados.html">Ver detalles →</a>
           </div>
         </div>
@@ -104,15 +104,11 @@
           </div>
           <div>
             <h4>Lista de deseos</h4>
-            <span class="stat-num">24</span>
+            <span class="stat-num" id="inicioTotalDeseos">0</span>
             <a class="stat-link" href="../staff/staff-lista-deseos.html">Ver lista →</a>
           </div>
         </div>
       </section>
-
-  <script src="../../js/portal-common.js"></script>
-</body>
-</html>
 
       <section class="promo-banner">
         <div class="carousel">
@@ -132,3 +128,29 @@
           <a href="../staff/staff-catalogo.html" class="btn btn-primary">Ver catálogo ✦</a>
         </div>
       </section>
+
+      <section>
+        <div class="events-section-header">
+          <h2>Eventos de esta semana ✦</h2>
+          <a href="../staff/staff-calendario.html" class="ver-todo-cal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="15" height="15"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+            Ver calendario completo
+          </a>
+        </div>
+        <div class="events-row-wrap">
+          <div class="events-row" id="weekEventsRow"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="../../js/eventos-ejemplo.js"></script>
+  <script src="../../js/eventos-modelo.js"></script>
+  <script src="../../js/apartados-modelo.js"></script>
+  <script src="../../js/staff-apartados-ejemplo.js"></script>
+  <script src="../../js/staff-deseos-ejemplo.js"></script>
+  <script src="../../js/portal-common.js"></script>
+  <script src="../../js/staff-portal.js"></script>
+</body>
+</html>
