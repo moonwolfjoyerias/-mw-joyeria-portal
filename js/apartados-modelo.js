@@ -2,19 +2,25 @@
 // TEMPORAL: localStorage simula la persistencia hasta integrar Firestore.
 //
 // LÓGICA DEL DEPÓSITO (ventana de apartado):
-// El depósito de $50 respalda TODA la ventana (no una pieza individual).
+// El depósito de $50+ respalda TODA la ventana (no una pieza
+// individual), y el apartado se liquida o cancela completo, no por
+// pieza — o pagan/desapartan todo, o nada.
 // - Se registra una sola vez al abrir la ventana (o se reutiliza un
-//   crédito guardado de una ventana anterior de la misma persona).
+//   crédito guardado de una ventana anterior de la misma persona). El
+//   plazo de vencimiento empieza a correr desde que se confirma el
+//   depósito, no desde que se solicitó la pieza.
 // - Mientras existan piezas activas, el depósito no se toca.
-// - Cuando ya no quedan piezas activas:
-//     - Si la ventana se cerró porque se PAGÓ la última pieza, se
-//       pregunta: aplicar el depósito a esa compra, o guardarlo como
-//       crédito para la próxima vez.
-//     - Si se cerró porque se CANCELÓ la última pieza (no hubo
-//       compra), el depósito se guarda como crédito automáticamente,
-//       sin preguntar.
-// - Si la ventana VENCE con piezas activas, esas piezas se cancelan y
-//   el depósito completo se pierde (no genera crédito).
+// - Cuando se LIQUIDA el apartado completo (se pagan todas las piezas
+//   activas juntas), se pregunta: aplicar el depósito a esa compra, o
+//   guardarlo como crédito para la próxima vez.
+// - Cuando se CANCELA el apartado completo (no hubo compra), el
+//   depósito se guarda como crédito automáticamente, sin preguntar.
+// - Que la ventana llegue a su fecha de vencimiento NO pierde nada
+//   automáticamente: solo se muestra como "vencida" (piezas y
+//   depósito intactos, se puede seguir liquidando con normalidad).
+//   El depósito solo se pierde si Staff decide "Desapartar" — después
+//   de contactar por Whatsapp y no obtener respuesta — que cancela
+//   las piezas activas restantes y pierde el depósito por completo.
 
 const APARTADOS_MODELO_STORAGE_KEY = 'mw-apartados-modelo-v1';
 const CREDITOS_MODELO_STORAGE_KEY = 'mw-creditos-modelo-v1';
@@ -190,14 +196,22 @@ function abrirVentanaApartado(datosPersona, empleado) {
 
 // El monto mínimo son $50, pero algunas personas transfieren más — el
 // monto completo recibido queda como depósito disponible de la ventana.
+// El plazo de vencimiento se cuenta a partir de este momento (no desde
+// que se solicitó la pieza).
 function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, empleado) {
 
   const montoFinal = Number(monto) || DEPOSITO_BASE;
+  const regla = obtenerReglaCategoria(ventana.categoria);
+  const ahora = new Date();
 
   ventana.depositoApartadoDisponible = montoFinal;
   ventana.metodoDeposito = metodo || null;
   ventana.referenciaDeposito = referencia || null;
   ventana.estado = 'activa';
+  ventana.fechaInicio = ahora.toISOString();
+  ventana.fechaVencimiento = regla.dias
+    ? new Date(ahora.getTime() + regla.dias * 24 * 60 * 60 * 1000).toISOString()
+    : null;
   ventana.auditoria.push(registrarAuditoria(`Depósito de $${montoFinal} confirmado`, empleado));
 
   return ventana;
@@ -214,78 +228,57 @@ function agregarPiezaAVentana(ventana, datosPieza, empleado) {
 
 }
 
-// Responde ANTES de cobrar: si se liquida esta pieza ahora mismo,
-// ¿sería la última pieza activa de una ventana con depósito
-// disponible? Si es así, la interfaz debe preguntar primero "aplicar
-// a esta compra o guardar como crédito", porque la respuesta cambia
-// cuánto debe pagar la persona (con "aplicar", se cobran $50 menos).
-function necesitaResolucionDeposito(ventana, piezaId) {
+// Liquida (paga) TODAS las piezas activas de la ventana juntas — el
+// apartado se paga completo, no por pieza. `monto` es el total ya
+// decidido por la interfaz (si se va a aplicar el depósito, debe venir
+// con ese descuento restado). Regresa si hace falta preguntar qué
+// hacer con el depósito (siempre que quede disponible, porque esta
+// acción deja la ventana sin piezas activas).
+function liquidarVentanaCompleta(ventana, { monto, metodo, referencia }, empleado) {
 
-  if (ventana.depositoApartadoDisponible <= 0) return false;
+  const piezasActivas = obtenerPiezasActivas(ventana);
+  if (!piezasActivas.length) return null;
 
-  const otrasActivas = obtenerPiezasActivas(ventana).filter(p => p.id !== piezaId);
+  const fecha = new Date().toISOString();
 
-  return otrasActivas.length === 0;
+  piezasActivas.forEach(pieza => {
+    pieza.pagos.push({ monto: pieza.saldo, tipo: 'liquidacion', metodo: metodo || null, referencia: referencia || null, fecha });
+    pieza.saldo = 0;
+    pieza.estado = 'liquidada';
+  });
 
-}
+  ventana.auditoria.push(registrarAuditoria(
+    `Apartado liquidado por completo (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'}) — $${monto}`,
+    empleado
+  ));
 
-// Liquida (paga) una pieza por el monto ya decidido (si se va a
-// aplicar el depósito, `monto` debe venir con ese descuento restado).
-// Regresa si la ventana se quedó sin piezas activas, para que la
-// interfaz cierre la ventana (resolverDepositoVentana si había
-// depósito pendiente de decisión, o cerrarVentana si no aplicaba).
-function liquidarPiezaVentana(ventana, piezaId, { monto, metodo, referencia }, empleado) {
+  const requiereResolucionDeposito = ventana.depositoApartadoDisponible > 0;
 
-  const pieza = ventana.apartados.find(p => p.id === piezaId);
-  if (!pieza) return null;
-
-  pieza.pagos.push({ monto, tipo: 'liquidacion', metodo: metodo || null, referencia: referencia || null, fecha: new Date().toISOString() });
-  pieza.saldo = Math.max(0, pieza.total - sumarPagos(pieza.pagos));
-  pieza.estado = 'liquidada';
-
-  ventana.auditoria.push(registrarAuditoria(`Pieza liquidada: ${pieza.producto}`, empleado));
-
-  const esUltimaPieza = obtenerPiezasActivas(ventana).length === 0;
-
-  if (esUltimaPieza && ventana.depositoApartadoDisponible <= 0) {
+  if (!requiereResolucionDeposito) {
     cerrarVentana(ventana, 'no_aplica');
   }
 
-  return { pieza, esUltimaPieza };
+  return { requiereResolucionDeposito };
 
 }
 
 // Resuelve el depósito de una ventana que se quedó sin piezas activas
 // por PAGO (no por cancelación). decision: 'aplicar' | 'credito'.
-// Debe llamarse DESPUÉS de liquidarPiezaVentana cuando esta reporte
-// esUltimaPieza=true y la ventana todavía tenía depósito disponible
-// (si se eligió "aplicar", el efectivo cobrado en liquidarPiezaVentana
-// ya debió venir con el descuento restado — aquí se registra el
-// depósito como el pago restante, para que el saldo quede en $0).
-function resolverDepositoVentana(ventana, decision, empleado, piezaId = null) {
+// Debe llamarse DESPUÉS de liquidarVentanaCompleta cuando esta reporte
+// requiereResolucionDeposito=true (si se eligió "aplicar", el efectivo
+// cobrado en liquidarVentanaCompleta ya debió venir con el descuento
+// restado).
+function resolverDepositoVentana(ventana, decision, empleado) {
 
   const monto = ventana.depositoApartadoDisponible;
 
   if (decision === 'aplicar') {
-
-    const pieza = piezaId
-      ? ventana.apartados.find(p => p.id === piezaId)
-      : ventana.apartados.filter(p => p.estado === 'liquidada').at(-1);
-
-    if (pieza) {
-      pieza.pagos.push({ monto, tipo: 'credito_deposito', metodo: null, referencia: null, fecha: new Date().toISOString() });
-      pieza.saldo = Math.max(0, pieza.total - sumarPagos(pieza.pagos));
-    }
-
     cerrarVentana(ventana, 'aplicado');
     ventana.auditoria.push(registrarAuditoria(`Depósito de $${monto} aplicado a la compra`, empleado));
-
   } else {
-
     establecerCredito(ventana.usuarioId, monto);
     cerrarVentana(ventana, 'credito');
     ventana.auditoria.push(registrarAuditoria(`Depósito de $${monto} guardado como crédito`, empleado));
-
   }
 
   ventana.depositoApartadoDisponible = 0;
@@ -294,32 +287,33 @@ function resolverDepositoVentana(ventana, decision, empleado, piezaId = null) {
 
 }
 
-// Cancela una pieza (desapartar). Cancelar NUNCA consume ni aplica el
-// depósito. Si esta era la última pieza activa, la ventana se cierra
-// y el depósito (si había) se guarda como crédito automáticamente.
-function cancelarPiezaVentana(ventana, piezaId, empleado) {
+// Cancela TODAS las piezas activas de la ventana juntas (desapartar el
+// apartado completo, no por pieza). Cancelar NUNCA aplica el depósito
+// a una compra — si queda depósito disponible, se guarda como crédito
+// automáticamente, sin preguntar.
+function cancelarVentanaCompleta(ventana, empleado) {
 
-  const pieza = ventana.apartados.find(p => p.id === piezaId);
-  if (!pieza) return null;
+  const piezasActivas = obtenerPiezasActivas(ventana);
+  if (!piezasActivas.length) return null;
 
-  pieza.estado = 'cancelada';
-  ventana.auditoria.push(registrarAuditoria(`Pieza cancelada: ${pieza.producto}`, empleado));
+  piezasActivas.forEach(pieza => { pieza.estado = 'cancelada'; });
 
-  if (obtenerPiezasActivas(ventana).length === 0) {
+  ventana.auditoria.push(registrarAuditoria(
+    `Apartado cancelado por completo (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'})`,
+    empleado
+  ));
 
-    if (ventana.depositoApartadoDisponible > 0) {
-      const monto = ventana.depositoApartadoDisponible;
-      establecerCredito(ventana.usuarioId, monto);
-      cerrarVentana(ventana, 'credito');
-      ventana.depositoApartadoDisponible = 0;
-      ventana.auditoria.push(registrarAuditoria(`Sin piezas activas tras cancelación — depósito de $${monto} guardado como crédito`, empleado));
-    } else {
-      cerrarVentana(ventana, 'no_aplica');
-    }
-
+  if (ventana.depositoApartadoDisponible > 0) {
+    const monto = ventana.depositoApartadoDisponible;
+    establecerCredito(ventana.usuarioId, monto);
+    cerrarVentana(ventana, 'credito');
+    ventana.depositoApartadoDisponible = 0;
+    ventana.auditoria.push(registrarAuditoria(`Depósito de $${monto} guardado como crédito`, empleado));
+  } else {
+    cerrarVentana(ventana, 'no_aplica');
   }
 
-  return pieza;
+  return piezasActivas;
 
 }
 
@@ -328,32 +322,28 @@ function cerrarVentana(ventana, resolucion) {
   ventana.resolucionDeposito = resolucion;
 }
 
-// Recorre las ventanas activas/pendientes y vence las que ya
-// cumplieron su plazo con piezas activas: se cancelan esas piezas y
-// se pierde el depósito completo (no genera crédito).
-function revisarVencimientoVentanas(ventanas, empleado = { nombre: 'Sistema' }) {
+// Cierra por completo una ventana vencida SIN respuesta al contacto
+// por Whatsapp: cancela las piezas activas restantes y el depósito se
+// pierde por completo (no genera crédito). A diferencia de vencer, que
+// es solo un aviso visual, esto sí es una acción definitiva.
+function desapartarVentanaVencida(ventana, empleado) {
 
-  const ahora = Date.now();
+  const piezasActivas = obtenerPiezasActivas(ventana);
+  piezasActivas.forEach(pieza => { pieza.estado = 'cancelada'; });
 
-  ventanas.forEach(ventana => {
+  const montoPerdido = ventana.depositoApartadoDisponible;
+  ventana.depositoApartadoDisponible = 0;
+  ventana.estado = 'vencida';
+  ventana.resolucionDeposito = 'perdido';
 
-    if (!['activa', 'pendiente_deposito'].includes(ventana.estado)) return;
-    if (!ventanaEstaVencida(ventana, ahora)) return;
+  ventana.auditoria.push(registrarAuditoria(
+    montoPerdido > 0
+      ? `Apartado desapartado por vencimiento — depósito de $${montoPerdido} perdido`
+      : 'Apartado desapartado por vencimiento',
+    empleado
+  ));
 
-    const activas = obtenerPiezasActivas(ventana);
-
-    if (activas.length > 0) {
-      activas.forEach(pieza => { pieza.estado = 'cancelada'; });
-      ventana.auditoria.push(registrarAuditoria(`Ventana vencida — ${activas.length} pieza(s) cancelada(s), depósito perdido`, empleado));
-    }
-
-    ventana.depositoApartadoDisponible = 0;
-    ventana.estado = 'vencida';
-    ventana.resolucionDeposito = 'perdido';
-
-  });
-
-  return ventanas;
+  return ventana;
 
 }
 

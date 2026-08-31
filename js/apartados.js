@@ -1,9 +1,12 @@
 // MW JOYERÍA — Mis apartados
 // Depende de APARTADOS_EJEMPLO, VENTANA_EJEMPLO y DATOS_BANCARIOS_EJEMPLO
 // (apartados-ejemplo.js), y reutiliza el modal genérico (#modalOverlay/#modalBox).
+//
+// El apartado se paga completo, no por pieza: no hay selección
+// individual, "Pagar todo mi apartado" cobra el total de todas las
+// piezas activas juntas.
 
 let apartadosActuales = [];
-const seleccionados = new Set();
 let vencimientoTs = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -59,7 +62,6 @@ function renderApartados() {
 
   list.innerHTML = apartadosActuales.map(p => `
     <div class="apartado-row" data-id="${p.id}">
-      <input type="checkbox" data-check="${p.id}" ${seleccionados.has(p.id) ? 'checked' : ''}>
       <div class="apartado-photo"><img src="../../assets/images/isotipo-morado.png" alt=""></div>
       <div class="apartado-info">
         <h4>${p.nombre}</h4>
@@ -76,13 +78,6 @@ function renderApartados() {
     </div>
   `).join('');
 
-  list.querySelectorAll('[data-check]').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      const id = e.target.getAttribute('data-check');
-      if (e.target.checked) seleccionados.add(id); else seleccionados.delete(id);
-      actualizarResumen();
-    });
-  });
   list.querySelectorAll('[data-quitar]').forEach(btn => {
     btn.addEventListener('click', () => quitarPieza(btn.getAttribute('data-quitar')));
   });
@@ -94,19 +89,16 @@ function renderApartados() {
 }
 
 function actualizarResumen() {
-  const total = apartadosActuales
-    .filter(p => seleccionados.has(p.id))
-    .reduce((sum, p) => sum + p.precioEmprendedora, 0);
-  setText('summaryCount', `${seleccionados.size} pieza${seleccionados.size === 1 ? '' : 's'} seleccionada${seleccionados.size === 1 ? '' : 's'}`);
+  const total = apartadosActuales.reduce((sum, p) => sum + p.precioEmprendedora, 0);
+  setText('summaryCount', `${apartadosActuales.length} pieza${apartadosActuales.length === 1 ? '' : 's'} en tu apartado`);
   setText('summaryTotal', `$${total} MXN`);
   const btn = document.getElementById('pagarSeleccionadasBtn');
-  if (btn) btn.disabled = seleccionados.size === 0;
+  if (btn) btn.disabled = apartadosActuales.length === 0;
 }
 
 // ---------- Quitar / Editar ----------
 function quitarPieza(id) {
   apartadosActuales = apartadosActuales.filter(p => p.id !== id);
-  seleccionados.delete(id);
   renderApartados();
   mostrarToast('Se le notificó al equipo de tus cambios');
 }
@@ -137,7 +129,7 @@ function abrirModalEditar(id) {
 
 // ---------- Pago ----------
 function abrirModalPago() {
-  const piezas = apartadosActuales.filter(p => seleccionados.has(p.id));
+  const piezas = apartadosActuales;
   if (piezas.length === 0) return;
   const total = piezas.reduce((sum, p) => sum + p.precioEmprendedora, 0);
   const overlay = document.getElementById('modalOverlay');
@@ -147,7 +139,7 @@ function abrirModalPago() {
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <h3>Pagar ${piezas.length} pieza${piezas.length === 1 ? '' : 's'}</h3>
+    <h3>Pagar tu apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'})</h3>
     <p class="modal-sub">Total a pagar: <strong style="color:var(--mw-purple)">$${total} MXN</strong></p>
 
     <div class="bank-details-box">
