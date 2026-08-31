@@ -98,6 +98,17 @@ function renderArbolVisual() {
   }
 
   document.getElementById('orgTreeContainer').innerHTML = `<div class="org-tree"><ul>${renderNode(byId['yo'], true, 0)}</ul></div>`;
+
+  // En pantallas angostas el árbol es más ancho que la ventana y queda
+  // centrado dentro de sí mismo (justify-content:center) — sin esto, el
+  // scroll inicial (0) muestra el borde izquierdo del árbol completo, no
+  // la raíz. Centramos el scroll para que "Tú (Líder)" quede a la vista.
+  const wrap = document.getElementById('orgTreeContainer')?.closest('.org-tree-wrap');
+  if (wrap) {
+    requestAnimationFrame(() => {
+      wrap.scrollLeft = (wrap.scrollWidth - wrap.clientWidth) / 2;
+    });
+  }
 }
 
 // ---------- Descargar árbol en PDF ----------
@@ -106,13 +117,37 @@ async function descargarArbolPDF() {
     mostrarToast('No se pudo generar el PDF — intenta de nuevo en un momento.');
     return;
   }
-  const viewport = document.getElementById('orgTreeContainer');
-  const canvas = await html2canvas(viewport, { backgroundColor: '#ffffff', scale: 2 });
-  const imgData = canvas.toDataURL('image/png');
 
-  const { jsPDF } = window.jspdf;
-  const orientacion = canvas.width > canvas.height ? 'l' : 'p';
-  const pdf = new jsPDF({ orientation: orientacion, unit: 'pt', format: [canvas.width, canvas.height] });
-  pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-  pdf.save('mi-arbol-mw.pdf');
+  const viewport = document.getElementById('orgTreeContainer');
+
+  try {
+
+    // Espera a que las fuentes web terminen de cargar — capturar antes de
+    // tiempo es una causa común de que html2canvas genere un lienzo vacío.
+    if (document.fonts?.ready) await document.fonts.ready;
+
+    const canvas = await html2canvas(viewport, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: viewport.scrollWidth,
+      windowHeight: viewport.scrollHeight
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+
+    const { jsPDF } = window.jspdf;
+    const orientacion = canvas.width > canvas.height ? 'l' : 'p';
+    const pdf = new jsPDF({ orientation: orientacion, unit: 'pt', format: [canvas.width, canvas.height] });
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    pdf.save('mi-arbol-mw.pdf');
+
+  } catch (error) {
+    console.error('Error al generar el PDF del árbol:', error);
+    mostrarToast('No se pudo generar el PDF — intenta de nuevo en un momento.');
+  }
+
 }
