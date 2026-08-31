@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal — RH MW</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="../../css/styles.css?v=9">
+</head>
+<body>
+
+<style>
+    :root {
+      --purple:#5E1A8A; --purple-dark:#241044; --purple-deep:#17092f; --lilac:#B597E5;
+      --cream:#FCFAF8; --gold:#C9A227; --text:#24184b; --muted:#746c8b; --line:#ebe5ef;
+      --green:#73a94f; --green-bg:#eef7e8; --yellow:#e2ae39; --yellow-bg:#fff5df;
+      --red:#e66b6b; --red-bg:#fff0f0; --blue:#6d83c4; --blue-bg:#eef2ff; --purple-bg:#f2eafa;
+      --shadow:0 12px 30px rgba(45,18,79,.06);
+    }
+    *{box-sizing:border-box} body{margin:0;background:#fbfaf9;color:var(--text);font-family:Poppins,Arial,sans-serif;font-size:13px}
+    button,input,select{font:inherit} button{cursor:pointer}
+    .layout{min-height:100vh;display:grid;grid-template-columns:256px 1fr}
+    .brand{display:flex;align-items:center;justify-content:center;gap:10px;margin:2px 0 34px;text-decoration:none;color:#fff}
+    .brand-mark{width:56px;height:56px;border:1px solid #c9a227;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#d6b847;font-family:Cinzel,serif;font-size:28px}
+    .brand-copy{line-height:1;text-align:left}.brand-copy strong{display:block;font:600 31px Cinzel,serif;letter-spacing:2px;color:#d7b64c}.brand-copy span{display:block;font-size:10px;letter-spacing:5px;margin-top:7px;color:#fff}
+    .side-title{padding:0 16px 18px;color:#e6d28b;font-size:12px;text-transform:uppercase;letter-spacing:1.3px}
+    .nav{display:flex;flex-direction:column;gap:7px}.nav a{height:58px;display:flex;align-items:center;gap:16px;padding:0 18px;color:#f8f4ff;text-decoration:none;border-radius:12px;font-size:15px}.nav a svg{width:23px;height:23px;stroke:#d7bb4f}.nav a.active{background:linear-gradient(90deg,#6b239a,#51207e);box-shadow:inset 0 0 0 1px #ffffff10}.nav a:hover{background:#ffffff0d}
+    .side-footer{position:absolute;bottom:32px;left:25px;right:20px;text-align:center;color:#e2cf83}.side-footer strong{display:block;font:italic 20px Georgia,serif}.side-footer span{font-size:11px;letter-spacing:2px}
+
+    .main{padding:26px 40px 42px;min-width:0}.header{height:70px;display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px}.welcome h1{margin:0;font:600 25px Cinzel,serif;color:#2d145d}.welcome p{margin:7px 0 0;color:#6c6380}.welcome .spark{color:var(--gold);margin-left:6px}.profile-area{display:flex;align-items:center;gap:18px}.bell{border:0;background:transparent;position:relative;color:var(--purple);font-size:25px}.badge{position:absolute;right:-4px;top:-6px;background:#291050;color:#fff;border-radius:50%;font-size:9px;min-width:18px;height:18px;display:grid;place-items:center}.divider{height:42px;width:1px;background:#dfd6df}.profile{display:flex;align-items:center;gap:12px}.profile-avatar{width:54px;height:54px;border-radius:50%;background:#e2d3ec;display:grid;place-items:center;color:#35105f;font:20px Cinzel,serif}.profile strong{display:block;font-size:14px}.profile small{display:block;color:#786f88;margin-top:3px}.profile-chevron{font-size:23px;color:#27104c;margin-left:10px}
+
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 13px}.section-head h2{margin:0;font:500 19px Cinzel,serif;color:#32135f}.section-head h2:after{content:'✦';color:var(--gold);font-size:12px;margin-left:10px}.date-pill{border:1px solid #decdb4;background:#fff;border-radius:9px;padding:9px 15px;color:#4e416a}.date-pill span{margin-right:9px;color:#7b5d2e}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-bottom:28px}.summary-card{background:#fff;border:1px solid #eee8ee;border-radius:11px;min-height:145px;padding:20px 18px;display:flex;gap:15px;box-shadow:var(--shadow)}.summary-icon{width:67px;height:67px;flex:0 0 67px;border-radius:50%;background:#eee5f5;color:#4b1974;display:grid;place-items:center;font-size:29px}.summary-card small{font-size:13px;color:#4a3d6a}.summary-card strong{display:block;font:400 32px Cinzel,serif;color:#29104f;margin:4px 0 2px}.summary-card p{margin:0;color:#77708a;font-size:11px;line-height:1.35}.summary-card a{display:inline-block;margin-top:13px;color:#4b0c84;text-decoration:none;font-size:11px;font-weight:600}
+    .apartados-summary{grid-template-columns:repeat(4,minmax(0,1fr));gap:0.8rem;margin-bottom:1.25rem}.apartados-summary .stat-card{min-height:86px;padding:0.8rem 0.9rem;gap:0.7rem;align-items:center}.apartados-summary .icon-circle{width:34px;height:34px}.apartados-summary .icon-circle svg{width:17px;height:17px}.apartados-summary h4{font-size:0.72rem;margin-bottom:0.1rem}.apartados-summary .stat-num{font-size:1.35rem;margin-bottom:0.1rem}.apartados-summary .stat-link{font-size:0.68rem}
+
+    .toolbar{display:flex;justify-content:flex-end;gap:12px;margin-bottom:9px}.filter-select,.search{height:39px;border:1px solid #ddd6e2;background:#fff;border-radius:8px;color:#4f4663}.filter-select{padding:0 32px 0 12px}.search{width:290px;padding:0 14px}.search::placeholder{color:#a19aa9}.quick-filters{display:none}
+    .table-card{background:#fff;border:1px solid #eae4eb;border-radius:12px;box-shadow:var(--shadow);overflow:hidden}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1120px}thead{background:#fff}th{height:45px;text-align:left;padding:0 15px;border-bottom:1px solid #eee8ed;color:#371467;font-size:11px;font-weight:600;white-space:nowrap}td{padding:12px 15px;border-bottom:1px solid #f0ecf0;color:#40375a;vertical-align:middle;font-size:11px}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#fcf9fd}
+    .client-cell,.piece-cell,.deposit-cell{display:flex;align-items:center;gap:10px}.avatar{width:40px;height:40px;flex:0 0 40px;border-radius:50%;background:#eee4f4;color:#3e1767;display:grid;place-items:center;font-size:13px}.client-cell strong,.piece-cell strong,.date-cell strong,.deposit-cell strong,.last-action strong{display:block;font-size:11px;color:#29134d;font-weight:600}.client-cell small,.piece-cell small,.date-cell small,.deposit-cell small,.last-action small{display:block;color:#766d83;font-size:10px;margin-top:4px}.piece-thumb{width:56px;height:56px;border-radius:8px;background:linear-gradient(145deg,#fff,#f2e5d3);display:grid;place-items:center;color:#c49c39;font:500 15px Cinzel,serif;box-shadow:inset 0 0 0 1px #eee0cb}.deposit-cell{gap:7px}.dot{width:8px;height:8px;border-radius:50%;display:block;flex:0 0 8px}.dot-yellow{background:#e6b439}.dot-blue{background:#7185c7}.dot-green{background:#76ad50}.dot-red{background:#e67575}.dot-purple{background:#aa8ad1}
+    .status{display:inline-flex;padding:6px 9px;border-radius:7px;font-size:10px;line-height:1.15;max-width:120px}.status-pending{background:var(--yellow-bg);color:#9a6716}.status-deposit{background:var(--blue-bg);color:#4f659f}.status-active{background:var(--green-bg);color:#4f8532}.status-expired{background:var(--red-bg);color:#bd4c4c}.status-cancelled{background:var(--purple-bg);color:#77529d}
+    .actions-stack{display:flex;flex-direction:column;gap:5px;width:150px}.action-btn{height:27px;border-radius:6px;border:1px solid #ddd1e4;background:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;gap:6px}.action-btn span{font-size:11px}.primary-action{background:#3e096c;color:#fff;border-color:#3e096c}.primary-action:hover{background:#53128b}.danger-action{color:#bd4a4a;border-color:#e39a9a}.danger-action:hover{background:#fff5f5}.detail-action{color:#5b1689;border-color:#bfa8d2}.detail-action:hover{background:#faf4fd}.last-action{min-width:105px}
+    .table-footer{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-top:1px solid #eee8ed;color:#6e657e;font-size:10px}.pagination{display:flex;gap:5px}.page-btn{width:28px;height:28px;border:1px solid #e5dfe8;background:#fff;border-radius:6px;color:#4a3c62}.page-btn.active{background:#3e096c;color:#fff;border-color:#3e096c}.page-btn:disabled{opacity:.45;cursor:not-allowed}
+
+    .guide{margin-top:16px;border:1px solid #e7dfea;background:linear-gradient(90deg,#f8f1fa,#fffaf8);border-radius:11px;padding:15px 18px;display:grid;grid-template-columns:1.15fr 1fr 1fr 1fr 1.45fr;align-items:center}.guide-title{font:500 12px Cinzel,serif;color:#4b1974}.guide-title:after{content:'✦';color:var(--gold);margin-left:8px}.guide-item{padding-left:20px;border-left:1px solid #e4dce8}.guide-item strong{display:block;font-size:10px;font-weight:500}.guide-item small{display:block;color:#746b7e;font-size:9px;margin-top:4px}.guide-dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px}
+
+    .modal-overlay{position:fixed;inset:0;background:rgba(24,10,43,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:50;backdrop-filter:blur(2px)}.modal-overlay.open{display:flex}.modal-box{position:relative;width:min(470px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:15px;padding:30px;box-shadow:0 25px 70px rgba(26,7,48,.25)}.modal-close{position:absolute;right:17px;top:14px;border:0;background:transparent;color:#776c82;font-size:25px}.auth-icon{width:54px;height:54px;border-radius:50%;background:#efe4f5;color:#4b1974;display:grid;place-items:center;font-size:24px;margin-bottom:15px}.auth-icon.danger{background:#fff0f0;color:#b94a4a}.modal-box h3{margin:0;color:#2e1155;font:600 21px Cinzel,serif}.modal-sub{color:#71677f;line-height:1.55;margin:7px 0 18px}.modal-context{display:grid;grid-template-columns:110px 1fr;gap:7px 12px;padding:14px;background:#faf7fb;border:1px solid #eee5f2;border-radius:9px;margin-bottom:15px}.modal-context span{color:#8b8193;font-size:10px}.modal-context strong{font-size:11px;color:#34204e}.auth-warning{display:flex;gap:10px;padding:12px;background:#fff8e9;border:1px solid #f1dfb2;border-radius:8px;margin-bottom:16px}.auth-warning span{font-size:18px;color:#aa781c}.auth-warning strong{display:block;font-size:11px;color:#72521d}.auth-warning small{display:block;color:#806f50;font-size:9px;margin-top:2px}.modal-box label{display:block;color:#3b2a54;font-size:11px;font-weight:600;margin:12px 0 6px}.modal-box input{width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;outline:none}.modal-box input:focus{border-color:#8b55ad;box-shadow:0 0 0 3px #8b55ad14}.password-wrap{display:flex;gap:6px}.password-wrap input{flex:1}.password-wrap button{width:70px;border:1px solid #ddd5e3;background:#fff;border-radius:7px;color:#5d5270}.btn{border:0;border-radius:7px;height:43px;padding:0 18px;font-weight:600;margin-top:16px}.btn-primary{background:#3e096c;color:#fff}.btn-danger{background:#b54b4b;color:#fff}.btn-outline{background:#fff;border:1px solid #cdbcdc;color:#4e1778}.auth-error{margin-top:10px;padding:10px;border-radius:7px;background:#fff0f0;color:#ad4545;font-size:10px}.demo-note{font-size:9px;color:#988fa0;text-align:center;margin:10px 0 0}.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#8c5ca6}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.detail-grid>div{background:#faf8fb;border:1px solid #eee7f0;border-radius:8px;padding:12px}.detail-grid span:not(.status){display:block;color:#887e91;font-size:9px;margin-bottom:4px}.detail-grid strong{font-size:11px;color:#39224f}.log-box{border-left:3px solid var(--gold);background:#fffbf2;padding:12px 13px;margin-bottom:17px}.log-box span,.log-box strong,.log-box small{display:block}.log-box span{font-size:9px;color:#8b7c61}.log-box strong{font-size:11px;margin:3px 0}.log-box small{font-size:9px;color:#817667}.empty-cell{text-align:center;padding:45px}.empty-state{display:flex;flex-direction:column;align-items:center;gap:6px;color:#776d81}.empty-icon{font-size:30px;color:#a48ab8}.empty-state strong{color:#422361}.mw-toast{position:fixed;right:25px;bottom:25px;background:#2d0b50;color:#fff;padding:13px 18px;border-radius:9px;box-shadow:0 12px 35px #1d063555;transform:translateY(20px);opacity:0;pointer-events:none;transition:.25s;z-index:100;font-size:11px}.mw-toast.show{transform:none;opacity:1}
+
+    @media(max-width:1180px){.summary-grid{grid-template-columns:repeat(2,1fr)}.main{padding:25px}.guide{grid-template-columns:1fr 1fr 1fr}.guide-title{grid-column:1/-1;margin-bottom:10px}.guide-item{margin-top:4px}}
+    @media(max-width:800px){.layout{grid-template-columns:1fr}.sidebar{display:none}.header{height:auto}.profile-info{display:none}.main{padding:20px 15px}.summary-grid{grid-template-columns:1fr}.toolbar{justify-content:stretch;flex-direction:column}.search{width:100%}.table-footer{gap:10px;flex-direction:column}.guide{grid-template-columns:1fr}.guide-item{border-left:0;border-top:1px solid #e4dce8;padding:10px 0 0}.guide-title{grid-column:auto}.modal-box{padding:25px 20px}}
+    .portal-header .profile-avatar{width:34px;height:34px;font-size:0.9rem}
+
+    .expand-toggle{width:24px;height:24px;border:1px solid #ddd1e4;background:#fff;border-radius:6px;color:#5b1689;font-size:11px;display:flex;align-items:center;justify-content:center}
+    .expand-row td{background:#faf8fc}
+    .expand-row table{min-width:0;width:100%}
+    .expand-row .log-box:last-child{margin-bottom:0}
+  </style>
+
+  <div class="layout-portal">
+    <aside class="sidebar">
+      <a href="../../index.html" class="brand-link">
+        <img src="../../assets/images/isotipo-blanco.png" alt="MOONWOLF Joyería">
+        <span>
+          <span class="logo-main">MOONWOLF</span>
+          <span class="logo-sub">JOYERÍA</span>
+        </span>
+      </a>
+      <nav>
+        <a href="../rh/rh-portal.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+          Inicio
+        </a>
+        <a href="../rh/rh-catalogo.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg>
+          Catálogo
+        </a>
+        <a href="../rh/rh-apartados.html" class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
+          Apartados
+        </a>
+        <a href="../rh/rh-calendario.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          Calendario
+        </a>
+        <a href="../rh/rh-lista-deseos.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
+          Lista de deseos
+        </a>
+        <a href="../rh/rh-nomina.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>
+          Nómina
+        </a>
+        <a href="../rh/rh-mi-cuenta.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+          Mi cuenta
+        </a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header class="portal-header">
+        <div>
+          <h1>Apartados</h1>
+          <p class="portal-sub">Consulta y gestiona los apartados de emprendedoras y líderes.</p>
+        </div>
+
+        <div class="portal-header-actions">
+          <button class="notif-bell" id="notifBell" aria-label="Notificaciones">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span class="notif-badge" id="notifBadge">0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel"></div>
+
+          <button class="profile-btn" id="profileBtn">
+            <span class="profile-avatar">R</span>
+            <span class="profile-info">
+              <strong>Recursos Humanos</strong>
+              <span class="profile-role">RH MW</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" data-modal="foto">Cambiar foto de perfil</a>
+            <a href="../../login.html" class="danger">Cerrar sesión</a>
+          </div>
+        </div>
+      </header>
+
+
+      <div class="section-head"><h2>Resumen operativo</h2><div class="date-pill"><span>▣</span><span id="summaryDate"></span></div></div>
+      <section class="stat-cards apartados-summary">
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          </div>
+          <div>
+            <h4>Ventanas activas</h4>
+            <span class="stat-num">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
+          </div>
+          <div>
+            <h4>Piezas activas</h4>
+            <span class="stat-num">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
+          </div>
+          <div>
+            <h4>Ventanas vencidas</h4>
+            <span class="stat-num">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+          </div>
+          <div>
+            <h4>Pendientes de depósito</h4>
+            <span class="stat-num">0</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="section-head">
+        <h2>Ventanas de apartado</h2>
+        <button class="action-btn primary-action" style="width:auto;padding:0 16px;height:36px;" id="nuevaVentanaBtn"><span>+</span> Nueva ventana de apartado</button>
+      </div>
+      <div class="toolbar"><select class="filter-select" id="statusSelect"><option value="todos">Todos los estados</option><option value="pendiente_deposito">Pendiente de depósito</option><option value="activa">Activa</option><option value="vencida">Vencida</option><option value="cerrada">Cerrada</option></select><input class="search" id="searchInput" placeholder="⌕  Buscar por nombre o pieza..." type="search"></div>
+
+      <section class="table-card">
+        <div class="table-wrap"><table><thead><tr><th>Emprendedora/Líder</th><th>Categoría</th><th>Depósito</th><th>Estado de Apartado</th><th>Vencimiento</th><th>Acciones</th></tr></thead><tbody id="apartadosTableBody"></tbody></table></div>
+        <div class="table-footer"><span id="resultCount">Mostrando resultados</span></div>
+      </section>
+
+      <section class="guide">
+        <div class="guide-title">Guía del depósito</div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#e6b439"></i>Pendiente de depósito</strong><small>Esperando los $50 para abrir la ventana</small></div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#76ad50"></i>Activa</strong><small>Puede apartar varias piezas sin pagar de nuevo</small></div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#e67575"></i>Vencida</strong><small>Solo aviso: nada se pierde hasta que se "Desaparte" por falta de respuesta</small></div>
+        <div class="guide-item"><strong><i class="guide-dot" style="background:#aa8ad1"></i>Cerrada</strong><small>Sin piezas activas: depósito aplicado o guardado como crédito</small></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay"><div class="modal-box" id="modalBox"></div></div>
+
+  <script src="../../js/apartados-modelo.js"></script>
+  <script src="../../js/staff-apartados-ejemplo.js"></script>
+  <script src="../../js/rh-comun.js"></script>
+  <script src="../../js/rh-apartados.js"></script>
+  <script src="../../js/portal-common.js"></script>
+</body>
+</html>
