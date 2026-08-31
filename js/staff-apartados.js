@@ -86,8 +86,8 @@ function abrirModalNuevaVentana() {
       <option value="vip">Líder VIP (sin depósito, sin vencimiento)</option>
     </select>
 
-    <label for="nvProducto">Primera pieza a apartar</label>
-    <input id="nvProducto" type="text" placeholder="Ej. Anillo Corazón">
+    <label for="nvProducto">Código de pieza</label>
+    <input id="nvProducto" type="text" placeholder="Ej. AN-0231">
 
     <label for="nvVariante">Variante</label>
     <input id="nvVariante" type="text" placeholder="Ej. Talla 6 · Rosa">
@@ -114,7 +114,7 @@ function abrirModalNuevaVentana() {
 
     if (!nombre || !producto || !Number.isFinite(total) || total <= 0) {
       error.style.display = "block";
-      error.textContent = "Escribe el nombre, el producto y un precio válido.";
+      error.textContent = "Escribe el nombre, el código de pieza y un precio válido.";
       return;
     }
 
@@ -135,6 +135,11 @@ function abrirModalNuevaVentana() {
 function obtenerVentanasFiltradas() {
 
   return ventanas.filter(v => {
+
+    // Una ventana cerrada sin depósito que conservar ya no tiene nada
+    // pendiente para Staff — no se muestra (el registro sigue viviendo
+    // en los datos, solo no se renderiza como fila).
+    if (v.estado === "cerrada" && v.resolucionDeposito !== "credito") return false;
 
     const coincideEstado = filtroEstado === "todos" || v.estado === filtroEstado;
 
@@ -162,7 +167,7 @@ function renderTabla() {
   if (!filtradas.length) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" class="empty-cell">
+        <td colspan="7" class="empty-cell">
           <div class="empty-state">
             <div class="empty-icon">✦</div>
             <strong>No se encontraron ventanas de apartado</strong>
@@ -185,15 +190,10 @@ function crearFilaVentana(v) {
 
   const estado = obtenerEstadoVentana(v);
   const categoria = obtenerReglaCategoria(v.categoria);
-  const activas = obtenerPiezasActivas(v);
   const expandida = filasExpandidas.has(v.id);
 
   return `
     <tr class="ventana-row">
-      <td>
-        <button class="expand-toggle" data-toggle="${v.id}" aria-label="Ver piezas">${expandida ? "▾" : "▸"}</button>
-      </td>
-
       <td>
         <div class="client-cell">
           <div class="avatar">${obtenerIniciales(v.usuarioNombre)}</div>
@@ -216,7 +216,7 @@ function crearFilaVentana(v) {
         </div>
       </td>
 
-      <td><strong>${activas.length}</strong> activa${activas.length === 1 ? "" : "s"}</td>
+      <td>${crearListaPiezas(v)}</td>
 
       <td>
         <span class="status ${estado.clase}">${estado.texto}</span>
@@ -228,42 +228,55 @@ function crearFilaVentana(v) {
       <td>
         <div class="actions-stack">
           ${obtenerAccionesVentana(v)}
+          <button class="action-btn detail-action" data-toggle="${v.id}">${expandida ? "▾" : "▸"} Historial</button>
         </div>
       </td>
     </tr>
 
-    ${expandida ? crearFilaExpandida(v) : ""}
+    ${expandida ? crearFilaHistorial(v) : ""}
   `;
 
 }
 
 
-function crearFilaExpandida(v) {
+function crearListaPiezas(v) {
 
-  const filasPiezas = v.apartados.map(p => `
-    <tr>
-      <td>
-        <div class="piece-cell">
-          <div class="piece-thumb">MW</div>
-          <div>
-            <strong>${escapeHTML(p.producto)}</strong>
-            <small>${escapeHTML(p.variante || "")}</small>
+  if (!v.apartados.length) {
+    return `<small style="color:#766d83;">Sin piezas</small>`;
+  }
+
+  return v.apartados.map(p => {
+
+    const estadoPieza = obtenerEstadoPieza(p.estado);
+
+    return `
+      <div class="piece-cell" style="margin-bottom:10px;align-items:flex-start;">
+        <div class="piece-thumb">MW</div>
+        <div>
+          <strong>${escapeHTML(p.producto)}</strong>
+          <small>${escapeHTML(p.variante || "")} · $${Number(p.total).toLocaleString("es-MX")} MXN</small>
+          <div style="margin-top:4px;">
+            <span class="status ${estadoPieza.clase}">${estadoPieza.texto}</span>
           </div>
+          ${p.estado === "activa" && v.estado === "activa" ? `
+            <div class="actions-stack" style="width:auto;flex-direction:row;margin-top:6px;">
+              <button class="action-btn primary-action" data-liquidar-ventana="${v.id}" data-liquidar-pieza="${p.id}"><span>✓</span> Liquidar</button>
+              <button class="action-btn danger-action" data-cancelar-ventana="${v.id}" data-cancelar-pieza="${p.id}"><span>×</span> Cancelar</button>
+            </div>
+          ` : ""}
+          ${p.estado === "activa" && v.estado === "pendiente_deposito" ? `
+            <small style="display:block;margin-top:6px;color:#9a6716;">Esperando confirmación de depósito</small>
+          ` : ""}
         </div>
-      </td>
-      <td>$${Number(p.total).toLocaleString("es-MX")} MXN</td>
-      <td>$${Number(p.saldo).toLocaleString("es-MX")} MXN</td>
-      <td><span class="status ${obtenerEstadoPieza(p.estado).clase}">${obtenerEstadoPieza(p.estado).texto}</span></td>
-      <td>
-        ${p.estado === "activa" ? `
-          <div class="actions-stack" style="width:auto;flex-direction:row;">
-            <button class="action-btn primary-action" data-liquidar-ventana="${v.id}" data-liquidar-pieza="${p.id}"><span>✓</span> Liquidar</button>
-            <button class="action-btn danger-action" data-cancelar-ventana="${v.id}" data-cancelar-pieza="${p.id}"><span>×</span> Cancelar</button>
-          </div>
-        ` : "—"}
-      </td>
-    </tr>
-  `).join("");
+      </div>
+    `;
+
+  }).join("");
+
+}
+
+
+function crearFilaHistorial(v) {
 
   const auditoria = v.auditoria.slice().reverse().map(a => `
     <div class="log-box" style="margin-bottom:8px;">
@@ -274,18 +287,9 @@ function crearFilaExpandida(v) {
 
   return `
     <tr class="expand-row">
-      <td colspan="8" style="background:#faf8fc;padding:16px 20px;">
-
-        <table style="min-width:0;margin-bottom:14px;">
-          <thead>
-            <tr><th>Pieza</th><th>Total</th><th>Saldo</th><th>Estado</th><th>Acciones</th></tr>
-          </thead>
-          <tbody>${filasPiezas}</tbody>
-        </table>
-
+      <td colspan="7" style="background:#faf8fc;padding:16px 20px;">
         <div class="eyebrow" style="margin-bottom:8px;">Historial de la ventana</div>
         ${auditoria || "<small>Sin movimientos registrados.</small>"}
-
       </td>
     </tr>
   `;
@@ -305,10 +309,6 @@ function agregarEventosFilas() {
 
   document.querySelectorAll("[data-confirmar-deposito]").forEach(btn => {
     btn.addEventListener("click", () => abrirModalConfirmarDeposito(btn.dataset.confirmarDeposito));
-  });
-
-  document.querySelectorAll("[data-agregar-pieza]").forEach(btn => {
-    btn.addEventListener("click", () => abrirModalAgregarPieza(btn.dataset.agregarPieza));
   });
 
   document.querySelectorAll("[data-liquidar-ventana]").forEach(btn => {
@@ -338,10 +338,6 @@ function obtenerAccionesVentana(v) {
     html += `<button class="action-btn primary-action" data-confirmar-deposito="${v.id}"><span>✓</span> Confirmar depósito</button>`;
   }
 
-  if (v.estado === "activa") {
-    html += `<button class="action-btn primary-action" data-agregar-pieza="${v.id}"><span>+</span> Agregar pieza</button>`;
-  }
-
   if (v.estado === "vencida") {
     html += `<button class="action-btn detail-action" data-whatsapp-ventana="${v.id}"><span>↗</span> Contactar por Whatsapp</button>`;
   }
@@ -367,7 +363,10 @@ function abrirModalConfirmarDeposito(ventanaId) {
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon">✓</div>
     <h3>Confirmar depósito</h3>
-    <p class="modal-sub">Confirma que el depósito de $${DEPOSITO_BASE} MXN de ${escapeHTML(v.usuarioNombre)} fue recibido. Este depósito respalda toda la ventana, no una sola pieza.</p>
+    <p class="modal-sub">Registra el depósito de ${escapeHTML(v.usuarioNombre)}. Algunas personas transfieren más de $50 — anota el monto exacto recibido. Este depósito respalda toda la ventana, no una sola pieza.</p>
+
+    <label for="depositoMonto">Monto recibido</label>
+    <input id="depositoMonto" type="number" min="${DEPOSITO_BASE}" step="0.01" value="${DEPOSITO_BASE}" placeholder="Mínimo $${DEPOSITO_BASE}">
 
     <label for="depositoMetodo">Método de pago</label>
     <select id="depositoMetodo" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
@@ -388,9 +387,16 @@ function abrirModalConfirmarDeposito(ventanaId) {
 
   document.getElementById("continuarDepositoBtn").addEventListener("click", () => {
 
+    const monto = Number(document.getElementById("depositoMonto").value);
     const metodo = document.getElementById("depositoMetodo").value;
     const referencia = document.getElementById("depositoReferencia").value.trim();
     const error = document.getElementById("formError");
+
+    if (!Number.isFinite(monto) || monto < DEPOSITO_BASE) {
+      error.style.display = "block";
+      error.textContent = `El monto mínimo del depósito es $${DEPOSITO_BASE} MXN.`;
+      return;
+    }
 
     if (!metodo || (metodo === "transferencia" && !referencia)) {
       error.style.display = "block";
@@ -400,61 +406,7 @@ function abrirModalConfirmarDeposito(ventanaId) {
       return;
     }
 
-    abrirAutorizacion({ tipo: "confirmar-deposito-ventana", ventanaId: v.id, datos: { metodo, referencia: referencia || null } });
-
-  });
-
-}
-
-
-// ============================================================
-// MODAL: AGREGAR PIEZA
-// ============================================================
-
-function abrirModalAgregarPieza(ventanaId) {
-
-  const v = ventanas.find(x => x.id === ventanaId);
-  if (!v) return;
-
-  const overlay = document.getElementById("modalOverlay");
-  const box = document.getElementById("modalBox");
-
-  box.innerHTML = `
-    <button class="modal-close" onclick="cerrarModal()">×</button>
-    <div class="auth-icon">+</div>
-    <h3>Agregar pieza</h3>
-    <p class="modal-sub">Se agregará a la ventana activa de ${escapeHTML(v.usuarioNombre)}. No se pide otro depósito: ya tiene $${v.depositoApartadoDisponible > 0 ? v.depositoApartadoDisponible : 0} MXN respaldando la ventana.</p>
-
-    <label for="piezaProducto">Producto</label>
-    <input id="piezaProducto" type="text" placeholder="Ej. Anillo Corazón">
-
-    <label for="piezaVariante">Variante</label>
-    <input id="piezaVariante" type="text" placeholder="Ej. Talla 6 · Rosa">
-
-    <label for="piezaTotal">Precio</label>
-    <input id="piezaTotal" type="number" min="0" step="1" placeholder="Ej. 690">
-
-    <div id="formError" class="auth-error" style="display:none;"></div>
-
-    <button class="btn btn-primary" style="width:100%;" id="continuarPiezaBtn">Continuar</button>
-  `;
-
-  overlay.classList.add("open");
-
-  document.getElementById("continuarPiezaBtn").addEventListener("click", () => {
-
-    const producto = document.getElementById("piezaProducto").value.trim();
-    const variante = document.getElementById("piezaVariante").value.trim();
-    const total = Number(document.getElementById("piezaTotal").value);
-    const error = document.getElementById("formError");
-
-    if (!producto || !Number.isFinite(total) || total <= 0) {
-      error.style.display = "block";
-      error.textContent = "Escribe el producto y un precio válido.";
-      return;
-    }
-
-    abrirAutorizacion({ tipo: "agregar-pieza", ventanaId: v.id, datos: { producto, variante, total } });
+    abrirAutorizacion({ tipo: "confirmar-deposito-ventana", ventanaId: v.id, datos: { monto, metodo, referencia: referencia || null } });
 
   });
 
@@ -621,7 +573,6 @@ function abrirAutorizacion(accion) {
   const titulos = {
     "nueva-ventana": "Autorizar nueva ventana",
     "confirmar-deposito-ventana": "Autorizar depósito",
-    "agregar-pieza": "Autorizar nueva pieza",
     "liquidar-pieza": "Autorizar liquidación",
     "cancelar-pieza": "Autorizar cancelación"
   };
@@ -735,11 +686,6 @@ function ejecutarAccion(personal) {
 
     confirmarDepositoVentana(v, accionPendiente.datos, personal);
     mensaje = `Depósito confirmado por ${personal.nombre}.`;
-
-  } else if (accionPendiente.tipo === "agregar-pieza") {
-
-    agregarPiezaAVentana(v, accionPendiente.datos, personal);
-    mensaje = `Pieza agregada por ${personal.nombre}.`;
 
   } else if (accionPendiente.tipo === "liquidar-pieza") {
 

@@ -138,7 +138,7 @@ function crearVentanaApartado(datos = {}) {
     metodoDeposito: datos.metodoDeposito || null,
     referenciaDeposito: datos.referenciaDeposito || null,
     estado: datos.estado || (regla.requiereDeposito ? 'pendiente_deposito' : 'activa'),
-    resolucionDeposito: null,
+    resolucionDeposito: datos.resolucionDeposito || null,
     apartados: Array.isArray(datos.apartados) ? datos.apartados : [],
     auditoria: Array.isArray(datos.auditoria) ? datos.auditoria : []
   };
@@ -188,13 +188,17 @@ function abrirVentanaApartado(datosPersona, empleado) {
 
 }
 
-function confirmarDepositoVentana(ventana, { metodo, referencia }, empleado) {
+// El monto mínimo son $50, pero algunas personas transfieren más — el
+// monto completo recibido queda como depósito disponible de la ventana.
+function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, empleado) {
 
-  ventana.depositoApartadoDisponible = DEPOSITO_BASE;
+  const montoFinal = Number(monto) || DEPOSITO_BASE;
+
+  ventana.depositoApartadoDisponible = montoFinal;
   ventana.metodoDeposito = metodo || null;
   ventana.referenciaDeposito = referencia || null;
   ventana.estado = 'activa';
-  ventana.auditoria.push(registrarAuditoria(`Depósito de $${DEPOSITO_BASE} confirmado`, empleado));
+  ventana.auditoria.push(registrarAuditoria(`Depósito de $${montoFinal} confirmado`, empleado));
 
   return ventana;
 
