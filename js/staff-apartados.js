@@ -1,6 +1,9 @@
 // MW JOYERÍA — Staff: Apartados
-// Una fila por VENTANA de apartado (persona), expandible para ver sus
-// piezas. La lógica del depósito compartido vive en apartados-modelo.js.
+// Una fila por VENTANA de apartado (persona). El nombre abre un
+// desplegable con sus piezas e historial — no van en columnas propias.
+// El apartado se liquida o cancela completo (todas las piezas activas
+// juntas), no por pieza. La lógica del depósito compartido vive en
+// apartados-modelo.js.
 // ⚠️ TEMPORAL: utiliza datos de staff-apartados-ejemplo.js.
 
 let ventanas = [];
@@ -8,10 +11,9 @@ let filtroEstado = "todos";
 let terminoBusqueda = "";
 const filasExpandidas = new Set();
 
-let accionPendiente = null; // { tipo, ventanaId, piezaId, datos, decisionDeposito }
-let datosFormularioPendiente = null;
+let accionPendiente = null; // { tipo, ventanaId, datos, decisionDeposito }
 
-const MENSAJE_WHATSAPP_VENCIDO = "Tu ventana de apartado venció y las piezas activas se liberaron. Contáctanos si quieres volver a apartar.";
+const MENSAJE_WHATSAPP_VENCIDO = "Tu apartado venció. Por favor contáctanos para revisar las opciones disponibles.";
 
 
 // ============================================================
@@ -167,7 +169,7 @@ function renderTabla() {
   if (!filtradas.length) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="empty-cell">
+        <td colspan="6" class="empty-cell">
           <div class="empty-state">
             <div class="empty-icon">✦</div>
             <strong>No se encontraron ventanas de apartado</strong>
@@ -191,17 +193,19 @@ function crearFilaVentana(v) {
   const estado = obtenerEstadoVentana(v);
   const categoria = obtenerReglaCategoria(v.categoria);
   const expandida = filasExpandidas.has(v.id);
+  const vencidaAviso = v.estado === "activa" && ventanaEstaVencida(v);
 
   return `
     <tr class="ventana-row">
       <td>
-        <div class="client-cell">
+        <button type="button" class="client-cell" style="border:0;background:transparent;text-align:left;cursor:pointer;padding:0;width:100%;" data-toggle="${v.id}">
           <div class="avatar">${obtenerIniciales(v.usuarioNombre)}</div>
           <div>
             <strong>${escapeHTML(v.usuarioNombre)}</strong>
             <small>${escapeHTML(v.telefono || "")}</small>
+            <small style="color:#5b1689;font-weight:600;">${expandida ? "▾" : "▸"} Ver piezas (${v.apartados.length})</small>
           </div>
-        </div>
+        </button>
       </td>
 
       <td><span class="status status-cancelled">${categoria.etiqueta}</span></td>
@@ -216,11 +220,10 @@ function crearFilaVentana(v) {
         </div>
       </td>
 
-      <td>${crearListaPiezas(v)}</td>
-
       <td>
         <span class="status ${estado.clase}">${estado.texto}</span>
         ${v.resolucionDeposito ? `<small style="display:block;margin-top:4px;color:#766d83;">${obtenerTextoResolucion(v.resolucionDeposito)}</small>` : ""}
+        ${vencidaAviso ? `<small style="display:block;margin-top:4px;color:#bd4c4c;">⚠ Vencida — pendiente de gestionar</small>` : ""}
       </td>
 
       <td>${obtenerTextoVencimiento(v)}</td>
@@ -228,24 +231,19 @@ function crearFilaVentana(v) {
       <td>
         <div class="actions-stack">
           ${obtenerAccionesVentana(v)}
-          <button class="action-btn detail-action" data-toggle="${v.id}">${expandida ? "▾" : "▸"} Historial</button>
         </div>
       </td>
     </tr>
 
-    ${expandida ? crearFilaHistorial(v) : ""}
+    ${expandida ? crearFilaDetalle(v) : ""}
   `;
 
 }
 
 
-function crearListaPiezas(v) {
+function crearFilaDetalle(v) {
 
-  if (!v.apartados.length) {
-    return `<small style="color:#766d83;">Sin piezas</small>`;
-  }
-
-  return v.apartados.map(p => {
+  const piezas = !v.apartados.length ? "<small>Sin piezas</small>" : v.apartados.map(p => {
 
     const estadoPieza = obtenerEstadoPieza(p.estado);
 
@@ -258,25 +256,11 @@ function crearListaPiezas(v) {
           <div style="margin-top:4px;">
             <span class="status ${estadoPieza.clase}">${estadoPieza.texto}</span>
           </div>
-          ${p.estado === "activa" && v.estado === "activa" ? `
-            <div class="actions-stack" style="width:auto;flex-direction:row;margin-top:6px;">
-              <button class="action-btn primary-action" data-liquidar-ventana="${v.id}" data-liquidar-pieza="${p.id}"><span>✓</span> Liquidar</button>
-              <button class="action-btn danger-action" data-cancelar-ventana="${v.id}" data-cancelar-pieza="${p.id}"><span>×</span> Cancelar</button>
-            </div>
-          ` : ""}
-          ${p.estado === "activa" && v.estado === "pendiente_deposito" ? `
-            <small style="display:block;margin-top:6px;color:#9a6716;">Esperando confirmación de depósito</small>
-          ` : ""}
         </div>
       </div>
     `;
 
   }).join("");
-
-}
-
-
-function crearFilaHistorial(v) {
 
   const auditoria = v.auditoria.slice().reverse().map(a => `
     <div class="log-box" style="margin-bottom:8px;">
@@ -287,9 +271,14 @@ function crearFilaHistorial(v) {
 
   return `
     <tr class="expand-row">
-      <td colspan="7" style="background:#faf8fc;padding:16px 20px;">
-        <div class="eyebrow" style="margin-bottom:8px;">Historial de la ventana</div>
+      <td colspan="6" style="background:#faf8fc;padding:16px 20px;">
+
+        <div class="eyebrow" style="margin-bottom:8px;">Piezas del apartado</div>
+        ${piezas}
+
+        <div class="eyebrow" style="margin:14px 0 8px;">Historial de la ventana</div>
         ${auditoria || "<small>Sin movimientos registrados.</small>"}
+
       </td>
     </tr>
   `;
@@ -312,15 +301,19 @@ function agregarEventosFilas() {
   });
 
   document.querySelectorAll("[data-liquidar-ventana]").forEach(btn => {
-    btn.addEventListener("click", () => iniciarLiquidacion(btn.dataset.liquidarVentana, btn.dataset.liquidarPieza));
+    btn.addEventListener("click", () => iniciarLiquidacionVentana(btn.dataset.liquidarVentana));
   });
 
   document.querySelectorAll("[data-cancelar-ventana]").forEach(btn => {
-    btn.addEventListener("click", () => abrirAutorizacion({ tipo: "cancelar-pieza", ventanaId: btn.dataset.cancelarVentana, piezaId: btn.dataset.cancelarPieza }));
+    btn.addEventListener("click", () => abrirAutorizacion({ tipo: "cancelar-ventana", ventanaId: btn.dataset.cancelarVentana }));
   });
 
   document.querySelectorAll("[data-whatsapp-ventana]").forEach(btn => {
     btn.addEventListener("click", () => abrirContactoWhatsapp(ventanas.find(v => v.id === btn.dataset.whatsappVentana)));
+  });
+
+  document.querySelectorAll("[data-desapartar-ventana]").forEach(btn => {
+    btn.addEventListener("click", () => abrirAutorizacion({ tipo: "desapartar-ventana", ventanaId: btn.dataset.desapartarVentana }));
   });
 
 }
@@ -338,8 +331,18 @@ function obtenerAccionesVentana(v) {
     html += `<button class="action-btn primary-action" data-confirmar-deposito="${v.id}"><span>✓</span> Confirmar depósito</button>`;
   }
 
-  if (v.estado === "vencida") {
-    html += `<button class="action-btn detail-action" data-whatsapp-ventana="${v.id}"><span>↗</span> Contactar por Whatsapp</button>`;
+  if (v.estado === "activa") {
+
+    if (obtenerPiezasActivas(v).length) {
+      html += `<button class="action-btn primary-action" data-liquidar-ventana="${v.id}"><span>✓</span> Liquidar apartado</button>`;
+      html += `<button class="action-btn danger-action" data-cancelar-ventana="${v.id}"><span>×</span> Cancelar apartado</button>`;
+    }
+
+    if (ventanaEstaVencida(v)) {
+      html += `<button class="action-btn detail-action" data-whatsapp-ventana="${v.id}"><span>↗</span> Contactar por Whatsapp</button>`;
+      html += `<button class="action-btn danger-action" data-desapartar-ventana="${v.id}"><span>×</span> Desapartar</button>`;
+    }
+
   }
 
   return html;
@@ -363,7 +366,7 @@ function abrirModalConfirmarDeposito(ventanaId) {
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon">✓</div>
     <h3>Confirmar depósito</h3>
-    <p class="modal-sub">Registra el depósito de ${escapeHTML(v.usuarioNombre)}. Algunas personas transfieren más de $50 — anota el monto exacto recibido. Este depósito respalda toda la ventana, no una sola pieza.</p>
+    <p class="modal-sub">Registra el depósito de ${escapeHTML(v.usuarioNombre)}. Algunas personas transfieren más de $50 — anota el monto exacto recibido. Este depósito respalda toda la ventana, no una sola pieza. El plazo de vencimiento empieza a contar a partir de ahora.</p>
 
     <label for="depositoMonto">Monto recibido</label>
     <input id="depositoMonto" type="number" min="${DEPOSITO_BASE}" step="0.01" value="${DEPOSITO_BASE}" placeholder="Mínimo $${DEPOSITO_BASE}">
@@ -414,25 +417,24 @@ function abrirModalConfirmarDeposito(ventanaId) {
 
 
 // ============================================================
-// LIQUIDAR PIEZA (con resolución del depósito si es la última)
+// LIQUIDAR APARTADO COMPLETO (con resolución del depósito)
 // ============================================================
 
-function iniciarLiquidacion(ventanaId, piezaId) {
+function iniciarLiquidacionVentana(ventanaId) {
 
   const v = ventanas.find(x => x.id === ventanaId);
-  const pieza = v?.apartados.find(p => p.id === piezaId);
-  if (!v || !pieza) return;
+  if (!v || !obtenerPiezasActivas(v).length) return;
 
-  if (necesitaResolucionDeposito(v, piezaId)) {
-    abrirModalResolucionDeposito(v, pieza);
+  if (v.depositoApartadoDisponible > 0) {
+    abrirModalResolucionDeposito(v);
   } else {
-    abrirModalLiquidar(v, pieza, null);
+    abrirModalLiquidar(v, null);
   }
 
 }
 
 
-function abrirModalResolucionDeposito(v, pieza) {
+function abrirModalResolucionDeposito(v) {
 
   const overlay = document.getElementById("modalOverlay");
   const box = document.getElementById("modalBox");
@@ -441,7 +443,7 @@ function abrirModalResolucionDeposito(v, pieza) {
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon">✓</div>
     <h3>¿Qué hacer con el depósito?</h3>
-    <p class="modal-sub">Esta es la última pieza activa de la ventana de ${escapeHTML(v.usuarioNombre)}. Tiene $${v.depositoApartadoDisponible} MXN de depósito disponible.</p>
+    <p class="modal-sub">Vas a liquidar el apartado completo de ${escapeHTML(v.usuarioNombre)}. Tiene $${v.depositoApartadoDisponible} MXN de depósito disponible.</p>
 
     <button class="btn btn-primary" style="width:100%;" id="aplicarDepositoBtn">Aplicar a esta compra (−$${v.depositoApartadoDisponible} MXN)</button>
     <button class="btn btn-outline" style="width:100%;" id="guardarCreditoBtn">Guardar como crédito para su próximo apartado</button>
@@ -449,17 +451,20 @@ function abrirModalResolucionDeposito(v, pieza) {
 
   overlay.classList.add("open");
 
-  document.getElementById("aplicarDepositoBtn").addEventListener("click", () => abrirModalLiquidar(v, pieza, "aplicar"));
-  document.getElementById("guardarCreditoBtn").addEventListener("click", () => abrirModalLiquidar(v, pieza, "credito"));
+  document.getElementById("aplicarDepositoBtn").addEventListener("click", () => abrirModalLiquidar(v, "aplicar"));
+  document.getElementById("guardarCreditoBtn").addEventListener("click", () => abrirModalLiquidar(v, "credito"));
 
 }
 
 
-function abrirModalLiquidar(v, pieza, decisionDeposito) {
+function abrirModalLiquidar(v, decisionDeposito) {
+
+  const piezasActivas = obtenerPiezasActivas(v);
+  const totalActivas = piezasActivas.reduce((suma, p) => suma + p.saldo, 0);
 
   const montoEsperado = decisionDeposito === "aplicar"
-    ? Math.max(0, pieza.saldo - v.depositoApartadoDisponible)
-    : pieza.saldo;
+    ? Math.max(0, totalActivas - v.depositoApartadoDisponible)
+    : totalActivas;
 
   const overlay = document.getElementById("modalOverlay");
   const box = document.getElementById("modalBox");
@@ -467,8 +472,8 @@ function abrirModalLiquidar(v, pieza, decisionDeposito) {
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon">✓</div>
-    <h3>Liquidar pieza</h3>
-    <p class="modal-sub">${escapeHTML(pieza.producto)} · ${escapeHTML(v.usuarioNombre)}</p>
+    <h3>Liquidar apartado</h3>
+    <p class="modal-sub">${escapeHTML(v.usuarioNombre)} · ${piezasActivas.length} pieza${piezasActivas.length === 1 ? "" : "s"}</p>
 
     ${decisionDeposito === "aplicar" ? `<div class="auth-warning"><span>✓</span><div><strong>Depósito aplicado</strong><small>Se descontaron $${v.depositoApartadoDisponible} MXN del total.</small></div></div>` : ""}
 
@@ -515,9 +520,8 @@ function abrirModalLiquidar(v, pieza, decisionDeposito) {
     }
 
     abrirAutorizacion({
-      tipo: "liquidar-pieza",
+      tipo: "liquidar-ventana",
       ventanaId: v.id,
-      piezaId: pieza.id,
       decisionDeposito,
       datos: { monto, metodo, referencia }
     });
@@ -528,7 +532,7 @@ function abrirModalLiquidar(v, pieza, decisionDeposito) {
 
 
 // ============================================================
-// CONTACTO WHATSAPP (ventana vencida)
+// CONTACTO WHATSAPP Y DESAPARTAR (ventana vencida)
 // ============================================================
 
 function abrirContactoWhatsapp(v) {
@@ -545,7 +549,7 @@ function abrirContactoWhatsapp(v) {
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon">↗</div>
     <h3>Contactar por Whatsapp</h3>
-    <p class="modal-sub">La ventana de ${escapeHTML(v.usuarioNombre)} venció y sus piezas activas ya se liberaron.</p>
+    <p class="modal-sub">El apartado de ${escapeHTML(v.usuarioNombre)} venció. Si no responde, usa "Desapartar" para cerrarlo y liberar las piezas.</p>
     <div class="modal-context">
       <span>Emprendedora</span><strong>${escapeHTML(v.usuarioNombre)}</strong>
       <span>Teléfono</span><strong>${escapeHTML(v.telefono || "Sin teléfono")}</strong>
@@ -573,11 +577,12 @@ function abrirAutorizacion(accion) {
   const titulos = {
     "nueva-ventana": "Autorizar nueva ventana",
     "confirmar-deposito-ventana": "Autorizar depósito",
-    "liquidar-pieza": "Autorizar liquidación",
-    "cancelar-pieza": "Autorizar cancelación"
+    "liquidar-ventana": "Autorizar liquidación",
+    "cancelar-ventana": "Autorizar cancelación",
+    "desapartar-ventana": "Autorizar desapartar"
   };
 
-  const esPeligrosa = accion.tipo === "cancelar-pieza";
+  const esPeligrosa = accion.tipo === "cancelar-ventana" || accion.tipo === "desapartar-ventana";
   const nombrePersona = v?.usuarioNombre || accion.datos?.nombre || "";
 
   box.innerHTML = `
@@ -687,20 +692,25 @@ function ejecutarAccion(personal) {
     confirmarDepositoVentana(v, accionPendiente.datos, personal);
     mensaje = `Depósito confirmado por ${personal.nombre}.`;
 
-  } else if (accionPendiente.tipo === "liquidar-pieza") {
+  } else if (accionPendiente.tipo === "liquidar-ventana") {
 
-    const resultado = liquidarPiezaVentana(v, accionPendiente.piezaId, accionPendiente.datos, personal);
+    const resultado = liquidarVentanaCompleta(v, accionPendiente.datos, personal);
 
-    if (resultado?.esUltimaPieza && accionPendiente.decisionDeposito) {
-      resolverDepositoVentana(v, accionPendiente.decisionDeposito, personal, accionPendiente.piezaId);
+    if (resultado?.requiereResolucionDeposito && accionPendiente.decisionDeposito) {
+      resolverDepositoVentana(v, accionPendiente.decisionDeposito, personal);
     }
 
-    mensaje = `Pieza liquidada por ${personal.nombre}.`;
+    mensaje = `Apartado liquidado por ${personal.nombre}.`;
 
-  } else if (accionPendiente.tipo === "cancelar-pieza") {
+  } else if (accionPendiente.tipo === "cancelar-ventana") {
 
-    cancelarPiezaVentana(v, accionPendiente.piezaId, personal);
-    mensaje = `Pieza cancelada por ${personal.nombre}.`;
+    cancelarVentanaCompleta(v, personal);
+    mensaje = `Apartado cancelado por ${personal.nombre}.`;
+
+  } else if (accionPendiente.tipo === "desapartar-ventana") {
+
+    desapartarVentanaVencida(v, personal);
+    mensaje = `Apartado desapartado por ${personal.nombre}.`;
 
   }
 
@@ -775,7 +785,7 @@ function obtenerTextoVencimiento(v) {
 
   const fecha = new Date(v.fechaVencimiento).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
 
-  return v.estado === "vencida" ? `Venció el ${fecha}` : fecha;
+  return v.estado === "vencida" || ventanaEstaVencida(v) ? `Venció el ${fecha}` : fecha;
 
 }
 
@@ -795,7 +805,7 @@ function actualizarResumen() {
   const valores = {
     ventanasActivas: ventanas.filter(v => v.estado === "activa").length,
     piezasActivas: ventanas.reduce((total, v) => total + obtenerPiezasActivas(v).length, 0),
-    ventanasVencidas: ventanas.filter(v => v.estado === "vencida").length,
+    ventanasVencidas: ventanas.filter(v => v.estado === "activa" && ventanaEstaVencida(v)).length,
     ventanasPendientes: ventanas.filter(v => v.estado === "pendiente_deposito").length
   };
 

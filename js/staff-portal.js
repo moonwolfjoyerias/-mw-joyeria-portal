@@ -28,7 +28,7 @@ function actualizarResumenInicio() {
 
   const valores = {
     inicioPendientesApartar: ventanas.filter(v => v.estado === 'pendiente_deposito').length,
-    inicioApartadosVencidos: ventanas.filter(v => v.estado === 'vencida').length,
+    inicioApartadosVencidos: ventanas.filter(v => v.estado === 'activa' && ventanaEstaVencida(v)).length,
     inicioTotalDeseos: deseos.length
   };
 

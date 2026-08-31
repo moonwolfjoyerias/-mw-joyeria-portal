@@ -102,8 +102,9 @@ function construirVentanasStaffEjemplo() {
   v4.auditoria.push({ texto: "Solicitud creada", usuario: "Sistema", fecha: v4.fechaInicio });
   ventanas.push(v4);
 
-  // 5) Vencida — se agotaron los 3 días con una pieza activa: se
-  //    canceló y el depósito se perdió por completo.
+  // 5) Se agotaron los 3 días con una pieza activa: se muestra como
+  //    "vencida" (aviso), pero la pieza y el depósito siguen intactos
+  //    hasta que Staff decida "Desapartar".
   const v5 = crearVentanaApartado({
     id: "VENT-EJ-05",
     usuarioId: "paola-gonzalez",
@@ -118,7 +119,7 @@ function construirVentanasStaffEjemplo() {
   v5.apartados.push(
     crearApartadoPieza({ id: "PZ-EJ-06", producto: "Dije Estrella", variante: "Grande · Dorado", total: 580 })
   );
-  ventanas.push(v5); // se vencerá sola al calcular (revisarVencimientoVentanas)
+  ventanas.push(v5); // ventanaEstaVencida(v5) da true al calcular, sin cancelar nada
 
   // 6) Cerrada — la última pieza se canceló y el depósito quedó como
   //    crédito automático (Andrea ya lo tiene disponible arriba).
@@ -175,9 +176,9 @@ function construirVentanasStaffEjemplo() {
 
 // Fuente única de verdad: la usan tanto la página de Apartados como
 // el resumen de Inicio, para que ambas muestren siempre los mismos
-// datos. Aplica el barrido de vencimiento en cada lectura (es
-// determinista según la fecha/hora actual, así que no hace falta
-// persistirlo para que se vea igual en todos lados).
+// datos. Que una ventana esté vencida (ventanaEstaVencida) es un
+// cálculo en vivo, no un barrido que cancele nada — las piezas y el
+// depósito siguen intactos hasta que Staff decida "Desapartar".
 function calcularVentanasStaffActuales() {
 
   let ventanas = obtenerVentanasApartado();
@@ -192,8 +193,6 @@ function calcularVentanasStaffActuales() {
     }
 
   }
-
-  revisarVencimientoVentanas(ventanas, { nombre: "Sistema" });
 
   return ventanas;
 
