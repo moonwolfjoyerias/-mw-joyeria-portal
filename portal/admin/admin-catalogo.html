@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal — Admin MW</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="../../css/styles.css?v=18">
+</head>
+<body>
+
+  <div class="layout-portal">
+    <aside class="sidebar">
+      <a href="../../index.html" class="brand-link">
+        <img src="../../assets/images/isotipo-blanco.png" alt="MOONWOLF Joyería">
+        <span>
+          <span class="logo-main">MOONWOLF</span>
+          <span class="logo-sub">JOYERÍA</span>
+        </span>
+      </a>
+      <nav>
+        <a href="../admin/admin-portal.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+          Dashboard
+        </a>
+        <a href="../admin/admin-catalogo.html" class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg>
+          Catálogo
+        </a>
+        <a href="../admin/admin-apartados.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
+          Apartados
+        </a>
+        <a href="../admin/admin-emprendedoras.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M2 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M14 20c.3-2.6 2-4.5 4.5-4.5"/></svg>
+          Emprendedoras/Líderes
+        </a>
+        <a href="../admin/admin-comisiones.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+          Comisiones
+        </a>
+        <a href="../admin/admin-plan-mw.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7L2 9.2l7.1-.6z"/></svg>
+          Plan MW
+        </a>
+        <a href="../admin/admin-calendario.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          Calendario
+        </a>
+        <a href="../admin/admin-actividad.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
+          Actividad
+        </a>
+        <a href="../admin/admin-nomina.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>
+          Nómina
+        </a>
+        <a href="../admin/admin-solicitudes.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M9 11h6M9 15h6"/></svg>
+          Solicitudes
+        </a>
+        <a href="../admin/admin-configuracion.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+          Configuración
+        </a>
+        <a href="../admin/admin-mi-cuenta.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+          Mi cuenta
+        </a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header class="portal-header">
+        <div>
+          <h1>Catálogo</h1>
+          <p class="portal-sub">Portal de Administración MW.</p>
+        </div>
+
+        <div class="portal-header-actions">
+          <button class="notif-bell" id="notifBell" aria-label="Notificaciones">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span class="notif-badge" id="notifBadge">0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel"></div>
+
+          <button class="profile-btn" id="profileBtn">
+            <span class="profile-avatar">C</span>
+            <span class="profile-info">
+              <strong>Claudia</strong>
+              <span class="profile-role">Admin MW</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" data-modal="foto">Cambiar foto de perfil</a>
+            <a href="../../login.html" class="danger">Cerrar sesión</a>
+          </div>
+        </div>
+      </header>
+
+      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
+        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
+        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
+        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box" id="modalBox"></div>
+  </div>
+
+  <script src="../../js/portal-common.js"></script>
+</body>
+</html>
