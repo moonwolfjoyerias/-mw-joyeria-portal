@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Admin MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=18">
+  <link rel="stylesheet" href="../../css/styles.css?v=9">
 </head>
 <body>
 
@@ -47,6 +47,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
           Calendario
         </a>
+        <a href="../admin/admin-lista-deseos.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
+          Lista de deseos
+        </a>
         <a href="../admin/admin-actividad.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
           Actividad
@@ -74,7 +78,7 @@
       <header class="portal-header">
         <div>
           <h1>Catálogo</h1>
-          <p class="portal-sub">Portal de Administración MW.</p>
+          <p class="portal-sub">Precio de mayoreo ya con tu descuento aplicado.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -99,19 +103,183 @@
         </div>
       </header>
 
-      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
-        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
-        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
-        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+  <!-- RESUMEN -->
+  <div class="section-head">
+    <h2>Resumen del catálogo</h2>
+  </div>
+
+  <section class="stat-cards catalog-summary">
+
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M6 7h12l1 13H5L6 7z"/>
+          <path d="M9 7a3 3 0 016 0"/>
+        </svg>
       </div>
 
-    </main>
+      <div>
+        <h4>Total de productos</h4>
+        <span class="stat-num" id="totalProductos">0</span>
+        <span class="stat-link">Productos registrados</span>
+      </div>
+    </div>
+
+
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M20 7L10 17l-5-5"/>
+          <path d="M4 4h16v16H4z"/>
+        </svg>
+      </div>
+
+      <div>
+        <h4>Disponibles</h4>
+        <span class="stat-num" id="productosDisponibles">0</span>
+        <span class="stat-link">Visibles para emprendedoras</span>
+      </div>
+    </div>
+
+
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M4 6h16"/>
+          <path d="M4 12h16"/>
+          <path d="M4 18h16"/>
+        </svg>
+      </div>
+
+      <div>
+        <h4>Oro Laminado</h4>
+        <span class="stat-num" id="productosOro">0</span>
+        <span class="stat-link">Productos</span>
+      </div>
+    </div>
+
+
+    <div class="stat-card">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M12 3v18"/>
+          <path d="M17 7.5c0-2-2-3.5-5-3.5S7 5.5 7 7.5 9 11 12 11s5 1.5 5 3.5S15 18 12 18s-5-1.5-5-3.5"/>
+        </svg>
+      </div>
+
+      <div>
+        <h4>Precio promedio</h4>
+        <span class="stat-num" id="precioPromedio">$0</span>
+        <span class="stat-link">Precio de mayoreo</span>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ACCIONES -->
+  <div class="section-head catalog-section-head">
+    <h2>Productos del catálogo</h2>
+
+    <button class="catalog-add-btn" id="agregarProductoBtn">
+      <span>＋</span>
+      Agregar producto
+    </button>
   </div>
 
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal-box" id="modalBox"></div>
+
+  <!-- FILTROS -->
+  <div class="catalog-toolbar">
+
+    <button type="button" class="action-btn detail-action compact-toggle-btn" data-compactar-tabla=".catalog-table-wrap"><span>🔍</span><span class="compact-toggle-label">Vista compacta</span></button>
+
+    <div class="catalog-search">
+      <span>⌕</span>
+      <input
+        type="search"
+        id="searchInput"
+        placeholder="Buscar por nombre, categoría o código..."
+      >
+    </div>
+
+    <select id="filterMaterial">
+      <option value="">Todos los materiales</option>
+      <option value="oro-laminado">Oro Laminado</option>
+      <option value="acero-inoxidable">Acero Inoxidable</option>
+      <option value="exhibidores">Exhibidores</option>
+      <option value="souvenirs">Souvenirs</option>
+    </select>
+
+    <select id="filterEstado">
+      <option value="">Todas las disponibilidades</option>
+      <option value="disponible">Disponible</option>
+      <option value="agotado">No disponible</option>
+    </select>
+
   </div>
 
+
+  <!-- PRODUCTOS -->
+  <section class="catalog-table-card">
+    <div class="catalog-table-wrap">
+      <table class="catalog-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Producto</th>
+            <th>Descripción</th>
+            <th>Categoría</th>
+            <th>Material</th>
+            <th>Calidad</th>
+            <th>Color / talla</th>
+            <th>Mayoreo</th>
+            <th>Público</th>
+            <th>Existencia</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="catalogGrid"></tbody>
+      </table>
+    </div>
+  </section>
+
+
+  <!-- MODAL -->
+  <div class="catalog-modal-overlay" id="modalOverlay">
+
+    <div class="catalog-modal modal-box" id="modalBox">
+
+      <button
+        class="catalog-modal-close"
+        id="catalogModalClose"
+        type="button"
+      >
+        ×
+      </button>
+
+    </div>
+
+  </div>
+
+</main>
+  </div>
+
+  <script src="../../js/notificaciones-ejemplo.js"></script>
+  <script src="../../js/eventos-ejemplo.js"></script>
+  <script>
+  const PORTAL_LINKS = {
+    inicio: '../admin/admin-portal.html',
+    catalogo: '../admin/admin-catalogo.html',
+    apartados: '../admin/admin-apartados.html',
+    deseos: '../admin/admin-lista-deseos.html',
+    calendario: '../admin/admin-calendario.html',
+    notificaciones: '../admin/admin-mi-cuenta.html',
+  };
+  </script>
   <script src="../../js/portal-common.js"></script>
+  <script src="../../js/staff-catalogo-ejemplo.js"></script>
+  <script src="../../js/admin-comun.js"></script>
+  <script src="../../js/admin-catalogo.js"></script>
+  <script src="../../js/tabla-compacta.js"></script>
 </body>
 </html>
