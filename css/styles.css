@@ -1356,7 +1356,7 @@ a:hover { color: var(--mw-gold); }
   .day-events-dots { gap: 3px; }
   .event-dot { width: 7px; height: 7px; }
   .calendar-main { padding: 0.9rem; }
-  .calendar-day { padding: 0.25rem; }
+  .calendar-day { padding: 0.25rem; aspect-ratio: 0.8; }
   .calendar-day .day-num { font-size: 0.68rem; }
   .calendar-weekday { font-size: 0.68rem; padding: 0.55em 0; }
   .calendar-weekday .cw-full { display: none; }
