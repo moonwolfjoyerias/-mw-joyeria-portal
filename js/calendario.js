@@ -5,6 +5,7 @@
 // semilla de ejemplo.
 
 const DIAS_SEMANA_LARGO = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DIAS_SEMANA_INICIAL = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 const MESES_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 const hoy = new Date();
@@ -74,7 +75,7 @@ function renderCalendario() {
   }
 
   const grid = document.getElementById('calendarGrid');
-  const weekdaysHtml = DIAS_SEMANA_LARGO.map(d => `<div class="calendar-weekday">${d}</div>`).join('');
+  const weekdaysHtml = DIAS_SEMANA_LARGO.map((d, i) => `<div class="calendar-weekday"><span class="cw-full">${d}</span><span class="cw-short">${DIAS_SEMANA_INICIAL[i]}</span></div>`).join('');
   const celdasHtml = celdas.map(c => `
     <div class="calendar-day ${c.otroMes ? 'other-month' : ''} ${c.esHoy ? 'is-today' : ''}">
       <span class="day-num">${c.dia}</span>
