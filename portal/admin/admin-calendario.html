@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Admin MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=18">
+  <link rel="stylesheet" href="../../css/styles.css?v=16">
 </head>
 <body>
 
@@ -47,6 +47,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
           Calendario
         </a>
+        <a href="../admin/admin-lista-deseos.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
+          Lista de deseos
+        </a>
         <a href="../admin/admin-actividad.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
           Actividad
@@ -73,8 +77,8 @@
     <main class="main-content">
       <header class="portal-header">
         <div>
-          <h1>Calendario</h1>
-          <p class="portal-sub">Portal de Administración MW.</p>
+          <h1>Calendario MW ✦</h1>
+          <p class="portal-sub">Agrega, edita o elimina las actividades del calendario.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -99,19 +103,134 @@
         </div>
       </header>
 
-      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
-        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
-        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
-        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+      <!-- RESUMEN -->
+      <div class="section-head">
+        <h2>Resumen del calendario</h2>
       </div>
+
+      <section class="stat-cards catalog-summary">
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          </div>
+          <div>
+            <h4>Total de eventos</h4>
+            <span class="stat-num" id="totalEventos">0</span>
+            <span class="stat-link">Registrados en el calendario</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 7L10 17l-5-5"/><path d="M4 4h16v16H4z"/></svg>
+          </div>
+          <div>
+            <h4>Próximos</h4>
+            <span class="stat-num" id="proximosEventos">0</span>
+            <span class="stat-link">A partir de hoy</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-7.58 7-12a7 7 0 10-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          </div>
+          <div>
+            <h4>Presenciales</h4>
+            <span class="stat-num" id="eventosPresenciales">0</span>
+            <span class="stat-link">Con ubicación física</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+          </div>
+          <div>
+            <h4>Virtuales</h4>
+            <span class="stat-num" id="eventosVirtuales">0</span>
+            <span class="stat-link">En línea (Zoom)</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ACCIONES -->
+      <div class="section-head catalog-section-head">
+        <h2>Eventos del calendario</h2>
+
+        <button class="catalog-add-btn" id="agregarEventoBtn">
+          <span>＋</span>
+          Agregar evento
+        </button>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="catalog-toolbar">
+
+        <button type="button" class="action-btn detail-action compact-toggle-btn" data-compactar-tabla=".catalog-table-wrap"><span>🔍</span><span class="compact-toggle-label">Vista compacta</span></button>
+
+        <div class="catalog-search">
+          <span>⌕</span>
+          <input type="search" id="searchInput" placeholder="Buscar por título, lugar o descripción...">
+        </div>
+
+        <select id="filterTipo">
+          <option value="">Todos los tipos</option>
+          <option value="presencial">Presencial</option>
+          <option value="virtual">Virtual</option>
+        </select>
+
+      </div>
+
+      <!-- TABLA -->
+      <section class="catalog-table-card">
+        <div class="catalog-table-wrap">
+          <table class="catalog-table">
+            <thead>
+              <tr>
+                <th>Evento</th>
+                <th>Descripción</th>
+                <th>Tipo</th>
+                <th>Fecha / hora</th>
+                <th>Lugar / enlace</th>
+                <th>Acciones</th>
+                <th>Última acción</th>
+              </tr>
+            </thead>
+            <tbody id="calendarioTableBody"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="resultCount">Mostrando resultados</span>
+        </div>
+      </section>
 
     </main>
   </div>
 
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal-box" id="modalBox"></div>
+  <div class="catalog-modal-overlay" id="modalOverlay">
+    <div class="catalog-modal modal-box" id="modalBox"></div>
   </div>
 
+  <script src="../../js/notificaciones-ejemplo.js"></script>
+  <script src="../../js/eventos-ejemplo.js"></script>
+  <script src="../../js/eventos-modelo.js"></script>
+  <script>
+  const PORTAL_LINKS = {
+    inicio: '../admin/admin-portal.html',
+    catalogo: '../admin/admin-catalogo.html',
+    apartados: '../admin/admin-apartados.html',
+    deseos: '../admin/admin-lista-deseos.html',
+    calendario: '../admin/admin-calendario.html',
+    notificaciones: '../admin/admin-mi-cuenta.html',
+  };
+  </script>
   <script src="../../js/portal-common.js"></script>
+  <script src="../../js/calendario-tabla-ejemplo.js"></script>
+  <script src="../../js/admin-comun.js"></script>
+  <script src="../../js/admin-calendario.js"></script>
+  <script src="../../js/tabla-compacta.js"></script>
 </body>
 </html>
