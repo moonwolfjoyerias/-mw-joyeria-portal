@@ -431,6 +431,15 @@ function ejecutarAccionDeseo(empleado) {
   };
 
   guardarDeseosStaff();
+
+  registrarAuditoria({
+    usuarioId: empleado.usuario,
+    usuarioNombre: empleado.nombre,
+    rol: 'staff',
+    modulo: 'lista_deseos',
+    accion: 'avanzar_estado',
+    descripcion: `Solicitud "${deseo.titulo}" → ${textos[accionDeseoPendiente.nuevoEstado] || accionDeseoPendiente.nuevoEstado}`
+  });
   cerrarModalDeseo();
   renderTablaDeseos();
 

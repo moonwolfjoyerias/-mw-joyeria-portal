@@ -1247,6 +1247,15 @@ function ejecutarAccion(accion, empleado) {
 
     guardarCatalogo();
 
+    registrarAuditoria({
+      usuarioId: empleado.usuario,
+      usuarioNombre: empleado.nombre,
+      rol: 'staff',
+      modulo: 'catalogo',
+      accion: 'agregar_producto',
+      descripcion: `Producto agregado: ${nuevoProducto.nombre}`
+    });
+
     cerrarModal();
 
     renderCatalogo();
@@ -1295,6 +1304,15 @@ function ejecutarAccion(accion, empleado) {
 
 
     guardarCatalogo();
+
+    registrarAuditoria({
+      usuarioId: empleado.usuario,
+      usuarioNombre: empleado.nombre,
+      rol: 'staff',
+      modulo: 'catalogo',
+      accion: 'editar_producto',
+      descripcion: `Producto editado: ${producto.nombre}`
+    });
 
     cerrarModal();
 
@@ -1355,6 +1373,15 @@ function ejecutarAccion(accion, empleado) {
 
 
     guardarCatalogo();
+
+    registrarAuditoria({
+      usuarioId: empleado.usuario,
+      usuarioNombre: empleado.nombre,
+      rol: 'staff',
+      modulo: 'catalogo',
+      accion: 'eliminar_producto',
+      descripcion: `Producto eliminado: ${producto.nombre}`
+    });
 
     cerrarModal();
 
@@ -1535,6 +1562,15 @@ function abrirModalStock(producto, empleado) {
 
 
       guardarCatalogo();
+
+      registrarAuditoria({
+        usuarioId: empleado.usuario,
+        usuarioNombre: empleado.nombre,
+        rol: 'staff',
+        modulo: 'catalogo',
+        accion: 'modificar_existencia',
+        descripcion: `Existencia de "${producto.nombre}" cambiada a ${producto.stock} piezas`
+      });
 
       cerrarModal();
 

@@ -1898,6 +1898,31 @@ a:hover { color: var(--mw-gold); }
 
 .catalog-empty-cell strong { color: #422361; margin-bottom: 5px; }
 
+/* ---------- Actividad (bitácora compartida Staff/RH/Admin) ---------- */
+.activity-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.activity-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--mw-lilac-soft);
+  color: var(--mw-purple);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.activity-person strong { display: block; color: #2d145d; font-size: 0.75rem; }
+.activity-person .badge { margin-top: 2px; }
+.activity-modulo { display: block; font-weight: 600; color: var(--mw-purple); font-size: 0.72rem; }
+.activity-fecha { white-space: nowrap; color: var(--mw-text-muted); }
+
 .catalog-toolbar select {
   height: 40px;
   border: 1px solid #ddd5e3;
