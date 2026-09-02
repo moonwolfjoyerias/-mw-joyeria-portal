@@ -1087,7 +1087,9 @@ a:hover { color: var(--mw-gold); }
 .catalog-product-card .cp-body { padding: 0.8rem 0.9rem 1rem; flex: 1; display: flex; flex-direction: column; }
 .catalog-product-card h4 { font-size: 0.88rem; font-family: var(--font-body); font-weight: 500; color: var(--mw-text); margin: 0 0 0.25rem; }
 .catalog-product-card .cp-meta { font-size: 0.72rem; color: var(--mw-text-muted); margin-bottom: 0.5rem; min-height: 1em; }
-.catalog-product-card .cp-price { font-family: var(--font-heading); color: var(--mw-purple); font-weight: 700; font-size: 1.05rem; margin-bottom: 0.7rem; }
+.catalog-product-card .cp-price { margin-bottom: 0.7rem; }
+.catalog-product-card .cp-price .price-public { display: block; font-size: 0.75rem; color: var(--mw-text-muted); text-decoration: line-through; }
+.catalog-product-card .cp-price .price-emprendedora { display: block; font-family: var(--font-heading); font-weight: 700; color: var(--mw-purple); font-size: 1.05rem; }
 .catalog-product-card .btn-apartar { margin-top: auto; font-size: 0.82rem; padding: 0.55em 0.8em; width: 100%; }
 .catalog-empty { grid-column: 1/-1; text-align: center; padding: 3rem 1rem; color: var(--mw-text-muted); }
 

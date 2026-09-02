@@ -175,7 +175,10 @@ function renderProductos(productos) {
       <div class="cp-body">
         <h4>${p.nombre}</h4>
         <div class="cp-meta">${[p.categoria, p.colorOro, p.talla].filter(Boolean).join(' · ') || '&nbsp;'}</div>
-        <div class="cp-price">$${p.precioMayoreo} MXN</div>
+        <div class="cp-price">
+          <span class="price-public">$${p.precioEtiqueta} MXN</span>
+          <span class="price-emprendedora">$${calcularPrecioEmprendedora(p.precioEtiqueta, p.descuento)} MXN</span>
+        </div>
         ${p.disponible
           ? `<button class="btn btn-primary btn-apartar" data-apartar="${p.nombre}">Apartar</button>`
           : `<button class="btn btn-outline btn-apartar" disabled style="opacity:0.5;cursor:not-allowed;">No disponible</button>`}
