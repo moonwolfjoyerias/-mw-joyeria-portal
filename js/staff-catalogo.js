@@ -307,7 +307,7 @@ function actualizarResumenCatalogo() {
   const disponibles = catalogoStaff.filter(producto => producto.stock > 0).length;
   const oro = catalogoStaff.filter(producto => producto.material === 'oro-laminado').length;
   const promedio = total
-    ? catalogoStaff.reduce((suma, producto) => suma + Number(producto.precioMayoreo || 0), 0) / total
+    ? catalogoStaff.reduce((suma, producto) => suma + Number(producto.precioEtiqueta || 0), 0) / total
     : 0;
 
   const valores = {
@@ -369,8 +369,11 @@ function renderProducto(p) {
       <td>${escapeHTML(material)}</td>
       <td>${p.calidad === 'premium' ? 'Premium' : 'Estándar'}</td>
       <td>${escapeHTML(colorTalla)}</td>
-      <td><strong>$${formatearPrecio(p.precioMayoreo)} MXN</strong></td>
-      <td>$${formatearPrecio(p.precioPublico)} MXN</td>
+      <td><strong>$${formatearPrecio(p.precioEtiqueta)} MXN</strong></td>
+      <td>
+        <strong>${p.descuento || 0}%</strong>
+        <div class="catalog-description">$${formatearPrecio(calcularPrecioEmprendedora(p.precioEtiqueta, p.descuento))} MXN emprendedora</div>
+      </td>
       <td><span class="catalog-stock ${stockClass}">${stockText}<small>${disponibilidad}</small></span></td>
       <td>
         <div class="catalog-actions">
@@ -401,6 +404,10 @@ function abrirModalProducto(producto = null) {
 
 
   imagenTemporal = normalizarImagenProducto(producto?.imagen);
+
+  const materialInicial = producto?.material || MATERIALES_STAFF[0].key;
+  const descuentoInicial = producto?.descuento ?? descuentoSugerido(materialInicial);
+  const esOtroDescuento = ![60, 40, 30, 0].includes(Number(descuentoInicial));
 
 
   box.innerHTML = `
@@ -623,30 +630,49 @@ function abrirModalProducto(producto = null) {
 
       <div class="form-field">
 
-        <label>Precio mayoreo *</label>
+        <label>Precio etiqueta *</label>
 
         <input
-          id="productoMayoreo"
+          id="productoPrecioEtiqueta"
           type="number"
           min="0"
           step="1"
-          value="${producto?.precioMayoreo ?? ''}"
+          value="${producto?.precioEtiqueta ?? ''}"
         >
+
+        <small class="field-help">
+          El precio que aparece en todos los catálogos.
+        </small>
 
       </div>
 
 
       <div class="form-field">
 
-        <label>Precio público *</label>
+        <label>Descuento</label>
+
+        <select id="productoDescuentoSelect">
+          <option value="60" ${!esOtroDescuento && descuentoInicial === 60 ? 'selected' : ''}>60%</option>
+          <option value="40" ${!esOtroDescuento && descuentoInicial === 40 ? 'selected' : ''}>40%</option>
+          <option value="30" ${!esOtroDescuento && descuentoInicial === 30 ? 'selected' : ''}>30%</option>
+          <option value="otro" ${esOtroDescuento ? 'selected' : ''}>Otro</option>
+          <option value="0" ${!esOtroDescuento && descuentoInicial === 0 ? 'selected' : ''}>No aplica</option>
+        </select>
 
         <input
-          id="productoPublico"
+          id="productoDescuentoOtro"
           type="number"
           min="0"
+          max="100"
           step="1"
-          value="${producto?.precioPublico ?? ''}"
+          placeholder="% de descuento"
+          value="${esOtroDescuento ? descuentoInicial : ''}"
+          style="margin-top:8px;${esOtroDescuento ? '' : 'display:none;'}"
         >
+
+        <small class="field-help">
+          Se sugiere según el material, pero puedes cambiarlo.
+        </small>
 
       </div>
 
@@ -681,6 +707,38 @@ function abrirModalProducto(producto = null) {
   document
     .getElementById('productoImagen')
     ?.addEventListener('change', manejarImagen);
+
+
+  document
+    .getElementById('productoMaterial')
+    ?.addEventListener('change', (e) => {
+
+      const select = document.getElementById('productoDescuentoSelect');
+      const otro = document.getElementById('productoDescuentoOtro');
+      if (!select) return;
+
+      select.value = String(descuentoSugerido(e.target.value));
+      if (otro) { otro.style.display = 'none'; otro.value = ''; }
+
+    });
+
+
+  document
+    .getElementById('productoDescuentoSelect')
+    ?.addEventListener('change', (e) => {
+
+      const otro = document.getElementById('productoDescuentoOtro');
+      if (!otro) return;
+
+      if (e.target.value === 'otro') {
+        otro.style.display = '';
+        otro.focus();
+      } else {
+        otro.style.display = 'none';
+        otro.value = '';
+      }
+
+    });
 
 
   document
@@ -792,12 +850,16 @@ function obtenerDatosProducto() {
     Number(document.getElementById('productoStock')?.value);
 
 
-  const precioMayoreo =
-    Number(document.getElementById('productoMayoreo')?.value);
+  const precioEtiqueta =
+    Number(document.getElementById('productoPrecioEtiqueta')?.value);
 
 
-  const precioPublico =
-    Number(document.getElementById('productoPublico')?.value);
+  const descuentoSelect = document.getElementById('productoDescuentoSelect')?.value;
+
+  const descuento =
+    descuentoSelect === 'otro'
+      ? Number(document.getElementById('productoDescuentoOtro')?.value)
+      : Number(descuentoSelect);
 
 
   if (!nombre) {
@@ -827,18 +889,18 @@ function obtenerDatosProducto() {
   }
 
 
-  if (Number.isNaN(precioMayoreo) || precioMayoreo < 0) {
+  if (Number.isNaN(precioEtiqueta) || precioEtiqueta < 0) {
 
-    mostrarToast('El precio de mayoreo no es válido.');
+    mostrarToast('El precio etiqueta no es válido.');
 
     return null;
 
   }
 
 
-  if (Number.isNaN(precioPublico) || precioPublico < 0) {
+  if (Number.isNaN(descuento) || descuento < 0 || descuento > 100) {
 
-    mostrarToast('El precio público no es válido.');
+    mostrarToast('El descuento no es válido (0 a 100).');
 
     return null;
 
@@ -855,8 +917,8 @@ function obtenerDatosProducto() {
     colorOro,
     talla,
     stock,
-    precioMayoreo,
-    precioPublico,
+    precioEtiqueta,
+    descuento,
     disponible: stock > 0,
     imagen: imagenTemporal
 
