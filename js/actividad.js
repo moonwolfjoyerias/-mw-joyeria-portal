@@ -6,7 +6,8 @@ const MODULOS_ACTIVIDAD = {
   catalogo: 'Catálogo',
   apartados: 'Apartados',
   calendario: 'Calendario',
-  lista_deseos: 'Lista de deseos'
+  lista_deseos: 'Lista de deseos',
+  personas: 'Personas'
 };
 
 const ROLES_ACTIVIDAD = {
@@ -16,6 +17,14 @@ const ROLES_ACTIVIDAD = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+
+  // ACTIVIDAD_ROL_VISOR lo declara cada portal en su propio <script>
+  // inline (admin/rh/staff-actividad.html). Solo Admin puede ver las
+  // acciones de Admin — Staff y RH nunca las ven, aunque las suyas
+  // propias sí quedan visibles entre ellos.
+  if (typeof ACTIVIDAD_ROL_VISOR !== 'undefined' && ACTIVIDAD_ROL_VISOR !== 'admin') {
+    document.querySelector('#filtroRolActividad option[value="admin"]')?.remove();
+  }
 
   renderActividad();
 
@@ -30,8 +39,10 @@ function renderActividad() {
   if (!wrap) return;
 
   const rolFiltro = document.getElementById('filtroRolActividad')?.value || '';
+  const puedeVerAdmin = typeof ACTIVIDAD_ROL_VISOR === 'undefined' || ACTIVIDAD_ROL_VISOR === 'admin';
 
   const registros = obtenerAuditoriaCompartida()
+    .filter(r => puedeVerAdmin || r.rol !== 'admin')
     .filter(r => !rolFiltro || r.rol === rolFiltro);
 
   const count = document.getElementById('actividadCount');

@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal — Admin MW</title>
+  <title>Emprendedoras / Líderes — Portal Admin MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=18">
+  <link rel="stylesheet" href="../../css/styles.css?v=19">
 </head>
 <body>
 
@@ -31,7 +31,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
           Apartados
         </a>
-        <a href="../admin/admin-emprendedoras.html" class="active">
+        <a href="../admin/admin-emprendedoras-lideres.html" class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M2 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M14 20c.3-2.6 2-4.5 4.5-4.5"/></svg>
           Emprendedoras/Líderes
         </a>
@@ -77,8 +77,8 @@
     <main class="main-content">
       <header class="portal-header">
         <div>
-          <h1>Emprendedoras/Líderes</h1>
-          <p class="portal-sub">Portal de Administración MW.</p>
+          <h1>Emprendedoras / Líderes</h1>
+          <p class="portal-sub">Busca, consulta y edita la información completa de cualquier persona registrada.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -103,10 +103,59 @@
         </div>
       </header>
 
-      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
-        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
-        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
-        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+      <div class="people-toolbar">
+        <div class="catalog-search people-search">
+          <span>⌕</span>
+          <input type="search" id="personaSearchInput" placeholder="Buscar por nombre, usuario o teléfono...">
+        </div>
+
+        <select id="filterTipo">
+          <option value="">Todos los tipos</option>
+          <option value="emprendedora">Emprendedora</option>
+          <option value="lider">Líder</option>
+        </select>
+
+        <select id="filterEstado">
+          <option value="">Todos los estados</option>
+          <option value="activa">Activa</option>
+          <option value="inactiva">Inactiva</option>
+          <option value="baja">Baja</option>
+        </select>
+
+        <select id="filterCategoria">
+          <option value="">Todas las categorías</option>
+          <option value="normal">Normal</option>
+          <option value="vip">VIP</option>
+          <option value="foranea">Foránea</option>
+        </select>
+
+        <select id="filterLider">
+          <option value="">Todas las líderes</option>
+        </select>
+
+        <select id="filterRango">
+          <option value="">Todos los rangos</option>
+        </select>
+      </div>
+
+      <div class="people-layout">
+
+        <section class="people-results-card">
+          <div class="people-results-head">
+            <span class="result-count" id="personaResultCount"></span>
+          </div>
+          <div class="people-results-list" id="personaResultsList"></div>
+        </section>
+
+        <section class="people-detail-card" id="personaDetailCard">
+          <div class="people-detail-empty" id="personaDetailEmpty">
+            <div class="people-detail-empty-icon">✦</div>
+            <strong>Selecciona una persona</strong>
+            <p>Elige un resultado de la lista para ver su perfil completo.</p>
+          </div>
+          <div class="people-detail-content" id="personaDetailContent" hidden></div>
+        </section>
+
       </div>
 
     </main>
@@ -116,6 +165,25 @@
     <div class="modal-box" id="modalBox"></div>
   </div>
 
+  <script src="../../js/notificaciones-ejemplo.js"></script>
+  <script src="../../js/eventos-ejemplo.js"></script>
+  <script>
+  const PORTAL_LINKS = {
+    inicio: '../admin/admin-portal.html',
+    catalogo: '../admin/admin-catalogo.html',
+    apartados: '../admin/admin-apartados.html',
+    deseos: '../admin/admin-lista-deseos.html',
+    calendario: '../admin/admin-calendario.html',
+    notificaciones: '../admin/admin-mi-cuenta.html',
+  };
+  </script>
   <script src="../../js/portal-common.js"></script>
+  <script src="../../js/admin-comun.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/apartados-modelo.js"></script>
+  <script src="../../js/staff-apartados-ejemplo.js"></script>
+  <script src="../../js/lider-ejemplo.js"></script>
+  <script src="../../js/personas-ejemplo.js"></script>
+  <script src="../../js/admin-emprendedoras.js"></script>
 </body>
 </html>

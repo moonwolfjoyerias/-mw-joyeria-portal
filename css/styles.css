@@ -2789,3 +2789,281 @@ a:hover { color: var(--mw-gold); }
   color: #6e657e;
   font-size: 0.7rem;
 }
+/* =========================================================
+   MW JOYERÍA — ADMIN: EMPRENDEDORAS / LÍDERES
+   ========================================================= */
+
+.people-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.people-toolbar select {
+  height: 42px;
+  border: 1px solid #ddd5e3;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #4f4663;
+  background: #fff;
+}
+.people-search {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.people-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.people-results-card {
+  background: #fff;
+  border: 1px solid #eae4eb;
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.people-results-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0ecf0;
+  color: #6e657e;
+  font-size: 0.75rem;
+}
+.people-results-list {
+  max-height: 74vh;
+  overflow-y: auto;
+}
+
+.persona-result-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid #f0ecf0;
+  background: #fff;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.persona-result-card:hover { background: #fcf9fd; }
+.persona-result-card.active { background: var(--mw-lilac-soft); }
+.persona-result-card:last-child { border-bottom: 0; }
+.persona-result-card .action-btn {
+  flex: 0 0 100%;
+  width: auto;
+  margin-left: 52px;
+}
+
+.persona-result-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--mw-lilac-soft);
+  color: var(--mw-purple);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.persona-result-card.active .persona-result-avatar { background: #fff; }
+
+.persona-result-body { flex: 1; min-width: 0; }
+.persona-result-body strong { display: block; color: #2d145d; font-size: 0.82rem; }
+.persona-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+  font-size: 0.68rem;
+  color: var(--mw-text-muted);
+}
+.persona-result-meta .badge { font-size: 0.62rem; padding: 0.2em 0.55em; }
+
+.people-detail-card {
+  background: #fff;
+  border: 1px solid #eae4eb;
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  padding: 1.6rem;
+  min-height: 74vh;
+}
+.people-detail-empty {
+  height: 74vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #7d7386;
+}
+.people-detail-empty[hidden] { display: none; }
+.people-detail-empty-icon { font-size: 2rem; color: var(--mw-gold); margin-bottom: 0.6rem; }
+.people-detail-empty strong { color: #422361; margin-bottom: 0.4rem; }
+
+.people-detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 1.2rem;
+}
+.people-detail-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--mw-lilac-soft);
+  color: var(--mw-purple);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.people-detail-header h3 { margin: 0 0 0.35rem; font-size: 1.2rem; color: #2d145d; }
+.people-detail-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.people-detail-header .modal-close { position: static; margin-left: auto; }
+
+.estado-badge.activa { background: #DCF3E4; color: #1F7A44; }
+.estado-badge.inactiva { background: var(--mw-gold-soft); color: #8A6D14; }
+.estado-badge.baja { background: #FBEAEA; color: #B3312C; }
+
+.profile-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-bottom: 1px solid #eee8ed;
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem;
+}
+.profile-tab-btn {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid #ddd5e3;
+  background: #fff;
+  border-radius: 999px;
+  color: #5d5270;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.profile-tab-btn.active { background: var(--mw-purple); border-color: var(--mw-purple); color: #fff; }
+.profile-tab-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.profile-section-title {
+  font-family: var(--font-heading);
+  color: var(--mw-purple);
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid #eee8ed;
+}
+.profile-actions .btn { margin-top: 0; }
+
+.persona-autocomplete { position: relative; }
+.persona-autocomplete-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #ddd5e3;
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(45, 18, 79, 0.12);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.persona-autocomplete-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid #f2eef4;
+  background: #fff;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: #3b2a54;
+}
+.persona-autocomplete-item:hover { background: #faf4fd; }
+.persona-autocomplete-item:last-child { border-bottom: 0; }
+.persona-autocomplete-item small { color: var(--mw-text-muted); font-size: 0.68rem; }
+.persona-autocomplete-empty { padding: 10px 12px; font-size: 0.72rem; color: var(--mw-text-muted); }
+
+.team-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.team-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--mw-lilac-soft);
+  color: var(--mw-purple-dark);
+  border-radius: 999px;
+  padding: 0.35em 0.5em 0.35em 0.9em;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.team-chip button {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(94, 26, 138, 0.15);
+  color: var(--mw-purple-dark);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.team-chip-empty { color: var(--mw-text-muted); font-size: 0.78rem; margin-bottom: 12px; }
+
+.compra-item, .apartado-item {
+  border: 1px solid #eee7f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  background: #faf8fb;
+}
+.compra-item:last-child, .apartado-item:last-child { margin-bottom: 0; }
+.compra-item-head, .apartado-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.compra-item-head strong, .apartado-item-head strong { color: #2d145d; font-size: 0.82rem; }
+.compra-item small, .apartado-item small { display: block; color: var(--mw-text-muted); font-size: 0.72rem; }
+.apartado-piezas { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e5dfe8; }
+.apartado-pieza-row { display: flex; justify-content: space-between; font-size: 0.75rem; color: #40375a; padding: 3px 0; }
+
+@media (max-width: 980px) {
+  .people-layout { grid-template-columns: minmax(0, 1fr); }
+  .people-results-list { max-height: 320px; }
+  .people-detail-card, .people-detail-empty { min-height: 0; height: auto; }
+}
+@media (max-width: 620px) {
+  .people-toolbar select { flex: 1 1 100%; }
+  .people-detail-header { flex-wrap: wrap; }
+}
