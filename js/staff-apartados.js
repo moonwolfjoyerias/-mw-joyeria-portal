@@ -670,6 +670,18 @@ function ejecutarAccion(personal) {
     ventanas.push(nuevaVentana);
 
     guardarVentanas();
+
+    registrarAuditoria({
+      usuarioId: personal.usuario,
+      usuarioNombre: personal.nombre,
+      rol: 'staff',
+      modulo: 'apartados',
+      accion: 'nueva_ventana',
+      descripcion: nuevaVentana.metodoDeposito === "credito_anterior"
+        ? `Ventana abierta para ${nombre} reutilizando crédito guardado`
+        : `Ventana abierta para ${nombre} con la pieza ${producto}`
+    });
+
     actualizarResumen();
     renderTabla();
     cerrarModal();
@@ -687,10 +699,15 @@ function ejecutarAccion(personal) {
   const v = ventanas.find(x => x.id === accionPendiente.ventanaId);
   if (!v) return;
 
+  let auditoriaAccion = null;
+  let auditoriaDescripcion = '';
+
   if (accionPendiente.tipo === "confirmar-deposito-ventana") {
 
     confirmarDepositoVentana(v, accionPendiente.datos, personal);
     mensaje = `Depósito confirmado por ${personal.nombre}.`;
+    auditoriaAccion = 'confirmar_deposito';
+    auditoriaDescripcion = `Depósito de $${accionPendiente.datos.monto} confirmado para ${v.usuarioNombre}`;
 
   } else if (accionPendiente.tipo === "liquidar-ventana") {
 
@@ -701,20 +718,38 @@ function ejecutarAccion(personal) {
     }
 
     mensaje = `Apartado liquidado por ${personal.nombre}.`;
+    auditoriaAccion = 'liquidar_ventana';
+    auditoriaDescripcion = `Apartado de ${v.usuarioNombre} liquidado por $${accionPendiente.datos.monto}`;
 
   } else if (accionPendiente.tipo === "cancelar-ventana") {
 
     cancelarVentanaCompleta(v, personal);
     mensaje = `Apartado cancelado por ${personal.nombre}.`;
+    auditoriaAccion = 'cancelar_ventana';
+    auditoriaDescripcion = `Apartado de ${v.usuarioNombre} cancelado`;
 
   } else if (accionPendiente.tipo === "desapartar-ventana") {
 
     desapartarVentanaVencida(v, personal);
     mensaje = `Apartado desapartado por ${personal.nombre}.`;
+    auditoriaAccion = 'desapartar_ventana';
+    auditoriaDescripcion = `Apartado vencido de ${v.usuarioNombre} desapartado`;
 
   }
 
   guardarVentanas();
+
+  if (auditoriaAccion) {
+    registrarAuditoria({
+      usuarioId: personal.usuario,
+      usuarioNombre: personal.nombre,
+      rol: 'staff',
+      modulo: 'apartados',
+      accion: auditoriaAccion,
+      descripcion: auditoriaDescripcion
+    });
+  }
+
   actualizarResumen();
   renderTabla();
   cerrarModal();

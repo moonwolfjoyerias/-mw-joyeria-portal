@@ -78,7 +78,7 @@
       <header class="portal-header">
         <div>
           <h1>Actividad</h1>
-          <p class="portal-sub">Portal de Administración MW.</p>
+          <p class="portal-sub">Últimas acciones de Staff, RH y Admin — quién, qué y cuándo.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -103,10 +103,29 @@
         </div>
       </header>
 
-      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
-        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
-        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
-        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+      <div class="catalog-toolbar" style="justify-content:space-between;align-items:center;">
+        <span class="result-count" id="actividadCount"></span>
+        <select id="filtroRolActividad">
+          <option value="">Todos los roles</option>
+          <option value="staff">Staff</option>
+          <option value="rh">RH</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+
+      <div class="catalog-table-card">
+        <div class="catalog-table-wrap">
+          <table class="catalog-table" style="min-width:0;">
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Acción realizada</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody id="actividadBody"></tbody>
+          </table>
+        </div>
       </div>
 
     </main>
@@ -117,5 +136,7 @@
   </div>
 
   <script src="../../js/portal-common.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/actividad.js"></script>
 </body>
 </html>
