@@ -3183,3 +3183,22 @@ a:hover { color: var(--mw-gold); }
   display: block;
   margin: 0 auto;
 }
+
+/* Aviso de ascenso de rango pendiente de confirmar (Admin →
+   Emprendedoras/Líderes → pestaña Equipo y Rango). */
+.badge-ascenso { background: var(--mw-gold-soft); color: #8A6D14; }
+
+.ascenso-banner {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: var(--mw-gold-soft);
+  border: 1px solid #e9d089;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.ascenso-banner strong { display: block; color: #6b5410; font-size: 0.9rem; margin-bottom: 3px; }
+.ascenso-banner p { margin: 0; color: #7a611c; font-size: 0.8rem; }
+.ascenso-banner .btn { margin-top: 0; margin-left: auto; }
