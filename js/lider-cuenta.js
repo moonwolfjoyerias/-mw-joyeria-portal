@@ -163,34 +163,96 @@ function calcularProfundidadesEquipo() {
 }
 
 function renderTicketComisiones() {
+
   const depths = calcularProfundidadesEquipo();
-  const produccionPorNivel = [0, 0, 0, 0, 0];
+  const miembrosPorNivel = [[], [], [], [], []];
   EQUIPO_ARBOL_EJEMPLO.forEach((m) => {
     const d = depths[m.id];
-    if (d >= 1 && d <= 5 && m.puntos) produccionPorNivel[d - 1] += m.puntos;
+    if (d >= 1 && d <= 5) miembrosPorNivel[d - 1].push(m);
   });
 
   const pcts = COMISIONES_PCT[LIDER_EJEMPLO.rangoActualKey];
   const wrap = document.getElementById('ticketNiveles');
   let total = 0;
 
-  wrap.innerHTML = produccionPorNivel.map((produccion, i) => {
+  wrap.innerHTML = miembrosPorNivel.map((miembros, i) => {
+
     const pct = pcts[i];
-    const comision = (produccion / 1.16) * (pct / 100);
-    total += comision;
+    const produccion = miembros.reduce((suma, m) => suma + (m.puntos || 0), 0);
+    const comisionNivel = (produccion / 1.16) * (pct / 100);
+    total += comisionNivel;
+
     return `
-      <div class="ct-row">
-        <div>
-          <span class="ct-level">Nivel ${i + 1}</span>
-          <span class="ct-detail">${fmtMoney(produccion)} en compras × ${pct}%</span>
+      <div class="ct-row-wrap">
+        <button type="button" class="ct-row" data-toggle-nivel="${i}" aria-expanded="false">
+          <div>
+            <span class="ct-level">Nivel ${i + 1}</span>
+            <span class="ct-detail">${fmtMoney(produccion)} en compras × ${pct}%</span>
+          </div>
+          <span class="ct-amount">${fmtMoney(comisionNivel)} <span class="ct-chevron">▾</span></span>
+        </button>
+        <div class="ct-detail-list" id="ctDetalle${i}" hidden>
+          ${construirDetalleNivelComisiones(miembros, pct)}
         </div>
-        <span class="ct-amount">${fmtMoney(comision)}</span>
       </div>
     `;
+
   }).join('');
 
   setText('ticketTotal', fmtMoney(total));
   setText('ticketRango', RANGOS_MW[idxRango(LIDER_EJEMPLO.rangoActualKey)].label);
+
+  wrap.querySelectorAll('[data-toggle-nivel]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const detalle = document.getElementById(`ctDetalle${btn.getAttribute('data-toggle-nivel')}`);
+      if (!detalle) return;
+      detalle.hidden = !detalle.hidden;
+      btn.classList.toggle('open', !detalle.hidden);
+      btn.setAttribute('aria-expanded', String(!detalle.hidden));
+    });
+  });
+
+}
+
+// Desglose por emprendedora de un nivel: cada compra individual con su
+// fecha, IVA y comisión — mismo % que ya se usó para el total del nivel.
+function construirDetalleNivelComisiones(miembros, pct) {
+
+  if (!miembros.length) {
+    return `<div class="ct-detail-empty">Todavía no hay integrantes en este nivel.</div>`;
+  }
+
+  return miembros.map((m) => {
+
+    const compras = (m.compras && m.compras.length) ? m.compras : [{ monto: m.puntos || 0, fecha: null }];
+
+    return compras.map((c) => {
+      const base = c.monto / 1.16;
+      const iva = c.monto - base;
+      const comisionCompra = base * (pct / 100);
+      return `
+        <div class="ct-detail-row">
+          <div>
+            <strong>${m.nombre}</strong>
+            <span class="ct-detail-sub">${c.fecha ? formatearFechaComision(c.fecha) : 'Sin fecha registrada'} · ${fmtMoney(c.monto)} en compra</span>
+          </div>
+          <div class="ct-detail-nums">
+            <span>IVA ${fmtMoney(iva)}</span>
+            <span>${pct}% comisión</span>
+            <strong>${fmtMoney(comisionCompra)}</strong>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  }).join('');
+
+}
+
+function formatearFechaComision(fechaISO) {
+  const fecha = new Date(fechaISO);
+  if (Number.isNaN(fecha.getTime())) return '—';
+  return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 // ---------- Próxima fecha de pago ----------
 const MESES_PAGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
