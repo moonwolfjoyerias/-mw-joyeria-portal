@@ -3241,3 +3241,85 @@ a:hover { color: var(--mw-gold); }
   .commission-ticket .ct-detail-row { flex-direction: column; align-items: flex-start; gap: 4px; }
   .commission-ticket .ct-detail-nums { align-items: flex-start; text-align: left; flex-direction: row; flex-wrap: wrap; gap: 8px; }
 }
+
+/* =========================================================
+   MW JOYERÍA — ADMIN: PLAN MW (seguimiento y alertas)
+   ========================================================= */
+
+.planmw-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.filtro-chips { display: flex; gap: 8px; }
+.filtro-chip {
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid #ddd5e3;
+  background: #fff;
+  border-radius: 999px;
+  color: #5d5270;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.filtro-chip.active { background: var(--mw-purple); border-color: var(--mw-purple); color: #fff; }
+#periodoSelect {
+  height: 42px;
+  border: 1px solid #ddd5e3;
+  border-radius: 8px;
+  padding: 0 14px;
+  color: #4f4663;
+  background: #fff;
+  min-width: 200px;
+}
+
+.planmw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.proximo-card {
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 1.1rem 1.2rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.proximo-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+.proximo-card.listo { border-color: var(--mw-gold); background: linear-gradient(180deg, #fffdf6 0%, #fff 60%); }
+.proximo-tipo { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--mw-purple); margin-bottom: 0.5rem; }
+.proximo-card.listo .proximo-tipo { color: #8A6D14; }
+.proximo-nombre { display: block; font-family: var(--font-heading); font-size: 1.05rem; color: #2d145d; }
+.proximo-sub { display: block; font-size: 0.78rem; color: var(--mw-text-muted); margin: 0.15rem 0 0.9rem; }
+.proximo-falta { margin: 0; font-size: 0.82rem; color: var(--mw-text); line-height: 1.4; }
+.proximo-falta strong { color: var(--mw-purple); }
+
+.logro-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 1rem 1.2rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.logro-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+.logro-icon { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+.logro-card strong { display: block; color: #2d145d; font-size: 0.9rem; }
+.logro-sub { display: block; font-size: 0.78rem; color: var(--mw-purple); margin-top: 0.2rem; }
+.logro-fecha { display: block; font-size: 0.72rem; color: var(--mw-text-muted); margin-top: 0.3rem; }
+
+@media (max-width: 620px) {
+  .planmw-toolbar { flex-direction: column; align-items: stretch; }
+  #periodoSelect { width: 100%; }
+}
