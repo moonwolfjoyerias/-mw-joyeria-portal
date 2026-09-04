@@ -30,8 +30,14 @@ function crearPersonaEjemplo(datos) {
     telefono: datos.telefono || '',
     correo: datos.correo || '',
     usuario: datos.usuario || '',
+    numeroCuenta: datos.numeroCuenta || '',
     fechaAlta: datos.fechaAlta || new Date().toISOString(),
     liderId: datos.liderId || null,
+    // Quién la invitó (Solicitudes de inscripción). Casi siempre es la
+    // misma persona que liderId, pero se guarda aparte porque liderId
+    // puede cambiar más adelante (ver Admin → Emprendedoras/Líderes)
+    // mientras que invitadaPor es un dato histórico que no cambia.
+    invitadaPor: datos.invitadaPor || null,
     // Solo aplica cuando tipo === 'lider':
     rangoActualKey: datos.rangoActualKey || 'sin_rango',
     stats: datos.stats || {
@@ -93,6 +99,27 @@ function construirPersonasEjemplo() {
       stats: { personasActivas: 8, produccionGrupalMes: 38000, equipoCalificadoPct: 35, compraPersonalPeriodo1: 1800, compraPersonalPeriodo2: 1650 },
       constancia: { mesesCumplidos: 7, montoMesActual: 5200, metaMes: 8000 },
       rifa: { montoAcumuladoMes: 2150, meta: 3000 }
+    }),
+    // "me-lider": la persona con la sesión abierta en el portal de
+    // Líder (ver js/lider-cuenta-ejemplo.js). Mismos datos que ya
+    // muestra su Mi cuenta, para que el módulo de Solicitudes de
+    // inscripción pueda registrarla como solicitante/líder directa.
+    crearPersonaEjemplo({
+      id: 'me-lider',
+      nombre: 'Líder',
+      apellidos: '',
+      tipo: 'lider',
+      categoria: 'normal',
+      estado: 'activa',
+      telefono: '444 987 6543',
+      correo: 'lider@example.com',
+      usuario: 'MW0002',
+      fechaAlta: '2023-05-10T00:00:00.000Z',
+      liderId: null,
+      rangoActualKey: 'plata',
+      stats: { personasActivas: 8, produccionGrupalMes: 38000, equipoCalificadoPct: 35, compraPersonalPeriodo1: 1800, compraPersonalPeriodo2: 1650 },
+      constancia: { mesesCumplidos: 10, montoMesActual: 6200, metaMes: 8000 },
+      rifa: { montoAcumuladoMes: 3400, meta: 3000 }
     })
   ];
 
@@ -110,7 +137,26 @@ function construirPersonasEjemplo() {
     { id: 'karla-torres', nombre: 'Karla', apellidos: 'Torres Beltrán', telefono: '444 890 1234', liderId: 'maria-camila-sanchez', usuario: 'MW0017', fechaAlta: '2024-06-10T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 1, montoMesActual: 300, metaMes: 8000 }, rifa: { montoAcumuladoMes: 300, meta: 3000 } }
   ].map(datos => crearPersonaEjemplo({ ...datos, tipo: 'emprendedora', correo: `${datos.id.replace(/-/g, '.')}@example.com` }));
 
-  return [...lideres, ...emprendedoras];
+  // "me-emprendedora": la persona con la sesión abierta en el portal
+  // de Emprendedora (ver js/cuenta-ejemplo.js). Mismos datos que ya
+  // muestra su Mi cuenta.
+  const meEmprendedora = crearPersonaEjemplo({
+    id: 'me-emprendedora',
+    nombre: 'Claudia',
+    apellidos: 'Ramírez',
+    tipo: 'emprendedora',
+    categoria: 'normal',
+    estado: 'activa',
+    telefono: '444 123 4567',
+    correo: 'claudia.ramirez@example.com',
+    usuario: 'MW0003',
+    fechaAlta: '2023-10-01T00:00:00.000Z',
+    liderId: 'ana-torres',
+    constancia: { mesesCumplidos: 6, montoMesActual: 5200, metaMes: 8000 },
+    rifa: { montoAcumuladoMes: 2150, meta: 3000 }
+  });
+
+  return [...lideres, ...emprendedoras, meEmprendedora];
 
 }
 
@@ -141,4 +187,18 @@ function obtenerPersonaPorId(id) {
 
 function nombreCompletoPersona(p) {
   return [p.nombre, p.apellidos].filter(Boolean).join(' ');
+}
+
+// Usado por el módulo de Solicitudes de inscripción (js/solicitudes-modelo.js)
+// para evitar cuentas duplicadas por correo o teléfono, tanto al enviar
+// la solicitud como al aprobarla.
+function existePersonaConCorreoOTelefono(correo, telefono, excluirId) {
+  const correoNorm = String(correo || '').trim().toLowerCase();
+  const telefonoNorm = String(telefono || '').replace(/\D/g, '');
+  return obtenerPersonas().some(p => {
+    if (excluirId && p.id === excluirId) return false;
+    const mismoCorreo = correoNorm && String(p.correo || '').trim().toLowerCase() === correoNorm;
+    const mismoTelefono = telefonoNorm && String(p.telefono || '').replace(/\D/g, '') === telefonoNorm;
+    return mismoCorreo || mismoTelefono;
+  });
 }

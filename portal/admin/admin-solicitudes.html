@@ -77,8 +77,8 @@
     <main class="main-content">
       <header class="portal-header">
         <div>
-          <h1>Solicitudes</h1>
-          <p class="portal-sub">Portal de Administración MW.</p>
+          <h1>Solicitudes de inscripción</h1>
+          <p class="portal-sub">Revisa, aprueba o rechaza las solicitudes enviadas por Emprendedoras y Líderes.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -103,10 +103,45 @@
         </div>
       </header>
 
-      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
-        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
-        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
-        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+      <div class="solicitudes-pending-chip" id="solicitudesPendingChip">
+        <span class="dot"></span>
+        <span id="solicitudesPendingCount">0 pendientes</span>
+      </div>
+
+      <div class="catalog-toolbar">
+        <div class="catalog-search">
+          <span>⌕</span>
+          <input type="search" id="solicitudSearchInput" placeholder="Buscar por nombre...">
+        </div>
+
+        <select id="solicitudFilterEstado">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="aprobada">Aprobadas</option>
+          <option value="rechazada">Rechazadas</option>
+        </select>
+
+        <select id="solicitudOrden">
+          <option value="reciente">Más reciente primero</option>
+          <option value="antigua">Más antigua primero</option>
+        </select>
+      </div>
+
+      <div class="catalog-table-card">
+        <div class="catalog-table-wrap">
+          <table class="catalog-table" style="min-width:0;">
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Solicitante</th>
+                <th>Estado</th>
+                <th>Fecha de solicitud</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="solicitudesBody"></tbody>
+          </table>
+        </div>
       </div>
 
     </main>
@@ -117,5 +152,11 @@
   </div>
 
   <script src="../../js/portal-common.js"></script>
+  <script src="../../js/admin-comun.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/notificaciones-modelo.js"></script>
+  <script src="../../js/personas-ejemplo.js"></script>
+  <script src="../../js/solicitudes-modelo.js"></script>
+  <script src="../../js/admin-solicitudes.js"></script>
 </body>
 </html>

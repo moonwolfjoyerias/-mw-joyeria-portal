@@ -3067,3 +3067,104 @@ a:hover { color: var(--mw-gold); }
   .people-toolbar select { flex: 1 1 100%; }
   .people-detail-header { flex-wrap: wrap; }
 }
+
+/* =========================================================
+   MW JOYERÍA — SOLICITUDES DE INSCRIPCIÓN
+   ========================================================= */
+
+.estado-badge.pendiente { background: var(--mw-gold-soft); color: #8A6D14; }
+.estado-badge.aprobada { background: #DCF3E4; color: #1F7A44; }
+.estado-badge.rechazada { background: #FBEAEA; color: #B3312C; }
+
+.solicitud-card {
+  border: 1px solid #eee7f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  background: #faf8fb;
+}
+.solicitud-card:last-child { margin-bottom: 0; }
+.solicitud-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.solicitud-card-head strong { color: #2d145d; font-size: 0.85rem; }
+.solicitud-card small { display: block; color: var(--mw-text-muted); font-size: 0.72rem; margin-top: 2px; }
+.solicitud-motivo {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #FBEAEA;
+  color: #8A2A2A;
+  border-radius: 7px;
+  font-size: 0.75rem;
+}
+
+/* Icono circular de los modales de autorización — antes solo estaba
+   definido dentro de .catalog-modal; esta versión sin ámbito hace que
+   también se vea bien en el resto de los modales (#modalOverlay /
+   .modal-box) que ya usan abrirAutorizacionAdmin/abrirAutorizacionRH. */
+.auth-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f2ebff 0%, #e9d9ff 100%);
+  color: var(--mw-purple);
+  display: grid;
+  place-items: center;
+  font-size: 1.55rem;
+  margin-bottom: 14px;
+  box-shadow: inset 0 0 0 1px rgba(94, 26, 138, 0.06);
+}
+.auth-icon.danger {
+  background: linear-gradient(135deg, #fff0f0 0%, #ffe5e5 100%);
+  color: #b94c4c;
+}
+
+/* =========================================================
+   MW JOYERÍA — ADMIN: SOLICITUDES DE INSCRIPCIÓN
+   ========================================================= */
+
+.solicitudes-pending-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #eae4eb;
+  border-radius: 999px;
+  padding: 0.5em 1em;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2d145d;
+  margin-bottom: 16px;
+}
+.solicitudes-pending-chip .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--mw-gold);
+  flex-shrink: 0;
+}
+
+.confidential-warning {
+  background: #FBEAEA !important;
+  color: #8A2A2A !important;
+  font-weight: 600;
+}
+
+.ine-preview {
+  border: 1px dashed #ddd1e4;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.ine-preview img {
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: 6px;
+  display: block;
+  margin: 0 auto;
+}

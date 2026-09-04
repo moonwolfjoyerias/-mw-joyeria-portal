@@ -71,6 +71,7 @@
           <div class="profile-menu" id="profileMenu">
             <a href="#" data-modal="telefono">Cambiar teléfono</a>
             <a href="#" data-modal="foto">Cambiar foto de perfil</a>
+            <a href="emprendedora-mi-cuenta.html#solicitar-inscripcion">Solicitar inscripción</a>
             <a href="../../login.html" class="danger">Cerrar sesión</a>
           </div>
         </div>
@@ -103,6 +104,13 @@
         </div>
 
         <div class="benefits-col">
+          <div class="benefit-panel">
+            <h3>🤝 Solicitar inscripción</h3>
+            <p class="bp-sub">¿Quieres integrar a una nueva persona a tu equipo? Envía su información y nuestro equipo administrativo revisará la solicitud.</p>
+            <button class="btn btn-primary" id="nuevaSolicitudBtn" type="button">+ Nueva solicitud</button>
+            <div class="solicitudes-lista" id="misSolicitudesLista" style="margin-top:1.2rem;"></div>
+          </div>
+
           <div class="benefit-panel">
             <h3>🎟️ Rifa mensual</h3>
             <p class="bp-sub">Acumula $3,000 en compras (precio emprendedora) para ganar tu boleto — cada $1,000 extra te da un boleto más.</p>
@@ -161,5 +169,10 @@
   </script>
   <script src="../../js/cuenta-ejemplo.js"></script>
   <script src="../../js/cuenta.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/notificaciones-modelo.js"></script>
+  <script src="../../js/personas-ejemplo.js"></script>
+  <script src="../../js/solicitudes-modelo.js"></script>
+  <script src="../../js/solicitudes-ui.js"></script>
 </body>
 </html>
