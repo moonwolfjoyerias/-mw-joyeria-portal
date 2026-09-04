@@ -95,8 +95,11 @@ function construirPersonasEjemplo() {
       usuario: 'MW0005',
       fechaAlta: '2023-08-02T00:00:00.000Z',
       liderId: 'ana-torres',
+      // Ya cumple los requisitos de Oro (10 personas / $52,500 / $1,500
+      // ambos periodos / 30% calificado) — sirve de ejemplo real para la
+      // verificación automática de ascenso de rango en Admin.
       rangoActualKey: 'plata',
-      stats: { personasActivas: 8, produccionGrupalMes: 38000, equipoCalificadoPct: 35, compraPersonalPeriodo1: 1800, compraPersonalPeriodo2: 1650 },
+      stats: { personasActivas: 10, produccionGrupalMes: 52500, equipoCalificadoPct: 35, compraPersonalPeriodo1: 1800, compraPersonalPeriodo2: 1650 },
       constancia: { mesesCumplidos: 7, montoMesActual: 5200, metaMes: 8000 },
       rifa: { montoAcumuladoMes: 2150, meta: 3000 }
     }),

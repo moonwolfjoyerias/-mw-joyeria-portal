@@ -21,6 +21,7 @@ let equipoAutocompleteSeleccionado = null;
 
 document.addEventListener('DOMContentLoaded', () => {
 
+  verificarAscensosPendientes();
   renderFiltroLideres();
   renderFiltroRangos();
   aplicarBusquedaPersonas();
@@ -144,6 +145,7 @@ function crearTarjetaResultadoPersona(p, todas) {
           <span class="badge estado-badge ${p.estado}">${ESTADOS_CUENTA_PERSONA[p.estado] || p.estado}</span>
           <span class="badge">${CATEGORIAS_PERSONA[p.categoria] || p.categoria}</span>
           ${p.tipo === 'lider' ? `<span class="badge">${rangoLabel(p.rangoActualKey)}</span>` : ''}
+          ${p.ascensoPendiente ? `<span class="badge badge-ascenso">⬆ Sube de rango</span>` : ''}
         </span>
         <span class="persona-result-meta">
           ${lider ? `Líder: ${escapeHTMLPersonas(nombreCompletoPersona(lider))}` : 'Sin líder asignada'}
@@ -204,6 +206,7 @@ function renderDetallePersona() {
           <span class="badge estado-badge ${persona.estado}">${ESTADOS_CUENTA_PERSONA[persona.estado] || persona.estado}</span>
           <span class="badge">${CATEGORIAS_PERSONA[persona.categoria] || persona.categoria}</span>
           ${esLider ? `<span class="badge">${rangoLabel(persona.rangoActualKey)}</span>` : ''}
+          ${persona.ascensoPendiente ? `<span class="badge badge-ascenso">⬆ Sube de rango</span>` : ''}
         </div>
       </div>
       <button class="modal-close" type="button" id="cerrarPerfilBtn" style="position:static;">×</button>
@@ -253,6 +256,18 @@ function cambiarTabPerfil(tab) {
   });
   document.querySelectorAll('.profile-section').forEach(sec => {
     sec.hidden = sec.getAttribute('data-section') !== tab;
+  });
+  // El árbol se dibuja mientras su pestaña está oculta (scrollWidth/
+  // clientWidth miden 0 ahí), así que el centrado solo puede calcularse
+  // hasta que la pestaña "equipo" realmente se muestra.
+  if (tab === 'equipo') centrarArbolEquipoAdmin();
+}
+
+function centrarArbolEquipoAdmin() {
+  const wrap = document.getElementById('orgTreeContainerAdmin')?.closest('.org-tree-wrap');
+  if (!wrap) return;
+  requestAnimationFrame(() => {
+    wrap.scrollLeft = (wrap.scrollWidth - wrap.clientWidth) / 2;
   });
 }
 
@@ -666,23 +681,31 @@ function renderSeccionEquipoPersona(persona) {
     ${construirRangoChecklistHTML(persona)}
 
     <h4 class="profile-section-title" style="margin-top:24px;">Equipo</h4>
-    <div class="detail-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;">
-      <div><span>Integrantes directos</span><strong>${equipo.length}</strong></div>
-      <div><span>Personas activas del mes</span><strong>${persona.stats.personasActivas}</strong></div>
-    </div>
+    <p class="bp-sub" style="margin-top:-6px;">Toca un nivel para ver nombres, o consulta el árbol completo — igual que lo ve la líder en su propio portal.</p>
 
-    <div class="team-chip-list" id="equipoChipList">
-      ${equipo.length
-        ? equipo.map(m => `
-          <span class="team-chip">
-            ${escapeHTMLPersonas(nombreCompletoPersona(m))}
-            ${modoEdicionPersona ? `<button type="button" data-quitar-equipo="${m.id}">×</button>` : ''}
-          </span>
-        `).join('')
-        : `<span class="team-chip-empty">Sin integrantes directos todavía.</span>`}
+    <div class="team-levels-grid" id="nivelesGridAdmin"></div>
+
+    <div class="org-tree-card" style="margin-top:16px;">
+      <div class="org-tree-card-header">
+        <h3>Árbol del equipo</h3>
+      </div>
+      <div class="org-tree-wrap">
+        <div id="orgTreeContainerAdmin"></div>
+      </div>
     </div>
 
     ${modoEdicionPersona ? `
+      <h4 class="profile-section-title" style="margin-top:24px;">Gestionar equipo directo</h4>
+      <div class="team-chip-list" id="equipoChipList">
+        ${equipo.length
+          ? equipo.map(m => `
+            <span class="team-chip">
+              ${escapeHTMLPersonas(nombreCompletoPersona(m))}
+              <button type="button" data-quitar-equipo="${m.id}">×</button>
+            </span>
+          `).join('')
+          : `<span class="team-chip-empty">Sin integrantes directos todavía.</span>`}
+      </div>
       <div class="form-field full">
         <label>Agregar integrante</label>
         <div class="persona-autocomplete" id="equipoAutocompleteWrap">
@@ -694,6 +717,11 @@ function renderSeccionEquipoPersona(persona) {
 
     <a class="btn btn-outline" style="display:inline-block;margin-top:16px;" href="admin-comisiones.html">Ver comisiones →</a>
   `;
+
+  renderNivelesEquipoAdmin(persona);
+  renderArbolEquipoAdmin(persona);
+
+  document.getElementById('confirmarAscensoBtn')?.addEventListener('click', () => abrirConfirmarAscensoRango(persona));
 
   sec.querySelectorAll('[data-quitar-equipo]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -716,12 +744,234 @@ function renderSeccionEquipoPersona(persona) {
 
 }
 
-function construirRangoChecklistHTML(persona) {
+// ============================================================
+// EQUIPO: NIVELES + ÁRBOL (misma vista que usa la líder en su propio
+// portal — js/mi-equipo.js — pero recorriendo el registro de Admin
+// por liderId en vez de EQUIPO_ARBOL_EJEMPLO).
+// ============================================================
+
+// Todas las personas cuya cadena de liderId llega hasta raizId,
+// con su profundidad (nivel 1 = integrantes directos).
+function calcularDescendenciaPersona(raizId) {
+
+  const porLider = {};
+  obtenerPersonas().forEach(p => {
+    if (!p.liderId) return;
+    (porLider[p.liderId] = porLider[p.liderId] || []).push(p);
+  });
+
+  const conNivel = [];
+  (function recorrer(id, nivel) {
+    (porLider[id] || []).forEach(hijo => {
+      conNivel.push({ persona: hijo, nivel });
+      recorrer(hijo.id, nivel + 1);
+    });
+  })(raizId, 1);
+
+  return { conNivel, porLider };
+
+}
+
+function renderNivelesEquipoAdmin(persona) {
+
+  const grid = document.getElementById('nivelesGridAdmin');
+  if (!grid) return;
+
+  const { conNivel } = calcularDescendenciaPersona(persona.id);
+  const porNivel = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+  conNivel.forEach(({ persona: p, nivel }) => { if (porNivel[nivel]) porNivel[nivel].push(p); });
+
+  grid.innerHTML = [1, 2, 3, 4, 5].map(nivel => `
+    <button class="team-level-card" style="text-align:left;cursor:pointer;width:100%;" type="button" data-nivel-admin="${nivel}">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+      </div>
+      <h4>Nivel ${nivel}</h4>
+      <span class="tl-count">${porNivel[nivel].length}</span>
+      <span class="tl-sub">Personas · toca para ver</span>
+    </button>
+  `).join('');
+
+  grid.querySelectorAll('[data-nivel-admin]').forEach(btn => {
+    const nivel = Number(btn.getAttribute('data-nivel-admin'));
+    btn.addEventListener('click', () => abrirModalNivelAdmin(nivel, porNivel[nivel]));
+  });
+
+}
+
+function abrirModalNivelAdmin(nivel, personas) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const filas = personas.length
+    ? personas.map(p => `
+      <div class="equipo-modal-row">
+        <span>${escapeHTMLPersonas(nombreCompletoPersona(p))} <span class="badge">${p.tipo === 'lider' ? 'Líder' : 'Emprendedora'}</span></span>
+        <span class="em-puntos">${ESTADOS_CUENTA_PERSONA[p.estado] || p.estado}</span>
+      </div>
+    `).join('')
+    : '<div class="equipo-modal-empty">Todavía no hay integrantes en este nivel.</div>';
+
+  box.style.maxWidth = '';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Nivel ${nivel}</h3>
+    <p class="modal-sub">Personas en este nivel de la estructura.</p>
+    <div class="equipo-modal-list">${filas}</div>
+  `;
+  overlay.classList.add('open');
+
+}
+
+function renderArbolEquipoAdmin(persona) {
+
+  const contenedor = document.getElementById('orgTreeContainerAdmin');
+  if (!contenedor) return;
+
+  const { porLider } = calcularDescendenciaPersona(persona.id);
+
+  function metricaNodo(p) {
+    return p.tipo === 'lider'
+      ? `$${formatearDineroPersonas(p.stats.produccionGrupalMes)} MXN`
+      : `$${formatearDineroPersonas(p.constancia.montoMesActual)} MXN este mes`;
+  }
+
+  function renderNodo(p, esRaiz, nivel) {
+    const lvlClass = esRaiz ? 'self' : `lvl-${((nivel - 1) % 5) + 1}`;
+    const hijos = porLider[p.id] || [];
+    const nodeHtml = `
+      <div class="org-node ${lvlClass}">
+        <span class="on-name">${escapeHTMLPersonas(nombreCompletoPersona(p))}</span>
+        <span class="on-tag">${esRaiz ? (p.tipo === 'lider' ? 'Líder' : 'Emprendedora') : `Nivel ${nivel}`}</span>
+        <span class="on-points">${metricaNodo(p)}</span>
+      </div>
+    `;
+    if (!hijos.length) return `<li>${nodeHtml}</li>`;
+    return `<li>${nodeHtml}<ul>${hijos.map(h => renderNodo(h, false, nivel + 1)).join('')}</ul></li>`;
+  }
+
+  contenedor.innerHTML = `<div class="org-tree"><ul>${renderNodo(persona, true, 0)}</ul></div>`;
+
+  // Si la pestaña "equipo" ya está visible en este momento (el usuario
+  // reabrió el mismo perfil), centra de una vez; si no, cambiarTabPerfil
+  // se encarga cuando el usuario la abra.
+  centrarArbolEquipoAdmin();
+
+}
+
+// Requisitos del SIGUIENTE rango comparados contra los datos actuales
+// de la líder. La usan tanto el checklist visual como la verificación
+// automática de ascensos (verificarAscensosPendientes).
+function calcularAscensoRango(persona) {
 
   const idxActual = RANGOS_MW.findIndex(r => r.key === persona.rangoActualKey);
   const esUltimo = idxActual === RANGOS_MW.length - 1;
   const siguiente = esUltimo ? null : RANGOS_MW[idxActual + 1];
-  const { personasActivas, equipoCalificadoPct, compraPersonalPeriodo1, compraPersonalPeriodo2 } = persona.stats;
+
+  if (!siguiente) return { siguiente: null, items: [], elegible: false };
+
+  const { personasActivas, produccionGrupalMes, equipoCalificadoPct, compraPersonalPeriodo1, compraPersonalPeriodo2 } = persona.stats;
+  const compraMinima = Math.min(compraPersonalPeriodo1, compraPersonalPeriodo2);
+
+  const items = [
+    { label: 'Personas activas', cumple: personasActivas >= siguiente.personas, valores: `${personasActivas} / ${siguiente.personas}` },
+    { label: 'Compra personal (ambos periodos)', cumple: compraMinima >= siguiente.compra, valores: `$${formatearDineroPersonas(compraPersonalPeriodo1)} y $${formatearDineroPersonas(compraPersonalPeriodo2)} / $${formatearDineroPersonas(siguiente.compra)}` },
+    { label: 'Equipo calificado', cumple: equipoCalificadoPct >= siguiente.calificado, valores: `${equipoCalificadoPct}% / ${siguiente.calificado}%` },
+    { label: 'Producción grupal', cumple: produccionGrupalMes >= siguiente.produccion, valores: `$${formatearDineroPersonas(produccionGrupalMes)} / $${formatearDineroPersonas(siguiente.produccion)}` }
+  ];
+
+  return { siguiente, items, elegible: items.every(it => it.cumple) };
+
+}
+
+// Revisa a todas las líderes y, si alguna ya cumple los requisitos del
+// siguiente rango, avisa a Administración (notificación) para que
+// confirme el ascenso manualmente — nunca sube de rango sola.
+function verificarAscensosPendientes() {
+
+  const personas = obtenerPersonas();
+  let huboCambios = false;
+
+  personas.filter(p => p.tipo === 'lider').forEach(persona => {
+
+    const { siguiente, elegible } = calcularAscensoRango(persona);
+
+    if (elegible && siguiente) {
+
+      if (!persona.ascensoPendiente || persona.ascensoPendiente.rangoKey !== siguiente.key) {
+
+        persona.ascensoPendiente = { rangoKey: siguiente.key, detectadoEn: new Date().toISOString() };
+        huboCambios = true;
+
+        if (typeof agregarNotificacion === 'function') {
+          agregarNotificacion({
+            texto: `${nombreCompletoPersona(persona)} cumple los requisitos para subir a ${siguiente.label}. Revisa y confirma su ascenso.`,
+            link: 'admin-emprendedoras-lideres.html',
+            paraId: 'admin01'
+          });
+        }
+
+      }
+
+    } else if (persona.ascensoPendiente) {
+      // Ya no cumple (p. ej. se editaron sus datos) — se limpia sin notificar.
+      delete persona.ascensoPendiente;
+      huboCambios = true;
+    }
+
+  });
+
+  if (huboCambios) guardarPersonas(personas);
+
+}
+
+function abrirConfirmarAscensoRango(persona) {
+
+  const siguienteLabel = rangoLabel(persona.ascensoPendiente.rangoKey);
+
+  abrirAutorizacionAdmin({
+    titulo: 'Confirmar subida de rango',
+    mensaje: `${escapeHTMLPersonas(nombreCompletoPersona(persona))} cumple los requisitos para subir a ${siguienteLabel}. ¿Confirmas su ascenso? Se actualizará su rango y se le notificará para que prepares sus premios.`,
+    onConfirmar: () => {
+
+      const personas = obtenerPersonas();
+      const actual = personas.find(p => p.id === persona.id);
+      if (!actual || !actual.ascensoPendiente) return;
+
+      const rangoAnterior = rangoLabel(actual.rangoActualKey);
+      actual.rangoActualKey = actual.ascensoPendiente.rangoKey;
+      delete actual.ascensoPendiente;
+      guardarPersonas(personas);
+
+      registrarAuditoriaAdmin({
+        modulo: 'personas',
+        accion: 'ascenso_rango',
+        descripcion: `${nombreCompletoPersona(actual)} subió de rango: ${rangoAnterior} → ${siguienteLabel}`
+      });
+
+      if (typeof agregarNotificacion === 'function') {
+        agregarNotificacion({
+          texto: `¡Felicidades! Tu rango subió a ${siguienteLabel}. Sigue así ✦`,
+          link: 'cuenta',
+          paraId: actual.id
+        });
+      }
+
+      renderFiltroLideres();
+      aplicarBusquedaPersonas();
+      renderDetallePersona();
+      mostrarToastPersonas(`${nombreCompletoPersona(actual)} ahora es ${siguienteLabel}.`);
+
+    }
+  });
+
+}
+
+function construirRangoChecklistHTML(persona) {
+
+  const { siguiente, items } = calcularAscensoRango(persona);
 
   const nodos = RANGOS_MW.map(r => {
     const alcanzado = persona.stats.produccionGrupalMes >= r.produccion;
@@ -753,14 +1003,6 @@ function construirRangoChecklistHTML(persona) {
     `;
   }
 
-  const compraMinima = Math.min(compraPersonalPeriodo1, compraPersonalPeriodo2);
-  const items = [
-    { label: 'Personas activas', cumple: personasActivas >= siguiente.personas, valores: `${personasActivas} / ${siguiente.personas}` },
-    { label: 'Compra personal (ambos periodos)', cumple: compraMinima >= siguiente.compra, valores: `$${formatearDineroPersonas(compraPersonalPeriodo1)} y $${formatearDineroPersonas(compraPersonalPeriodo2)} / $${formatearDineroPersonas(siguiente.compra)}` },
-    { label: 'Equipo calificado', cumple: equipoCalificadoPct >= siguiente.calificado, valores: `${equipoCalificadoPct}% / ${siguiente.calificado}%` },
-    { label: 'Producción grupal', cumple: persona.stats.produccionGrupalMes >= siguiente.produccion, valores: `$${formatearDineroPersonas(persona.stats.produccionGrupalMes)} / $${formatearDineroPersonas(siguiente.produccion)}` }
-  ];
-
   return `
     <div class="rank-progress-main">
       <h3>Rango actual: ${rangoLabel(persona.rangoActualKey).toUpperCase()} ✦</h3>
@@ -783,6 +1025,15 @@ function construirRangoChecklistHTML(persona) {
         `).join('')}
       </div>
     </div>
+    ${persona.ascensoPendiente ? `
+      <div class="ascenso-banner">
+        <div>
+          <strong>🎉 ¡Lista para subir de rango!</strong>
+          <p>Cumple todos los requisitos para ${rangoLabel(persona.ascensoPendiente.rangoKey)}. Confirma su ascenso y prepara sus premios.</p>
+        </div>
+        <button class="btn btn-primary" id="confirmarAscensoBtn" type="button">Confirmar subida de rango</button>
+      </div>
+    ` : ''}
   `;
 
 }
