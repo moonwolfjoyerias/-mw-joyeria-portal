@@ -18,17 +18,23 @@ function initNotifPanel() {
   const badge = document.getElementById('notifBadge');
   if (!bell || !panel) return;
 
-  const noLeidas = (typeof NOTIFICACIONES_EJEMPLO !== 'undefined')
-    ? NOTIFICACIONES_EJEMPLO.filter(n => !n.leida).length : 0;
+  // Si la página cargó js/notificaciones-modelo.js, la lista puede
+  // crecer en vivo (por ejemplo, al aprobar/rechazar una Solicitud de
+  // inscripción). Si no, se mantiene el arreglo estático de siempre.
+  const notificaciones = (typeof obtenerNotificacionesCompartidas === 'function')
+    ? obtenerNotificacionesCompartidas()
+    : (typeof NOTIFICACIONES_EJEMPLO !== 'undefined' ? NOTIFICACIONES_EJEMPLO : []);
+
+  const noLeidas = notificaciones.filter(n => !n.leida).length;
 
   if (badge) {
     if (noLeidas > 0) { badge.textContent = noLeidas; badge.style.display = 'flex'; }
     else { badge.style.display = 'none'; }
   }
 
-  if (typeof NOTIFICACIONES_EJEMPLO !== 'undefined' && NOTIFICACIONES_EJEMPLO.length > 0) {
+  if (notificaciones.length > 0) {
     panel.innerHTML = '<div class="notif-header">Notificaciones</div>' +
-      NOTIFICACIONES_EJEMPLO.map(n => `
+      notificaciones.map(n => `
         <a class="notif-item" href="${(typeof PORTAL_LINKS !== 'undefined' && PORTAL_LINKS[n.link]) || n.link}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
       `).join('');
   } else {

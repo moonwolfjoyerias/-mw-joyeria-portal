@@ -2,6 +2,10 @@
 // ⚠️ TEMPORAL: se reemplaza por Firestore en Fase 3.
 
 const PERFIL_LIDER_EJEMPLO = {
+  // id: identifica a "quien tiene la sesión abierta" en el registro
+  // compartido de personas (js/personas-ejemplo.js) — lo usa el módulo
+  // de Solicitudes de inscripción para saber quién es el solicitante.
+  id: 'me-lider',
   nombre: 'Líder',
   telefono: '444 987 6543',
   correo: 'lider@example.com',

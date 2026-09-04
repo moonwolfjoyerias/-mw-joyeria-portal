@@ -2,6 +2,10 @@
 // ⚠️ TEMPORAL: se reemplaza por Firestore en Fase 3.
 
 const CUENTA_EJEMPLO = {
+  // id: identifica a "quien tiene la sesión abierta" en el registro
+  // compartido de personas (js/personas-ejemplo.js) — lo usa el módulo
+  // de Solicitudes de inscripción para saber quién es el solicitante.
+  id: 'me-emprendedora',
   nombre: 'Claudia Ramírez',
   lider: 'Ana Torres',
   telefono: '444 123 4567',
