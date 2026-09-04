@@ -22,10 +22,18 @@ let equipoAutocompleteSeleccionado = null;
 document.addEventListener('DOMContentLoaded', () => {
 
   verificarAscensosPendientes();
+  verificarRecompensasConstancia();
   renderFiltroLideres();
   renderFiltroRangos();
   aplicarBusquedaPersonas();
   inicializarEventosPersonas();
+
+  // Enlace directo a un perfil (usado por "Ver perfil completo" desde
+  // Admin → Plan MW): admin-emprendedoras-lideres.html?persona=ID
+  const idDesdeUrl = new URLSearchParams(window.location.search).get('persona');
+  if (idDesdeUrl && obtenerPersonaPorId(idDesdeUrl)) {
+    seleccionarPersonaAdmin(idDesdeUrl);
+  }
 
 });
 
@@ -146,6 +154,7 @@ function crearTarjetaResultadoPersona(p, todas) {
           <span class="badge">${CATEGORIAS_PERSONA[p.categoria] || p.categoria}</span>
           ${p.tipo === 'lider' ? `<span class="badge">${rangoLabel(p.rangoActualKey)}</span>` : ''}
           ${p.ascensoPendiente ? `<span class="badge badge-ascenso">⬆ Sube de rango</span>` : ''}
+          ${p.recompensaPendiente ? `<span class="badge badge-ascenso">🎁 Recompensa lista</span>` : ''}
         </span>
         <span class="persona-result-meta">
           ${lider ? `Líder: ${escapeHTMLPersonas(nombreCompletoPersona(lider))}` : 'Sin líder asignada'}
@@ -157,9 +166,8 @@ function crearTarjetaResultadoPersona(p, todas) {
 
 }
 
-function rangoLabel(key) {
-  return RANGOS_MW.find(r => r.key === key)?.label || 'Sin Rango';
-}
+// rangoLabel ahora vive en js/plan-mw-admin.js (reutilizado también por
+// admin-plan-mw.js).
 
 // ============================================================
 // SELECCIÓN Y PANEL DE DETALLE
@@ -207,6 +215,7 @@ function renderDetallePersona() {
           <span class="badge">${CATEGORIAS_PERSONA[persona.categoria] || persona.categoria}</span>
           ${esLider ? `<span class="badge">${rangoLabel(persona.rangoActualKey)}</span>` : ''}
           ${persona.ascensoPendiente ? `<span class="badge badge-ascenso">⬆ Sube de rango</span>` : ''}
+          ${persona.recompensaPendiente ? `<span class="badge badge-ascenso">🎁 Recompensa lista</span>` : ''}
         </div>
       </div>
       <button class="modal-close" type="button" id="cerrarPerfilBtn" style="position:static;">×</button>
@@ -628,7 +637,7 @@ function renderSeccionPlanMWPersona(persona) {
   const sec = document.querySelector('.profile-section[data-section="planmw"]');
   if (!sec) return;
 
-  const { mesesCumplidos, montoMesActual, metaMes } = persona.constancia;
+  const { mesesCumplidos, montoMesActual, metaMes, hitosOtorgados } = persona.constancia;
   const boletos = calcularBoletosRifaPersona(persona.rifa);
   const pctConstancia = Math.min(100, (montoMesActual / metaMes) * 100);
   const pctRifa = Math.min(100, (persona.rifa.montoAcumuladoMes / persona.rifa.meta) * 100);
@@ -645,13 +654,27 @@ function renderSeccionPlanMWPersona(persona) {
     </div>
 
     <div class="detail-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:10px;">
-      ${HITOS_CONSTANCIA_PERSONA.map(h => `
-        <div>
-          <span>${h.meses} meses</span>
-          <strong>${mesesCumplidos >= h.meses ? '✓ ' : ''}${h.premio}</strong>
-        </div>
-      `).join('')}
+      ${HITOS_CONSTANCIA_PERSONA.map(h => {
+        const otorgado = (hitosOtorgados || []).some(o => o.meses === h.meses);
+        const marca = otorgado ? '✓ ' : (mesesCumplidos >= h.meses ? '⏳ ' : '');
+        return `
+          <div>
+            <span>${h.meses} meses</span>
+            <strong>${marca}${h.premio}</strong>
+          </div>
+        `;
+      }).join('')}
     </div>
+
+    ${persona.recompensaPendiente ? `
+      <div class="ascenso-banner">
+        <div>
+          <strong>🎁 ¡Cumplió un hito del Reto de Constancia!</strong>
+          <p>${persona.recompensaPendiente.meses} meses acumulados. Confirma la entrega de: ${escapeHTMLPersonas(persona.recompensaPendiente.premio)}.</p>
+        </div>
+        <button class="btn btn-primary" id="confirmarRecompensaBtn" type="button">Confirmar recompensa</button>
+      </div>
+    ` : ''}
 
     <h4 class="profile-section-title" style="margin-top:22px;">Boletos de rifa (mes en curso)</h4>
     <div class="detail-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">
@@ -662,6 +685,12 @@ function renderSeccionPlanMWPersona(persona) {
       <div class="timeline-track"><div class="timeline-fill" style="width:${pctRifa}%"></div></div>
     </div>
   `;
+
+  document.getElementById('confirmarRecompensaBtn')?.addEventListener('click', () => abrirConfirmarRecompensaConstancia(persona, () => {
+    aplicarBusquedaPersonas();
+    renderDetallePersona();
+    mostrarToastPersonas(`Recompensa confirmada para ${nombreCompletoPersona(persona)}.`);
+  }));
 
 }
 
@@ -721,7 +750,12 @@ function renderSeccionEquipoPersona(persona) {
   renderNivelesEquipoAdmin(persona);
   renderArbolEquipoAdmin(persona);
 
-  document.getElementById('confirmarAscensoBtn')?.addEventListener('click', () => abrirConfirmarAscensoRango(persona));
+  document.getElementById('confirmarAscensoBtn')?.addEventListener('click', () => abrirConfirmarAscensoRango(persona, () => {
+    renderFiltroLideres();
+    aplicarBusquedaPersonas();
+    renderDetallePersona();
+    mostrarToastPersonas(`${nombreCompletoPersona(persona)} subió de rango.`);
+  }));
 
   sec.querySelectorAll('[data-quitar-equipo]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -861,113 +895,9 @@ function renderArbolEquipoAdmin(persona) {
 
 }
 
-// Requisitos del SIGUIENTE rango comparados contra los datos actuales
-// de la líder. La usan tanto el checklist visual como la verificación
-// automática de ascensos (verificarAscensosPendientes).
-function calcularAscensoRango(persona) {
-
-  const idxActual = RANGOS_MW.findIndex(r => r.key === persona.rangoActualKey);
-  const esUltimo = idxActual === RANGOS_MW.length - 1;
-  const siguiente = esUltimo ? null : RANGOS_MW[idxActual + 1];
-
-  if (!siguiente) return { siguiente: null, items: [], elegible: false };
-
-  const { personasActivas, produccionGrupalMes, equipoCalificadoPct, compraPersonalPeriodo1, compraPersonalPeriodo2 } = persona.stats;
-  const compraMinima = Math.min(compraPersonalPeriodo1, compraPersonalPeriodo2);
-
-  const items = [
-    { label: 'Personas activas', cumple: personasActivas >= siguiente.personas, valores: `${personasActivas} / ${siguiente.personas}` },
-    { label: 'Compra personal (ambos periodos)', cumple: compraMinima >= siguiente.compra, valores: `$${formatearDineroPersonas(compraPersonalPeriodo1)} y $${formatearDineroPersonas(compraPersonalPeriodo2)} / $${formatearDineroPersonas(siguiente.compra)}` },
-    { label: 'Equipo calificado', cumple: equipoCalificadoPct >= siguiente.calificado, valores: `${equipoCalificadoPct}% / ${siguiente.calificado}%` },
-    { label: 'Producción grupal', cumple: produccionGrupalMes >= siguiente.produccion, valores: `$${formatearDineroPersonas(produccionGrupalMes)} / $${formatearDineroPersonas(siguiente.produccion)}` }
-  ];
-
-  return { siguiente, items, elegible: items.every(it => it.cumple) };
-
-}
-
-// Revisa a todas las líderes y, si alguna ya cumple los requisitos del
-// siguiente rango, avisa a Administración (notificación) para que
-// confirme el ascenso manualmente — nunca sube de rango sola.
-function verificarAscensosPendientes() {
-
-  const personas = obtenerPersonas();
-  let huboCambios = false;
-
-  personas.filter(p => p.tipo === 'lider').forEach(persona => {
-
-    const { siguiente, elegible } = calcularAscensoRango(persona);
-
-    if (elegible && siguiente) {
-
-      if (!persona.ascensoPendiente || persona.ascensoPendiente.rangoKey !== siguiente.key) {
-
-        persona.ascensoPendiente = { rangoKey: siguiente.key, detectadoEn: new Date().toISOString() };
-        huboCambios = true;
-
-        if (typeof agregarNotificacion === 'function') {
-          agregarNotificacion({
-            texto: `${nombreCompletoPersona(persona)} cumple los requisitos para subir a ${siguiente.label}. Revisa y confirma su ascenso.`,
-            link: 'admin-emprendedoras-lideres.html',
-            paraId: 'admin01'
-          });
-        }
-
-      }
-
-    } else if (persona.ascensoPendiente) {
-      // Ya no cumple (p. ej. se editaron sus datos) — se limpia sin notificar.
-      delete persona.ascensoPendiente;
-      huboCambios = true;
-    }
-
-  });
-
-  if (huboCambios) guardarPersonas(personas);
-
-}
-
-function abrirConfirmarAscensoRango(persona) {
-
-  const siguienteLabel = rangoLabel(persona.ascensoPendiente.rangoKey);
-
-  abrirAutorizacionAdmin({
-    titulo: 'Confirmar subida de rango',
-    mensaje: `${escapeHTMLPersonas(nombreCompletoPersona(persona))} cumple los requisitos para subir a ${siguienteLabel}. ¿Confirmas su ascenso? Se actualizará su rango y se le notificará para que prepares sus premios.`,
-    onConfirmar: () => {
-
-      const personas = obtenerPersonas();
-      const actual = personas.find(p => p.id === persona.id);
-      if (!actual || !actual.ascensoPendiente) return;
-
-      const rangoAnterior = rangoLabel(actual.rangoActualKey);
-      actual.rangoActualKey = actual.ascensoPendiente.rangoKey;
-      delete actual.ascensoPendiente;
-      guardarPersonas(personas);
-
-      registrarAuditoriaAdmin({
-        modulo: 'personas',
-        accion: 'ascenso_rango',
-        descripcion: `${nombreCompletoPersona(actual)} subió de rango: ${rangoAnterior} → ${siguienteLabel}`
-      });
-
-      if (typeof agregarNotificacion === 'function') {
-        agregarNotificacion({
-          texto: `¡Felicidades! Tu rango subió a ${siguienteLabel}. Sigue así ✦`,
-          link: 'cuenta',
-          paraId: actual.id
-        });
-      }
-
-      renderFiltroLideres();
-      aplicarBusquedaPersonas();
-      renderDetallePersona();
-      mostrarToastPersonas(`${nombreCompletoPersona(actual)} ahora es ${siguienteLabel}.`);
-
-    }
-  });
-
-}
+// calcularAscensoRango / verificarAscensosPendientes /
+// abrirConfirmarAscensoRango ahora viven en js/plan-mw-admin.js, para
+// que Admin → Plan MW use exactamente la misma lógica.
 
 function construirRangoChecklistHTML(persona) {
 
@@ -1180,25 +1110,6 @@ function mostrarToastPersonas(mensaje) {
   setTimeout(() => toast.classList.remove('show'), 2800);
 }
 
-function formatearDineroPersonas(numero) {
-  return Number(numero || 0).toLocaleString('es-MX');
-}
-
-function formatearFechaPersonas(fechaISO) {
-  const fecha = new Date(fechaISO);
-  if (Number.isNaN(fecha.getTime())) return '—';
-  return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function escapeHTMLPersonas(texto) {
-  return String(texto ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-function escapeAttributePersonas(texto) {
-  return escapeHTMLPersonas(texto);
-}
+// formatearDineroPersonas / formatearFechaPersonas / escapeHTMLPersonas /
+// escapeAttributePersonas ahora viven en js/personas-ejemplo.js, para
+// que admin-plan-mw.js pueda reutilizarlas sin duplicarlas.

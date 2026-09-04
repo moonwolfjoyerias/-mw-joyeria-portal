@@ -47,10 +47,26 @@ function crearPersonaEjemplo(datos) {
       compraPersonalPeriodo1: 0,
       compraPersonalPeriodo2: 0
     },
+    // Detectado automáticamente por js/plan-mw-admin.js cuando una
+    // líder ya cumple los requisitos del siguiente rango. Admin debe
+    // confirmarlo — nunca sube sola. { rangoKey, detectadoEn }
+    ascensoPendiente: datos.ascensoPendiente || null,
     // Aplica a ambos tipos — mismos campos que usan cuenta-ejemplo.js /
     // lider-cuenta-ejemplo.js (Reto de Constancia + boletos de rifa).
-    constancia: datos.constancia || { mesesCumplidos: 0, montoMesActual: 0, metaMes: 8000 },
-    rifa: datos.rifa || { montoAcumuladoMes: 0, meta: 3000 }
+    // hitosOtorgados: hitos del Reto de Constancia ya CONFIRMADOS por
+    // Admin ({ meses, premio, fecha }) — distinto de mesesCumplidos
+    // (el conteo puede ya alcanzar un hito sin que Admin lo haya
+    // confirmado/entregado todavía).
+    constancia: { mesesCumplidos: 0, montoMesActual: 0, metaMes: 8000, hitosOtorgados: [], ...(datos.constancia || {}) },
+    rifa: datos.rifa || { montoAcumuladoMes: 0, meta: 3000 },
+    // Detectado automáticamente cuando mesesCumplidos alcanza un hito
+    // todavía no otorgado. { meses, premio, detectadoEn }
+    recompensaPendiente: datos.recompensaPendiente || null,
+    // Historial de logros ya CONFIRMADOS (ascensos de rango y
+    // recompensas de constancia entregadas), con fecha — es la fuente
+    // de "Logros del periodo" en Admin → Plan MW. Se llena en el mismo
+    // momento en que se confirma cada logro, nunca por captura manual.
+    historialLogros: datos.historialLogros || []
   };
 }
 
@@ -190,6 +206,31 @@ function obtenerPersonaPorId(id) {
 
 function nombreCompletoPersona(p) {
   return [p.nombre, p.apellidos].filter(Boolean).join(' ');
+}
+
+// Utilidades genéricas compartidas por todas las páginas que consumen
+// este registro (admin-emprendedoras.js, admin-plan-mw.js).
+function formatearDineroPersonas(numero) {
+  return Number(numero || 0).toLocaleString('es-MX');
+}
+
+function formatearFechaPersonas(fechaISO) {
+  const fecha = new Date(fechaISO);
+  if (Number.isNaN(fecha.getTime())) return '—';
+  return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function escapeHTMLPersonas(texto) {
+  return String(texto ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function escapeAttributePersonas(texto) {
+  return escapeHTMLPersonas(texto);
 }
 
 // Usado por el módulo de Solicitudes de inscripción (js/solicitudes-modelo.js)

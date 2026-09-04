@@ -78,7 +78,7 @@
       <header class="portal-header">
         <div>
           <h1>Plan MW</h1>
-          <p class="portal-sub">Portal de Administración MW.</p>
+          <p class="portal-sub">Seguimiento de avances, rangos y recompensas del periodo.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -103,11 +103,71 @@
         </div>
       </header>
 
-      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
-        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
-        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
-        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+      <div class="planmw-toolbar">
+        <div class="filtro-chips" id="planmwFiltros">
+          <button type="button" class="filtro-chip active" data-filtro="todos">Todos</button>
+          <button type="button" class="filtro-chip" data-filtro="proximos">Próximos</button>
+          <button type="button" class="filtro-chip" data-filtro="alcanzados">Alcanzados</button>
+        </div>
+        <select id="periodoSelect"></select>
       </div>
+
+      <section class="stat-cards catalog-summary">
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7L2 9.2l7.1-.6z"/></svg>
+          </div>
+          <div>
+            <h4>Logros del periodo</h4>
+            <span class="stat-num" id="statLogros">0</span>
+            <span class="stat-link">En el periodo seleccionado</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+          </div>
+          <div>
+            <h4>Subieron de rango</h4>
+            <span class="stat-num" id="statAscensos">0</span>
+            <span class="stat-link">En el periodo seleccionado</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12v8H4v-8"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7C9 7 8 5 8 4a2 2 0 114 0 2 2 0 114 0c0 1-1 3-4 3z"/></svg>
+          </div>
+          <div>
+            <h4>Recompensas ganadas</h4>
+            <span class="stat-num" id="statRecompensas">0</span>
+            <span class="stat-link">En el periodo seleccionado</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+          </div>
+          <div>
+            <h4>Próximos a lograr</h4>
+            <span class="stat-num" id="statProximos">0</span>
+            <span class="stat-link">Ahora mismo</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="seccionProximos">
+        <div class="section-head">
+          <h2>⚡ Próximos a lograr</h2>
+        </div>
+        <div class="planmw-grid" id="proximosGrid"></div>
+      </section>
+
+      <section id="seccionLogros" style="margin-top:28px;">
+        <div class="section-head">
+          <h2>🏆 Logros del periodo</h2>
+        </div>
+        <div class="planmw-grid" id="logrosGrid"></div>
+      </section>
 
     </main>
   </div>
@@ -117,5 +177,12 @@
   </div>
 
   <script src="../../js/portal-common.js"></script>
+  <script src="../../js/admin-comun.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/notificaciones-modelo.js"></script>
+  <script src="../../js/lider-ejemplo.js"></script>
+  <script src="../../js/personas-ejemplo.js"></script>
+  <script src="../../js/plan-mw-admin.js"></script>
+  <script src="../../js/admin-plan-mw.js"></script>
 </body>
 </html>
