@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Admin MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=18">
+  <link rel="stylesheet" href="../../css/styles.css?v=19">
 </head>
 <body>
 
@@ -78,7 +78,7 @@
       <header class="portal-header">
         <div>
           <h1>Comisiones</h1>
-          <p class="portal-sub">Portal de Administración MW.</p>
+          <p class="portal-sub">Consulta, revisión y gestión de comisiones de líderes y sus equipos.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -103,11 +103,56 @@
         </div>
       </header>
 
-      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
-        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
-        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
-        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+      <div class="comm-recuperar-banner" id="commRecuperarBanner" hidden>
+        <div>
+          <strong>Encontramos cambios sin sincronizar.</strong>
+          <span>¿Quieres recuperarlos?</span>
+        </div>
+        <div class="comm-recuperar-acciones">
+          <button class="btn btn-outline" id="commDescartarBtn" type="button">Descartar</button>
+          <button class="btn btn-primary" id="commRecuperarBtn" type="button">Recuperar</button>
+        </div>
       </div>
+
+      <div class="comm-toolbar">
+        <div class="comm-toolbar-field">
+          <label for="periodoSelect">Periodo</label>
+          <select id="periodoSelect"></select>
+        </div>
+        <div class="comm-toolbar-field">
+          <label for="pagoSelect">Pago</label>
+          <select id="pagoSelect">
+            <option value="p1">Periodo 1 · 1–15</option>
+            <option value="p2">Periodo 2 · 16–fin</option>
+          </select>
+        </div>
+        <div class="comm-toolbar-field comm-toolbar-buscar">
+          <label for="buscarLiderInput">Buscar líder</label>
+          <input type="text" id="buscarLiderInput" placeholder="Nombre de la líder...">
+        </div>
+        <div class="comm-toolbar-field comm-toolbar-buscar">
+          <label for="buscarEquipoInput">Buscar en equipos</label>
+          <input type="text" id="buscarEquipoInput" placeholder="Nombre, cuenta o teléfono...">
+        </div>
+        <button class="btn btn-outline" id="recalcularBtn" type="button">↻ Recalcular</button>
+        <span class="comm-sync-pill" id="commSyncPill">🟢 Todos los cálculos actualizados</span>
+      </div>
+
+      <div class="comm-actions-row">
+        <div class="comm-legend">
+          <span><span class="comm-legend-dot calc"></span> Calculado</span>
+          <span><span class="comm-legend-dot ajustado"></span> Ajustado manualmente</span>
+        </div>
+        <div class="comm-actions-row-btns">
+          <button class="btn btn-outline" id="expandirTodoBtn" type="button">Expandir todo</button>
+          <button class="btn btn-outline" id="contraerTodoBtn" type="button">Contraer todo</button>
+          <button class="btn btn-outline" id="exportarExcelBtn" type="button">Exportar Excel</button>
+        </div>
+      </div>
+
+      <div id="commResultadoBusqueda" class="comm-busqueda-resultado" hidden></div>
+
+      <div id="comisionesLideres"></div>
 
     </main>
   </div>
@@ -116,6 +161,20 @@
     <div class="modal-box" id="modalBox"></div>
   </div>
 
+  <div id="commPdfTemplate" class="comm-pdf-template"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <script src="../../js/portal-common.js"></script>
+  <script src="../../js/admin-comun.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/notificaciones-modelo.js"></script>
+  <script src="../../js/lider-ejemplo.js"></script>
+  <script src="../../js/lider-cuenta-ejemplo.js"></script>
+  <script src="../../js/personas-ejemplo.js"></script>
+  <script src="../../js/plan-mw-admin.js"></script>
+  <script src="../../js/comisiones-modelo.js"></script>
+  <script src="../../js/admin-comisiones.js"></script>
 </body>
 </html>

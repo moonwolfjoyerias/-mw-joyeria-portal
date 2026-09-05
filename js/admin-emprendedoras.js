@@ -786,25 +786,9 @@ function renderSeccionEquipoPersona(persona) {
 
 // Todas las personas cuya cadena de liderId llega hasta raizId,
 // con su profundidad (nivel 1 = integrantes directos).
-function calcularDescendenciaPersona(raizId) {
-
-  const porLider = {};
-  obtenerPersonas().forEach(p => {
-    if (!p.liderId) return;
-    (porLider[p.liderId] = porLider[p.liderId] || []).push(p);
-  });
-
-  const conNivel = [];
-  (function recorrer(id, nivel) {
-    (porLider[id] || []).forEach(hijo => {
-      conNivel.push({ persona: hijo, nivel });
-      recorrer(hijo.id, nivel + 1);
-    });
-  })(raizId, 1);
-
-  return { conNivel, porLider };
-
-}
+// calcularDescendenciaPersona ahora vive en js/personas-ejemplo.js, para
+// que js/comisiones-modelo.js (Admin → Comisiones) use exactamente el
+// mismo recorrido de equipo — no un árbol paralelo.
 
 function renderNivelesEquipoAdmin(persona) {
 
