@@ -233,6 +233,30 @@ function escapeAttributePersonas(texto) {
   return escapeHTMLPersonas(texto);
 }
 
+// Recorre el registro por liderId (equipo por niveles de una persona
+// raíz). La usan Admin → Emprendedoras/Líderes (pestaña Equipo) y
+// Admin → Comisiones (js/comisiones-modelo.js) — un solo recorrido de
+// equipo, no dos árboles paralelos.
+function calcularDescendenciaPersona(raizId) {
+
+  const porLider = {};
+  obtenerPersonas().forEach(p => {
+    if (!p.liderId) return;
+    (porLider[p.liderId] = porLider[p.liderId] || []).push(p);
+  });
+
+  const conNivel = [];
+  (function recorrer(id, nivel) {
+    (porLider[id] || []).forEach(hijo => {
+      conNivel.push({ persona: hijo, nivel });
+      recorrer(hijo.id, nivel + 1);
+    });
+  })(raizId, 1);
+
+  return { conNivel, porLider };
+
+}
+
 // Usado por el módulo de Solicitudes de inscripción (js/solicitudes-modelo.js)
 // para evitar cuentas duplicadas por correo o teléfono, tanto al enviar
 // la solicitud como al aprobarla.
