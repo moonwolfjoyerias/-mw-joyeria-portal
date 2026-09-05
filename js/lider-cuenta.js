@@ -21,6 +21,13 @@ function fmtMoney(n) {
 function idxRango(key) {
   return RANGOS_MW.findIndex(r => r.key === key);
 }
+// Admin → Configuración → Comisiones es dueño de este valor (fórmula:
+// comisión = (compra ÷ divisor) × %). Antes este archivo repetía el
+// 1.16 aparte del de comisiones-modelo.js — ahora ambos leen del mismo
+// lugar cuando está disponible, para que nunca queden desincronizados.
+function obtenerIvaDivisorLider() {
+  return (typeof obtenerValorVigente === 'function' && obtenerValorVigente('formula', 'iva_divisor')) || 1.16;
+}
 
 // ---------- Perfil ----------
 function renderPerfilLider() {
@@ -34,7 +41,12 @@ function renderPerfilLider() {
 
 // ---------- Rifa mensual ----------
 function renderRifaLider() {
-  const { montoAcumuladoMes, meta } = RIFA_LIDER_EJEMPLO;
+  const { montoAcumuladoMes } = RIFA_LIDER_EJEMPLO;
+  // Admin → Configuración → Plan MW es dueña de estas dos reglas; si no
+  // está cargada aquí, se usan los mismos valores fijos de siempre.
+  const meta = (typeof obtenerValorVigente === 'function' && obtenerValorVigente('rifa', 'meta_mensual')) || RIFA_LIDER_EJEMPLO.meta;
+  const montoPorBoletoExtra = (typeof obtenerValorVigente === 'function' && obtenerValorVigente('rifa', 'monto_por_boleto_extra')) || 1000;
+
   const pctBase = Math.min(100, (montoAcumuladoMes / meta) * 100);
   document.getElementById('rifaFill').style.width = `${pctBase}%`;
   setText('rifaMontoActual', fmtMoney(montoAcumuladoMes));
@@ -45,9 +57,9 @@ function renderRifaLider() {
     msg.textContent = `Te faltan ${fmtMoney(meta - montoAcumuladoMes)} en compras este mes para ganar tu boleto de la rifa.`;
   } else {
     const extra = montoAcumuladoMes - meta;
-    const boletosExtra = Math.floor(extra / 1000);
+    const boletosExtra = Math.floor(extra / montoPorBoletoExtra);
     const totalBoletos = 1 + boletosExtra;
-    const faltanteSiguiente = 1000 - (extra % 1000);
+    const faltanteSiguiente = montoPorBoletoExtra - (extra % montoPorBoletoExtra);
     let texto = totalBoletos === 1 ? '¡Ya tienes tu boleto para la rifa de este mes! 🎟️' : `¡Llevas ${totalBoletos} boletos para la rifa de este mes! 🎟️`;
     texto += ` Te faltan ${fmtMoney(faltanteSiguiente)} para tu siguiente boleto extra.`;
     msg.textContent = texto;
@@ -179,7 +191,7 @@ function renderTicketComisiones() {
 
     const pct = pcts[i];
     const produccion = miembros.reduce((suma, m) => suma + (m.puntos || 0), 0);
-    const comisionNivel = (produccion / 1.16) * (pct / 100);
+    const comisionNivel = (produccion / obtenerIvaDivisorLider()) * (pct / 100);
     total += comisionNivel;
 
     return `
@@ -227,7 +239,7 @@ function construirDetalleNivelComisiones(miembros, pct) {
     const compras = (m.compras && m.compras.length) ? m.compras : [{ monto: m.puntos || 0, fecha: null }];
 
     return compras.map((c) => {
-      const base = c.monto / 1.16;
+      const base = c.monto / obtenerIvaDivisorLider();
       const iva = c.monto - base;
       const comisionCompra = base * (pct / 100);
       return `

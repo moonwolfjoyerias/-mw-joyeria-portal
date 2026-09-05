@@ -24,13 +24,29 @@
 
 const APARTADOS_MODELO_STORAGE_KEY = 'mw-apartados-modelo-v1';
 const CREDITOS_MODELO_STORAGE_KEY = 'mw-creditos-modelo-v1';
-const DEPOSITO_BASE = 50;
+let DEPOSITO_BASE = 50;
 
 const CATEGORIAS_APARTADO = {
   normal: { etiqueta: 'Normal', dias: 3, requiereDeposito: true },
   foranea: { etiqueta: 'Foránea', dias: 15, requiereDeposito: true },
   vip: { etiqueta: 'VIP', dias: null, requiereDeposito: false, requiereAprobacion: true }
 };
+
+// Admin → Configuración es dueña de estos tres valores (ver
+// js/configuracion-modelo.js). Si esa página está cargada aquí, se usan
+// sus valores vigentes hoy; si no, esta página sigue igual que siempre.
+// Solo aplica a ventanas NUEVAS — una ventana ya abierta conserva la
+// fecha de vencimiento que ya se le calculó.
+if (typeof obtenerValorVigente === 'function') {
+  const depositoConfigurado = obtenerValorVigente('apartado', 'deposito_base');
+  if (typeof depositoConfigurado === 'number') DEPOSITO_BASE = depositoConfigurado;
+
+  const diasNormalConfigurado = obtenerValorVigente('apartado', 'ventana_normal_dias');
+  if (typeof diasNormalConfigurado === 'number') CATEGORIAS_APARTADO.normal.dias = diasNormalConfigurado;
+
+  const diasForaneaConfigurado = obtenerValorVigente('apartado', 'ventana_foranea_dias');
+  if (typeof diasForaneaConfigurado === 'number') CATEGORIAS_APARTADO.foranea.dias = diasForaneaConfigurado;
+}
 
 // Estados de la VENTANA (no de cada pieza).
 const ESTADOS_VENTANA_MODELO = {

@@ -256,7 +256,7 @@ function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
     });
   }
 
-  if (typeof agregarNotificacion === 'function') {
+  if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_aprobada'))) {
     agregarNotificacion({
       texto: `Solicitud aprobada: la solicitud para inscribir a ${solicitud.nombreCompleto} fue aprobada. La nueva Emprendedora ya tiene una cuenta y ha sido agregada a tu equipo.`,
       link: 'cuenta',
@@ -299,7 +299,7 @@ function rechazarSolicitud(solicitudId, { adminId, adminNombre, motivo }) {
     });
   }
 
-  if (typeof agregarNotificacion === 'function') {
+  if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_rechazada'))) {
     agregarNotificacion({
       texto: `Solicitud rechazada: la solicitud para inscribir a ${solicitud.nombreCompleto} fue rechazada. Motivo: ${motivo}`,
       link: 'cuenta',
