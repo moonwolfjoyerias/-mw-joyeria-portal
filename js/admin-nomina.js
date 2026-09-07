@@ -836,10 +836,10 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
   `;
 
   return `
-    <div style="width: 820px; min-height: 1100px; background: #ffffff; color: #2A2230; font-family: Arial, sans-serif; padding: 24px 28px 20px; box-sizing: border-box; border: 1px solid #e8dff0;">
+    <div style="width: 820px; min-height: 1100px; background: #ffffff; color: #2A2230; font-family: poppins, cinzel; padding: 24px 28px 20px; box-sizing: border-box; border: 1px solid #e8dff0;">
       <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #6d2f83; padding-bottom: 16px; margin-bottom: 20px;">
         <div style="display:flex; align-items:center; gap:12px;">
-          <img src="../../assets/images/isotipo-morado.png" alt="MW" style="width:46px;height:46px;object-fit:contain;" />
+          <img src="../../assets/images/isotipo-morado.png" alt="MW" style="width:92px;height:46px;object-fit:contain;" />
           <div>
             <div style="font-size: 20px; font-weight: 700; color: #5E1A8A; letter-spacing: 1px;">MW JOYERÍA</div>
             <div style="font-size: 10px; color: #6B6270; letter-spacing: 1.5px; text-transform: uppercase;">Portal de nómina</div>
