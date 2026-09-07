@@ -7,7 +7,10 @@ const MODULOS_ACTIVIDAD = {
   apartados: 'Apartados',
   calendario: 'Calendario',
   lista_deseos: 'Lista de deseos',
-  personas: 'Personas'
+  personas: 'Personas',
+  comisiones: 'Comisiones',
+  solicitudes: 'Solicitudes',
+  configuracion: 'Configuración'
 };
 
 const ROLES_ACTIVIDAD = {

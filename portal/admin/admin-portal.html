@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Admin MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=18">
+  <link rel="stylesheet" href="../../css/styles.css?v=20">
 </head>
 <body>
 
@@ -78,7 +78,7 @@
       <header class="portal-header">
         <div>
           <h1>Dashboard</h1>
-          <p class="portal-sub">Portal de Administración MW.</p>
+          <p class="portal-sub">Resumen general de todas las áreas del portal — haz clic en cualquier tarjeta para ver el detalle.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -103,10 +103,104 @@
         </div>
       </header>
 
-      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
-        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
-        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
-        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+      <section class="stat-cards cols-4">
+        <div class="stat-card">
+          <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg></div>
+          <div>
+            <h4>Catálogo disponible</h4>
+            <span class="stat-num" id="dashCatalogoDisponibles">0</span>
+            <a class="stat-link" href="admin-catalogo.html">Ver catálogo →</a>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg></div>
+          <div>
+            <h4>Apartados vencidos</h4>
+            <span class="stat-num" id="dashApartadosVencidos">0</span>
+            <a class="stat-link" href="admin-apartados.html">Ver apartados →</a>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M2 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M14 20c.3-2.6 2-4.5 4.5-4.5"/></svg></div>
+          <div>
+            <h4>Emprendedoras/Líderes activas</h4>
+            <span class="stat-num" id="dashPersonasActivas">0</span>
+            <a class="stat-link" href="admin-emprendedoras-lideres.html">Ver equipo →</a>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7L2 9.2l7.1-.6z"/></svg></div>
+          <div>
+            <h4>Plan MW por confirmar</h4>
+            <span class="stat-num" id="dashPlanMwPendientes">0</span>
+            <a class="stat-link" href="admin-plan-mw.html">Ver Plan MW →</a>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></div>
+          <div>
+            <h4>Comisiones sin pagar (periodo actual)</h4>
+            <span class="stat-num" id="dashComisionesPendientes">$0</span>
+            <span class="stat-sub" id="dashComisionesLideresPendientes"></span>
+            <a class="stat-link" href="admin-comisiones.html">Ver comisiones →</a>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M9 11h6M9 15h6"/></svg></div>
+          <div>
+            <h4>Solicitudes pendientes</h4>
+            <span class="stat-num" id="dashSolicitudesPendientes">0</span>
+            <a class="stat-link" href="admin-solicitudes.html">Ver solicitudes →</a>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg></div>
+          <div>
+            <h4>Lista de deseos activa</h4>
+            <span class="stat-num" id="dashDeseosActivos">0</span>
+            <a class="stat-link" href="admin-lista-deseos.html">Ver lista →</a>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></div>
+          <div>
+            <h4>Cambios en Configuración</h4>
+            <span class="stat-num" id="dashConfigCambios">0</span>
+            <a class="stat-link" href="admin-configuracion.html">Ver configuración →</a>
+          </div>
+        </div>
+      </section>
+
+      <div class="dash-two-col">
+        <div class="cfg-card" style="margin-bottom:0;">
+          <h3 class="cfg-card-title">Próximo periodo de pago</h3>
+          <p class="cfg-card-sub" style="margin-bottom:0.6rem;"><strong id="dashProximoPago">—</strong> · <span id="dashDiasProximoPago"></span></p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a class="btn btn-outline" style="width:auto;" href="admin-comisiones.html">Ver Comisiones</a>
+            <a class="btn btn-outline" style="width:auto;" href="admin-nomina.html">Ver Nómina</a>
+          </div>
+        </div>
+
+        <div class="cfg-card" style="margin-bottom:0;">
+          <h3 class="cfg-card-title">Eventos de esta semana</h3>
+          <p class="cfg-card-sub">Del calendario compartido con Staff y RH.</p>
+          <div class="events-row-wrap"><div class="events-row" id="weekEventsRow"></div></div>
+          <a href="admin-calendario.html" style="display:inline-block;margin-top:10px;font-size:0.8rem;color:var(--mw-purple);">Ver calendario completo →</a>
+        </div>
+      </div>
+
+      <div class="cfg-card" style="margin-top:1.1rem;">
+        <h3 class="cfg-card-title">Actividad reciente</h3>
+        <p class="cfg-card-sub">Últimas acciones de Staff, RH y Admin en todo el portal.</p>
+        <div id="dashActividadReciente"></div>
+        <a href="admin-actividad.html" style="display:inline-block;margin-top:10px;font-size:0.8rem;color:var(--mw-purple);">Ver toda la actividad →</a>
       </div>
 
     </main>
@@ -116,6 +210,22 @@
     <div class="modal-box" id="modalBox"></div>
   </div>
 
+  <script src="../../js/eventos-ejemplo.js"></script>
+  <script src="../../js/eventos-modelo.js"></script>
+  <script src="../../js/configuracion-modelo.js"></script>
+  <script src="../../js/apartados-modelo.js"></script>
+  <script src="../../js/staff-apartados-ejemplo.js"></script>
+  <script src="../../js/lider-ejemplo.js"></script>
+  <script src="../../js/lider-cuenta-ejemplo.js"></script>
+  <script src="../../js/personas-ejemplo.js"></script>
+  <script src="../../js/comisiones-modelo.js"></script>
+  <script src="../../js/catalogo-productos-ejemplo.js"></script>
+  <script src="../../js/staff-deseos-ejemplo.js"></script>
+  <script src="../../js/solicitudes-modelo.js"></script>
+  <script src="../../js/notificaciones-modelo.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/actividad.js"></script>
   <script src="../../js/portal-common.js"></script>
+  <script src="../../js/admin-portal.js"></script>
 </body>
 </html>
