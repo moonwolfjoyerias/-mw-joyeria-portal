@@ -15,6 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
     mostrarToast('Se notificó a Administración. Ellos se pondrán en contacto contigo para restablecer tu acceso.');
   });
 
+  document.getElementById('verComprobanteBtn')?.addEventListener('click', () => {
+    mostrarToast('El comprobante de agosto 2026 está disponible para consulta.');
+  });
+
 });
 
 function setText(id, valor) {

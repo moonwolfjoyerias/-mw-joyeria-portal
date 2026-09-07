@@ -1392,6 +1392,7 @@ a:hover { color: var(--mw-gold); }
 }
 .change-photo-btn svg { width: 13px; height: 13px; }
 .profile-card h2 { font-size: 1.15rem; margin-bottom: 0.2rem; }
+.profile-card .profile-name { font-size: 1rem; font-weight: 600; margin-bottom: 0.2rem; }
 .profile-card .profile-team { font-size: 0.85rem; color: var(--mw-text-muted); margin-bottom: 1.2rem; }
 
 .profile-field { text-align: left; padding: 0.8rem 0; border-top: 1px solid var(--mw-border); }
