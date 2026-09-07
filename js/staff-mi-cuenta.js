@@ -22,13 +22,22 @@ document.addEventListener('DOMContentLoaded', () => {
 // DIRECTORIO DE PERSONAL
 // ============================================================
 
+// Incluye también las cuentas de Staff creadas desde Admin →
+// Configuración → Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js)
+// — sin esto, una cuenta nueva no aparecería aquí ni podría autorizar
+// su propio recibo.
+function obtenerPersonalStaffTotal() {
+  const extra = typeof obtenerCuentasInternas === 'function' ? obtenerCuentasInternas().filter(c => c.rol === 'staff') : [];
+  return PERSONAL_STAFF_EJEMPLO.concat(extra);
+}
+
 function renderEmployeeGrid() {
 
   const grid = document.getElementById('employeeGrid');
 
   if (!grid) return;
 
-  grid.innerHTML = PERSONAL_STAFF_EJEMPLO.map(empleado => `
+  grid.innerHTML = obtenerPersonalStaffTotal().map(empleado => `
     <div class="employee-card">
       <span class="profile-avatar employee-avatar">${obtenerIniciales(empleado.nombre)}</span>
       <strong>${escapeHTML(empleado.nombre)}</strong>
@@ -73,7 +82,7 @@ function inicializarEventosMiCuenta() {
 
 function abrirAutorizacionNomina(usuario) {
 
-  empleadoNominaPendiente = PERSONAL_STAFF_EJEMPLO.find(e => e.usuario === usuario);
+  empleadoNominaPendiente = obtenerPersonalStaffTotal().find(e => e.usuario === usuario);
 
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');

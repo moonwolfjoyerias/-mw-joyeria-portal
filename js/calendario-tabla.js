@@ -533,9 +533,15 @@ function validarAutorizacionCalendario() {
   const password = document.getElementById('calendarioPassword')?.value;
   const error = document.getElementById('authError');
 
+  // También acepta cuentas creadas desde Admin → Configuración →
+  // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js) y
+  // cuentas de Líderes/Emprendedoras (js/personas-ejemplo.js), además
+  // de MW0005 que ya venía incluida a mano en la lista de ejemplo.
   const empleado = CALENDARIO_USUARIOS_EJEMPLO.find(
     u => u.usuario === usuario && u.password === password
-  );
+  )
+    || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null)
+    || (typeof obtenerPersonas === 'function' ? obtenerPersonas().find(p => p.usuario === usuario && p.password === password) : null);
 
   if (!empleado) {
 

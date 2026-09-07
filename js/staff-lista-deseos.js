@@ -384,9 +384,11 @@ function validarAutorizacionDeseo() {
   const password = document.getElementById('deseoPassword')?.value;
   const error = document.getElementById('authError');
 
+  // También acepta cuentas creadas desde Admin → Configuración →
+  // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js).
   const empleado = STAFF_USUARIOS_EJEMPLO.find(
     u => u.usuario === usuario && u.password === password
-  );
+  ) || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null);
 
   if (!empleado) {
 

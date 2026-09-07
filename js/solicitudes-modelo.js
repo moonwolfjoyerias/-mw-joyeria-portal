@@ -227,6 +227,7 @@ function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
     telefono: solicitud.telefono,
     correo: solicitud.correo,
     usuario: credenciales.usuario,
+    password: credenciales.passwordTemporal,
     numeroCuenta: credenciales.numeroCuenta,
     fechaAlta: new Date().toISOString(),
     liderId: solicitud.solicitanteId,   // el solicitante queda como su líder directa

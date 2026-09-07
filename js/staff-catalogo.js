@@ -1172,7 +1172,10 @@ function validarAutorizacion() {
       u =>
         u.usuario === usuario &&
         u.password === password
-    );
+    )
+    // También acepta cuentas creadas desde Admin → Configuración →
+    // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js).
+    || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null);
 
 
   if (!empleado) {
