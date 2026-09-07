@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Admin MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=18">
+  <link rel="stylesheet" href="../../css/styles.css?v=23">
 </head>
 <body>
 
@@ -103,10 +103,80 @@
         </div>
       </header>
 
-      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
-        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
-        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
-        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+      <p class="portal-sub" style="margin-top:-0.8rem;margin-bottom:1.1rem;">Solo aplica a empleados con sueldo (Staff, RH, Administrativo) — Emprendedoras/Líderes se administran en Comisiones y Plan MW.</p>
+
+      <div class="cfg-recuperar-banner" id="nomRecuperarBanner" hidden>
+        <div>
+          <strong>Encontramos cambios sin sincronizar.</strong>
+          <span>¿Quieres recuperarlos para seguir editando?</span>
+        </div>
+        <div class="cfg-recuperar-acciones">
+          <button class="btn btn-outline" id="nomDescartarBtn" type="button">Descartar</button>
+          <button class="btn btn-primary" id="nomRecuperarBtn" type="button">Recuperar</button>
+        </div>
+      </div>
+
+      <nav class="cfg-nav nom-nav-principal" id="nomNavPrincipal">
+        <button type="button" class="cfg-nav-item active" data-nom-vista="lista">Nómina</button>
+        <button type="button" class="cfg-nav-item" data-nom-vista="datos">DATOS</button>
+      </nav>
+
+      <div id="nomVistaLista" class="nom-vista">
+
+        <div class="comm-toolbar">
+          <div class="comm-toolbar-field comm-toolbar-buscar">
+            <label for="nomBuscarInput">Buscar empleado</label>
+            <input type="text" id="nomBuscarInput" placeholder="Nombre, número o cargo...">
+          </div>
+          <div class="comm-toolbar-field">
+            <label for="nomFiltroEstado">Estado</label>
+            <select id="nomFiltroEstado">
+              <option value="todos">Todos</option>
+              <option value="activos">Activos</option>
+              <option value="inactivos">Inactivos</option>
+            </select>
+          </div>
+          <div class="comm-toolbar-field">
+            <label for="nomFiltroCargo">Cargo</label>
+            <select id="nomFiltroCargo">
+              <option value="todos">Todos</option>
+              <option value="staff">Staff</option>
+              <option value="rh">RH</option>
+              <option value="admin">Administrativo</option>
+            </select>
+          </div>
+          <div class="comm-toolbar-field">
+            <label for="nomPeriodoSelect">Periodo (semana)</label>
+            <select id="nomPeriodoSelect"></select>
+          </div>
+          <span class="comm-sync-pill" id="nomSyncPill">🟢 Guardado</span>
+        </div>
+
+        <div class="catalog-table-card">
+          <div class="catalog-table-wrap">
+            <table class="catalog-table" id="nomTablaPrincipal">
+              <thead><tr><th>Empleado</th><th>Cargo</th><th>Estado</th><th></th></tr></thead>
+              <tbody id="nomTablaPrincipalBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="nomVistaDetalle" class="nom-vista" hidden></div>
+
+      <div id="nomVistaDatos" class="nom-vista" hidden>
+
+        <nav class="cfg-nav nom-nav-datos" id="nomNavDatos">
+          <button type="button" class="cfg-nav-item active" data-nom-datos-tab="empleados">Empleados</button>
+          <button type="button" class="cfg-nav-item" data-nom-datos-tab="conceptos">Conceptos de nómina</button>
+          <button type="button" class="cfg-nav-item" data-nom-datos-tab="solicitudes">Solicitudes</button>
+        </nav>
+
+        <div id="nomDatosEmpleados" class="nom-datos-tab"></div>
+        <div id="nomDatosConceptos" class="nom-datos-tab" hidden></div>
+        <div id="nomDatosSolicitudes" class="nom-datos-tab" hidden></div>
+
       </div>
 
     </main>
@@ -116,6 +186,16 @@
     <div class="modal-box" id="modalBox"></div>
   </div>
 
+  <div id="nomPdfTemplate" class="comm-pdf-template"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <script src="../../js/portal-common.js"></script>
+  <script src="../../js/admin-comun.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/notificaciones-modelo.js"></script>
+  <script src="../../js/nomina-modelo.js"></script>
+  <script src="../../js/admin-nomina.js"></script>
 </body>
 </html>
