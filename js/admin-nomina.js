@@ -340,7 +340,7 @@ function renderVistaDetalleNomina() {
         <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
           <button class="btn btn-outline" id="nomVerHistorialBtn" type="button" style="width:auto;">🕘 Historial de ajustes</button>
           <button class="btn btn-outline" id="nomRegistrarPagoBtn" type="button" style="width:auto;">Registrar pago</button>
-          <button class="btn btn-primary" id="nomGenerarPdfBtn" type="button" style="width:auto;">📊 Generar comprobante</button>
+          <button class="btn btn-primary" id="nomGenerarPdfBtn" type="button" style="width:auto;">Descargar comprobante Excel</button>
         </div>
       </div>
     </div>
@@ -771,8 +771,8 @@ function generarComprobanteNomina() {
 
 async function ejecutarGeneracionComprobanteNomina(empleado) {
 
-  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
-    mostrarToast('No se pudo generar el comprobante — intenta de nuevo en un momento.');
+  if (typeof XlsxPopulate === 'undefined') {
+    mostrarToast('No se pudo cargar el machote de Excel — revisa tu conexión e intenta de nuevo.');
     return;
   }
 
@@ -783,41 +783,74 @@ async function ejecutarGeneracionComprobanteNomina(empleado) {
       return;
     }
 
-    const contenedor = document.getElementById('nomPdfTemplate');
-    contenedor.innerHTML = construirHTMLComprobanteNomina(empleado, periodo);
+    const respuesta = await fetch('../../assets/images/MACHOTE-COMPROBANTE.xlsx');
+    if (!respuesta.ok) throw new Error(`No se pudo leer el machote (${respuesta.status})`);
 
-    if (document.fonts?.ready) await document.fonts.ready;
-
-    const canvas = await html2canvas(contenedor, {
-      backgroundColor: '#ffffff',
-      scale: 2,
-      useCORS: true,
-      width: 1600,
-      height: 1123
-    });
-
-    const imgData = canvas.toDataURL('image/png');
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
-    const w = canvas.width * ratio;
-    const h = canvas.height * ratio;
-    pdf.addImage(imgData, 'PNG', (pageWidth - w) / 2, (pageHeight - h) / 2, w, h);
+    const libro = await XlsxPopulate.fromDataAsync(await respuesta.arrayBuffer());
+    const hoja = libro.sheet('Comprobante');
+    rellenarMachoteComprobanteNomina(hoja, empleado, periodo);
+    const archivo = await libro.outputAsync({ type: 'blob' });
 
     const nombreArchivo = sanitizarNombreArchivoNomina(empleado.nombre);
     const periodoArchivo = sanitizarNombreArchivoNomina(formatearRangoSemanaNomina(nomPeriodoActual));
-    pdf.save(`MW_Nomina_${nombreArchivo}_${periodoArchivo}.pdf`);
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(archivo);
+    enlace.download = `MW_Nomina_${nombreArchivo}_${periodoArchivo}.xlsx`;
+    enlace.click();
+    URL.revokeObjectURL(enlace.href);
 
-    mostrarToast('Comprobante generado.');
+    mostrarToast('Comprobante Excel generado con el machote original.');
   } catch (error) {
     console.error('Error generando comprobante de nómina:', error);
-    mostrarToast('No se pudo generar el comprobante — intenta de nuevo en un momento.');
-  } finally {
-    const contenedor = document.getElementById('nomPdfTemplate');
-    if (contenedor) contenedor.innerHTML = '';
+    mostrarToast('No se pudo generar el comprobante Excel — intenta de nuevo.');
   }
+
+}
+
+function rellenarMachoteComprobanteNomina(hoja, empleado, periodo) {
+
+  const fechaPago = new Date();
+  const fechaInicio = empleado.fechaInicio ? new Date(`${empleado.fechaInicio}T00:00:00`) : '';
+  const fechaPeriodoInicio = new Date(`${periodo.periodoKey}T00:00:00`);
+  const fechaPeriodoFin = new Date(fechaPeriodoInicio);
+  fechaPeriodoFin.setDate(fechaPeriodoFin.getDate() + 6);
+  const percepciones = (periodo.conceptos || []).filter(c => c.tipo === 'percepcion');
+  const deducciones = (periodo.conceptos || []).filter(c => c.tipo === 'deduccion');
+
+  hoja.usedRange().forEach(cell => {
+    if (cell.formula()) cell.value('');
+  });
+
+  const escribirCopia = (offset) => {
+    const celda = (columna, fila) => hoja.cell(`${columna}${fila + offset}`);
+    celda('B', 6).value(fechaInicio);
+    celda('D', 6).value(empleado.numeroEmpleado || '');
+    celda('B', 7).value(fechaPago);
+    celda('D', 7).value('Transferencia');
+    celda('B', 11).value(fechaPeriodoInicio);
+    celda('D', 11).value(fechaPeriodoFin);
+    celda('F', 11).value(7);
+    celda('H', 11).value(Number(periodo.totalAPagar) || 0);
+    escribirConceptos(percepciones, [13, 14], celda);
+    escribirConceptos(deducciones, [16, 17], celda);
+  };
+
+  escribirCopia(0);
+  escribirCopia(26);
+
+}
+
+function escribirConceptos(conceptos, filas, celda) {
+
+  filas.forEach((fila, indice) => {
+    const concepto = conceptos[indice];
+    celda('A', fila).value(concepto?.nombre || '');
+    celda('B', fila).value(concepto ? Number(concepto.cantidad) || 0 : '');
+    celda('C', fila).value(concepto ? Number(concepto.importe) || 0 : '');
+    celda('D', fila).value('');
+    celda('E', fila).value('');
+    celda('F', fila).value(concepto ? Number(concepto.total) || 0 : '');
+  });
 
 }
 
