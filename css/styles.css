@@ -962,6 +962,7 @@ a:hover { color: var(--mw-gold); }
 .stat-card .stat-sub { display: block; font-size: 0.72rem; color: var(--mw-text-muted); margin-bottom: 4px; }
 
 .dash-two-col { display: grid; grid-template-columns: 1fr 1.6fr; gap: 1rem; align-items: start; }
+.dash-two-col > * { min-width: 0; }
 @media (max-width: 900px) { .dash-two-col { grid-template-columns: 1fr; } }
 
 /* ---------- Banner "Nuevas piezas" ---------- */
@@ -3792,4 +3793,66 @@ a:hover { color: var(--mw-gold); }
 }
 @media (max-width: 620px) {
   .cfg-barra-guardar { left: 12px; right: 12px; bottom: 12px; transform: none; flex-direction: column; align-items: stretch; border-radius: 14px; }
+}
+
+/* ===== Nómina (admin-nomina.html) ===== */
+
+.nom-nav-principal, .nom-nav-datos {
+  flex-direction: row;
+  flex-wrap: wrap;
+  position: static;
+  display: flex;
+  margin-bottom: 1.1rem;
+}
+.nom-nav-datos { margin-bottom: 1rem; }
+
+.nom-celda-editable { cursor: text; position: relative; }
+.nom-celda-editable:focus-visible { outline: 2px solid var(--mw-purple); outline-offset: -2px; }
+.nom-celda-editable input {
+  width: 100%;
+  border: 1px solid var(--mw-purple);
+  border-radius: 5px;
+  padding: 3px 5px;
+  font-size: 0.72rem;
+  font-family: inherit;
+  color: var(--mw-text);
+}
+
+.nom-resumen-totales {
+  margin-top: 14px;
+  border-top: 1px solid var(--mw-border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nom-total-fila { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--mw-text); }
+.nom-total-fila strong { color: var(--mw-text); }
+.nom-total-final {
+  border-top: 1px dashed var(--mw-border);
+  margin-top: 4px;
+  padding-top: 8px;
+  font-size: 0.95rem;
+}
+.nom-total-final span, .nom-total-final strong { font-family: var(--font-heading); color: var(--mw-purple); font-size: 1.05rem; }
+
+.nom-semanas-lista { display: flex; flex-wrap: wrap; gap: 8px; }
+.nom-semana-chip {
+  border: 1px solid var(--mw-border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.5em 1em;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: var(--mw-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.nom-semana-chip:hover { background: var(--mw-lilac-soft); }
+.nom-semana-chip.activa { border-color: var(--mw-purple); background: var(--mw-lilac-soft); font-weight: 600; }
+
+@media (max-width: 900px) {
+  .nom-nav-principal, .nom-nav-datos { flex-direction: row; }
 }
