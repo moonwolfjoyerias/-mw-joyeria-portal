@@ -906,12 +906,13 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
         </div>
         <div style="flex:1; border-top:2px solid #d9c3e6; padding-top:8px; text-align:center;">
           <div style="font-size:10px; color:#6B6270; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:12px;">Firma de recibido</div>
+          <div style="font-size:12px; color:#2A2230; font-weight:600;">${escapeHTMLNomina(empleado.nombre)}</div>
           <div style="height: 46px; border-bottom: 2px solid #2A2230; width: 90%; margin: 0 auto; opacity: 0.7;"></div>
         </div>
       </div>
 
       <div style="border-top:1px solid #eae4eb; padding-top:10px; font-size:9px; color:#6B6270; text-align:center;">
-        Comprobante generado por Portal MW • Sin alteración del diseño original del machote.
+        Comprobante generado por Portal MW
       </div>
     </div>
   `;
