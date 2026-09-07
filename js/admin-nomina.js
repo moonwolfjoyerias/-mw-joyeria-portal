@@ -198,6 +198,13 @@ function obtenerInicialesNomina(nombre) {
   return String(nombre || '').trim().split(/\s+/).slice(0, 2).map(p => p.charAt(0).toUpperCase()).join('');
 }
 
+function construirAvatarEmpleadoNomina(empleado, estilos = '') {
+  const contenido = empleado.fotoUrl
+    ? `<img src="${escapeHTMLNomina(empleado.fotoUrl)}" alt="Foto de ${escapeHTMLNomina(empleado.nombre)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+    : escapeHTMLNomina(obtenerInicialesNomina(empleado.nombre));
+  return `<span class="profile-avatar" style="${estilos}overflow:hidden;">${contenido}</span>`;
+}
+
 function escapeHTMLNomina(texto) {
   return String(texto ?? '')
     .replace(/&/g, '&amp;')
@@ -301,7 +308,7 @@ function renderVistaDetalleNomina() {
     <div class="dash-two-col">
       <div class="cfg-card" style="margin-bottom:0;">
         <div style="display:flex;gap:14px;align-items:center;">
-          <span class="profile-avatar" style="width:56px;height:56px;font-size:1.2rem;flex-shrink:0;">${escapeHTMLNomina(obtenerInicialesNomina(empleado.nombre))}</span>
+          ${construirAvatarEmpleadoNomina(empleado, 'width:56px;height:56px;font-size:1.2rem;flex-shrink:0;')}
           <div>
             <h3 class="cfg-card-title" style="margin-bottom:4px;">${escapeHTMLNomina(empleado.nombre)}</h3>
             <span class="badge ${empleado.estado === 'activo' ? 'badge-pagada' : 'badge-pendiente'}">${escapeHTMLNomina(CARGOS_NOMINA[empleado.cargo])} · ${escapeHTMLNomina(ESTADOS_EMPLEADO_NOMINA[empleado.estado])}</span>
@@ -895,7 +902,7 @@ function renderDatosEmpleados() {
           <tbody>
             ${empleados.map(e => `
               <tr>
-                <td><span class="profile-avatar" style="width:30px;height:30px;font-size:0.7rem;display:inline-flex;vertical-align:middle;margin-right:6px;">${escapeHTMLNomina(obtenerInicialesNomina(e.nombre))}</span>${escapeHTMLNomina(e.nombre)}</td>
+                <td>${construirAvatarEmpleadoNomina(e, 'width:30px;height:30px;font-size:0.7rem;display:inline-flex;vertical-align:middle;margin-right:6px;')}${escapeHTMLNomina(e.nombre)}</td>
                 <td>${escapeHTMLNomina(e.numeroEmpleado)}</td>
                 <td>${escapeHTMLNomina(CARGOS_NOMINA[e.cargo] || e.cargo)}</td>
                 <td>${formatearFechaNomina(e.fechaInicio)}</td>
@@ -951,6 +958,11 @@ function abrirModalEmpleadoNomina(id) {
   if (!overlay || !box) return;
 
   const empleado = id ? obtenerEmpleadoNominaPorId(id) : null;
+  let fotoEmpleadoData = empleado?.fotoUrl || '';
+  const inicialesEmpleado = obtenerInicialesNomina(empleado?.nombre || 'Empleado');
+  const avatarEmpleado = fotoEmpleadoData
+    ? `<img src="${escapeHTMLNomina(fotoEmpleadoData)}" alt="Foto de ${escapeHTMLNomina(empleado?.nombre || 'empleado')}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+    : escapeHTMLNomina(inicialesEmpleado);
 
   box.style.maxWidth = '460px';
   box.innerHTML = `
@@ -970,6 +982,11 @@ function abrirModalEmpleadoNomina(id) {
       <label>Fecha de inicio<input type="date" id="nomEmpFechaInicio" value="${empleado?.fechaInicio || new Date().toISOString().slice(0, 10)}"></label>
       <label>Salario base semanal<input type="number" step="0.01" id="nomEmpSalario" value="${empleado?.salarioBase ?? 0}"></label>
       <label>Pago por hora extra<input type="number" step="0.01" id="nomEmpHoraExtra" value="${empleado?.pagoHoraExtra ?? 0}"></label>
+      <label class="cfg-span-2">Foto del empleado<input type="file" id="nomEmpFoto" accept="image/*"></label>
+      <div class="cfg-span-2" style="display:flex;align-items:center;gap:10px;">
+        <div id="nomEmpFotoPreview" class="profile-avatar" style="width:56px;height:56px;font-size:1.1rem;overflow:hidden;flex-shrink:0;">${avatarEmpleado}</div>
+        <span class="cfg-card-sub" style="margin:0;">Selecciona una imagen para actualizar la foto.</span>
+      </div>
     </div>
     <div id="nomEmpError" class="auth-error" style="display:none;"></div>
     <div style="display:flex;gap:10px;margin-top:14px;">
@@ -983,6 +1000,33 @@ function abrirModalEmpleadoNomina(id) {
   box.querySelector('[data-close]')?.addEventListener('click', cerrar);
   document.getElementById('nomEmpCancelarBtn')?.addEventListener('click', cerrar);
 
+  document.getElementById('nomEmpFoto')?.addEventListener('change', (e) => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+
+    const error = document.getElementById('nomEmpError');
+    if (!archivo.type.startsWith('image/')) {
+      e.target.value = '';
+      error.style.display = 'block';
+      error.textContent = 'Selecciona un archivo de imagen válido.';
+      return;
+    }
+    if (archivo.size > 2 * 1024 * 1024) {
+      e.target.value = '';
+      error.style.display = 'block';
+      error.textContent = 'La imagen no puede superar 2 MB.';
+      return;
+    }
+
+    const lector = new FileReader();
+    lector.onload = () => {
+      fotoEmpleadoData = lector.result;
+      document.getElementById('nomEmpFotoPreview').innerHTML = `<img src="${fotoEmpleadoData}" alt="Vista previa de la foto" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      error.style.display = 'none';
+    };
+    lector.readAsDataURL(archivo);
+  });
+
   document.getElementById('nomEmpGuardarBtn')?.addEventListener('click', () => {
 
     const datos = {
@@ -991,7 +1035,8 @@ function abrirModalEmpleadoNomina(id) {
       cargo: document.getElementById('nomEmpCargo').value,
       fechaInicio: document.getElementById('nomEmpFechaInicio').value,
       salarioBase: parseFloat(document.getElementById('nomEmpSalario').value) || 0,
-      pagoHoraExtra: parseFloat(document.getElementById('nomEmpHoraExtra').value) || 0
+      pagoHoraExtra: parseFloat(document.getElementById('nomEmpHoraExtra').value) || 0,
+      fotoUrl: fotoEmpleadoData
     };
 
     const error = document.getElementById('nomEmpError');
