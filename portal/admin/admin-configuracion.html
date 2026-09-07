@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Admin MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=18">
+  <link rel="stylesheet" href="../../css/styles.css?v=20">
 </head>
 <body>
 
@@ -103,10 +103,44 @@
         </div>
       </header>
 
-      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
-        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
-        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
-        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+      <p class="portal-sub" style="margin-top:-0.8rem;margin-bottom:1.2rem;">Aquí se configuran las reglas generales del sistema — no las operaciones del día a día.</p>
+
+      <div class="cfg-recuperar-banner" id="cfgRecuperarBanner" hidden>
+        <div>
+          <strong>Encontramos cambios sin confirmar.</strong>
+          <span>¿Quieres recuperarlos para seguir editando?</span>
+        </div>
+        <div class="cfg-recuperar-acciones">
+          <button class="btn btn-outline" id="cfgDescartarBtn" type="button">Descartar</button>
+          <button class="btn btn-primary" id="cfgRecuperarBtn" type="button">Recuperar</button>
+        </div>
+      </div>
+
+      <div class="cfg-layout">
+        <nav class="cfg-nav" id="cfgNav">
+          <button type="button" class="cfg-nav-item active" data-cfg-seccion="datosMW">Datos de MW</button>
+          <button type="button" class="cfg-nav-item" data-cfg-seccion="planMW">Plan MW</button>
+          <button type="button" class="cfg-nav-item" data-cfg-seccion="comisiones">Comisiones</button>
+          <button type="button" class="cfg-nav-item" data-cfg-seccion="apartados">Apartados</button>
+          <button type="button" class="cfg-nav-item" data-cfg-seccion="usuarios">Usuarios y permisos</button>
+          <button type="button" class="cfg-nav-item" data-cfg-seccion="notificaciones">Notificaciones</button>
+          <button type="button" class="cfg-nav-item" data-cfg-seccion="sistema">Sistema</button>
+          <button type="button" class="cfg-nav-item" data-cfg-seccion="auditoria">Auditoría</button>
+        </nav>
+
+        <div class="cfg-contenido">
+          <div class="cfg-sync-row">
+            <span class="cfg-sync-pill" id="cfgSyncPill">🟢 Guardado</span>
+          </div>
+          <div id="seccion-datosMW" class="cfg-seccion"></div>
+          <div id="seccion-planMW" class="cfg-seccion" hidden></div>
+          <div id="seccion-comisiones" class="cfg-seccion" hidden></div>
+          <div id="seccion-apartados" class="cfg-seccion" hidden></div>
+          <div id="seccion-usuarios" class="cfg-seccion" hidden></div>
+          <div id="seccion-notificaciones" class="cfg-seccion" hidden></div>
+          <div id="seccion-sistema" class="cfg-seccion" hidden></div>
+          <div id="seccion-auditoria" class="cfg-seccion" hidden></div>
+        </div>
       </div>
 
     </main>
@@ -117,5 +151,13 @@
   </div>
 
   <script src="../../js/portal-common.js"></script>
+  <script src="../../js/admin-comun.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/notificaciones-modelo.js"></script>
+  <script src="../../js/configuracion-modelo.js"></script>
+  <script src="../../js/lider-ejemplo.js"></script>
+  <script src="../../js/lider-cuenta-ejemplo.js"></script>
+  <script src="../../js/personas-ejemplo.js"></script>
+  <script src="../../js/admin-configuracion.js"></script>
 </body>
 </html>

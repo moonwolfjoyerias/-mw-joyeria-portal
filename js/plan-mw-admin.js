@@ -28,6 +28,32 @@ function rangoLabel(key) {
   return RANGOS_MW.find(r => r.key === key)?.label || 'Sin Rango';
 }
 
+// Admin → Configuración → Plan MW es dueña de estos umbrales y premios
+// (ver js/configuracion-modelo.js). Si esta página no la tiene cargada,
+// se usan los mismos RANGOS_MW / HITOS_CONSTANCIA_PERSONA de siempre.
+function obtenerRangoConfigurado(rango) {
+  if (typeof obtenerValorVigente !== 'function') return rango;
+  const personas = obtenerValorVigente('rango', `${rango.key}_personas`);
+  const produccion = obtenerValorVigente('rango', `${rango.key}_produccion`);
+  const compra = obtenerValorVigente('rango', `${rango.key}_compra`);
+  const calificado = obtenerValorVigente('rango', `${rango.key}_calificado`);
+  return {
+    ...rango,
+    personas: typeof personas === 'number' ? personas : rango.personas,
+    produccion: typeof produccion === 'number' ? produccion : rango.produccion,
+    compra: typeof compra === 'number' ? compra : rango.compra,
+    calificado: typeof calificado === 'number' ? calificado : rango.calificado
+  };
+}
+
+function obtenerHitosConstanciaConfigurados() {
+  if (typeof obtenerValorVigente !== 'function') return HITOS_CONSTANCIA_PERSONA;
+  return HITOS_CONSTANCIA_PERSONA.map(h => {
+    const premio = obtenerValorVigente('constancia', `hito_${h.meses}_meses`);
+    return { ...h, premio: typeof premio === 'string' && premio ? premio : h.premio };
+  });
+}
+
 // ============================================================
 // RANGOS
 // ============================================================
@@ -38,7 +64,7 @@ function calcularAscensoRango(persona) {
 
   const idxActual = RANGOS_MW.findIndex(r => r.key === persona.rangoActualKey);
   const esUltimo = idxActual === RANGOS_MW.length - 1;
-  const siguiente = esUltimo ? null : RANGOS_MW[idxActual + 1];
+  const siguiente = esUltimo ? null : obtenerRangoConfigurado(RANGOS_MW[idxActual + 1]);
 
   if (!siguiente) return { siguiente: null, items: [], elegible: false };
 
@@ -89,7 +115,7 @@ function verificarAscensosPendientes() {
         persona.ascensoPendiente = { rangoKey: siguiente.key, detectadoEn: new Date().toISOString() };
         huboCambios = true;
 
-        if (typeof agregarNotificacion === 'function') {
+        if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('rango_candidata_detectada'))) {
           agregarNotificacion({
             texto: `${nombreCompletoPersona(persona)} cumple los requisitos para subir a ${siguiente.label}. Revisa y confirma su ascenso.`,
             link: 'admin-emprendedoras-lideres.html',
@@ -141,7 +167,7 @@ function abrirConfirmarAscensoRango(persona, onExito) {
         descripcion: `${nombreCompletoPersona(actual)} subió de rango: ${rangoAnterior} → ${siguienteLabel}`
       });
 
-      if (typeof agregarNotificacion === 'function') {
+      if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('cambio_rango_confirmado'))) {
         agregarNotificacion({
           texto: `¡Felicidades! Tu rango subió a ${siguienteLabel}. Sigue así ✦`,
           link: 'cuenta',
@@ -164,7 +190,7 @@ function abrirConfirmarAscensoRango(persona, onExito) {
 function calcularProximidadConstancia(persona) {
 
   const otorgados = persona.constancia.hitosOtorgados || [];
-  const siguienteHito = HITOS_CONSTANCIA_PERSONA.find(h => !otorgados.some(o => o.meses === h.meses));
+  const siguienteHito = obtenerHitosConstanciaConfigurados().find(h => !otorgados.some(o => o.meses === h.meses));
 
   if (!siguienteHito) return null; // ya recibió todos los hitos
 
@@ -198,7 +224,7 @@ function verificarRecompensasConstancia() {
         persona.recompensaPendiente = { meses: proximidad.siguienteHito.meses, premio: proximidad.siguienteHito.premio, detectadoEn: new Date().toISOString() };
         huboCambios = true;
 
-        if (typeof agregarNotificacion === 'function') {
+        if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('constancia_hito_detectado'))) {
           agregarNotificacion({
             texto: `${nombreCompletoPersona(persona)} cumplió ${proximidad.siguienteHito.meses} meses del Reto de Constancia. Confirma y prepara su premio: ${proximidad.siguienteHito.premio}.`,
             link: 'admin-emprendedoras-lideres.html',
@@ -246,7 +272,7 @@ function abrirConfirmarRecompensaConstancia(persona, onExito) {
         descripcion: `${nombreCompletoPersona(actual)} recibió "${premio}" por ${meses} meses del Reto de Constancia`
       });
 
-      if (typeof agregarNotificacion === 'function') {
+      if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('recompensa_constancia_entregada'))) {
         agregarNotificacion({
           texto: `¡Felicidades! Ganaste "${premio}" por cumplir ${meses} meses del Reto de Constancia 🎉`,
           link: 'cuenta',

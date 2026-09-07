@@ -36,6 +36,47 @@ const BONOS_RANGO = { plata: 2500, oro: 3500, diamante: 5000, corona: 10000 };
 const IVA_DIVISOR = 1.16;
 
 // ============================================================
+// LECTURA DESDE CONFIGURACIÓN (js/configuracion-modelo.js)
+// ============================================================
+//
+// Comisiones ya NO es dueña de estos valores — Configuración lo es.
+// Si esta página incluye configuracion-modelo.js, se usa el valor
+// VIGENTE en el mes del periodo que se está calculando (para que un
+// cambio con vigencia futura nunca recalcule un mes ya cerrado). Si no
+// está cargado (página vieja / todavía no actualizada), se usa
+// exactamente el mismo valor fijo de siempre — cero cambio de
+// comportamiento.
+
+function obtenerFechaReferenciaPeriodo(periodoKey) {
+  return `${periodoKey}-01`;
+}
+
+function obtenerPctNivelRango(nivel, rangoKey, periodoKey) {
+  if (typeof obtenerValorVigente === 'function') {
+    const configurado = obtenerValorVigente('comision', `nivel${nivel}_${rangoKey}`, obtenerFechaReferenciaPeriodo(periodoKey));
+    if (typeof configurado === 'number') return configurado;
+  }
+  const pcts = COMISIONES_PCT[rangoKey] || COMISIONES_PCT.sin_rango;
+  return pcts[nivel - 1] || 0;
+}
+
+function obtenerIvaDivisorVigente(periodoKey) {
+  if (typeof obtenerValorVigente === 'function') {
+    const configurado = obtenerValorVigente('formula', 'iva_divisor', obtenerFechaReferenciaPeriodo(periodoKey));
+    if (typeof configurado === 'number') return configurado;
+  }
+  return IVA_DIVISOR;
+}
+
+function obtenerMontoBonoRango(rangoKey, periodoKey) {
+  if (typeof obtenerValorVigente === 'function') {
+    const configurado = obtenerValorVigente('bono', rangoKey, obtenerFechaReferenciaPeriodo(periodoKey));
+    if (typeof configurado === 'number') return configurado;
+  }
+  return BONOS_RANGO[rangoKey];
+}
+
+// ============================================================
 // PERIODOS
 // ============================================================
 
@@ -324,7 +365,7 @@ function obtenerBonoRangoPeriodo(persona, periodoKey) {
 
   return {
     rango: ascensoDelPeriodo.rangoNuevo,
-    monto: BONOS_RANGO[ascensoDelPeriodo.rangoNuevo],
+    monto: obtenerMontoBonoRango(ascensoDelPeriodo.rangoNuevo, periodoKey),
     fechaAscenso: ascensoDelPeriodo.fecha,
     pagado: !!registro,
     fechaPago: registro?.fechaPago || null,
@@ -374,7 +415,7 @@ function descartarBorrador() {
 function calcularFilaComision(persona, nivel, pct, liderId, periodoKey, subPeriodo) {
 
   const compras = obtenerComprasPersonaPeriodo(persona, periodoKey, subPeriodo);
-  const base = compras.normal / IVA_DIVISOR;
+  const base = compras.normal / obtenerIvaDivisorVigente(periodoKey);
   const comisionCalculada = base * (pct / 100);
 
   const clave = construirClaveAjuste(liderId, persona.id, periodoKey, subPeriodo);
@@ -400,11 +441,10 @@ function calcularComisionesLider(liderPersona, periodoKey, subPeriodo) {
 
   const { conNivel } = calcularDescendenciaPersona(liderPersona.id);
   const { rangoKey, origen } = calcularRangoAplicadoPeriodo(liderPersona, periodoKey);
-  const pcts = COMISIONES_PCT[rangoKey] || COMISIONES_PCT.sin_rango;
 
   const niveles = [1, 2, 3, 4, 5].map(nivel => {
     const miembros = conNivel.filter(c => c.nivel === nivel).map(c => c.persona);
-    const pct = pcts[nivel - 1] || 0;
+    const pct = obtenerPctNivelRango(nivel, rangoKey, periodoKey);
     const filas = miembros.map(m => calcularFilaComision(m, nivel, pct, liderPersona.id, periodoKey, subPeriodo));
     const totalNivel = filas.reduce((s, f) => s + f.comisionFinal, 0);
     return { nivel, pct, filas, totalNivel };
