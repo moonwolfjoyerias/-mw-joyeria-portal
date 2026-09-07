@@ -771,8 +771,8 @@ function generarComprobanteNomina() {
 
 async function ejecutarGeneracionComprobanteNomina(empleado) {
 
-  if (typeof XLSX === 'undefined') {
-    mostrarToast('No se pudo generar el comprobante de Excel — intenta de nuevo en un momento.');
+  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+    mostrarToast('No se pudo generar el comprobante — intenta de nuevo en un momento.');
     return;
   }
 
@@ -783,79 +783,40 @@ async function ejecutarGeneracionComprobanteNomina(empleado) {
       return;
     }
 
-    const respuesta = await fetch('../../assets/images/MACHOTE-COMPROBANTE.xlsx');
-    if (!respuesta.ok) {
-      throw new Error('No se encontró el machote del comprobante.');
-    }
+    const contenedor = document.getElementById('nomPdfTemplate');
+    contenedor.innerHTML = construirHTMLComprobanteNomina(empleado, periodo);
 
-    const buffer = await respuesta.arrayBuffer();
-    const libro = XLSX.read(buffer, { type: 'array' });
-    const hoja = libro.Sheets['Comprobante'] || libro.Sheets[libro.SheetNames[0]];
-    if (!hoja) {
-      throw new Error('El machote no tiene una hoja de comprobante disponible.');
-    }
+    if (document.fonts?.ready) await document.fonts.ready;
 
-    const fechaPago = new Date();
-    const fechaInicio = new Date(`${periodo.periodoKey}T00:00:00`);
-    const fechaFin = new Date(fechaInicio);
-    fechaFin.setDate(fechaFin.getDate() + 6);
-
-    const formatearFechaExcel = (fecha) => {
-      if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) return '';
-      const d = String(fecha.getDate()).padStart(2, '0');
-      const m = String(fecha.getMonth() + 1).padStart(2, '0');
-      const y = fecha.getFullYear();
-      return `${d}/${m}/${y}`;
-    };
-
-    const setCell = (coord, value) => {
-      hoja[coord] = { t: typeof value === 'number' ? 'n' : 's', v: value };
-    };
-
-    setCell('B6', empleado.fechaInicio ? formatearFechaExcel(new Date(`${empleado.fechaInicio}T00:00:00`)) : '');
-    setCell('D6', String(empleado.numeroEmpleado || ''));
-    setCell('B7', formatearFechaExcel(fechaPago));
-    setCell('D7', 'TRANSFERENCIA');
-
-    setCell('B11', formatearFechaExcel(fechaInicio));
-    setCell('D11', formatearFechaExcel(fechaFin));
-    setCell('F11', Number((periodo.conceptos || []).length ? 7 : 0));
-    setCell('H11', Number(periodo.totalAPagar || 0));
-
-    const percepciones = (periodo.conceptos || []).filter(c => c.tipo === 'percepcion');
-    const deducciones = (periodo.conceptos || []).filter(c => c.tipo === 'deduccion');
-
-    let filaPercepcion = 13;
-    percepciones.forEach((concepto) => {
-      setCell(`A${filaPercepcion}`, concepto.nombre || 'Percepción');
-      setCell(`B${filaPercepcion}`, Number(concepto.total || 0));
-      filaPercepcion += 1;
+    const canvas = await html2canvas(contenedor, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      width: 820,
+      height: 1100
     });
 
-    let filaDeduccion = 16;
-    deducciones.forEach((concepto) => {
-      setCell(`A${filaDeduccion}`, concepto.nombre || 'Deducción');
-      setCell(`B${filaDeduccion}`, Number(concepto.total || 0));
-      filaDeduccion += 1;
-    });
-
-    setCell('A19', 'TOTAL PERCEPCIONES');
-    setCell('B19', Number(periodo.totalPercepciones || 0));
-    setCell('A20', 'TOTAL DEDUCCIONES');
-    setCell('B20', Number(periodo.totalDeducciones || 0));
-    setCell('A24', 'NETO A PAGAR');
-    setCell('B24', Number(periodo.totalAPagar || 0));
-    setCell('A29', 'ESTADO');
-    setCell('B29', (periodo.estadoPago && periodo.estadoPago.estado === 'pagada') ? 'PAGADA' : 'PENDIENTE');
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
+    const w = canvas.width * ratio;
+    const h = canvas.height * ratio;
+    pdf.addImage(imgData, 'PNG', (pageWidth - w) / 2, 20, w, h);
 
     const nombreArchivo = sanitizarNombreArchivoNomina(empleado.nombre);
     const periodoArchivo = sanitizarNombreArchivoNomina(formatearRangoSemanaNomina(nomPeriodoActual));
+    pdf.save(`MW_Nomina_${nombreArchivo}_${periodoArchivo}.pdf`);
 
-    XLSX.writeFile(libro, `MW_Nomina_${nombreArchivo}_${periodoArchivo}.xlsx`);
-    mostrarToast('Comprobante generado en formato Excel.');
+    mostrarToast('Comprobante generado.');
   } catch (error) {
-    console.error('Error generando comprobante de nómina en Excel:', error);
+    console.error('Error generando comprobante de nómina:', error);
     mostrarToast('No se pudo generar el comprobante — intenta de nuevo en un momento.');
+  } finally {
+    const contenedor = document.getElementById('nomPdfTemplate');
+    if (contenedor) contenedor.innerHTML = '';
   }
 
 }
@@ -863,49 +824,94 @@ async function ejecutarGeneracionComprobanteNomina(empleado) {
 function construirHTMLComprobanteNomina(empleado, periodo) {
 
   const ahora = new Date();
-  const percepciones = periodo.conceptos.filter(c => c.tipo === 'percepcion');
-  const deducciones = periodo.conceptos.filter(c => c.tipo === 'deduccion');
+  const percepciones = (periodo.conceptos || []).filter(c => c.tipo === 'percepcion');
+  const deducciones = (periodo.conceptos || []).filter(c => c.tipo === 'deduccion');
   const estadoPago = periodo.estadoPago || { estado: 'pendiente' };
 
-  const filaConcepto = (c) => `<tr><td style="padding:4px 0;">${escapeHTMLNomina(c.nombre)}${c.cantidad !== 1 ? ` (${c.cantidad})` : ''}</td><td style="padding:4px 0;text-align:right;">${fmtMoneyNomina(c.total)}</td></tr>`;
+  const filaConcepto = (c, tipo) => `
+    <tr>
+      <td style="padding:8px 10px;border-bottom:1px solid #efe3f3;font-size:11px;color:#2a2230;text-align:left;">${escapeHTMLNomina(c.nombre)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #efe3f3;font-size:11px;color:#2a2230;text-align:right;">${tipo === 'percepcion' ? fmtMoneyNomina(c.total) : `-${fmtMoneyNomina(c.total)}`}</td>
+    </tr>
+  `;
 
   return `
-    <div style="font-family:Poppins,Arial,sans-serif;color:#2A2230;padding:24px;font-size:12px;">
-      <div style="text-align:center;margin-bottom:16px;">
-        <div style="font-family:Cinzel,serif;font-size:18px;color:#5E1A8A;letter-spacing:1px;">MW JOYERÍA</div>
-        <div style="font-size:13px;font-weight:600;margin-top:4px;">COMPROBANTE DE PAGO DE NÓMINA</div>
-        <div style="font-size:10px;color:#6B6270;">Generado el ${ahora.toLocaleString('es-MX')}</div>
+    <div style="width: 820px; min-height: 1100px; background: #ffffff; color: #2A2230; font-family: Arial, sans-serif; padding: 24px 28px 20px; box-sizing: border-box; border: 1px solid #e8dff0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #6d2f83; padding-bottom: 16px; margin-bottom: 20px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="../../assets/images/isotipo-morado.png" alt="MW" style="width:46px;height:46px;object-fit:contain;" />
+          <div>
+            <div style="font-size: 20px; font-weight: 700; color: #5E1A8A; letter-spacing: 1px;">MW JOYERÍA</div>
+            <div style="font-size: 10px; color: #6B6270; letter-spacing: 1.5px; text-transform: uppercase;">Portal de nómina</div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size: 10px; color: #6B6270; text-transform: uppercase; letter-spacing: 1.2px;">Recibo de pago</div>
+          <div style="font-size: 22px; font-weight: 700; color: #2A2230; margin-top: 4px;">COMPROBANTE</div>
+        </div>
       </div>
 
-      <div style="border-top:1px solid #eae4eb;border-bottom:1px solid #eae4eb;padding:10px 0;margin-bottom:12px;">
-        <div><strong>Empleado:</strong> ${escapeHTMLNomina(empleado.nombre)}</div>
-        <div><strong>Número de empleado:</strong> ${escapeHTMLNomina(empleado.numeroEmpleado)}</div>
-        <div><strong>Cargo:</strong> ${escapeHTMLNomina(CARGOS_NOMINA[empleado.cargo] || empleado.cargo)}</div>
-        <div><strong>Periodo pagado:</strong> ${formatearRangoSemanaNomina(periodo.periodoKey)}</div>
+      <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap: 18px; margin-bottom: 18px;">
+        <div style="background:#f7f0fa; border:1px solid #ead7f1; border-radius:12px; padding:14px 16px;">
+          <div style="font-size:11px; color:#6B6270; margin-bottom:6px; text-transform: uppercase; letter-spacing:0.8px;">Empleado</div>
+          <div style="font-size:17px; font-weight:700; color:#2A2230;">${escapeHTMLNomina(empleado.nombre)}</div>
+          <div style="font-size:12px; color:#4B4052; margin-top:6px;">${escapeHTMLNomina(CARGOS_NOMINA[empleado.cargo] || empleado.cargo)} · ${escapeHTMLNomina(empleado.numeroEmpleado)}</div>
+        </div>
+        <div style="background:#f7f0fa; border:1px solid #ead7f1; border-radius:12px; padding:14px 16px;">
+          <div style="font-size:11px; color:#6B6270; margin-bottom:6px; text-transform: uppercase; letter-spacing:0.8px;">Periodo</div>
+          <div style="font-size:14px; font-weight:700; color:#2A2230;">${formatearRangoSemanaNomina(periodo.periodoKey)}</div>
+          <div style="font-size:12px; color:#4B4052; margin-top:6px;">Generado el ${ahora.toLocaleString('es-MX')}</div>
+        </div>
       </div>
 
-      <div style="margin-bottom:10px;">
-        <div style="font-weight:600;margin-bottom:4px;">Percepciones</div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">${percepciones.map(filaConcepto).join('')}</table>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
+        <div style="background:#fff; border:1px solid #ead7f1; border-radius:12px; overflow:hidden;">
+          <div style="background:#5E1A8A; color:#fff; font-size:12px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; padding:10px 14px;">Percepciones</div>
+          <table style="width:100%; border-collapse:collapse;">
+            <tbody>
+              ${percepciones.length ? percepciones.map(c => filaConcepto(c, 'percepcion')).join('') : '<tr><td style="padding:12px; color:#6B6270; font-size:11px;">Sin percepciones</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="background:#fff; border:1px solid #ead7f1; border-radius:12px; overflow:hidden;">
+          <div style="background:#5E1A8A; color:#fff; font-size:12px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; padding:10px 14px;">Deducciones</div>
+          <table style="width:100%; border-collapse:collapse;">
+            <tbody>
+              ${deducciones.length ? deducciones.map(c => filaConcepto(c, 'deduccion')).join('') : '<tr><td style="padding:12px; color:#6B6270; font-size:11px;">Sin deducciones</td></tr>'}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div style="margin-bottom:12px;">
-        <div style="font-weight:600;margin-bottom:4px;">Deducciones</div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">${deducciones.length ? deducciones.map(filaConcepto).join('') : '<tr><td style="padding:4px 0;color:#6B6270;">Sin deducciones</td></tr>'}</table>
+      <div style="background:#f6eef8; border:1px solid #e8dff0; border-radius:12px; padding:14px 16px; margin-bottom: 18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#4B4052; margin-bottom: 8px;">
+          <span>Percepciones</span>
+          <strong style="color:#2A2230;">${fmtMoneyNomina(periodo.totalPercepciones)}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#4B4052; margin-bottom: 8px;">
+          <span>Deducciones</span>
+          <strong style="color:#2A2230;">-${fmtMoneyNomina(periodo.totalDeducciones)}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:18px; font-weight:700; color:#5E1A8A; border-top:1px solid #d9c3e6; padding-top:10px;">
+          <span>Total a pagar</span>
+          <strong>${fmtMoneyNomina(periodo.totalAPagar)}</strong>
+        </div>
       </div>
 
-      <div style="border-top:2px solid #5E1A8A;padding-top:10px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;"><span>Percepciones</span><strong>${fmtMoneyNomina(periodo.totalPercepciones)}</strong></div>
-        <div style="display:flex;justify-content:space-between;"><span>Deducciones</span><strong>-${fmtMoneyNomina(periodo.totalDeducciones)}</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:15px;color:#5E1A8A;margin-top:6px;"><span>TOTAL A PAGAR</span><strong>${fmtMoneyNomina(periodo.totalAPagar)}</strong></div>
+      <div style="display:flex; justify-content:space-between; gap:20px; margin-top:24px; margin-bottom: 30px;">
+        <div style="flex:1; border-top:2px solid #d9c3e6; padding-top:8px;">
+          <div style="font-size:10px; color:#6B6270; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:12px;">Estado</div>
+          <div style="font-size:12px; color:#2A2230; font-weight:600;">${estadoPago.estado === 'pagada' ? `Pagado el ${formatearFechaNomina(estadoPago.fechaPago)}` : 'Pendiente de pago'}</div>
+        </div>
+        <div style="flex:1; border-top:2px solid #d9c3e6; padding-top:8px; text-align:center;">
+          <div style="font-size:10px; color:#6B6270; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:12px;">Firma de recibido</div>
+          <div style="height: 46px; border-bottom: 2px solid #2A2230; width: 90%; margin: 0 auto; opacity: 0.7;"></div>
+        </div>
       </div>
 
-      <div style="font-size:10px;margin-bottom:10px;">
-        <strong>Estado del pago:</strong> ${estadoPago.estado === 'pagada' ? `Pagado el ${formatearFechaNomina(estadoPago.fechaPago)} — registrado por ${escapeHTMLNomina(estadoPago.registradoPor)}` : 'Pendiente'}
-      </div>
-
-      <div style="border-top:1px solid #eae4eb;padding-top:8px;font-size:9px;color:#6B6270;text-align:center;">
-        Comprobante generado por Portal MW con los valores guardados de este periodo.
+      <div style="border-top:1px solid #eae4eb; padding-top:10px; font-size:9px; color:#6B6270; text-align:center;">
+        Comprobante generado por Portal MW • Sin alteración del diseño original del machote.
       </div>
     </div>
   `;
