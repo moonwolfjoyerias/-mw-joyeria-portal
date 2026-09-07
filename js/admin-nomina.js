@@ -826,7 +826,6 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
   const ahora = new Date();
   const percepciones = (periodo.conceptos || []).filter(c => c.tipo === 'percepcion');
   const deducciones = (periodo.conceptos || []).filter(c => c.tipo === 'deduccion');
-  const estadoPago = periodo.estadoPago || { estado: 'pendiente' };
 
   const fechaInicio = empleado.fechaInicio ? new Date(`${empleado.fechaInicio}T00:00:00`) : null;
   const fechaPeriodoInicio = new Date(`${periodo.periodoKey}T00:00:00`);
@@ -920,12 +919,8 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
         </div>
       </div>
 
-      <div style="position:absolute;left:30px;right:30px;bottom:24px;display:grid;grid-template-columns:1fr 1fr;gap:30px;">
-        <div style="border-top:2px solid #d9c3e6;padding-top:8px;">
-          <div style="font-size:10px;color:#6B6270;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Estado</div>
-          <div style="font-size:12px;color:#2A2230;font-weight:700;">${estadoPago.estado === 'pagada' ? `Pagado el ${formatearFechaNomina(estadoPago.fechaPago)}` : 'Pendiente de pago'}</div>
-        </div>
-        <div style="border-top:2px solid #d9c3e6;padding-top:8px;text-align:center;">
+      <div style="position:absolute;left:0;right:0;bottom:24px;display:flex;justify-content:flex-end;">
+        <div style="width:300px;border-top:2px solid #d9c3e6;padding-top:8px;text-align:center;">
           <div style="font-size:10px;color:#6B6270;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Firma de recibido</div>
           <div style="height:48px;border-bottom:2px solid #2A2230;width:90%;margin:0 auto;opacity:0.7;"></div>
           <div style="margin-top:8px;font-size:11px;color:#3E3544;font-weight:700;">${escapeHTMLNomina(empleado.nombre)}</div>
