@@ -579,7 +579,12 @@ function abrirModalAgregarConceptoFila() {
     <div class="cfg-form-grid" style="margin-top:10px;">
       <label class="cfg-span-2">Concepto
         <select id="nomNuevoConceptoId">
-          ${conceptosDisponibles.map(c => `<option value="${c.id}">${escapeHTMLNomina(c.nombre)} (${c.tipo === 'percepcion' ? 'Percepción' : 'Deducción'})</option>`).join('')}
+          ${conceptosDisponibles.map(c => {
+            const tipoLabel = c.tipo === 'percepcion' ? 'Percepción' : 'Deducción';
+            const nombreIncluyeTipo = c.nombre.toLowerCase().includes(`(${tipoLabel.toLowerCase()})`);
+            const etiqueta = nombreIncluyeTipo ? c.nombre : `${c.nombre} (${tipoLabel})`;
+            return `<option value="${c.id}">${escapeHTMLNomina(etiqueta)}</option>`;
+          }).join('')}
         </select>
       </label>
       <label>Cantidad<input type="number" step="0.01" id="nomNuevaCantidad" value="1"></label>
