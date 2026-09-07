@@ -811,6 +811,13 @@ async function ejecutarGeneracionPDF(r) {
 
   try {
     if (document.fonts?.ready) await document.fonts.ready;
+    const logo = contenedor.querySelector('[data-pdf-logo]');
+    if (logo && !logo.complete) {
+      await new Promise((resolve, reject) => {
+        logo.addEventListener('load', resolve, { once: true });
+        logo.addEventListener('error', reject, { once: true });
+      });
+    }
 
     const canvas = await html2canvas(contenedor, {
       backgroundColor: '#ffffff',
@@ -850,7 +857,7 @@ function construirHTMLTicketPDF(r) {
   return `
     <div style="${estiloBase}">
       <div style="text-align:center;margin-bottom:16px;">
-        <div style="font-family:Cinzel,serif;font-size:18px;color:#5E1A8A;letter-spacing:1px;">MW JOYERÍA</div>
+        <img data-pdf-logo src="../../assets/images/imagotipo-completo.png" alt="MW Joyería" style="display:block;width:180px;height:auto;margin:0 auto 10px;">
         <div style="font-size:13px;font-weight:600;margin-top:4px;">COMPROBANTE DE COMISIÓN</div>
         <div style="font-size:11px;color:#6B6270;margin-top:2px;">${formatearPeriodoLabelComisiones(periodoActual)} · ${info.label}</div>
         <div style="font-size:10px;color:#6B6270;">Generado el ${ahora.toLocaleString('es-MX')}</div>
