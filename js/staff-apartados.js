@@ -635,7 +635,10 @@ function validarAutorizacion() {
   const password = document.getElementById("authPassword")?.value;
   const error = document.getElementById("authError");
 
-  const personal = PERSONAL_EJEMPLO.find(p => p.usuario === usuario && p.password === password);
+  // También acepta cuentas creadas desde Admin → Configuración →
+  // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js).
+  const personal = PERSONAL_EJEMPLO.find(p => p.usuario === usuario && p.password === password)
+    || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null);
 
   if (!personal) {
     if (error) {

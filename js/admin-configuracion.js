@@ -854,6 +854,10 @@ function renderSeccionUsuarios() {
     ['Su propia cuenta / equipo', '✓', '✓', '✓', '✓', '✓']
   ];
 
+  const personas = typeof obtenerPersonas === 'function' ? obtenerPersonas() : [];
+  const internas = typeof obtenerCuentasInternas === 'function' ? obtenerCuentasInternas() : [];
+  const lideresParaSelect = personas.filter(p => p.tipo === 'lider');
+
   cont.innerHTML = `
     <div class="cfg-card">
       <h3 class="cfg-card-title">Usuarios y permisos</h3>
@@ -873,7 +877,393 @@ function renderSeccionUsuarios() {
         Tampoco existe hoy más de una cuenta de Administrativo, así que la regla "un admin no puede darse permisos financieros a sí mismo sin confirmación especial" no aplica todavía — se deja documentada aquí para cuando exista un sistema de múltiples cuentas de Admin.
       </div>
     </div>
+
+    <div class="cfg-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:0.4rem;">
+        <div>
+          <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Cuentas — Emprendedoras/Líderes</h3>
+          <p class="cfg-card-sub" style="margin-bottom:0;">Crear cuentas nuevas, ver/restablecer su contraseña o eliminarlas.</p>
+        </div>
+        <button class="btn btn-primary" id="cfgCrearCuentaPersonaBtn" style="width:auto;" type="button">＋ Crear cuenta</button>
+      </div>
+      <div class="catalog-table-wrap cfg-tabla-wrap" style="margin-top:10px;">
+        <table class="catalog-table">
+          <thead><tr><th>Nombre</th><th>Usuario</th><th>Tipo</th><th>Estado</th><th>Contraseña</th><th>Acciones</th></tr></thead>
+          <tbody>
+            ${personas.length ? personas.map(p => `
+              <tr>
+                <td>${escapeHTMLPersonas(nombreCompletoPersona(p))}</td>
+                <td>${escapeHTMLPersonas(p.usuario)}</td>
+                <td>${p.tipo === 'lider' ? 'Líder' : 'Emprendedora'}</td>
+                <td><span class="badge ${p.estado === 'activa' ? 'badge-pagada' : 'badge-pendiente'}">${escapeHTMLPersonas(ESTADOS_CUENTA_PERSONA[p.estado] || p.estado)}</span></td>
+                <td style="white-space:nowrap;">
+                  <span class="cfg-password-texto" data-password-real="${escapeAttributePersonas(p.password || '(sin contraseña)')}" style="font-family:monospace;">••••••••</span>
+                  <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar">👁</button>
+                </td>
+                <td style="white-space:nowrap;">
+                  <button type="button" class="cfg-icon-btn" data-cfg-reset-persona="${p.id}" title="Restablecer contraseña">🔑</button>
+                  <button type="button" class="cfg-icon-btn" data-cfg-eliminar-persona="${p.id}" title="Eliminar cuenta">🗑</button>
+                </td>
+              </tr>
+            `).join('') : `<tr><td colspan="6" class="catalog-empty-cell">Todavía no hay cuentas registradas.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="cfg-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:0.4rem;">
+        <div>
+          <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Cuentas internas — Staff / RH / Admin</h3>
+          <p class="cfg-card-sub" style="margin-bottom:0;">Sirven para reautorizar acciones en Apartados, Catálogo, Lista de deseos, Nómina y Calendario.</p>
+        </div>
+        <button class="btn btn-primary" id="cfgCrearCuentaInternaBtn" style="width:auto;" type="button">＋ Crear cuenta</button>
+      </div>
+      <div class="catalog-table-wrap cfg-tabla-wrap" style="margin-top:10px;">
+        <table class="catalog-table">
+          <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Contraseña</th><th>Acciones</th></tr></thead>
+          <tbody>
+            ${internas.length ? internas.map(c => `
+              <tr>
+                <td>${escapeHTMLPersonas(c.nombre)}</td>
+                <td>${escapeHTMLPersonas(c.usuario)}</td>
+                <td>${escapeHTMLPersonas(ROLES_CUENTA_INTERNA[c.rol] || c.rol)}</td>
+                <td style="white-space:nowrap;">
+                  <span class="cfg-password-texto" data-password-real="${escapeAttributePersonas(c.password || '(sin contraseña)')}" style="font-family:monospace;">••••••••</span>
+                  <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar">👁</button>
+                </td>
+                <td style="white-space:nowrap;">
+                  <button type="button" class="cfg-icon-btn" data-cfg-reset-interna="${c.id}" title="Restablecer contraseña">🔑</button>
+                  <button type="button" class="cfg-icon-btn" data-cfg-eliminar-interna="${c.id}" title="Eliminar cuenta">🗑</button>
+                </td>
+              </tr>
+            `).join('') : `<tr><td colspan="5" class="catalog-empty-cell">Todavía no hay cuentas registradas.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="cfg-disclosure">
+        ⚠️ Las contraseñas se guardan en texto plano para que puedas recuperarlas si alguien las olvida — esto es aceptable únicamente porque este portal todavía no tiene un backend real. Con Firebase Auth, esto se reemplazará por "restablecer contraseña" en vez de "ver la contraseña actual".
+        <br><br>
+        <code>admin01</code> y <code>rh01</code> son las cuentas fijas de esta demo (Claudia y Recursos Humanos). Eliminarlas aquí no cierra su acceso al portal, porque ese acceso todavía no depende de esta lista — es solo la cuenta que usan para reautorizar acciones en Apartados/Catálogo/etc.
+      </div>
+    </div>
   `;
+
+  wireCuentasPersonas(cont, lideresParaSelect);
+  wireCuentasInternas(cont);
+
+  cont.querySelectorAll('[data-cfg-ver-password]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const span = btn.previousElementSibling;
+      if (!span) return;
+      const mostrando = span.textContent === span.dataset.passwordReal;
+      span.textContent = mostrando ? '••••••••' : span.dataset.passwordReal;
+      btn.textContent = mostrando ? '👁' : '🙈';
+    });
+  });
+
+}
+
+// ============================================================
+// CUENTAS — Emprendedoras/Líderes
+// ============================================================
+
+function wireCuentasPersonas(cont, lideresParaSelect) {
+
+  document.getElementById('cfgCrearCuentaPersonaBtn')?.addEventListener('click', () => abrirModalCrearCuentaPersona(lideresParaSelect));
+
+  cont.querySelectorAll('[data-cfg-reset-persona]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalResetPassword('persona', btn.getAttribute('data-cfg-reset-persona')));
+  });
+
+  cont.querySelectorAll('[data-cfg-eliminar-persona]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-cfg-eliminar-persona');
+      const persona = obtenerPersonaPorId(id);
+      if (!persona) return;
+      abrirAutorizacionAdmin({
+        titulo: 'Eliminar cuenta',
+        peligrosa: true,
+        mensaje: `Vas a eliminar por completo la cuenta de <strong>${escapeHTMLPersonas(nombreCompletoPersona(persona))}</strong> (${escapeHTMLPersonas(persona.usuario)}). Esta acción no se puede deshacer y puede dejar huérfanas referencias históricas (comisiones, actividad) que la mencionan por id. Si solo quieres desactivarla temporalmente, usa "Estado de cuenta: Baja" en Emprendedoras/Líderes en vez de eliminarla.`,
+        onConfirmar: () => {
+          const resultado = eliminarPersona(id);
+          if (resultado.ok) {
+            if (typeof registrarAuditoriaAdmin === 'function') {
+              registrarAuditoriaAdmin({
+                modulo: 'cuentas',
+                accion: 'eliminar_cuenta_persona',
+                descripcion: `Cuenta eliminada: ${nombreCompletoPersona(resultado.persona)} (${resultado.persona.usuario})`
+              });
+            }
+            mostrarToast('Cuenta eliminada.');
+            renderSeccionUsuarios();
+          }
+        }
+      });
+    });
+  });
+
+}
+
+function abrirModalCrearCuentaPersona(lideresParaSelect) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.style.maxWidth = '460px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="auth-icon">＋</div>
+    <h3>Crear cuenta — Emprendedora/Líder</h3>
+    <div class="cfg-form-grid" style="margin-top:10px;">
+      <label>Nombre(s)<input type="text" id="cfgNuevoNombre"></label>
+      <label>Apellidos<input type="text" id="cfgNuevoApellidos"></label>
+      <label>Teléfono<input type="text" id="cfgNuevoTelefono"></label>
+      <label>Correo<input type="email" id="cfgNuevoCorreo"></label>
+      <label>Tipo
+        <select id="cfgNuevoTipo">
+          <option value="emprendedora">Emprendedora</option>
+          <option value="lider">Líder</option>
+        </select>
+      </label>
+      <label>Líder directa
+        <select id="cfgNuevoLiderId">
+          <option value="">— Ninguna (es líder raíz) —</option>
+          ${lideresParaSelect.map(l => `<option value="${l.id}">${escapeHTMLPersonas(nombreCompletoPersona(l))}</option>`).join('')}
+        </select>
+      </label>
+    </div>
+    <div class="modal-note">El usuario y la contraseña temporal se generan automáticamente — mismo esquema que ya usa Solicitudes de inscripción (usuario MW#### + iniciales del nombre).</div>
+    <div id="cfgCrearPersonaError" class="auth-error" style="display:none;"></div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" id="cfgCancelarCrearPersonaBtn" type="button">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1;" id="cfgConfirmarCrearPersonaBtn" type="button">Crear cuenta</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  document.getElementById('cfgCancelarCrearPersonaBtn')?.addEventListener('click', cerrar);
+
+  document.getElementById('cfgConfirmarCrearPersonaBtn')?.addEventListener('click', () => {
+
+    const nombre = document.getElementById('cfgNuevoNombre').value.trim();
+    const apellidos = document.getElementById('cfgNuevoApellidos').value.trim();
+    const telefono = document.getElementById('cfgNuevoTelefono').value.trim();
+    const correo = document.getElementById('cfgNuevoCorreo').value.trim();
+    const tipo = document.getElementById('cfgNuevoTipo').value;
+    const liderId = document.getElementById('cfgNuevoLiderId').value || null;
+    const error = document.getElementById('cfgCrearPersonaError');
+
+    if (!nombre || !telefono) {
+      error.style.display = 'block';
+      error.textContent = 'Nombre y teléfono son obligatorios.';
+      return;
+    }
+    if (typeof existePersonaConCorreoOTelefono === 'function' && existePersonaConCorreoOTelefono(correo, telefono)) {
+      error.style.display = 'block';
+      error.textContent = 'Ya existe una cuenta con ese correo o teléfono.';
+      return;
+    }
+
+    const nombreCompleto = [nombre, apellidos].filter(Boolean).join(' ');
+    const credenciales = generarCredenciales(nombreCompleto);
+
+    const nuevaPersona = crearPersonaEjemplo({
+      id: `persona-${Date.now()}`,
+      nombre, apellidos, tipo, categoria: 'normal', estado: 'activa',
+      telefono, correo,
+      usuario: credenciales.usuario,
+      password: credenciales.passwordTemporal,
+      numeroCuenta: credenciales.numeroCuenta,
+      liderId, invitadaPor: liderId
+    });
+
+    const personas = obtenerPersonas();
+    personas.push(nuevaPersona);
+    guardarPersonas(personas);
+
+    if (typeof registrarAuditoriaAdmin === 'function') {
+      registrarAuditoriaAdmin({
+        modulo: 'cuentas',
+        accion: 'crear_cuenta_persona',
+        descripcion: `Cuenta creada desde Configuración: ${nombreCompleto} (${credenciales.usuario}) — ${tipo === 'lider' ? 'Líder' : 'Emprendedora'}`
+      });
+    }
+
+    cerrar();
+    mostrarToast(`Cuenta creada: ${credenciales.usuario} — contraseña temporal ${credenciales.passwordTemporal}`);
+    renderSeccionUsuarios();
+
+  });
+
+}
+
+// ============================================================
+// CUENTAS — internas (Staff / RH / Admin)
+// ============================================================
+
+function wireCuentasInternas(cont) {
+
+  document.getElementById('cfgCrearCuentaInternaBtn')?.addEventListener('click', abrirModalCrearCuentaInterna);
+
+  cont.querySelectorAll('[data-cfg-reset-interna]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalResetPassword('interna', btn.getAttribute('data-cfg-reset-interna')));
+  });
+
+  cont.querySelectorAll('[data-cfg-eliminar-interna]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-cfg-eliminar-interna');
+      const cuenta = obtenerCuentasInternas().find(c => c.id === id);
+      if (!cuenta) return;
+      abrirAutorizacionAdmin({
+        titulo: 'Eliminar cuenta interna',
+        peligrosa: true,
+        mensaje: `Vas a eliminar la cuenta de <strong>${escapeHTMLPersonas(cuenta.nombre)}</strong> (${escapeHTMLPersonas(cuenta.usuario)} — ${escapeHTMLPersonas(ROLES_CUENTA_INTERNA[cuenta.rol] || cuenta.rol)}). Ya no podrá usarla para reautorizar acciones.`,
+        onConfirmar: () => {
+          const resultado = eliminarCuentaInterna(id);
+          if (resultado.ok) {
+            mostrarToast('Cuenta eliminada.');
+            renderSeccionUsuarios();
+          }
+        }
+      });
+    });
+  });
+
+}
+
+function abrirModalCrearCuentaInterna() {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const sugerida = String(Math.floor(1000 + Math.random() * 9000));
+
+  box.style.maxWidth = '420px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="auth-icon">＋</div>
+    <h3>Crear cuenta interna</h3>
+    <div class="cfg-form-grid" style="margin-top:10px;">
+      <label class="cfg-span-2">Nombre completo<input type="text" id="cfgNuevoNombreInterno"></label>
+      <label>Usuario<input type="text" id="cfgNuevoUsuarioInterno" placeholder="Ej. staff08"></label>
+      <label>Rol
+        <select id="cfgNuevoRolInterno">
+          <option value="staff">Staff</option>
+          <option value="rh">RH</option>
+          <option value="admin">Admin</option>
+        </select>
+      </label>
+      <label class="cfg-span-2">Contraseña<input type="text" id="cfgNuevaPasswordInterna" value="${sugerida}"></label>
+    </div>
+    <div id="cfgCrearInternaError" class="auth-error" style="display:none;"></div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" id="cfgCancelarCrearInternaBtn" type="button">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1;" id="cfgConfirmarCrearInternaBtn" type="button">Crear cuenta</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  document.getElementById('cfgCancelarCrearInternaBtn')?.addEventListener('click', cerrar);
+
+  document.getElementById('cfgConfirmarCrearInternaBtn')?.addEventListener('click', () => {
+
+    const nombre = document.getElementById('cfgNuevoNombreInterno').value.trim();
+    const usuario = document.getElementById('cfgNuevoUsuarioInterno').value.trim();
+    const rol = document.getElementById('cfgNuevoRolInterno').value;
+    const password = document.getElementById('cfgNuevaPasswordInterna').value.trim();
+    const error = document.getElementById('cfgCrearInternaError');
+
+    const resultado = crearCuentaInterna({ usuario, nombre, rol, password });
+    if (!resultado.ok) {
+      error.style.display = 'block';
+      error.textContent = resultado.error;
+      return;
+    }
+
+    cerrar();
+    mostrarToast(`Cuenta interna creada: ${usuario}.`);
+    renderSeccionUsuarios();
+
+  });
+
+}
+
+// ============================================================
+// RESTABLECER CONTRASEÑA (compartido por ambas tablas)
+// ============================================================
+
+function abrirModalResetPassword(tipo, id) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  let nombre, usuario;
+  if (tipo === 'persona') {
+    const persona = obtenerPersonaPorId(id);
+    if (!persona) return;
+    nombre = nombreCompletoPersona(persona);
+    usuario = persona.usuario;
+  } else {
+    const cuenta = obtenerCuentasInternas().find(c => c.id === id);
+    if (!cuenta) return;
+    nombre = cuenta.nombre;
+    usuario = cuenta.usuario;
+  }
+
+  const sugerida = tipo === 'persona'
+    ? `${usuario}${generarIniciales(nombre)}`
+    : String(Math.floor(1000 + Math.random() * 9000));
+
+  box.style.maxWidth = '400px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="auth-icon">🔑</div>
+    <h3>Restablecer contraseña</h3>
+    <p class="modal-sub">${escapeHTMLPersonas(nombre)} · usuario ${escapeHTMLPersonas(usuario)}</p>
+    <label class="cfg-field-label">Nueva contraseña</label>
+    <input type="text" id="cfgNuevaPasswordInput" value="${escapeAttributePersonas(sugerida)}">
+    <div class="modal-note"><strong>Compártela de forma segura.</strong> Quedará guardada aquí mismo por si la necesitas consultar después.</div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" id="cfgCancelarResetBtn" type="button">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1;" id="cfgConfirmarResetBtn" type="button">Guardar</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  document.getElementById('cfgCancelarResetBtn')?.addEventListener('click', cerrar);
+
+  document.getElementById('cfgConfirmarResetBtn')?.addEventListener('click', () => {
+
+    const nueva = document.getElementById('cfgNuevaPasswordInput').value.trim();
+    if (!nueva) return;
+
+    const resultado = tipo === 'persona' ? restablecerPasswordPersona(id, nueva) : restablecerPasswordCuentaInterna(id, nueva);
+    if (!resultado.ok) return;
+
+    if (tipo === 'persona' && typeof registrarAuditoriaAdmin === 'function') {
+      registrarAuditoriaAdmin({
+        modulo: 'cuentas',
+        accion: 'restablecer_password_persona',
+        descripcion: `Contraseña restablecida para ${nombre} (${usuario})`
+      });
+    }
+
+    cerrar();
+    mostrarToast('Contraseña actualizada.');
+    renderSeccionUsuarios();
+
+  });
 
 }
 

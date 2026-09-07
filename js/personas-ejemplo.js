@@ -30,6 +30,12 @@ function crearPersonaEjemplo(datos) {
     telefono: datos.telefono || '',
     correo: datos.correo || '',
     usuario: datos.usuario || '',
+    // ⚠️ TEMPORAL: se guarda en texto plano porque Admin necesita poder
+    // recuperarla (verla) si la persona la olvida — ver aviso de
+    // seguridad completo en Admin → Configuración → Usuarios y
+    // permisos. En producción, con Firebase Auth, esto se reemplaza
+    // por un flujo de "restablecer contraseña", no por "ver la actual".
+    password: datos.password || '',
     numeroCuenta: datos.numeroCuenta || '',
     fechaAlta: datos.fechaAlta || new Date().toISOString(),
     liderId: datos.liderId || null,
@@ -92,6 +98,7 @@ function construirPersonasEjemplo() {
       telefono: '444 111 2233',
       correo: 'ana.torres@example.com',
       usuario: 'MW0001',
+      password: 'MW0001AT',
       fechaAlta: '2023-02-14T00:00:00.000Z',
       liderId: null,
       rangoActualKey: 'oro',
@@ -109,6 +116,7 @@ function construirPersonasEjemplo() {
       telefono: '444 222 3344',
       correo: 'maria.sanchez@example.com',
       usuario: 'MW0005',
+      password: 'MW0005MCSC',
       fechaAlta: '2023-08-02T00:00:00.000Z',
       liderId: 'ana-torres',
       // Ya cumple los requisitos de Oro (10 personas / $52,500 / $1,500
@@ -133,6 +141,7 @@ function construirPersonasEjemplo() {
       telefono: '444 987 6543',
       correo: 'lider@example.com',
       usuario: 'MW0002',
+      password: 'MW0002L',
       fechaAlta: '2023-05-10T00:00:00.000Z',
       liderId: null,
       rangoActualKey: 'plata',
@@ -146,14 +155,14 @@ function construirPersonasEjemplo() {
   // nombres de js/staff-apartados-ejemplo.js, para poder cruzar sus
   // ventanas de apartado reales en la sección "Apartados"/"Compras".
   const emprendedoras = [
-    { id: 'maria-fernanda', nombre: 'María Fernanda', apellidos: 'Gómez Ruiz', telefono: '444 123 4567', liderId: 'ana-torres', usuario: 'MW0010', fechaAlta: '2024-01-15T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 3, montoMesActual: 1210, metaMes: 8000 }, rifa: { montoAcumuladoMes: 1210, meta: 3000 } },
-    { id: 'sofia-hernandez', nombre: 'Sofía', apellidos: 'Hernández', telefono: '444 234 5678', liderId: 'ana-torres', usuario: 'MW0011', fechaAlta: '2024-02-20T00:00:00.000Z', categoria: 'foranea', estado: 'activa', constancia: { mesesCumplidos: 2, montoMesActual: 650, metaMes: 8000 }, rifa: { montoAcumuladoMes: 650, meta: 3000 } },
-    { id: 'valeria-ramirez', nombre: 'Valeria', apellidos: 'Ramírez', telefono: '444 345 6789', liderId: 'maria-camila-sanchez', usuario: 'MW0012', fechaAlta: '2023-11-05T00:00:00.000Z', categoria: 'vip', estado: 'activa', constancia: { mesesCumplidos: 9, montoMesActual: 4300, metaMes: 8000 }, rifa: { montoAcumuladoMes: 430, meta: 3000 } },
-    { id: 'daniela-martinez', nombre: 'Daniela', apellidos: 'Martínez', telefono: '444 456 7890', liderId: 'maria-camila-sanchez', usuario: 'MW0013', fechaAlta: '2024-04-18T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 0, montoMesActual: 790, metaMes: 8000 }, rifa: { montoAcumuladoMes: 790, meta: 3000 } },
-    { id: 'paola-gonzalez', nombre: 'Paola', apellidos: 'González', telefono: '444 567 8901', liderId: 'ana-torres', usuario: 'MW0014', fechaAlta: '2024-03-01T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 5, montoMesActual: 580, metaMes: 8000 }, rifa: { montoAcumuladoMes: 580, meta: 3000 } },
-    { id: 'andrea-castillo', nombre: 'Andrea', apellidos: 'Castillo', telefono: '444 678 9012', liderId: 'maria-camila-sanchez', usuario: 'MW0015', fechaAlta: '2023-09-22T00:00:00.000Z', categoria: 'normal', estado: 'inactiva', constancia: { mesesCumplidos: 4, montoMesActual: 0, metaMes: 8000 }, rifa: { montoAcumuladoMes: 0, meta: 3000 } },
-    { id: 'camila-rojas', nombre: 'Camila', apellidos: 'Rojas', telefono: '444 789 0123', liderId: 'ana-torres', usuario: 'MW0016', fechaAlta: '2024-05-30T00:00:00.000Z', categoria: 'foranea', estado: 'baja', constancia: { mesesCumplidos: 1, montoMesActual: 0, metaMes: 8000 }, rifa: { montoAcumuladoMes: 0, meta: 3000 } },
-    { id: 'karla-torres', nombre: 'Karla', apellidos: 'Torres Beltrán', telefono: '444 890 1234', liderId: 'maria-camila-sanchez', usuario: 'MW0017', fechaAlta: '2024-06-10T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 1, montoMesActual: 300, metaMes: 8000 }, rifa: { montoAcumuladoMes: 300, meta: 3000 } }
+    { id: 'maria-fernanda', nombre: 'María Fernanda', apellidos: 'Gómez Ruiz', telefono: '444 123 4567', liderId: 'ana-torres', usuario: 'MW0010', password: 'MW0010MFGR', fechaAlta: '2024-01-15T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 3, montoMesActual: 1210, metaMes: 8000 }, rifa: { montoAcumuladoMes: 1210, meta: 3000 } },
+    { id: 'sofia-hernandez', nombre: 'Sofía', apellidos: 'Hernández', telefono: '444 234 5678', liderId: 'ana-torres', usuario: 'MW0011', password: 'MW0011SH', fechaAlta: '2024-02-20T00:00:00.000Z', categoria: 'foranea', estado: 'activa', constancia: { mesesCumplidos: 2, montoMesActual: 650, metaMes: 8000 }, rifa: { montoAcumuladoMes: 650, meta: 3000 } },
+    { id: 'valeria-ramirez', nombre: 'Valeria', apellidos: 'Ramírez', telefono: '444 345 6789', liderId: 'maria-camila-sanchez', usuario: 'MW0012', password: 'MW0012VR', fechaAlta: '2023-11-05T00:00:00.000Z', categoria: 'vip', estado: 'activa', constancia: { mesesCumplidos: 9, montoMesActual: 4300, metaMes: 8000 }, rifa: { montoAcumuladoMes: 430, meta: 3000 } },
+    { id: 'daniela-martinez', nombre: 'Daniela', apellidos: 'Martínez', telefono: '444 456 7890', liderId: 'maria-camila-sanchez', usuario: 'MW0013', password: 'MW0013DM', fechaAlta: '2024-04-18T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 0, montoMesActual: 790, metaMes: 8000 }, rifa: { montoAcumuladoMes: 790, meta: 3000 } },
+    { id: 'paola-gonzalez', nombre: 'Paola', apellidos: 'González', telefono: '444 567 8901', liderId: 'ana-torres', usuario: 'MW0014', password: 'MW0014PG', fechaAlta: '2024-03-01T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 5, montoMesActual: 580, metaMes: 8000 }, rifa: { montoAcumuladoMes: 580, meta: 3000 } },
+    { id: 'andrea-castillo', nombre: 'Andrea', apellidos: 'Castillo', telefono: '444 678 9012', liderId: 'maria-camila-sanchez', usuario: 'MW0015', password: 'MW0015AC', fechaAlta: '2023-09-22T00:00:00.000Z', categoria: 'normal', estado: 'inactiva', constancia: { mesesCumplidos: 4, montoMesActual: 0, metaMes: 8000 }, rifa: { montoAcumuladoMes: 0, meta: 3000 } },
+    { id: 'camila-rojas', nombre: 'Camila', apellidos: 'Rojas', telefono: '444 789 0123', liderId: 'ana-torres', usuario: 'MW0016', password: 'MW0016CR', fechaAlta: '2024-05-30T00:00:00.000Z', categoria: 'foranea', estado: 'baja', constancia: { mesesCumplidos: 1, montoMesActual: 0, metaMes: 8000 }, rifa: { montoAcumuladoMes: 0, meta: 3000 } },
+    { id: 'karla-torres', nombre: 'Karla', apellidos: 'Torres Beltrán', telefono: '444 890 1234', liderId: 'maria-camila-sanchez', usuario: 'MW0017', password: 'MW0017KTB', fechaAlta: '2024-06-10T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 1, montoMesActual: 300, metaMes: 8000 }, rifa: { montoAcumuladoMes: 300, meta: 3000 } }
   ].map(datos => crearPersonaEjemplo({ ...datos, tipo: 'emprendedora', correo: `${datos.id.replace(/-/g, '.')}@example.com` }));
 
   // "me-emprendedora": la persona con la sesión abierta en el portal
@@ -169,6 +178,7 @@ function construirPersonasEjemplo() {
     telefono: '444 123 4567',
     correo: 'claudia.ramirez@example.com',
     usuario: 'MW0003',
+    password: 'MW0003CR',
     fechaAlta: '2023-10-01T00:00:00.000Z',
     liderId: 'ana-torres',
     constancia: { mesesCumplidos: 6, montoMesActual: 5200, metaMes: 8000 },
@@ -198,6 +208,29 @@ function obtenerPersonas() {
 
 function guardarPersonas(personas) {
   localStorage.setItem(PERSONAS_STORAGE_KEY, JSON.stringify(personas));
+}
+
+// Elimina la cuenta por completo (no es lo mismo que "estado: baja",
+// que es reversible y no borra nada). Usado desde Configuración →
+// Usuarios y permisos → Cuentas. Quien llame a esta función es
+// responsable de mostrar la advertencia y registrar la auditoría —
+// este archivo no depende de admin-comun.js.
+function eliminarPersona(id) {
+  const personas = obtenerPersonas();
+  const persona = personas.find(p => p.id === id);
+  if (!persona) return { ok: false, error: 'La cuenta no existe.' };
+  guardarPersonas(personas.filter(p => p.id !== id));
+  return { ok: true, persona };
+}
+
+function restablecerPasswordPersona(id, nuevoPassword) {
+  const personas = obtenerPersonas();
+  const persona = personas.find(p => p.id === id);
+  if (!persona) return { ok: false, error: 'La cuenta no existe.' };
+  if (!nuevoPassword) return { ok: false, error: 'La nueva contraseña no puede estar vacía.' };
+  persona.password = nuevoPassword;
+  guardarPersonas(personas);
+  return { ok: true, persona };
 }
 
 function obtenerPersonaPorId(id) {
