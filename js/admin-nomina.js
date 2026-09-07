@@ -907,7 +907,7 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
         <div style="flex:1; border-top:2px solid #d9c3e6; padding-top:8px; text-align:center;">
           <div style="font-size:10px; color:#6B6270; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:12px;">Firma de recibido</div>
           <div style="height: 46px; border-bottom: 2px solid #2A2230; width: 90%; margin: 0 auto; opacity: 0.7;"></div>
-          <div style="font-size:12px; color:#2A2230; font-weight:600;">${escapeHTMLNomina(empleado.nombre)}</div>
+          <div style="font-size:50px; color:#5E1A8A; font-weight:600;">${escapeHTMLNomina(empleado.nombre)}</div>
         </div>
       </div>
 
