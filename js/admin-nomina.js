@@ -828,6 +828,16 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
   const deducciones = (periodo.conceptos || []).filter(c => c.tipo === 'deduccion');
   const estadoPago = periodo.estadoPago || { estado: 'pendiente' };
 
+  const fechaInicio = empleado.fechaInicio ? new Date(`${empleado.fechaInicio}T00:00:00`) : null;
+  const fechaPeriodoInicio = new Date(`${periodo.periodoKey}T00:00:00`);
+  const fechaPeriodoFin = new Date(fechaPeriodoInicio);
+  fechaPeriodoFin.setDate(fechaPeriodoFin.getDate() + 6);
+
+  const formatearFechaCorta = (fecha) => {
+    if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) return '';
+    return `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}/${fecha.getFullYear()}`;
+  };
+
   const filaConcepto = (c, tipo) => `
     <tr>
       <td style="padding:8px 10px;border-bottom:1px solid #efe3f3;font-size:11px;color:#2a2230;text-align:left;">${escapeHTMLNomina(c.nombre)}</td>
@@ -836,83 +846,90 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
   `;
 
   return `
-    <div style="width: 820px; min-height: 1100px; background: #ffffff; color: #2A2230; font-family: poppins, cinzel; padding: 24px 28px 20px; box-sizing: border-box; border: 1px solid #e8dff0;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #6d2f83; padding-bottom: 16px; margin-bottom: 20px;">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <img src="../../assets/images/isotipo-morado.png" alt="MW" style="width:92px;height:46px;object-fit:contain;" />
-          <div>
-            <div style="font-size: 20px; font-weight: 700; color: #5E1A8A; letter-spacing: 1px;">MW JOYERÍA</div>
-            <div style="font-size: 10px; color: #6B6270; letter-spacing: 1.5px; text-transform: uppercase;">Portal de nómina</div>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size: 10px; color: #6B6270; text-transform: uppercase; letter-spacing: 1.2px;">Recibo de pago</div>
-          <div style="font-size: 22px; font-weight: 700; color: #2A2230; margin-top: 4px;">COMPROBANTE</div>
+    <div style="width:794px;height:1123px;background:#fff;color:#2A2230;font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;padding:30px 34px 18px;position:relative;">
+      <div style="text-align:center;margin-bottom:14px;">
+        <div style="font-size:10px;letter-spacing:2px;color:#6B6270;text-transform:uppercase;">Recibo de pago</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px;">
+          <img src="../../assets/images/isotipo-morado.png" alt="MW" style="width:42px;height:42px;object-fit:contain;" />
+          <div style="font-size:21px;font-weight:700;color:#5E1A8A;letter-spacing:1px;">MW JOYERIA</div>
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap: 18px; margin-bottom: 18px;">
-        <div style="background:#f7f0fa; border:1px solid #ead7f1; border-radius:12px; padding:14px 16px;">
-          <div style="font-size:11px; color:#6B6270; margin-bottom:6px; text-transform: uppercase; letter-spacing:0.8px;">Empleado</div>
-          <div style="font-size:17px; font-weight:700; color:#2A2230;">${escapeHTMLNomina(empleado.nombre)}</div>
-          <div style="font-size:12px; color:#4B4052; margin-top:6px;">${escapeHTMLNomina(CARGOS_NOMINA[empleado.cargo] || empleado.cargo)} · ${escapeHTMLNomina(empleado.numeroEmpleado)}</div>
-        </div>
-        <div style="background:#f7f0fa; border:1px solid #ead7f1; border-radius:12px; padding:14px 16px;">
-          <div style="font-size:11px; color:#6B6270; margin-bottom:6px; text-transform: uppercase; letter-spacing:0.8px;">Periodo</div>
-          <div style="font-size:14px; font-weight:700; color:#2A2230;">${formatearRangoSemanaNomina(periodo.periodoKey)}</div>
-          <div style="font-size:12px; color:#4B4052; margin-top:6px;">Generado el ${ahora.toLocaleString('es-MX')}</div>
-        </div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <tr>
+          <td style="padding:5px 0;width:22%;font-weight:700;color:#3E3544;">Inicio de labores:</td>
+          <td style="padding:5px 0;width:28%;">${formatearFechaCorta(fechaInicio)}</td>
+          <td style="padding:5px 0;width:18%;font-weight:700;color:#3E3544;">ID EMPLEADO</td>
+          <td style="padding:5px 0;width:32%;">${escapeHTMLNomina(empleado.numeroEmpleado)}</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 0;font-weight:700;color:#3E3544;">Fecha de pago</td>
+          <td style="padding:5px 0;">${formatearFechaCorta(ahora)}</td>
+          <td style="padding:5px 0;font-weight:700;color:#3E3544;">Metodo de pago</td>
+          <td style="padding:5px 0;">Transferencia</td>
+        </tr>
+      </table>
+
+      <div style="margin-top:18px;border-top:2px solid #5E1A8A;padding-top:10px;">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr style="background:#f7f0fa;">
+            <td style="padding:7px 8px;color:#3E3544;font-weight:700;width:12%;">FECHA INICIAL:</td>
+            <td style="padding:7px 8px;width:18%;">${formatearFechaCorta(fechaPeriodoInicio)}</td>
+            <td style="padding:7px 8px;color:#3E3544;font-weight:700;width:12%;">FECHA FINAL:</td>
+            <td style="padding:7px 8px;width:18%;">${formatearFechaCorta(fechaPeriodoFin)}</td>
+            <td style="padding:7px 8px;color:#3E3544;font-weight:700;width:7%;">DIAS:</td>
+            <td style="padding:7px 8px;width:12%;">7</td>
+            <td style="padding:7px 8px;color:#3E3544;font-weight:700;width:9%;">TOTAL</td>
+            <td style="padding:7px 8px;width:12%;text-align:right;">${fmtMoneyNomina(periodo.totalAPagar)}</td>
+          </tr>
+        </table>
       </div>
 
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
-        <div style="background:#fff; border:1px solid #ead7f1; border-radius:12px; overflow:hidden;">
-          <div style="background:#5E1A8A; color:#fff; font-size:12px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; padding:10px 14px;">Percepciones</div>
-          <table style="width:100%; border-collapse:collapse;">
+      <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+        <div style="border:1px solid #ead7f1; background:#fff;">
+          <div style="background:#5E1A8A;color:#fff;padding:8px 10px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Percepciones</div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;">
             <tbody>
-              ${percepciones.length ? percepciones.map(c => filaConcepto(c, 'percepcion')).join('') : '<tr><td style="padding:12px; color:#6B6270; font-size:11px;">Sin percepciones</td></tr>'}
+              ${percepciones.length ? percepciones.map(c => filaConcepto(c, 'percepcion')).join('') : '<tr><td style="padding:10px;color:#6B6270;">Sin percepciones</td></tr>'}
             </tbody>
           </table>
         </div>
 
-        <div style="background:#fff; border:1px solid #ead7f1; border-radius:12px; overflow:hidden;">
-          <div style="background:#5E1A8A; color:#fff; font-size:12px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; padding:10px 14px;">Deducciones</div>
-          <table style="width:100%; border-collapse:collapse;">
+        <div style="border:1px solid #ead7f1; background:#fff;">
+          <div style="background:#5E1A8A;color:#fff;padding:8px 10px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Deducciones</div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;">
             <tbody>
-              ${deducciones.length ? deducciones.map(c => filaConcepto(c, 'deduccion')).join('') : '<tr><td style="padding:12px; color:#6B6270; font-size:11px;">Sin deducciones</td></tr>'}
+              ${deducciones.length ? deducciones.map(c => filaConcepto(c, 'deduccion')).join('') : '<tr><td style="padding:10px;color:#6B6270;">Sin deducciones</td></tr>'}
             </tbody>
           </table>
         </div>
       </div>
 
-      <div style="background:#f6eef8; border:1px solid #e8dff0; border-radius:12px; padding:14px 16px; margin-bottom: 18px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#4B4052; margin-bottom: 8px;">
+      <div style="margin-top:18px;border:1px solid #e8dff0;background:#f6eef8;padding:12px 14px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#3E3544;margin-bottom:8px;">
           <span>Percepciones</span>
-          <strong style="color:#2A2230;">${fmtMoneyNomina(periodo.totalPercepciones)}</strong>
+          <strong>${fmtMoneyNomina(periodo.totalPercepciones)}</strong>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#4B4052; margin-bottom: 8px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#3E3544;margin-bottom:8px;">
           <span>Deducciones</span>
-          <strong style="color:#2A2230;">-${fmtMoneyNomina(periodo.totalDeducciones)}</strong>
+          <strong>-${fmtMoneyNomina(periodo.totalDeducciones)}</strong>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:18px; font-weight:700; color:#5E1A8A; border-top:1px solid #d9c3e6; padding-top:10px;">
-          <span>Total a pagar</span>
+        <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:700;color:#5E1A8A;border-top:1px solid #d9c3e6;padding-top:8px;">
+          <span>TOTAL A PAGAR</span>
           <strong>${fmtMoneyNomina(periodo.totalAPagar)}</strong>
         </div>
       </div>
 
-      <div style="display:flex; justify-content:space-between; gap:20px; margin-top:24px; margin-bottom: 30px;">
-        <div style="flex:1; border-top:2px solid #d9c3e6; padding-top:8px;">
-          <div style="font-size:10px; color:#6B6270; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:12px;">Estado</div>
-          <div style="font-size:12px; color:#2A2230; font-weight:600;">${estadoPago.estado === 'pagada' ? `Pagado el ${formatearFechaNomina(estadoPago.fechaPago)}` : 'Pendiente de pago'}</div>
+      <div style="position:absolute;left:34px;right:34px;bottom:36px;display:grid;grid-template-columns:1fr 1fr;gap:30px;">
+        <div style="border-top:2px solid #d9c3e6;padding-top:8px;">
+          <div style="font-size:10px;color:#6B6270;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Estado</div>
+          <div style="font-size:12px;color:#2A2230;font-weight:700;">${estadoPago.estado === 'pagada' ? `Pagado el ${formatearFechaNomina(estadoPago.fechaPago)}` : 'Pendiente de pago'}</div>
         </div>
-        <div style="flex:1; border-top:2px solid #d9c3e6; padding-top:8px; text-align:center;">
-          <div style="font-size:10px; color:#6B6270; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:12px;">Firma de recibido</div>
-          <div style="height: 46px; border-bottom: 2px solid #2A2230; width: 90%; margin: 0 auto; opacity: 0.7;"></div>
-          <div style="font-size:50px; color:#5E1A8A; font-weight:600;">${escapeHTMLNomina(empleado.nombre)}</div>
+        <div style="border-top:2px solid #d9c3e6;padding-top:8px;text-align:center;">
+          <div style="font-size:10px;color:#6B6270;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Firma de recibido</div>
+          <div style="height:48px;border-bottom:2px solid #2A2230;width:90%;margin:0 auto;opacity:0.7;"></div>
+          <div style="margin-top:8px;font-size:11px;color:#3E3544;font-weight:700;">${escapeHTMLNomina(empleado.nombre)}</div>
         </div>
-      </div>
-
-      <div style="border-top:1px solid #eae4eb; padding-top:10px; font-size:9px; color:#6B6270; text-align:center;">
-        Comprobante generado por Portal MW
       </div>
     </div>
   `;
