@@ -792,19 +792,19 @@ async function ejecutarGeneracionComprobanteNomina(empleado) {
       backgroundColor: '#ffffff',
       scale: 2,
       useCORS: true,
-      width: 820,
-      height: 1100
+      width: 1600,
+      height: 1123
     });
 
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
     const w = canvas.width * ratio;
     const h = canvas.height * ratio;
-    pdf.addImage(imgData, 'PNG', (pageWidth - w) / 2, 20, w, h);
+    pdf.addImage(imgData, 'PNG', (pageWidth - w) / 2, (pageHeight - h) / 2, w, h);
 
     const nombreArchivo = sanitizarNombreArchivoNomina(empleado.nombre);
     const periodoArchivo = sanitizarNombreArchivoNomina(formatearRangoSemanaNomina(nomPeriodoActual));
@@ -845,8 +845,8 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
     </tr>
   `;
 
-  return `
-    <div style="width:794px;height:1123px;background:#fff;color:#2A2230;font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;padding:30px 34px 18px;position:relative;">
+  const construirRecibo = () => `
+    <div style="width:760px;height:1050px;background:#fff;color:#2A2230;font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;padding:30px 30px 18px;position:relative;border:1px solid #ead7f1;">
       <div style="text-align:center;margin-bottom:14px;">
         <div style="font-size:10px;letter-spacing:2px;color:#6B6270;text-transform:uppercase;">Recibo de pago</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px;">
@@ -920,7 +920,7 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
         </div>
       </div>
 
-      <div style="position:absolute;left:34px;right:34px;bottom:36px;display:grid;grid-template-columns:1fr 1fr;gap:30px;">
+      <div style="position:absolute;left:30px;right:30px;bottom:24px;display:grid;grid-template-columns:1fr 1fr;gap:30px;">
         <div style="border-top:2px solid #d9c3e6;padding-top:8px;">
           <div style="font-size:10px;color:#6B6270;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Estado</div>
           <div style="font-size:12px;color:#2A2230;font-weight:700;">${estadoPago.estado === 'pagada' ? `Pagado el ${formatearFechaNomina(estadoPago.fechaPago)}` : 'Pendiente de pago'}</div>
@@ -931,6 +931,13 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
           <div style="margin-top:8px;font-size:11px;color:#3E3544;font-weight:700;">${escapeHTMLNomina(empleado.nombre)}</div>
         </div>
       </div>
+    </div>
+  `;
+
+  return `
+    <div style="width:1600px;height:1123px;background:#fff;padding:10px 12px;box-sizing:border-box;display:flex;justify-content:space-between;align-items:flex-start;gap:18px;">
+      ${construirRecibo()}
+      ${construirRecibo()}
     </div>
   `;
 
