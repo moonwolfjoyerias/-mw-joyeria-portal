@@ -340,7 +340,7 @@ function renderVistaDetalleNomina() {
         <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
           <button class="btn btn-outline" id="nomVerHistorialBtn" type="button" style="width:auto;">🕘 Historial de ajustes</button>
           <button class="btn btn-outline" id="nomRegistrarPagoBtn" type="button" style="width:auto;">Registrar pago</button>
-          <button class="btn btn-primary" id="nomGenerarPdfBtn" type="button" style="width:auto;">🧾 Generar comprobante</button>
+          <button class="btn btn-primary" id="nomGenerarPdfBtn" type="button" style="width:auto;">📊 Generar comprobante</button>
         </div>
       </div>
     </div>
@@ -771,32 +771,91 @@ function generarComprobanteNomina() {
 
 async function ejecutarGeneracionComprobanteNomina(empleado) {
 
-  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
-    mostrarToast('No se pudo generar el comprobante — intenta de nuevo en un momento.');
+  if (typeof XLSX === 'undefined') {
+    mostrarToast('No se pudo generar el comprobante de Excel — intenta de nuevo en un momento.');
     return;
   }
 
-  const contenedor = document.getElementById('nomPdfTemplate');
-  contenedor.innerHTML = construirHTMLComprobanteNomina(empleado, nomPeriodoEnEdicion);
-
   try {
-    if (document.fonts?.ready) await document.fonts.ready;
+    const periodo = nomPeriodoEnEdicion || obtenerPeriodoNomina(empleado.id, nomPeriodoActual);
+    if (!periodo) {
+      mostrarToast('No se pudo generar el comprobante — no hay datos de nómina para este periodo.');
+      return;
+    }
 
-    const canvas = await html2canvas(contenedor, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
-    const imgData = canvas.toDataURL('image/png');
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: [canvas.width, canvas.height] });
-    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    const respuesta = await fetch('../../assets/images/MACHOTE-COMPROBANTE.xlsx');
+    if (!respuesta.ok) {
+      throw new Error('No se encontró el machote del comprobante.');
+    }
+
+    const buffer = await respuesta.arrayBuffer();
+    const libro = XLSX.read(buffer, { type: 'array' });
+    const hoja = libro.Sheets['Comprobante'] || libro.Sheets[libro.SheetNames[0]];
+    if (!hoja) {
+      throw new Error('El machote no tiene una hoja de comprobante disponible.');
+    }
+
+    const fechaPago = new Date();
+    const fechaInicio = new Date(`${periodo.periodoKey}T00:00:00`);
+    const fechaFin = new Date(fechaInicio);
+    fechaFin.setDate(fechaFin.getDate() + 6);
+
+    const formatearFechaExcel = (fecha) => {
+      if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) return '';
+      const d = String(fecha.getDate()).padStart(2, '0');
+      const m = String(fecha.getMonth() + 1).padStart(2, '0');
+      const y = fecha.getFullYear();
+      return `${d}/${m}/${y}`;
+    };
+
+    const setCell = (coord, value) => {
+      hoja[coord] = { t: typeof value === 'number' ? 'n' : 's', v: value };
+    };
+
+    setCell('B6', empleado.fechaInicio ? formatearFechaExcel(new Date(`${empleado.fechaInicio}T00:00:00`)) : '');
+    setCell('D6', String(empleado.numeroEmpleado || ''));
+    setCell('B7', formatearFechaExcel(fechaPago));
+    setCell('D7', 'TRANSFERENCIA');
+
+    setCell('B11', formatearFechaExcel(fechaInicio));
+    setCell('D11', formatearFechaExcel(fechaFin));
+    setCell('F11', Number((periodo.conceptos || []).length ? 7 : 0));
+    setCell('H11', Number(periodo.totalAPagar || 0));
+
+    const percepciones = (periodo.conceptos || []).filter(c => c.tipo === 'percepcion');
+    const deducciones = (periodo.conceptos || []).filter(c => c.tipo === 'deduccion');
+
+    let filaPercepcion = 13;
+    percepciones.forEach((concepto) => {
+      setCell(`A${filaPercepcion}`, concepto.nombre || 'Percepción');
+      setCell(`B${filaPercepcion}`, Number(concepto.total || 0));
+      filaPercepcion += 1;
+    });
+
+    let filaDeduccion = 16;
+    deducciones.forEach((concepto) => {
+      setCell(`A${filaDeduccion}`, concepto.nombre || 'Deducción');
+      setCell(`B${filaDeduccion}`, Number(concepto.total || 0));
+      filaDeduccion += 1;
+    });
+
+    setCell('A19', 'TOTAL PERCEPCIONES');
+    setCell('B19', Number(periodo.totalPercepciones || 0));
+    setCell('A20', 'TOTAL DEDUCCIONES');
+    setCell('B20', Number(periodo.totalDeducciones || 0));
+    setCell('A24', 'NETO A PAGAR');
+    setCell('B24', Number(periodo.totalAPagar || 0));
+    setCell('A29', 'ESTADO');
+    setCell('B29', (periodo.estadoPago && periodo.estadoPago.estado === 'pagada') ? 'PAGADA' : 'PENDIENTE');
 
     const nombreArchivo = sanitizarNombreArchivoNomina(empleado.nombre);
     const periodoArchivo = sanitizarNombreArchivoNomina(formatearRangoSemanaNomina(nomPeriodoActual));
-    pdf.save(`MW_Nomina_${nombreArchivo}_${periodoArchivo}.pdf`);
 
-    mostrarToast('Comprobante generado.');
+    XLSX.writeFile(libro, `MW_Nomina_${nombreArchivo}_${periodoArchivo}.xlsx`);
+    mostrarToast('Comprobante generado en formato Excel.');
   } catch (error) {
+    console.error('Error generando comprobante de nómina en Excel:', error);
     mostrarToast('No se pudo generar el comprobante — intenta de nuevo en un momento.');
-  } finally {
-    contenedor.innerHTML = '';
   }
 
 }
