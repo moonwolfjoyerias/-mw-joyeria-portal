@@ -959,6 +959,10 @@ a:hover { color: var(--mw-gold); }
 .stat-card .stat-num { font-family: var(--font-heading); font-size: 1.9rem; color: var(--mw-purple); font-weight: 700; display: block; margin-bottom: 0.3rem; }
 .stat-card a.stat-link { font-size: 0.8rem; color: var(--mw-purple); display: inline-flex; align-items: center; gap: 0.3rem; }
 .stat-card a.stat-link:hover { color: var(--mw-gold); }
+.stat-card .stat-sub { display: block; font-size: 0.72rem; color: var(--mw-text-muted); margin-bottom: 4px; }
+
+.dash-two-col { display: grid; grid-template-columns: 1fr 1.6fr; gap: 1rem; align-items: start; }
+@media (max-width: 900px) { .dash-two-col { grid-template-columns: 1fr; } }
 
 /* ---------- Banner "Nuevas piezas" ---------- */
 .promo-banner {
@@ -1624,6 +1628,28 @@ a:hover { color: var(--mw-gold); }
 .commission-ticket .ct-total span { font-family: var(--font-heading); color: var(--mw-purple); font-size: 1rem; }
 .commission-ticket .ct-total strong { font-family: var(--font-heading); color: var(--mw-purple); font-size: 1.5rem; }
 .commission-ticket .ct-note { font-size: 0.75rem; color: var(--mw-text-muted); margin-top: 0.8rem; text-align: center; }
+
+/* Versión SIN el ancestro .commission-ticket — se usa en modales de
+   historial (Plan MW, Comisiones, Configuración) que no viven dentro
+   del ticket. Reglas equivalentes a las de arriba, agregadas aparte
+   para no romper nada que ya dependa de la versión con ancestro. */
+.ct-detail-list { padding: 0.2rem 0 0.4rem; }
+.ct-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 0.55em 0.6em;
+  background: #faf8fb;
+  border-radius: 8px;
+  margin-top: 6px;
+}
+.ct-detail-row strong { display: block; font-size: 0.8rem; color: #2d145d; }
+.ct-detail-sub { display: block; font-size: 0.7rem; color: var(--mw-text-muted); margin-top: 2px; }
+.ct-detail-empty { font-size: 0.78rem; color: var(--mw-text-muted); padding: 0.6em 0; }
+@media (max-width: 620px) {
+  .ct-detail-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
 
 /* ---------- Sidebar (portal privado) ---------- */
 .layout-portal {
@@ -3612,7 +3638,7 @@ a:hover { color: var(--mw-gold); }
 .cfg-sync-pill.offline { background: #fdeee0; color: #9a4e10; border-color: #f6d3b3; }
 .cfg-sync-pill.error { background: #fdecec; color: #a3231f; border-color: #f5cccb; }
 
-.cfg-card {
+.cfg-card, .dash-card {
   background: #fff;
   border: 1px solid var(--mw-border);
   border-radius: var(--radius);
@@ -3620,8 +3646,8 @@ a:hover { color: var(--mw-gold); }
   padding: 1.2rem 1.3rem;
   margin-bottom: 1.1rem;
 }
-.cfg-card-title { font-family: var(--font-heading); color: #2d145d; font-size: 1rem; margin: 0 0 0.3rem; }
-.cfg-card-sub { font-size: 0.8rem; color: var(--mw-text-muted); margin: 0 0 1rem; line-height: 1.4; }
+.cfg-card-title, .dash-card-title { font-family: var(--font-heading); color: #2d145d; font-size: 1rem; margin: 0 0 0.3rem; }
+.cfg-card-sub, .dash-card-sub { font-size: 0.8rem; color: var(--mw-text-muted); margin: 0 0 1rem; line-height: 1.4; }
 
 .cfg-form-grid {
   display: grid;
