@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('expandirTodoBtn')?.addEventListener('click', () => alternarTodo(true));
   document.getElementById('contraerTodoBtn')?.addEventListener('click', () => alternarTodo(false));
   document.getElementById('exportarExcelBtn')?.addEventListener('click', exportarComisionesExcel);
+  document.getElementById('comprobanteGeneralBtn')?.addEventListener('click', abrirModalComprobanteGeneral);
 
   document.getElementById('commRecuperarBtn')?.addEventListener('click', recuperarBorrador);
   document.getElementById('commDescartarBtn')?.addEventListener('click', descartarBorradorUI);
@@ -921,6 +922,222 @@ function construirHTMLTicketPDF(r) {
       <div style="border-top:1px solid #eae4eb;padding-top:8px;font-size:9px;color:#6B6270;text-align:center;">
         Calculado automáticamente por Portal MW.
         ${totalAjustes.length ? `<br>Este comprobante contiene ajustes manuales registrados en el sistema. Última modificación: ${formatearFechaPersonas(totalAjustes[totalAjustes.length - 1].ajuste.fecha)} por ${escapeHTMLPersonas(totalAjustes[totalAjustes.length - 1].ajuste.usuarioAdminId)}.` : ''}
+      </div>
+    </div>
+  `;
+
+}
+
+// ============================================================
+// PDF — COMPROBANTE GENERAL (TODAS las líderes de un periodo o mes)
+// ============================================================
+//
+// A diferencia del ticket individual (por líder), este es un resumen:
+// una fila por líder con su comisión/bono/total, sin repetir el
+// desglose completo por nivel/persona de cada una (eso ya lo cubre
+// "Generar comprobante" en la tarjeta de cada líder). "Todo el mes"
+// arma dos secciones (Periodo 1 y Periodo 2) en el mismo documento en
+// vez de sumarlas en un solo número — así el comprobante sigue
+// mostrando exactamente cómo se paga cada quincena.
+
+function abrirModalComprobanteGeneral() {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const info = obtenerInfoSubPeriodo(periodoActual, subPeriodoActual);
+
+  box.style.maxWidth = '440px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="auth-icon">🧾</div>
+    <h3>Comprobante de todas las comisiones</h3>
+    <p class="modal-sub">¿Lo quieres solo de este periodo o del mes completo?</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
+      <button class="btn btn-outline" style="width:100%;text-align:left;padding:0.7em 1em;" id="comprobanteSoloPeriodoBtn" type="button">
+        <strong>Solo este periodo</strong><br>
+        <span style="font-weight:400;font-size:0.82em;">${info.label} · ${formatearPeriodoLabelComisiones(periodoActual)}</span>
+      </button>
+      <button class="btn btn-outline" style="width:100%;text-align:left;padding:0.7em 1em;" id="comprobanteMesCompletoBtn" type="button">
+        <strong>Todo el mes</strong><br>
+        <span style="font-weight:400;font-size:0.82em;">${formatearPeriodoLabelComisiones(periodoActual)} · Periodo 1 y Periodo 2</span>
+      </button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+
+  document.getElementById('comprobanteSoloPeriodoBtn')?.addEventListener('click', () => {
+    cerrar();
+    generarComprobanteGeneral('periodo');
+  });
+  document.getElementById('comprobanteMesCompletoBtn')?.addEventListener('click', () => {
+    cerrar();
+    generarComprobanteGeneral('mes');
+  });
+
+}
+
+function generarComprobanteGeneral(modo) {
+
+  if (!comisionesData.length) {
+    mostrarToast('No hay comisiones para generar un comprobante.');
+    return;
+  }
+
+  if (Object.keys(pendienteBorrador).length) {
+    abrirAutorizacionAdmin({
+      titulo: 'Hay cambios sin sincronizar',
+      mensaje: 'Este comprobante se generará antes de que algunos ajustes terminen de sincronizarse. Se recomienda esperar unos segundos. ¿Generar de todas formas?',
+      peligrosa: true,
+      onConfirmar: () => ejecutarGeneracionPDFGeneral(modo)
+    });
+    return;
+  }
+
+  ejecutarGeneracionPDFGeneral(modo);
+
+}
+
+async function ejecutarGeneracionPDFGeneral(modo) {
+
+  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+    mostrarToast('No se pudo generar el PDF — intenta de nuevo en un momento.');
+    return;
+  }
+
+  const contenedor = document.getElementById('commPdfTemplate');
+  contenedor.innerHTML = construirHTMLComprobanteGeneral(modo);
+
+  try {
+    if (document.fonts?.ready) await document.fonts.ready;
+    const logo = contenedor.querySelector('[data-pdf-logo]');
+    if (logo && !logo.complete) {
+      await new Promise((resolve, reject) => {
+        logo.addEventListener('load', resolve, { once: true });
+        logo.addEventListener('error', reject, { once: true });
+      });
+    }
+
+    const canvas = await html2canvas(contenedor, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: [canvas.width, canvas.height] });
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+
+    const periodoArchivo = sanitizarNombreArchivo(formatearPeriodoLabelComisiones(periodoActual));
+    const sufijo = modo === 'mes' ? 'MES_COMPLETO' : subPeriodoActual.toUpperCase();
+    pdf.save(`MW_Comisiones_Todas_${periodoArchivo}_${sufijo}.pdf`);
+
+    mostrarToast('Comprobante generado.');
+  } catch (error) {
+    mostrarToast('No se pudo generar el PDF — intenta de nuevo en un momento.');
+  } finally {
+    contenedor.innerHTML = '';
+  }
+
+}
+
+function construirSeccionResumenComisiones(datosPeriodo, periodoKeyDoc, subPeriodoDoc) {
+
+  const info = obtenerInfoSubPeriodo(periodoKeyDoc, subPeriodoDoc);
+  const totalComisionSeccion = datosPeriodo.reduce((s, r) => s + r.totalComision, 0);
+  const totalBonoSeccion = datosPeriodo.reduce((s, r) => s + (r.bono ? r.bono.monto : 0), 0);
+  const totalGeneralSeccion = totalComisionSeccion + totalBonoSeccion;
+
+  return `
+    <div style="margin-bottom:18px;">
+      <div style="font-weight:600;font-size:12px;margin-bottom:6px;color:#5E1A8A;">${info.label} · ${info.rango} (paga ${info.fechaPago})</div>
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px;">
+        <thead>
+          <tr style="background:#F1EBFA;">
+            <th style="padding:4px;text-align:left;">Líder</th>
+            <th style="padding:4px;text-align:left;">Rango</th>
+            <th style="padding:4px;">Equipo</th>
+            <th style="padding:4px;text-align:right;">Comisión</th>
+            <th style="padding:4px;text-align:right;">Bono</th>
+            <th style="padding:4px;text-align:right;">Total a pagar</th>
+            <th style="padding:4px;text-align:center;">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${datosPeriodo.map(r => {
+            const totalPagarLider = r.totalComision + (r.bono ? r.bono.monto : 0);
+            return `
+              <tr>
+                <td style="padding:4px;">${escapeHTMLPersonas(nombreCompletoPersona(r.lider))}</td>
+                <td style="padding:4px;">${rangoLabel(r.rangoKey)}</td>
+                <td style="padding:4px;text-align:center;">${r.totalEquipo}</td>
+                <td style="padding:4px;text-align:right;">${fmtMoneyComm(r.totalComision)}</td>
+                <td style="padding:4px;text-align:right;">${r.bono ? fmtMoneyComm(r.bono.monto) : '—'}</td>
+                <td style="padding:4px;text-align:right;font-weight:600;">${fmtMoneyComm(totalPagarLider)}</td>
+                <td style="padding:4px;text-align:center;">${r.estadoPago.estado === 'pagada' ? 'Pagada' : 'Pendiente'}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="border-top:2px solid #5E1A8A;font-weight:700;">
+            <td style="padding:4px;" colspan="3">TOTAL ${info.label.toUpperCase()}</td>
+            <td style="padding:4px;text-align:right;">${fmtMoneyComm(totalComisionSeccion)}</td>
+            <td style="padding:4px;text-align:right;">${fmtMoneyComm(totalBonoSeccion)}</td>
+            <td style="padding:4px;text-align:right;">${fmtMoneyComm(totalGeneralSeccion)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+
+}
+
+function construirHTMLComprobanteGeneral(modo) {
+
+  const ahora = new Date();
+  const estiloBase = `font-family:Poppins,Arial,sans-serif;color:#2A2230;padding:24px;font-size:12px;`;
+
+  let secciones;
+  let subtituloPeriodo;
+  let totalGeneralDoc;
+
+  if (modo === 'mes') {
+    const datosP1 = calcularTodasLasComisiones(periodoActual, 'p1');
+    const datosP2 = calcularTodasLasComisiones(periodoActual, 'p2');
+    secciones = construirSeccionResumenComisiones(datosP1, periodoActual, 'p1') + construirSeccionResumenComisiones(datosP2, periodoActual, 'p2');
+    totalGeneralDoc = [...datosP1, ...datosP2].reduce((s, r) => s + r.totalComision + (r.bono ? r.bono.monto : 0), 0);
+    subtituloPeriodo = `${formatearPeriodoLabelComisiones(periodoActual)} · Mes completo (Periodo 1 y Periodo 2)`;
+  } else {
+    secciones = construirSeccionResumenComisiones(comisionesData, periodoActual, subPeriodoActual);
+    totalGeneralDoc = comisionesData.reduce((s, r) => s + r.totalComision + (r.bono ? r.bono.monto : 0), 0);
+    const info = obtenerInfoSubPeriodo(periodoActual, subPeriodoActual);
+    subtituloPeriodo = `${formatearPeriodoLabelComisiones(periodoActual)} · ${info.label}`;
+  }
+
+  return `
+    <div style="${estiloBase}">
+      <div style="text-align:center;margin-bottom:16px;">
+        <img data-pdf-logo src="../../assets/images/imagotipo-completo.png" alt="MW Joyería" style="display:block;width:180px;height:auto;margin:0 auto 10px;">
+        <div style="font-size:13px;font-weight:600;margin-top:4px;">COMPROBANTE GENERAL DE COMISIONES</div>
+        <div style="font-size:11px;color:#6B6270;margin-top:2px;">${subtituloPeriodo}</div>
+        <div style="font-size:10px;color:#6B6270;">Generado el ${ahora.toLocaleString('es-MX')}</div>
+      </div>
+
+      ${secciones}
+
+      <div style="border-top:2px solid #5E1A8A;padding-top:10px;margin-top:6px;display:flex;justify-content:space-between;font-size:14px;color:#5E1A8A;">
+        <span>TOTAL GENERAL A PAGAR</span><strong>${fmtMoneyComm(totalGeneralDoc)}</strong>
+      </div>
+
+      <div style="border-top:1px solid #eae4eb;padding-top:8px;margin-top:12px;font-size:9px;color:#6B6270;text-align:center;">
+        Calculado automáticamente por Portal MW. Para el detalle completo por nivel y por persona de una líder en particular, usa "Generar comprobante" en su tarjeta.
       </div>
     </div>
   `;
