@@ -789,56 +789,114 @@ async function ejecutarGeneracionComprobanteNomina(empleado) {
 
 }
 
-function construirHTMLComprobanteNomina(empleado, periodo) {
+// Formato d/m/yyyy (igual al recibo de RH en Excel), sin ceros a la izquierda.
+function formatearFechaDMYNomina(fechaISO) {
+  if (!fechaISO) return '—';
+  const fecha = new Date(fechaISO.length <= 10 ? `${fechaISO}T00:00:00` : fechaISO);
+  if (Number.isNaN(fecha.getTime())) return '—';
+  return `${fecha.getDate()}/${fecha.getMonth() + 1}/${fecha.getFullYear()}`;
+}
 
-  const ahora = new Date();
+function obtenerDireccionMWNomina() {
+  if (typeof obtenerConfigSimple === 'function') {
+    const direccion = obtenerConfigSimple()?.datosMW?.direccion;
+    if (direccion) return direccion;
+  }
+  return 'Ignacio Aldama #400 Local 21, Centro Histórico, San Luis Potosí, San Luis Potosí, CP 78000';
+}
+
+// Recibo con el mismo formato que usaba RH en Excel (dirección, datos de la
+// colaboradora, tabla con PERCEPCIONES/DEDUCCIONES y un TOTAL a un costado
+// que abarca toda la tabla, texto de conformidad y línea de firma). El
+// recibo se arma una sola vez y se imprime duplicado en la misma hoja para
+// poder cortarse a la mitad, tal como lo hacía la plantilla original.
+function construirBloqueReciboNomina(empleado, periodo) {
+
+  const lunes = new Date(`${periodo.periodoKey}T00:00:00`);
+  const domingo = new Date(lunes);
+  domingo.setDate(lunes.getDate() + 6);
+
   const percepciones = periodo.conceptos.filter(c => c.tipo === 'percepcion');
   const deducciones = periodo.conceptos.filter(c => c.tipo === 'deduccion');
   const estadoPago = periodo.estadoPago || { estado: 'pendiente' };
+  const fechaPagoTexto = estadoPago.estado === 'pagada' ? formatearFechaDMYNomina(estadoPago.fechaPago) : 'Pendiente';
 
-  const filaConcepto = (c) => `<tr><td style="padding:4px 0;">${escapeHTMLNomina(c.nombre)}${c.cantidad !== 1 ? ` (${c.cantidad})` : ''}</td><td style="padding:4px 0;text-align:right;">${fmtMoneyNomina(c.total)}</td></tr>`;
+  // Filas de la tabla: encabezado + fila de fechas + PERCEPCIONES + sus
+  // conceptos + DEDUCCIONES + sus conceptos (mínimo 1 fila cada sección).
+  const filasPercepciones = percepciones.length || 1;
+  const filasDeducciones = deducciones.length || 1;
+  const totalFilas = 2 + 1 + filasPercepciones + 1 + filasDeducciones;
+
+  const filaConcepto = (c) => `
+    <tr>
+      <td colspan="4" style="border:1px solid #5E1A8A;padding:4px 8px;font-size:10px;">${escapeHTMLNomina(c.nombre)}${c.cantidad !== 1 ? ` (${c.cantidad})` : ''}</td>
+      <td colspan="2" style="border:1px solid #5E1A8A;padding:4px 8px;font-size:10px;text-align:right;">${fmtMoneyNomina(c.total)}</td>
+    </tr>`;
 
   return `
-    <div style="font-family:Poppins,Arial,sans-serif;color:#2A2230;padding:24px;font-size:12px;">
-      <div style="text-align:center;margin-bottom:16px;">
-        <div style="font-family:Cinzel,serif;font-size:18px;color:#5E1A8A;letter-spacing:1px;">MW JOYERÍA</div>
-        <div style="font-size:13px;font-weight:600;margin-top:4px;">COMPROBANTE DE PAGO DE NÓMINA</div>
-        <div style="font-size:10px;color:#6B6270;">Generado el ${ahora.toLocaleString('es-MX')}</div>
+    <div style="font-family:Poppins,Arial,sans-serif;color:#2A2230;padding:14px 18px;font-size:11px;">
+
+      <div style="font-size:9px;text-align:center;color:#6B6270;margin-bottom:8px;">${escapeHTMLNomina(obtenerDireccionMWNomina())}</div>
+
+      <table style="width:100%;font-size:11px;margin-bottom:8px;border-collapse:collapse;">
+        <tr>
+          <td style="padding:2px 0;"><strong>Colaborador(a):</strong> ${escapeHTMLNomina(empleado.nombre)}</td>
+        </tr>
+        <tr>
+          <td style="padding:2px 0;width:60%;"><strong>Inicio de labores:</strong> ${formatearFechaDMYNomina(empleado.fechaInicio)}</td>
+          <td style="padding:2px 0;"><strong>ID EMPLEADO:</strong> ${escapeHTMLNomina(empleado.numeroEmpleado)}</td>
+        </tr>
+        <tr>
+          <td style="padding:2px 0;"><strong>Fecha de pago:</strong> ${fechaPagoTexto}</td>
+          <td style="padding:2px 0;"><strong>Método de pago:</strong> ${escapeHTMLNomina(empleado.metodoPago || 'Efectivo')}</td>
+        </tr>
+      </table>
+
+      <table style="width:100%;border-collapse:collapse;border:2px solid #5E1A8A;">
+        <tr>
+          <td colspan="4" style="background:#E3D2F5;border:1px solid #5E1A8A;padding:5px;text-align:center;font-weight:700;font-size:11px;">RECIBO DE PAGO</td>
+          <td rowspan="${totalFilas}" style="border:1px solid #5E1A8A;padding:4px;text-align:center;vertical-align:middle;width:14%;font-weight:700;font-size:10px;">TOTAL</td>
+          <td rowspan="${totalFilas}" style="border:1px solid #5E1A8A;padding:4px;text-align:center;vertical-align:middle;width:20%;font-weight:700;font-size:13px;color:#5E1A8A;">${fmtMoneyNomina(periodo.totalAPagar)}</td>
+        </tr>
+        <tr style="background:#F1EBFA;">
+          <td style="border:1px solid #5E1A8A;padding:4px;text-align:center;font-size:9px;"><strong>FECHA INICIAL:</strong> ${formatearFechaDMYNomina(periodo.periodoKey)}</td>
+          <td style="border:1px solid #5E1A8A;padding:4px;text-align:center;font-size:9px;"><strong>FECHA FINAL:</strong> ${formatearFechaDMYNomina(domingo.toISOString().slice(0, 10))}</td>
+          <td colspan="2" style="border:1px solid #5E1A8A;padding:4px;text-align:center;font-size:9px;"><strong>DÍAS:</strong> 7</td>
+        </tr>
+        <tr>
+          <td colspan="6" style="background:#E3D2F5;border:1px solid #5E1A8A;padding:4px;text-align:center;font-weight:700;font-size:10px;">PERCEPCIONES</td>
+        </tr>
+        ${percepciones.length ? percepciones.map(filaConcepto).join('') : `<tr><td colspan="4" style="border:1px solid #5E1A8A;padding:4px 8px;font-size:10px;color:#6B6270;">Sin percepciones</td><td colspan="2" style="border:1px solid #5E1A8A;padding:4px 8px;text-align:right;">$0.00</td></tr>`}
+        <tr>
+          <td colspan="6" style="background:#E3D2F5;border:1px solid #5E1A8A;padding:4px;text-align:center;font-weight:700;font-size:10px;">DEDUCCIONES</td>
+        </tr>
+        ${deducciones.length ? deducciones.map(filaConcepto).join('') : `<tr><td colspan="4" style="border:1px solid #5E1A8A;padding:4px 8px;font-size:10px;color:#6B6270;">Sin deducciones</td><td colspan="2" style="border:1px solid #5E1A8A;padding:4px 8px;text-align:right;">$0.00</td></tr>`}
+      </table>
+
+      <p style="font-size:8.5px;color:#6B6270;margin:8px 0 0;">Recibí el total anotado, quedando la empresa al corriente con el pago correspondiente al periodo arriba indicado, y estoy de acuerdo con el total recibido.</p>
+
+      <div style="text-align:center;margin-top:26px;">
+        <div style="border-top:1px solid #2A2230;width:230px;margin:0 auto;padding-top:4px;font-size:9px;">NOMBRE Y FIRMA</div>
       </div>
 
-      <div style="border-top:1px solid #eae4eb;border-bottom:1px solid #eae4eb;padding:10px 0;margin-bottom:12px;">
-        <div><strong>Empleado:</strong> ${escapeHTMLNomina(empleado.nombre)}</div>
-        <div><strong>Número de empleado:</strong> ${escapeHTMLNomina(empleado.numeroEmpleado)}</div>
-        <div><strong>Cargo:</strong> ${escapeHTMLNomina(CARGOS_NOMINA[empleado.cargo] || empleado.cargo)}</div>
-        <div><strong>Periodo pagado:</strong> ${formatearRangoSemanaNomina(periodo.periodoKey)}</div>
-      </div>
+      <div style="font-size:8.5px;color:#6B6270;margin-top:10px;">Copia MW JOYERÍA</div>
 
-      <div style="margin-bottom:10px;">
-        <div style="font-weight:600;margin-bottom:4px;">Percepciones</div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">${percepciones.map(filaConcepto).join('')}</table>
-      </div>
-
-      <div style="margin-bottom:12px;">
-        <div style="font-weight:600;margin-bottom:4px;">Deducciones</div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">${deducciones.length ? deducciones.map(filaConcepto).join('') : '<tr><td style="padding:4px 0;color:#6B6270;">Sin deducciones</td></tr>'}</table>
-      </div>
-
-      <div style="border-top:2px solid #5E1A8A;padding-top:10px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;"><span>Percepciones</span><strong>${fmtMoneyNomina(periodo.totalPercepciones)}</strong></div>
-        <div style="display:flex;justify-content:space-between;"><span>Deducciones</span><strong>-${fmtMoneyNomina(periodo.totalDeducciones)}</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:15px;color:#5E1A8A;margin-top:6px;"><span>TOTAL A PAGAR</span><strong>${fmtMoneyNomina(periodo.totalAPagar)}</strong></div>
-      </div>
-
-      <div style="font-size:10px;margin-bottom:10px;">
-        <strong>Estado del pago:</strong> ${estadoPago.estado === 'pagada' ? `Pagado el ${formatearFechaNomina(estadoPago.fechaPago)} — registrado por ${escapeHTMLNomina(estadoPago.registradoPor)}` : 'Pendiente'}
-      </div>
-
-      <div style="border-top:1px solid #eae4eb;padding-top:8px;font-size:9px;color:#6B6270;text-align:center;">
-        Comprobante generado por Portal MW con los valores guardados de este periodo.
-      </div>
     </div>
   `;
 
+}
+
+function construirHTMLComprobanteNomina(empleado, periodo) {
+  const bloque = construirBloqueReciboNomina(empleado, periodo);
+  return `
+    <div style="background:#fff;">
+      ${bloque}
+      <div style="border-top:1px dashed #9a8ea8;margin:0 18px;position:relative;">
+        <span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);background:#fff;padding:0 8px;font-size:9px;color:#6B6270;">✂ cortar aquí</span>
+      </div>
+      ${bloque}
+    </div>
+  `;
 }
 
 // ============================================================
@@ -965,6 +1023,13 @@ function abrirModalEmpleadoNomina(id) {
       <label>Fecha de inicio<input type="date" id="nomEmpFechaInicio" value="${empleado?.fechaInicio || new Date().toISOString().slice(0, 10)}"></label>
       <label>Salario base semanal<input type="number" step="0.01" id="nomEmpSalario" value="${empleado?.salarioBase ?? 0}"></label>
       <label>Pago por hora extra<input type="number" step="0.01" id="nomEmpHoraExtra" value="${empleado?.pagoHoraExtra ?? 0}"></label>
+      <label>Método de pago
+        <select id="nomEmpMetodoPago">
+          <option value="Efectivo" ${(empleado?.metodoPago || 'Efectivo') === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
+          <option value="Transferencia" ${empleado?.metodoPago === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
+          <option value="Cheque" ${empleado?.metodoPago === 'Cheque' ? 'selected' : ''}>Cheque</option>
+        </select>
+      </label>
     </div>
     <div id="nomEmpError" class="auth-error" style="display:none;"></div>
     <div style="display:flex;gap:10px;margin-top:14px;">
@@ -986,7 +1051,8 @@ function abrirModalEmpleadoNomina(id) {
       cargo: document.getElementById('nomEmpCargo').value,
       fechaInicio: document.getElementById('nomEmpFechaInicio').value,
       salarioBase: parseFloat(document.getElementById('nomEmpSalario').value) || 0,
-      pagoHoraExtra: parseFloat(document.getElementById('nomEmpHoraExtra').value) || 0
+      pagoHoraExtra: parseFloat(document.getElementById('nomEmpHoraExtra').value) || 0,
+      metodoPago: document.getElementById('nomEmpMetodoPago').value
     };
 
     const error = document.getElementById('nomEmpError');
