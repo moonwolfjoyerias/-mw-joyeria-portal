@@ -115,6 +115,11 @@ const NOTIF_ADMIN_GRUPOS = [
   { rol: 'rh', titulo: 'RH' }
 ];
 
+// Cada bandeja se muestra como un desplegable independiente (<details>)
+// en vez de una lista plana larga — más fácil de escanear cuando hay
+// varias bandejas con notificaciones a la vez. Se abre automáticamente
+// la bandeja que tiene algo sin leer; una bandeja ya vista completa
+// queda colapsada hasta que Admin decida abrirla.
 function renderNotificacionesAdminAgrupadas(panel, badge) {
 
   if (!panel) return;
@@ -139,11 +144,19 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
 
   panel.innerHTML = grupos.map(g => {
     if (!g.items.length) return '';
+    const noLeidasGrupo = g.items.filter(n => !n.leida).length;
     return `
-      <div class="notif-header">Notificaciones de ${g.titulo}</div>
-      ${g.items.map(n => `
-        <a class="notif-item" href="${(typeof PORTAL_LINKS !== 'undefined' && PORTAL_LINKS[n.link]) || n.link}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
-      `).join('')}
+      <details class="notif-group" ${noLeidasGrupo > 0 ? 'open' : ''}>
+        <summary>
+          <span>${g.titulo}</span>
+          <span class="notif-group-count ${noLeidasGrupo > 0 ? 'sin-leer' : ''}">${noLeidasGrupo > 0 ? noLeidasGrupo : g.items.length}</span>
+        </summary>
+        <div class="notif-group-items">
+          ${g.items.map(n => `
+            <a class="notif-item" href="${(typeof PORTAL_LINKS !== 'undefined' && PORTAL_LINKS[n.link]) || n.link}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
+          `).join('')}
+        </div>
+      </details>
     `;
   }).join('');
 

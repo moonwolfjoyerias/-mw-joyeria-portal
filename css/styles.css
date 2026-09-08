@@ -891,6 +891,48 @@ a:hover { color: var(--mw-gold); }
 .notif-panel .notif-empty { padding: 1.2em 1em; text-align: center; color: var(--mw-text-muted); font-size: 0.85rem; }
 .notif-panel .notif-header { padding: 0.7em 1em; font-family: var(--font-heading); font-size: 0.85rem; color: var(--mw-purple); border-bottom: 1px solid var(--mw-border); }
 
+/* Bandejas desplegables del panel de Admin (una por rol) */
+.notif-panel .notif-group { border-bottom: 1px solid var(--mw-border); }
+.notif-panel .notif-group:last-child { border-bottom: none; }
+.notif-panel .notif-group summary {
+  padding: 0.7em 1em;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  color: var(--mw-purple);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  list-style: none;
+}
+.notif-panel .notif-group summary::-webkit-details-marker { display: none; }
+.notif-panel .notif-group summary span:first-child { display: flex; align-items: center; gap: 7px; }
+.notif-panel .notif-group summary span:first-child::before {
+  content: '▸';
+  font-size: 0.7rem;
+  color: var(--mw-text-muted);
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.notif-panel .notif-group[open] summary span:first-child::before { transform: rotate(90deg); }
+.notif-panel .notif-group-count {
+  background: var(--mw-border);
+  color: var(--mw-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.notif-panel .notif-group-count.sin-leer { background: var(--mw-purple); color: #fff; }
+.notif-panel .notif-group-items .notif-item { padding-left: 1.4em; }
+
 .profile-btn {
   display: flex;
   align-items: center;

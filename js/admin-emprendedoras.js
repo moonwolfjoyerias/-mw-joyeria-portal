@@ -29,10 +29,17 @@ document.addEventListener('DOMContentLoaded', () => {
   inicializarEventosPersonas();
 
   // Enlace directo a un perfil (usado por "Ver perfil completo" desde
-  // Admin → Plan MW): admin-emprendedoras-lideres.html?persona=ID
-  const idDesdeUrl = new URLSearchParams(window.location.search).get('persona');
+  // Admin → Plan MW, y por las notificaciones de rango/constancia/
+  // apartados): admin-emprendedoras-lideres.html?persona=ID&tab=TAB
+  const paramsUrl = new URLSearchParams(window.location.search);
+  const idDesdeUrl = paramsUrl.get('persona');
+  const tabDesdeUrl = paramsUrl.get('tab');
   if (idDesdeUrl && obtenerPersonaPorId(idDesdeUrl)) {
     seleccionarPersonaAdmin(idDesdeUrl);
+    const tabsValidas = ['info', 'compras', 'apartados', 'planmw', 'equipo'];
+    if (tabDesdeUrl && tabsValidas.includes(tabDesdeUrl) && document.querySelector(`.profile-tab-btn[data-tab="${tabDesdeUrl}"]`)) {
+      cambiarTabPerfil(tabDesdeUrl);
+    }
   }
 
 });

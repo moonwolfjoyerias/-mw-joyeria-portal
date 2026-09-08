@@ -118,9 +118,9 @@ function verificarAscensosPendientes() {
         if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('rango_candidata_detectada'))) {
           agregarNotificacion({
             texto: `${nombreCompletoPersona(persona)} cumple los requisitos para subir a ${siguiente.label}. Revisa y confirma su ascenso.`,
-            link: 'admin-emprendedoras-lideres.html',
+            link: `admin-emprendedoras-lideres.html?persona=${persona.id}&tab=equipo`,
             paraId: 'admin01',
-            rolDestino: 'emprendedora_lider'
+            rolDestino: 'admin'
           });
         }
 
@@ -229,9 +229,9 @@ function verificarRecompensasConstancia() {
         if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('constancia_hito_detectado'))) {
           agregarNotificacion({
             texto: `${nombreCompletoPersona(persona)} cumplió ${proximidad.siguienteHito.meses} meses del Reto de Constancia. Confirma y prepara su premio: ${proximidad.siguienteHito.premio}.`,
-            link: 'admin-emprendedoras-lideres.html',
+            link: `admin-emprendedoras-lideres.html?persona=${persona.id}&tab=planmw`,
             paraId: 'admin01',
-            rolDestino: 'emprendedora_lider'
+            rolDestino: 'admin'
           });
         }
 

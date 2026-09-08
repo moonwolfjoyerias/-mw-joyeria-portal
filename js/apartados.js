@@ -48,10 +48,17 @@ function setText(id, val) {
 // (quitar pieza, cambiar variante, avisar transferencia). Antes estos
 // flujos solo mostraban un toast que DECÍA "se le notificó al equipo"
 // sin de verdad notificar a nadie — esto lo vuelve real.
-function notificarEquipoOperativo(texto) {
+//
+// nombrePersona: a quién pertenece el apartado — el texto lo nombra
+// explícitamente (antes decía "de un apartado" sin decir de quién) y
+// el link lleva directo a la fila de esa persona en la tabla operativa
+// de Staff/RH (?buscar=NOMBRE — ver js/staff-apartados.js /
+// js/rh-apartados.js), no a la lista genérica de apartados.
+function notificarEquipoOperativo(texto, nombrePersona) {
   if (typeof agregarNotificacion !== 'function') return;
-  agregarNotificacion({ texto, link: 'apartados', rolDestino: 'staff' });
-  agregarNotificacion({ texto, link: 'apartados', rolDestino: 'rh' });
+  const query = nombrePersona ? `?buscar=${encodeURIComponent(nombrePersona)}` : '';
+  agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff' });
+  agregarNotificacion({ texto, link: `rh-apartados.html${query}`, rolDestino: 'rh' });
 }
 
 // ---------- Render de la lista ----------
@@ -111,7 +118,7 @@ function quitarPieza(id) {
   const pieza = apartadosActuales.find(p => p.id === id);
   apartadosActuales = apartadosActuales.filter(p => p.id !== id);
   renderApartados();
-  if (pieza) notificarEquipoOperativo(`Se quitó "${pieza.nombre}" (${pieza.variante}) de un apartado — revisa si hay que liberar la pieza.`);
+  if (pieza) notificarEquipoOperativo(`Se quitó "${pieza.nombre}" (${pieza.variante}) del apartado de ${pieza.emprendedora} — revisa si hay que liberar la pieza.`, pieza.emprendedora);
   mostrarToast('Se le notificó al equipo de tus cambios');
 }
 
@@ -135,7 +142,7 @@ function abrirModalEditar(id) {
     if (nuevaVariante) pieza.variante = nuevaVariante;
     overlay.classList.remove('open');
     renderApartados();
-    if (nuevaVariante) notificarEquipoOperativo(`Se cambió la variante de "${pieza.nombre}" a "${nuevaVariante}" en un apartado — confirma que la pieza esté disponible.`);
+    if (nuevaVariante) notificarEquipoOperativo(`Se cambió la variante de "${pieza.nombre}" a "${nuevaVariante}" en el apartado de ${pieza.emprendedora} — confirma que la pieza esté disponible.`, pieza.emprendedora);
     mostrarToast('Se le notificó al equipo de tus cambios');
   });
 }
@@ -191,7 +198,8 @@ function abrirModalPago() {
   });
 
   document.getElementById('yaEnvieBtn').addEventListener('click', () => {
-    notificarEquipoOperativo(`Avisó que ya transfirió el pago de su apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${total} MXN) — confirma el depósito en el sistema.`);
+    const nombrePersona = piezas[0]?.emprendedora;
+    notificarEquipoOperativo(`${nombrePersona || 'Una emprendedora'} avisó que ya transfirió el pago de su apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${total} MXN) — confirma el depósito en el sistema.`, nombrePersona);
     box.innerHTML = `
       <button class="modal-close" data-close>&times;</button>
       <div class="confirm-box">

@@ -21,6 +21,20 @@ function obtenerInicialesPerfil(nombre) {
   return String(nombre || '').trim().split(/\s+/).slice(0, 2).map(p => p.charAt(0).toUpperCase()).join('');
 }
 
+// ---------- Nombre de la persona con sesión abierta (Emprendedora/Líder) ----------
+// 'me-emprendedora' / 'me-lider' son los registros de ejemplo que
+// representan a quien tiene la sesión abierta en cada portal (ver
+// js/personas-ejemplo.js) — se usa para que las notificaciones a
+// Staff/RH digan explícitamente de quién se trata en vez de un genérico
+// "una emprendedora" (ver js/catalogo.js, js/apartados.js).
+function obtenerNombrePersonaActualPortal() {
+  if (typeof obtenerPersonaPorId !== 'function') return null;
+  const esLider = window.location.pathname.includes('/portal/lider/');
+  const persona = obtenerPersonaPorId(esLider ? 'me-lider' : 'me-emprendedora');
+  if (!persona) return null;
+  return typeof nombreCompletoPersona === 'function' ? nombreCompletoPersona(persona) : persona.nombre;
+}
+
 // ---------- Fecha del día (pill "Resumen operativo" en Apartados) ----------
 function initResumenDatePill() {
   const el = document.getElementById('summaryDate');
