@@ -98,6 +98,7 @@
 
       <nav class="cfg-nav nom-nav-principal" id="nomNavPrincipal">
         <button type="button" class="cfg-nav-item active" data-nom-vista="lista">Nómina</button>
+        <button type="button" class="cfg-nav-item" data-nom-vista="datos">DATOS</button>
         <button type="button" class="cfg-nav-item" data-nom-vista="solicitudes">Mis solicitudes de empleados</button>
       </nav>
 
@@ -147,6 +148,18 @@
       </div>
 
       <div id="nomVistaDetalle" class="nom-vista" hidden></div>
+
+      <div id="nomVistaDatos" class="nom-vista" hidden>
+
+        <nav class="cfg-nav nom-nav-datos" id="nomNavDatos">
+          <button type="button" class="cfg-nav-item active" data-nom-datos-tab="empleados">Empleados</button>
+          <button type="button" class="cfg-nav-item" data-nom-datos-tab="conceptos">Conceptos de nómina</button>
+        </nav>
+
+        <div id="nomDatosEmpleados" class="nom-datos-tab"></div>
+        <div id="nomDatosConceptos" class="nom-datos-tab" hidden></div>
+
+      </div>
 
       <div id="nomVistaSolicitudes" class="nom-vista" hidden></div>
 
