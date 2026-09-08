@@ -84,14 +84,15 @@
       </header>
 
       <div class="account-layout">
-        <div class="profile-card">
+        <section class="profile-card" aria-labelledby="miPerfilTitulo">
           <div class="profile-photo-wrap">
             <div class="profile-photo-lg" id="perfilIniciales">R</div>
             <button class="change-photo-btn" data-modal="foto" aria-label="Cambiar foto de perfil">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5.5-5.5L4 21"/></svg>
             </button>
           </div>
-          <h2 id="perfilNombre">Recursos Humanos</h2>
+          <h2 id="miPerfilTitulo">Mi perfil</h2>
+          <p class="profile-name" id="perfilNombre">Recursos Humanos</p>
           <p class="profile-team">Puesto: Recursos Humanos</p>
 
           <div class="profile-field">
@@ -104,34 +105,57 @@
             <label>Teléfono</label>
             <div class="field-row">
               <span class="field-value">Sin registrar</span>
+              <button class="change-link" type="button" data-modal="telefono">Gestionar</button>
             </div>
           </div>
-          <div class="profile-field">
-            <label>Estado de cuenta</label>
-            <div class="field-row">
-              <span class="wishlist-status disponible">Activa</span>
-            </div>
-          </div>
-
-          <a href="../../login.html" class="btn btn-outline" style="width:100%;display:block;text-align:center;text-decoration:none;margin-top:1.2rem;">Cerrar sesión</a>
-        </div>
+          <button class="btn btn-outline" type="button" data-modal="foto" style="width:100%;margin-top:1.2rem;">Gestionar foto</button>
+        </section>
 
         <div class="benefits-col">
+          <section class="benefit-panel" aria-labelledby="miNominaTitulo">
+            <h3 id="miNominaTitulo">💰 Mi nómina</h3>
+            <p class="bp-sub">Consulta únicamente tus pagos y comprobantes de nómina.</p>
+            <div class="detail-grid">
+              <div><span>Periodo actual</span><strong>Agosto 2026</strong></div>
+              <div><span>Pago neto</span><strong>$2,600.00</strong></div>
+              <div><span>Estado</span><strong class="wishlist-status disponible">Pagada</strong></div>
+            </div>
+            <div class="profile-field" style="margin-top:1rem;">
+              <label>Comprobantes</label>
+              <div class="field-row">
+                <span class="field-value">Agosto 2026</span>
+                <button class="change-link" type="button" id="verComprobanteBtn">Consultar</button>
+              </div>
+            </div>
+          </section>
 
-          <div class="benefit-panel">
-            <h3>ℹ️ Información básica</h3>
-            <p class="bp-sub" style="margin-bottom:0;">
-              Cuenta individual de Recursos Humanos. Tiene las mismas funciones operativas que Staff — Catálogo, Apartados, Calendario y Lista de deseos — más el módulo de Nómina cuando esté disponible. RH no tiene acceso a compras de emprendedoras, comisiones, ganancias, equipos ni información financiera individual de emprendedoras o líderes.
-            </p>
-          </div>
+          <section class="benefit-panel" aria-labelledby="informacionLaboralTitulo">
+            <h3 id="informacionLaboralTitulo">📅 Información laboral</h3>
+            <p class="bp-sub">Datos laborales registrados para tu cuenta.</p>
+            <div class="detail-grid">
+              <div><span>Puesto</span><strong>Recursos Humanos</strong></div>
+              <div><span>Número de empleado</span><strong>EMP008</strong></div>
+              <div><span>Fecha de ingreso</span><strong>01 ene 2023</strong></div>
+              <div><span>Salario base</span><strong>$2,600.00</strong></div>
+              <div><span>Estado laboral</span><strong class="wishlist-status disponible">Activo</strong></div>
+            </div>
+          </section>
 
-          <div class="benefit-panel">
-            <h3>🔒 Seguridad de la cuenta</h3>
-            <p class="bp-sub">
-              Por seguridad, tu contraseña o PIN no puede cambiarse ni restablecerse desde aquí. Si no puedes ingresar, notifica a Administración y ellos se pondrán en contacto contigo — nunca se genera un restablecimiento automático.
-            </p>
-            <button class="btn btn-outline" id="olvideAccesoBtn" type="button">Olvidé mi contraseña — notificar a Administración</button>
-          </div>
+          <section class="benefit-panel" aria-labelledby="misSolicitudesTitulo">
+            <h3 id="misSolicitudesTitulo">📝 Mis solicitudes</h3>
+            <p class="bp-sub">Solicitudes realizadas por Recursos Humanos y su estado.</p>
+            <div class="solicitud-card">
+              <div class="sc-header"><strong>Actualización de datos laborales</strong><span class="status-badge en_revision">En revisión</span></div>
+              <p class="bp-sub" style="margin:0.7rem 0 0;">Solicitud enviada el 02 sep 2026 para actualizar información de contacto.</p>
+            </div>
+          </section>
+
+          <section class="benefit-panel" aria-labelledby="seguridadTitulo">
+            <h3 id="seguridadTitulo">🔐 Seguridad</h3>
+            <p class="bp-sub">Gestiona el acceso y la protección de tu cuenta.</p>
+            <p class="bp-sub">El cambio o restablecimiento de contraseña requiere validación de Administración.</p>
+            <button class="btn btn-outline" id="olvideAccesoBtn" type="button">Solicitar cambio de contraseña</button>
+          </section>
 
         </div>
       </div>
