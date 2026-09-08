@@ -892,7 +892,7 @@ function construirBloqueReciboNomina(empleado, periodo) {
           <tr>
             <td colspan="6" style="${sinBorde}font-size:8.5px;">${escapeHTMLNomina(obtenerDireccionMWNomina())}</td>
             <td colspan="2" rowspan="4" style="${sinBorde}text-align:right;vertical-align:middle;">
-              <img src="../../assets/images/imagotipo-completo-negro.png" alt="MW JOYERÍA" style="width:100%;max-width:100px;height:auto;object-fit:contain;">
+              <img src="../../assets/images/imagotipo-completo-negro.png" alt="MW JOYERÍA" style="width:100%;max-width:62px;height:auto;object-fit:contain;">
             </td>
           </tr>
 
