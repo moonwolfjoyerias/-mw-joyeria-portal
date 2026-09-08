@@ -241,9 +241,11 @@ function abrirModalApartar(nombreProducto) {
     });
     document.getElementById('yaPagueDepositoBtn')?.addEventListener('click', () => {
       if (typeof agregarNotificacion === 'function') {
-        const texto = `Avisó que ya pagó su depósito de $50 para apartar "${nombreProducto}" — confirma el depósito para abrir su ventana.`;
-        agregarNotificacion({ texto, link: 'apartados', rolDestino: 'staff' });
-        agregarNotificacion({ texto, link: 'apartados', rolDestino: 'rh' });
+        const nombrePersona = typeof obtenerNombrePersonaActualPortal === 'function' ? obtenerNombrePersonaActualPortal() : null;
+        const texto = `${nombrePersona || 'Una emprendedora'} avisó que ya pagó su depósito de $50 para apartar "${nombreProducto}" — confirma el depósito para abrir su ventana.`;
+        const query = nombrePersona ? `?buscar=${encodeURIComponent(nombrePersona)}` : '';
+        agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff' });
+        agregarNotificacion({ texto, link: `rh-apartados.html${query}`, rolDestino: 'rh' });
       }
       box.innerHTML = `
         <button class="modal-close" data-close>&times;</button>

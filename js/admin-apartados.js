@@ -27,6 +27,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   ventanas = calcularVentanasStaffActuales();
 
+  // Enlace directo desde una notificación (?buscar=NOMBRE) — precarga
+  // el buscador y, si hay una sola coincidencia, la abre expandida.
+  const buscarDesdeUrl = new URLSearchParams(window.location.search).get("buscar");
+  if (buscarDesdeUrl) {
+    terminoBusqueda = buscarDesdeUrl.trim().toLowerCase();
+    const inputBusqueda = document.getElementById("searchInput");
+    if (inputBusqueda) inputBusqueda.value = buscarDesdeUrl;
+    const coincidencias = ventanas.filter(v => v.usuarioNombre.toLowerCase().includes(terminoBusqueda));
+    if (coincidencias.length === 1) filasExpandidas.add(coincidencias[0].id);
+  }
+
   actualizarResumen();
   renderTabla();
   configurarEventos();
