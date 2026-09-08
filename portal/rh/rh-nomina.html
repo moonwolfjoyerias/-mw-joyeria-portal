@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mi portal — RH MW</title>
+  <title>Nómina — RH MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=9">
+  <link rel="stylesheet" href="../../css/styles.css?v=25">
 </head>
 <body>
 
@@ -53,3 +53,121 @@
         </a>
       </nav>
     </aside>
+
+    <main class="main-content">
+      <header class="portal-header">
+        <div>
+          <h1>Nómina</h1>
+          <p class="portal-sub">Portal de Recursos Humanos MW.</p>
+        </div>
+
+        <div class="portal-header-actions">
+          <button class="notif-bell" id="notifBell" aria-label="Notificaciones">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span class="notif-badge" id="notifBadge">0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel"></div>
+
+          <button class="profile-btn" id="profileBtn">
+            <span class="profile-avatar">R</span>
+            <span class="profile-info">
+              <strong>Recursos Humanos</strong>
+              <span class="profile-role">RH MW</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="profile-menu" id="profileMenu">
+            <a href="#" data-modal="foto">Cambiar foto de perfil</a>
+            <a href="../../login.html" class="danger">Cerrar sesión</a>
+          </div>
+        </div>
+      </header>
+
+      <p class="portal-sub" style="margin-top:-0.8rem;margin-bottom:1.1rem;">Solo aplica a empleados con sueldo (Staff, RH, Administrativo). RH captura y envía la nómina a validación de Administración — Administración es quien la valida y solo entonces puede registrarse el pago.</p>
+
+      <div class="cfg-recuperar-banner" id="nomRecuperarBanner" hidden>
+        <div>
+          <strong>Encontramos cambios sin sincronizar.</strong>
+          <span>¿Quieres recuperarlos para seguir editando?</span>
+        </div>
+        <div class="cfg-recuperar-acciones">
+          <button class="btn btn-outline" id="nomDescartarBtn" type="button">Descartar</button>
+          <button class="btn btn-primary" id="nomRecuperarBtn" type="button">Recuperar</button>
+        </div>
+      </div>
+
+      <nav class="cfg-nav nom-nav-principal" id="nomNavPrincipal">
+        <button type="button" class="cfg-nav-item active" data-nom-vista="lista">Nómina</button>
+        <button type="button" class="cfg-nav-item" data-nom-vista="solicitudes">Mis solicitudes de empleados</button>
+      </nav>
+
+      <div id="nomVistaLista" class="nom-vista">
+
+        <div class="comm-toolbar">
+          <div class="comm-toolbar-field comm-toolbar-buscar">
+            <label for="nomBuscarInput">Buscar empleado</label>
+            <input type="text" id="nomBuscarInput" placeholder="Nombre, número o cargo...">
+          </div>
+          <div class="comm-toolbar-field">
+            <label for="nomFiltroEstado">Estado de la nómina</label>
+            <select id="nomFiltroEstado">
+              <option value="todos">Todos</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="necesita_validacion_admin">Necesita validación de Administración</option>
+              <option value="validado_admin">Validado por Administración</option>
+              <option value="correccion_solicitada">Corrección solicitada por Administración</option>
+              <option value="pagado">Pagado</option>
+            </select>
+          </div>
+          <div class="comm-toolbar-field">
+            <label for="nomFiltroCargo">Cargo</label>
+            <select id="nomFiltroCargo">
+              <option value="todos">Todos</option>
+              <option value="staff">Staff</option>
+              <option value="rh">RH</option>
+              <option value="admin">Administrativo</option>
+            </select>
+          </div>
+          <div class="comm-toolbar-field">
+            <label for="nomPeriodoSelect">Periodo (semana)</label>
+            <select id="nomPeriodoSelect"></select>
+          </div>
+          <span class="comm-sync-pill" id="nomSyncPill">🟢 Guardado</span>
+        </div>
+
+        <div class="catalog-table-card">
+          <div class="catalog-table-wrap">
+            <table class="catalog-table" id="nomTablaPrincipal">
+              <thead><tr><th>Empleado</th><th>Cargo</th><th>Estado</th><th></th></tr></thead>
+              <tbody id="nomTablaPrincipalBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="nomVistaDetalle" class="nom-vista" hidden></div>
+
+      <div id="nomVistaSolicitudes" class="nom-vista" hidden></div>
+
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box" id="modalBox"></div>
+  </div>
+
+  <div id="nomPdfTemplate" class="comm-pdf-template"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script src="../../js/portal-common.js"></script>
+  <script src="../../js/rh-comun.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/notificaciones-modelo.js"></script>
+  <script src="../../js/cuentas-internas-modelo.js"></script>
+  <script src="../../js/nomina-modelo.js"></script>
+  <script src="../../js/rh-nomina.js"></script>
+</body>
+</html>

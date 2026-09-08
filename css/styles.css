@@ -3554,6 +3554,9 @@ a:hover { color: var(--mw-gold); }
 }
 .badge-pendiente { background: #fdeee0; color: #9a4e10; }
 .badge-pagada { background: #eaf7ec; color: #1f7a34; }
+.badge-revision { background: #e8eefd; color: #2952a3; }
+.badge-validado { background: #e6f6f4; color: #12766a; }
+.badge-correccion { background: #fbe7e9; color: #a3272f; }
 
 .comm-pdf-template { position: fixed; left: -10000px; top: 0; width: 480px; background: #fff; }
 #nomPdfTemplate { width: 720px; }

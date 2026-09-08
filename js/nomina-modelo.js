@@ -39,6 +39,20 @@ const NOMINA_BORRADOR_KEY = 'mw-nomina-borrador-v1';
 const CARGOS_NOMINA = { staff: 'Staff', rh: 'RH', admin: 'Administrativo' };
 const ESTADOS_EMPLEADO_NOMINA = { activo: 'Activo', inactivo: 'Inactivo' };
 
+// Flujo de revisión RH ↔ Administración de cada nómina semanal.
+// RH prepara y envía a validación; Administración valida o pide
+// corrección; el pago solo se registra una vez validada. Nunca se
+// salta un paso ni se sobrescribe el historial (ver
+// registrarCambioEstadoNomina más abajo).
+const ESTADOS_NOMINA_PERIODO = {
+  pendiente: 'Pendiente',
+  necesita_validacion_admin: 'Necesita validación de Administración',
+  validado_admin: 'Validado por Administración',
+  correccion_solicitada: 'Corrección solicitada por Administración',
+  pagado: 'Pagado'
+};
+const NOMINA_HISTORIAL_ESTADOS_KEY = 'mw-nomina-historial-estados-v1';
+
 // ============================================================
 // EMPLEADOS DE NÓMINA
 // ============================================================
@@ -358,6 +372,10 @@ function obtenerPeriodoNomina(empleadoId, periodoKey) {
     periodoKey,
     conceptos,
     ...totales,
+    estadoNomina: 'pendiente',
+    validacionRH: null,
+    validacionAdmin: null,
+    comentarioCorreccion: null,
     estadoPago: { estado: 'pendiente' },
     guardado: false
   };
@@ -425,15 +443,182 @@ function obtenerHistorialAjustesPeriodo(empleadoId, periodoKey) {
 }
 
 // ============================================================
+// FLUJO DE VALIDACIÓN RH ↔ ADMINISTRACIÓN
+// ============================================================
+
+function obtenerHistorialEstadosNomina() {
+  try {
+    const registros = JSON.parse(localStorage.getItem(NOMINA_HISTORIAL_ESTADOS_KEY));
+    return Array.isArray(registros) ? registros : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function obtenerHistorialEstadosPeriodo(empleadoId, periodoKey) {
+  return obtenerHistorialEstadosNomina()
+    .filter(r => r.empleadoId === empleadoId && r.periodoKey === periodoKey)
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+}
+
+// Nunca sobrescribe — cada cambio de estado agrega un registro nuevo.
+// Mismo formato que pidió la sección 7: estadoAnterior, estadoNuevo,
+// usuarioId, usuarioRol, fecha y (si aplica) comentario.
+function registrarCambioEstadoNomina({ empleadoId, periodoKey, estadoAnterior, estadoNuevo, usuarioId, usuarioNombre, usuarioRol, comentario }) {
+
+  const registro = {
+    empleadoId,
+    periodoKey,
+    estadoAnterior,
+    estadoNuevo,
+    usuarioId,
+    usuarioNombre,
+    usuarioRol,
+    fecha: new Date().toISOString(),
+    comentario: comentario || null
+  };
+
+  const historial = obtenerHistorialEstadosNomina();
+  historial.push(registro);
+  localStorage.setItem(NOMINA_HISTORIAL_ESTADOS_KEY, JSON.stringify(historial));
+
+  if (typeof registrarAuditoria === 'function') {
+    registrarAuditoria({
+      usuarioId, usuarioNombre, rol: usuarioRol,
+      modulo: 'nomina',
+      accion: 'cambio_estado_nomina',
+      descripcion: `Nómina de ${empleadoId} (${periodoKey}): ${ESTADOS_NOMINA_PERIODO[estadoAnterior] || estadoAnterior} → ${ESTADOS_NOMINA_PERIODO[estadoNuevo] || estadoNuevo}${comentario ? ` — ${comentario}` : ''}`
+    });
+  }
+
+  return registro;
+
+}
+
+// RH envía la nómina a revisión de Administración. Válido desde
+// "pendiente" o desde "corrección solicitada" (ciclo de revisión las
+// veces que hagan falta — sección 5).
+function enviarNominaAValidacion(empleadoId, periodoKey, { usuarioId, usuarioNombre }) {
+
+  const periodo = guardarPeriodoNomina({ ...obtenerPeriodoNomina(empleadoId, periodoKey) });
+  const estadoAnterior = periodo.estadoNomina || 'pendiente';
+
+  if (estadoAnterior !== 'pendiente' && estadoAnterior !== 'correccion_solicitada') {
+    return { ok: false, error: 'Esta nómina ya está en revisión o ya fue validada.' };
+  }
+
+  const clave = construirClavePeriodo(empleadoId, periodoKey);
+  const periodos = obtenerPeriodosNomina();
+  periodos[clave].estadoNomina = 'necesita_validacion_admin';
+  periodos[clave].validacionRH = { usuarioId, usuarioNombre, fecha: new Date().toISOString() };
+  guardarPeriodosNomina(periodos);
+
+  registrarCambioEstadoNomina({
+    empleadoId, periodoKey, estadoAnterior, estadoNuevo: 'necesita_validacion_admin',
+    usuarioId, usuarioNombre, usuarioRol: 'rh'
+  });
+
+  const empleado = obtenerEmpleadoNominaPorId(empleadoId);
+  if (typeof agregarNotificacion === 'function' && empleado) {
+    agregarNotificacion({
+      texto: `La nómina de ${empleado.nombre} (${formatearRangoSemanaNomina(periodoKey)}) está lista para validación.`,
+      link: `admin-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
+      rolDestino: 'admin'
+    });
+  }
+
+  return { ok: true, periodo: periodos[clave] };
+
+}
+
+// Administración valida la nómina — único rol que puede hacerlo.
+function validarNominaAdmin(empleadoId, periodoKey, { usuarioId, usuarioNombre }) {
+
+  const clave = construirClavePeriodo(empleadoId, periodoKey);
+  const periodos = obtenerPeriodosNomina();
+  const periodo = periodos[clave];
+  if (!periodo) return { ok: false, error: 'La nómina no existe.' };
+
+  const estadoAnterior = periodo.estadoNomina || 'pendiente';
+  if (estadoAnterior !== 'necesita_validacion_admin') {
+    return { ok: false, error: 'Esta nómina no está esperando validación.' };
+  }
+
+  periodo.estadoNomina = 'validado_admin';
+  periodo.validacionAdmin = { usuarioId, usuarioNombre, fecha: new Date().toISOString() };
+  guardarPeriodosNomina(periodos);
+
+  registrarCambioEstadoNomina({
+    empleadoId, periodoKey, estadoAnterior, estadoNuevo: 'validado_admin',
+    usuarioId, usuarioNombre, usuarioRol: 'admin'
+  });
+
+  const empleado = obtenerEmpleadoNominaPorId(empleadoId);
+  if (typeof agregarNotificacion === 'function' && empleado) {
+    agregarNotificacion({
+      texto: `La nómina de ${empleado.nombre} (${formatearRangoSemanaNomina(periodoKey)}) fue validada por Administración.`,
+      link: `rh-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
+      rolDestino: 'rh'
+    });
+  }
+
+  return { ok: true, periodo };
+
+}
+
+// Administración regresa la nómina a RH con un comentario obligatorio.
+function solicitarCorreccionNomina(empleadoId, periodoKey, { usuarioId, usuarioNombre, comentario }) {
+
+  comentario = String(comentario || '').trim();
+  if (!comentario) return { ok: false, error: 'Escribe qué debe corregir RH.' };
+
+  const clave = construirClavePeriodo(empleadoId, periodoKey);
+  const periodos = obtenerPeriodosNomina();
+  const periodo = periodos[clave];
+  if (!periodo) return { ok: false, error: 'La nómina no existe.' };
+
+  const estadoAnterior = periodo.estadoNomina || 'pendiente';
+  if (estadoAnterior !== 'necesita_validacion_admin') {
+    return { ok: false, error: 'Esta nómina no está esperando validación.' };
+  }
+
+  periodo.estadoNomina = 'correccion_solicitada';
+  periodo.comentarioCorreccion = comentario;
+  guardarPeriodosNomina(periodos);
+
+  registrarCambioEstadoNomina({
+    empleadoId, periodoKey, estadoAnterior, estadoNuevo: 'correccion_solicitada',
+    usuarioId, usuarioNombre, usuarioRol: 'admin', comentario
+  });
+
+  const empleado = obtenerEmpleadoNominaPorId(empleadoId);
+  if (typeof agregarNotificacion === 'function' && empleado) {
+    agregarNotificacion({
+      texto: `La nómina de ${empleado.nombre} (${formatearRangoSemanaNomina(periodoKey)}) requiere correcciones. Revisa el comentario de Administración.`,
+      link: `rh-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
+      rolDestino: 'rh'
+    });
+  }
+
+  return { ok: true, periodo };
+
+}
+
+// ============================================================
 // PAGO
 // ============================================================
 
+// El pago solo puede registrarse una vez que Administración validó
+// la nómina (sección 6) — nunca antes.
 function registrarPagoNomina(empleadoId, periodoKey, { montoPagado, registradoPor }) {
 
   const clave = construirClavePeriodo(empleadoId, periodoKey);
   const periodos = obtenerPeriodosNomina();
   const periodo = periodos[clave];
   if (!periodo) return { ok: false, error: 'Primero guarda el periodo antes de registrar el pago.' };
+  if (periodo.estadoNomina !== 'validado_admin') {
+    return { ok: false, error: 'Esta nómina debe estar validada por Administración antes de registrar el pago.' };
+  }
 
   periodo.estadoPago = {
     estado: 'pagada',
@@ -441,6 +626,7 @@ function registrarPagoNomina(empleadoId, periodoKey, { montoPagado, registradoPo
     registradoPor,
     montoPagado
   };
+  periodo.estadoNomina = 'pagado';
   guardarPeriodosNomina(periodos);
 
   if (typeof registrarAuditoriaAdmin === 'function') {
@@ -493,7 +679,7 @@ function guardarSolicitudesNomina(solicitudes) {
   localStorage.setItem(NOMINA_SOLICITUDES_KEY, JSON.stringify(solicitudes));
 }
 
-function crearSolicitudAltaNomina({ nombre, fechaInicio, salarioBase, numeroEmpleado, cargo, fotoUrl, solicitadoPor }) {
+function crearSolicitudAltaNomina({ nombre, fechaInicio, salarioBase, pagoHoraExtra, numeroEmpleado, cargo, fotoUrl, correo, celular, solicitadoPor, solicitadoPorId }) {
 
   if (!nombre || !numeroEmpleado) {
     return { ok: false, error: 'Nombre y número de empleado son obligatorios.' };
@@ -507,13 +693,24 @@ function crearSolicitudAltaNomina({ nombre, fechaInicio, salarioBase, numeroEmpl
     id: `sol-${Date.now()}`,
     tipo: 'alta',
     empleadoId: null,
-    datosAlta: { nombre, fechaInicio, salarioBase: Number(salarioBase) || 0, numeroEmpleado, cargo: cargo || 'staff', fotoUrl: fotoUrl || '' },
+    cuentaInternaId: null,
+    datosAlta: {
+      nombre, fechaInicio,
+      salarioBase: Number(salarioBase) || 0,
+      pagoHoraExtra: Number(pagoHoraExtra) || 0,
+      numeroEmpleado, cargo: cargo || 'staff',
+      fotoUrl: fotoUrl || '', correo: correo || '', celular: celular || ''
+    },
     motivoBaja: null,
     fechaEfectivaBaja: null,
+    observaciones: null,
     estado: 'pendiente',
     solicitadoPor,
+    solicitadoPorId: solicitadoPorId || null,
+    solicitadoPorRol: 'rh',
     fechaSolicitud: new Date().toISOString(),
     revisadoPor: null,
+    revisadoPorId: null,
     fechaResolucion: null,
     motivoRechazo: null
   };
@@ -524,12 +721,19 @@ function crearSolicitudAltaNomina({ nombre, fechaInicio, salarioBase, numeroEmpl
   if (typeof registrarAuditoriaAdmin === 'function') {
     registrarAuditoriaAdmin({ modulo: 'nomina', accion: 'solicitud_alta', descripcion: `Solicitud de alta creada: ${nombre} (${numeroEmpleado})` });
   }
+  if (typeof agregarNotificacion === 'function') {
+    agregarNotificacion({
+      texto: `Nueva solicitud de alta: RH solicitó el alta de ${nombre}. Requiere revisión de Administración.`,
+      link: `admin-nomina.html?solicitud=${nueva.id}`,
+      rolDestino: 'admin'
+    });
+  }
 
   return { ok: true, solicitud: nueva };
 
 }
 
-function crearSolicitudBajaNomina({ empleadoId, motivoBaja, fechaEfectivaBaja, solicitadoPor }) {
+function crearSolicitudBajaNomina({ empleadoId, motivoBaja, fechaEfectivaBaja, observaciones, solicitadoPor, solicitadoPorId }) {
 
   const empleado = obtenerEmpleadoNominaPorId(empleadoId);
   if (!empleado) return { ok: false, error: 'El empleado no existe.' };
@@ -540,13 +744,18 @@ function crearSolicitudBajaNomina({ empleadoId, motivoBaja, fechaEfectivaBaja, s
     id: `sol-${Date.now()}`,
     tipo: 'baja',
     empleadoId,
+    cuentaInternaId: null,
     datosAlta: null,
     motivoBaja,
     fechaEfectivaBaja: fechaEfectivaBaja || new Date().toISOString().slice(0, 10),
+    observaciones: observaciones || '',
     estado: 'pendiente',
     solicitadoPor,
+    solicitadoPorId: solicitadoPorId || null,
+    solicitadoPorRol: 'rh',
     fechaSolicitud: new Date().toISOString(),
     revisadoPor: null,
+    revisadoPorId: null,
     fechaResolucion: null,
     motivoRechazo: null
   };
@@ -557,6 +766,13 @@ function crearSolicitudBajaNomina({ empleadoId, motivoBaja, fechaEfectivaBaja, s
   if (typeof registrarAuditoriaAdmin === 'function') {
     registrarAuditoriaAdmin({ modulo: 'nomina', accion: 'solicitud_baja', descripcion: `Solicitud de baja creada: ${nombreCompletoEmpleadoNomina(empleado)} (${empleado.numeroEmpleado})` });
   }
+  if (typeof agregarNotificacion === 'function') {
+    agregarNotificacion({
+      texto: `Nueva solicitud de baja: RH solicitó la baja de ${nombreCompletoEmpleadoNomina(empleado)}. Requiere revisión de Administración.`,
+      link: `admin-nomina.html?solicitud=${nueva.id}`,
+      rolDestino: 'admin'
+    });
+  }
 
   return { ok: true, solicitud: nueva };
 
@@ -566,6 +782,21 @@ function nombreCompletoEmpleadoNomina(empleado) {
   return empleado ? empleado.nombre : '';
 }
 
+// Usuario/password iniciales de la cuenta que se crea al aprobar un
+// alta — mismo patrón ya usado para Emprendedoras/Líderes
+// (js/solicitudes-modelo.js → generarCredenciales): usuario corto +
+// password = usuario + iniciales del nombre.
+function generarCredencialesEmpleadoNomina(numeroEmpleado, nombre) {
+  const usuario = String(numeroEmpleado).toLowerCase().replace(/\s+/g, '');
+  const iniciales = String(nombre || '').trim().split(/\s+/).slice(0, 2).map(p => p.charAt(0).toUpperCase()).join('');
+  return { usuario, password: `${usuario}${iniciales}` };
+}
+
+// Único rol que puede aprobar/denegar — Administración. Al aprobar un
+// alta, además de crear el registro de nómina, crea automáticamente
+// la cuenta de acceso correspondiente (sección 4): Staff → subcuenta
+// de Staff (mismo sistema de cuentas internas que ya existe), RH/Admin
+// → cuenta normal — nunca deja que RH cree cuentas directamente.
 function aprobarSolicitudNomina(id, { usuarioAdminId, usuarioAdminNombre }) {
 
   const solicitudes = obtenerSolicitudesNomina();
@@ -573,17 +804,45 @@ function aprobarSolicitudNomina(id, { usuarioAdminId, usuarioAdminNombre }) {
   if (!solicitud) return { ok: false, error: 'La solicitud no existe.' };
   if (solicitud.estado !== 'pendiente') return { ok: false, error: 'Esta solicitud ya fue resuelta.' };
 
+  let empleadoResultante = null;
+
   if (solicitud.tipo === 'alta') {
+
     const resultado = crearEmpleadoNomina(solicitud.datosAlta);
     if (!resultado.ok) return resultado;
     solicitud.empleadoId = resultado.empleado.id;
+    empleadoResultante = resultado.empleado;
+
+    if (typeof crearCuentaInterna === 'function') {
+      const { usuario, password } = generarCredencialesEmpleadoNomina(resultado.empleado.numeroEmpleado, resultado.empleado.nombre);
+      const cuenta = crearCuentaInterna({
+        usuario, password,
+        nombre: resultado.empleado.nombre,
+        rol: resultado.empleado.cargo, // 'staff' | 'rh' | 'admin' — mismos valores en ambos catálogos
+        empleadoNominaId: resultado.empleado.id
+      });
+      if (cuenta.ok) solicitud.cuentaInternaId = cuenta.cuenta.id;
+    }
+
   } else {
+
     const resultado = darDeBajaEmpleadoNomina(solicitud.empleadoId, solicitud.fechaEfectivaBaja);
     if (!resultado.ok) return resultado;
+    empleadoResultante = resultado.empleado;
+
+    if (typeof obtenerCuentaInternaPorEmpleadoNomina === 'function' && typeof desactivarCuentaInterna === 'function') {
+      const cuenta = obtenerCuentaInternaPorEmpleadoNomina(solicitud.empleadoId);
+      if (cuenta) {
+        desactivarCuentaInterna(cuenta.id);
+        solicitud.cuentaInternaId = cuenta.id;
+      }
+    }
+
   }
 
   solicitud.estado = 'aprobada';
   solicitud.revisadoPor = usuarioAdminNombre;
+  solicitud.revisadoPorId = usuarioAdminId;
   solicitud.fechaResolucion = new Date().toISOString();
   guardarSolicitudesNomina(solicitudes);
 
@@ -592,6 +851,14 @@ function aprobarSolicitudNomina(id, { usuarioAdminId, usuarioAdminNombre }) {
       modulo: 'nomina',
       accion: solicitud.tipo === 'alta' ? 'aprobar_alta' : 'aprobar_baja',
       descripcion: `Solicitud de ${solicitud.tipo} aprobada por ${usuarioAdminNombre}`
+    });
+  }
+  if (typeof agregarNotificacion === 'function') {
+    const nombreEmpleado = solicitud.tipo === 'alta' ? solicitud.datosAlta.nombre : nombreCompletoEmpleadoNomina(empleadoResultante);
+    agregarNotificacion({
+      texto: solicitud.tipo === 'alta' ? `Alta aprobada: la solicitud de alta de ${nombreEmpleado} fue aprobada y su cuenta ya está creada.` : `Baja aprobada: la solicitud de baja de ${nombreEmpleado} fue aprobada.`,
+      link: `rh-nomina.html?solicitud=${solicitud.id}`,
+      rolDestino: 'rh'
     });
   }
 
@@ -610,6 +877,7 @@ function rechazarSolicitudNomina(id, { motivo, usuarioAdminId, usuarioAdminNombr
   solicitud.estado = 'rechazada';
   solicitud.motivoRechazo = motivo;
   solicitud.revisadoPor = usuarioAdminNombre;
+  solicitud.revisadoPorId = usuarioAdminId;
   solicitud.fechaResolucion = new Date().toISOString();
   guardarSolicitudesNomina(solicitudes);
 
@@ -618,6 +886,14 @@ function rechazarSolicitudNomina(id, { motivo, usuarioAdminId, usuarioAdminNombr
       modulo: 'nomina',
       accion: solicitud.tipo === 'alta' ? 'rechazar_alta' : 'rechazar_baja',
       descripcion: `Solicitud de ${solicitud.tipo} rechazada por ${usuarioAdminNombre} — ${motivo}`
+    });
+  }
+  if (typeof agregarNotificacion === 'function') {
+    const nombreEmpleado = solicitud.tipo === 'alta' ? solicitud.datosAlta.nombre : nombreCompletoEmpleadoNomina(obtenerEmpleadoNominaPorId(solicitud.empleadoId));
+    agregarNotificacion({
+      texto: solicitud.tipo === 'alta' ? `Alta denegada: la solicitud de alta de ${nombreEmpleado} fue denegada. Motivo: ${motivo}` : `Baja denegada: la solicitud de baja de ${nombreEmpleado} fue denegada. Motivo: ${motivo}`,
+      link: `rh-nomina.html?solicitud=${solicitud.id}`,
+      rolDestino: 'rh'
     });
   }
 
