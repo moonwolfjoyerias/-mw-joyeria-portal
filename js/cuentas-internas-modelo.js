@@ -36,15 +36,15 @@ const ROLES_CUENTA_INTERNA = { staff: 'Staff', rh: 'RH', admin: 'Admin' };
 // Líder con su propia cuenta en personas-ejemplo.js; no se duplica aquí.
 function construirCuentasInternasEjemplo() {
   return [
-    { id: 'staff01', usuario: 'staff01', nombre: 'Ana López', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z' },
-    { id: 'staff02', usuario: 'staff02', nombre: 'Mariana Torres', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z' },
-    { id: 'staff03', usuario: 'staff03', nombre: 'Carlos Reyes', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z' },
-    { id: 'staff04', usuario: 'staff04', nombre: 'Fernanda Ibarra', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z' },
-    { id: 'staff05', usuario: 'staff05', nombre: 'Jorge Salinas', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z' },
-    { id: 'staff06', usuario: 'staff06', nombre: 'Paulina Gómez', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z' },
-    { id: 'staff07', usuario: 'staff07', nombre: 'Luis Medina', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z' },
-    { id: 'rh01', usuario: 'rh01', nombre: 'Recursos Humanos', rol: 'rh', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z' },
-    { id: 'admin01', usuario: 'admin01', nombre: 'Claudia', rol: 'admin', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z' }
+    { id: 'staff01', usuario: 'staff01', nombre: 'Ana López', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
+    { id: 'staff02', usuario: 'staff02', nombre: 'Mariana Torres', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
+    { id: 'staff03', usuario: 'staff03', nombre: 'Carlos Reyes', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
+    { id: 'staff04', usuario: 'staff04', nombre: 'Fernanda Ibarra', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
+    { id: 'staff05', usuario: 'staff05', nombre: 'Jorge Salinas', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
+    { id: 'staff06', usuario: 'staff06', nombre: 'Paulina Gómez', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
+    { id: 'staff07', usuario: 'staff07', nombre: 'Luis Medina', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
+    { id: 'rh01', usuario: 'rh01', nombre: 'Recursos Humanos', rol: 'rh', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
+    { id: 'admin01', usuario: 'admin01', nombre: 'Claudia', rol: 'admin', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' }
   ];
 }
 
@@ -126,6 +126,33 @@ function eliminarCuentaInterna(id) {
       modulo: 'cuentas',
       accion: 'eliminar_cuenta_interna',
       descripcion: `Cuenta interna eliminada: ${cuenta.usuario} (${cuenta.nombre}) — rol ${ROLES_CUENTA_INTERNA[cuenta.rol] || cuenta.rol}`
+    });
+  }
+
+  return { ok: true, cuenta };
+
+}
+
+// Edición de datos de perfil propios (teléfono, correo, foto) desde
+// "Mi cuenta" — nunca toca usuario/password/rol, eso solo se cambia
+// desde Configuración → Usuarios y permisos.
+function editarCuentaInterna(id, { telefono, correo, fotoUrl } = {}) {
+
+  const cuentas = obtenerCuentasInternas();
+  const cuenta = cuentas.find(c => c.id === id);
+  if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
+
+  if (telefono !== undefined) cuenta.telefono = telefono;
+  if (correo !== undefined) cuenta.correo = correo;
+  if (fotoUrl !== undefined) cuenta.fotoUrl = fotoUrl;
+
+  guardarCuentasInternas(cuentas);
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({
+      modulo: 'cuentas',
+      accion: 'editar_perfil_cuenta_interna',
+      descripcion: `${cuenta.nombre} (${cuenta.usuario}) actualizó los datos de su cuenta.`
     });
   }
 
