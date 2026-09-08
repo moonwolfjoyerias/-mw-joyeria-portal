@@ -44,6 +44,16 @@ function setText(id, val) {
   if (el) el.textContent = val;
 }
 
+// Avisa a Staff y RH de una acción que ellos deben revisar/confirmar
+// (quitar pieza, cambiar variante, avisar transferencia). Antes estos
+// flujos solo mostraban un toast que DECÍA "se le notificó al equipo"
+// sin de verdad notificar a nadie — esto lo vuelve real.
+function notificarEquipoOperativo(texto) {
+  if (typeof agregarNotificacion !== 'function') return;
+  agregarNotificacion({ texto, link: 'apartados', rolDestino: 'staff' });
+  agregarNotificacion({ texto, link: 'apartados', rolDestino: 'rh' });
+}
+
 // ---------- Render de la lista ----------
 function renderApartados() {
   const list = document.getElementById('apartadosList');
@@ -98,8 +108,10 @@ function actualizarResumen() {
 
 // ---------- Quitar / Editar ----------
 function quitarPieza(id) {
+  const pieza = apartadosActuales.find(p => p.id === id);
   apartadosActuales = apartadosActuales.filter(p => p.id !== id);
   renderApartados();
+  if (pieza) notificarEquipoOperativo(`Se quitó "${pieza.nombre}" (${pieza.variante}) de un apartado — revisa si hay que liberar la pieza.`);
   mostrarToast('Se le notificó al equipo de tus cambios');
 }
 
@@ -123,6 +135,7 @@ function abrirModalEditar(id) {
     if (nuevaVariante) pieza.variante = nuevaVariante;
     overlay.classList.remove('open');
     renderApartados();
+    if (nuevaVariante) notificarEquipoOperativo(`Se cambió la variante de "${pieza.nombre}" a "${nuevaVariante}" en un apartado — confirma que la pieza esté disponible.`);
     mostrarToast('Se le notificó al equipo de tus cambios');
   });
 }
@@ -178,6 +191,7 @@ function abrirModalPago() {
   });
 
   document.getElementById('yaEnvieBtn').addEventListener('click', () => {
+    notificarEquipoOperativo(`Avisó que ya transfirió el pago de su apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${total} MXN) — confirma el depósito en el sistema.`);
     box.innerHTML = `
       <button class="modal-close" data-close>&times;</button>
       <div class="confirm-box">

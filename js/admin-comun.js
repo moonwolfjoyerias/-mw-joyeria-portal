@@ -97,3 +97,53 @@ function obtenerAuditoriaAdmin() {
     return [];
   }
 }
+
+// ============================================================
+// CAMPANA DE NOTIFICACIONES — vista de Admin dividida por rol
+// ============================================================
+//
+// Admin es el único rol que ve las tres bandejas a la vez (en vez de
+// una sola bandeja filtrada como Emprendedora/Líder, Staff o RH — ver
+// initNotifPanel en portal-common.js). Esta función existe solo aquí
+// porque admin-comun.js se carga en todas las páginas de Admin; si
+// existe, initNotifPanel la usa en vez de su propio render genérico.
+
+const NOTIF_ADMIN_GRUPOS = [
+  { rol: 'emprendedora_lider', titulo: 'Emprendedoras/Líderes' },
+  { rol: 'staff', titulo: 'Staff' },
+  { rol: 'rh', titulo: 'RH' }
+];
+
+function renderNotificacionesAdminAgrupadas(panel, badge) {
+
+  if (!panel) return;
+
+  const todas = typeof obtenerNotificacionesCompartidas === 'function' ? obtenerNotificacionesCompartidas() : [];
+  const noLeidas = todas.filter(n => !n.leida).length;
+
+  if (badge) {
+    if (noLeidas > 0) { badge.textContent = noLeidas; badge.style.display = 'flex'; }
+    else { badge.style.display = 'none'; }
+  }
+
+  const grupos = NOTIF_ADMIN_GRUPOS.map(g => ({
+    ...g,
+    items: todas.filter(n => (n.rolDestino || 'emprendedora_lider') === g.rol)
+  }));
+
+  if (!grupos.some(g => g.items.length)) {
+    panel.innerHTML = '<div class="notif-empty">No tienes notificaciones nuevas.</div>';
+    return;
+  }
+
+  panel.innerHTML = grupos.map(g => {
+    if (!g.items.length) return '';
+    return `
+      <div class="notif-header">Notificaciones de ${g.titulo}</div>
+      ${g.items.map(n => `
+        <a class="notif-item" href="${(typeof PORTAL_LINKS !== 'undefined' && PORTAL_LINKS[n.link]) || n.link}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
+      `).join('')}
+    `;
+  }).join('');
+
+}

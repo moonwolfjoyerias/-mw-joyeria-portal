@@ -31,7 +31,7 @@ function obtenerIvaDivisorLider() {
 
 // ---------- Perfil ----------
 function renderPerfilLider() {
-  const iniciales = 'LI';
+  const iniciales = typeof obtenerInicialesPerfil === 'function' ? obtenerInicialesPerfil(PERFIL_LIDER_EJEMPLO.nombre) : 'L';
   setText('perfilIniciales', iniciales);
   setText('perfilNombre', PERFIL_LIDER_EJEMPLO.nombre);
   setText('perfilLider', `Líder ${RANGOS_MW[idxRango(LIDER_EJEMPLO.rangoActualKey)].label}`);

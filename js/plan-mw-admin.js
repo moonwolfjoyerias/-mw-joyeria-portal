@@ -119,7 +119,8 @@ function verificarAscensosPendientes() {
           agregarNotificacion({
             texto: `${nombreCompletoPersona(persona)} cumple los requisitos para subir a ${siguiente.label}. Revisa y confirma su ascenso.`,
             link: 'admin-emprendedoras-lideres.html',
-            paraId: 'admin01'
+            paraId: 'admin01',
+            rolDestino: 'emprendedora_lider'
           });
         }
 
@@ -171,7 +172,8 @@ function abrirConfirmarAscensoRango(persona, onExito) {
         agregarNotificacion({
           texto: `¡Felicidades! Tu rango subió a ${siguienteLabel}. Sigue así ✦`,
           link: 'cuenta',
-          paraId: actual.id
+          paraId: actual.id,
+          rolDestino: 'emprendedora_lider'
         });
       }
 
@@ -228,7 +230,8 @@ function verificarRecompensasConstancia() {
           agregarNotificacion({
             texto: `${nombreCompletoPersona(persona)} cumplió ${proximidad.siguienteHito.meses} meses del Reto de Constancia. Confirma y prepara su premio: ${proximidad.siguienteHito.premio}.`,
             link: 'admin-emprendedoras-lideres.html',
-            paraId: 'admin01'
+            paraId: 'admin01',
+            rolDestino: 'emprendedora_lider'
           });
         }
 
@@ -276,7 +279,8 @@ function abrirConfirmarRecompensaConstancia(persona, onExito) {
         agregarNotificacion({
           texto: `¡Felicidades! Ganaste "${premio}" por cumplir ${meses} meses del Reto de Constancia 🎉`,
           link: 'cuenta',
-          paraId: actual.id
+          paraId: actual.id,
+          rolDestino: 'emprendedora_lider'
         });
       }
 
