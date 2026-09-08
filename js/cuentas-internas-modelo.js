@@ -36,15 +36,15 @@ const ROLES_CUENTA_INTERNA = { staff: 'Staff', rh: 'RH', admin: 'Admin' };
 // Líder con su propia cuenta en personas-ejemplo.js; no se duplica aquí.
 function construirCuentasInternasEjemplo() {
   return [
-    { id: 'staff01', usuario: 'staff01', nombre: 'Ana López', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
-    { id: 'staff02', usuario: 'staff02', nombre: 'Mariana Torres', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
-    { id: 'staff03', usuario: 'staff03', nombre: 'Carlos Reyes', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
-    { id: 'staff04', usuario: 'staff04', nombre: 'Fernanda Ibarra', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
-    { id: 'staff05', usuario: 'staff05', nombre: 'Jorge Salinas', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
-    { id: 'staff06', usuario: 'staff06', nombre: 'Paulina Gómez', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
-    { id: 'staff07', usuario: 'staff07', nombre: 'Luis Medina', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
-    { id: 'rh01', usuario: 'rh01', nombre: 'Recursos Humanos', rol: 'rh', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' },
-    { id: 'admin01', usuario: 'admin01', nombre: 'Claudia', rol: 'admin', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '' }
+    { id: 'staff01', usuario: 'staff01', nombre: 'Ana López', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
+    { id: 'staff02', usuario: 'staff02', nombre: 'Mariana Torres', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
+    { id: 'staff03', usuario: 'staff03', nombre: 'Carlos Reyes', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
+    { id: 'staff04', usuario: 'staff04', nombre: 'Fernanda Ibarra', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
+    { id: 'staff05', usuario: 'staff05', nombre: 'Jorge Salinas', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
+    { id: 'staff06', usuario: 'staff06', nombre: 'Paulina Gómez', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
+    { id: 'staff07', usuario: 'staff07', nombre: 'Luis Medina', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
+    { id: 'rh01', usuario: 'rh01', nombre: 'Recursos Humanos', rol: 'rh', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
+    { id: 'admin01', usuario: 'admin01', nombre: 'Claudia', rol: 'admin', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true }
   ];
 }
 
@@ -68,11 +68,15 @@ function guardarCuentasInternas(cuentas) {
 // Catálogo, Lista de deseos, Mi cuenta/Nómina, Calendario) como
 // respaldo ADICIONAL a su propio arreglo fijo de ejemplo — nunca lo
 // reemplaza, solo lo complementa.
+// Una cuenta desactivada (ver desactivarCuentaInterna) nunca puede
+// iniciar sesión ni reautorizar, aunque conozca la contraseña — así
+// se "desactiva su acceso al portal" en una baja de empleado sin
+// borrar la cuenta ni su historial.
 function verificarCredencialInterna(usuario, password) {
-  return obtenerCuentasInternas().find(c => c.usuario === usuario && c.password === password) || null;
+  return obtenerCuentasInternas().find(c => c.usuario === usuario && c.password === password && c.activa !== false) || null;
 }
 
-function crearCuentaInterna({ usuario, nombre, rol, password }) {
+function crearCuentaInterna({ usuario, nombre, rol, password, empleadoNominaId }) {
 
   usuario = String(usuario || '').trim();
   nombre = String(nombre || '').trim();
@@ -95,7 +99,9 @@ function crearCuentaInterna({ usuario, nombre, rol, password }) {
     nombre,
     rol,
     password,
-    fechaAlta: new Date().toISOString()
+    fechaAlta: new Date().toISOString(),
+    activa: true,
+    empleadoNominaId: empleadoNominaId || null
   };
 
   cuentas.push(nueva);
@@ -111,6 +117,54 @@ function crearCuentaInterna({ usuario, nombre, rol, password }) {
 
   return { ok: true, cuenta: nueva };
 
+}
+
+// Baja de empleado (sección 6 del flujo de alta/baja): nunca se borra
+// la cuenta, solo se le quita el acceso — conserva su historial.
+function desactivarCuentaInterna(id) {
+
+  const cuentas = obtenerCuentasInternas();
+  const cuenta = cuentas.find(c => c.id === id);
+  if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
+
+  cuenta.activa = false;
+  guardarCuentasInternas(cuentas);
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({
+      modulo: 'cuentas',
+      accion: 'desactivar_cuenta_interna',
+      descripcion: `Acceso desactivado para la cuenta interna ${cuenta.usuario} (${cuenta.nombre})`
+    });
+  }
+
+  return { ok: true, cuenta };
+
+}
+
+function activarCuentaInterna(id) {
+
+  const cuentas = obtenerCuentasInternas();
+  const cuenta = cuentas.find(c => c.id === id);
+  if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
+
+  cuenta.activa = true;
+  guardarCuentasInternas(cuentas);
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({
+      modulo: 'cuentas',
+      accion: 'activar_cuenta_interna',
+      descripcion: `Acceso reactivado para la cuenta interna ${cuenta.usuario} (${cuenta.nombre})`
+    });
+  }
+
+  return { ok: true, cuenta };
+
+}
+
+function obtenerCuentaInternaPorEmpleadoNomina(empleadoNominaId) {
+  return obtenerCuentasInternas().find(c => c.empleadoNominaId === empleadoNominaId) || null;
 }
 
 function eliminarCuentaInterna(id) {

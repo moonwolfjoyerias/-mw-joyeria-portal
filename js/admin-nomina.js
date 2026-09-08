@@ -198,6 +198,24 @@ function obtenerInicialesNomina(nombre) {
   return String(nombre || '').trim().split(/\s+/).slice(0, 2).map(p => p.charAt(0).toUpperCase()).join('');
 }
 
+// Mapea cada estado del flujo RH↔Administración (js/nomina-modelo.js →
+// ESTADOS_NOMINA_PERIODO) a la clase de badge y texto que se muestran
+// en la tabla principal y en el detalle — un solo lugar para no
+// repetir el mapeo cada vez que se pinta un estado.
+const NOM_BADGE_ESTADO = {
+  pendiente: 'badge-pendiente',
+  necesita_validacion_admin: 'badge-revision',
+  validado_admin: 'badge-validado',
+  correccion_solicitada: 'badge-correccion',
+  pagado: 'badge-pagada'
+};
+
+function badgeEstadoNominaHTML(estadoNomina) {
+  const clase = NOM_BADGE_ESTADO[estadoNomina] || 'badge-pendiente';
+  const texto = ESTADOS_NOMINA_PERIODO[estadoNomina] || ESTADOS_NOMINA_PERIODO.pendiente;
+  return `<span class="badge ${clase}">${escapeHTMLNomina(texto)}</span>`;
+}
+
 function construirAvatarEmpleadoNomina(empleado, estilos = '') {
   const contenido = empleado.fotoUrl
     ? `<img src="${escapeHTMLNomina(empleado.fotoUrl)}" alt="Foto de ${escapeHTMLNomina(empleado.nombre)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
@@ -245,8 +263,6 @@ function renderTablaPrincipalNomina() {
 
   let empleados = obtenerEmpleadosNomina();
 
-  if (nomFiltroEstado === 'activos') empleados = empleados.filter(e => e.estado === 'activo');
-  if (nomFiltroEstado === 'inactivos') empleados = empleados.filter(e => e.estado === 'inactivo');
   if (nomFiltroCargo !== 'todos') empleados = empleados.filter(e => e.cargo === nomFiltroCargo);
 
   if (nomFiltroTexto) {
@@ -257,16 +273,26 @@ function renderTablaPrincipalNomina() {
     );
   }
 
-  if (!empleados.length) {
+  // El estado que se filtra/muestra es el de la nómina del periodo
+  // seleccionado (flujo RH↔Administración), no el activo/inactivo del
+  // empleado — obtenerPeriodoNomina no guarda nada, solo lee/calcula
+  // el periodo por defecto si todavía no se ha capturado.
+  let filas = empleados.map(e => ({ empleado: e, periodo: obtenerPeriodoNomina(e.id, nomPeriodoActual) }));
+
+  if (nomFiltroEstado !== 'todos') {
+    filas = filas.filter(f => (f.periodo?.estadoNomina || 'pendiente') === nomFiltroEstado);
+  }
+
+  if (!filas.length) {
     cont.innerHTML = `<tr><td colspan="4" class="catalog-empty-cell">No se encontraron empleados con ese filtro.</td></tr>`;
     return;
   }
 
-  cont.innerHTML = empleados.map(e => `
+  cont.innerHTML = filas.map(({ empleado: e, periodo: p }) => `
     <tr>
-      <td><strong>${escapeHTMLNomina(e.nombre)}</strong> <span class="catalog-product-id">${escapeHTMLNomina(e.numeroEmpleado)}</span></td>
+      <td><strong>${escapeHTMLNomina(e.nombre)}</strong> <span class="catalog-product-id">${escapeHTMLNomina(e.numeroEmpleado)}</span>${e.estado === 'inactivo' ? ' <span class="catalog-product-id">· Inactivo</span>' : ''}</td>
       <td>${escapeHTMLNomina(CARGOS_NOMINA[e.cargo] || e.cargo)}</td>
-      <td><span class="badge ${e.estado === 'activo' ? 'badge-pagada' : 'badge-pendiente'}">${ESTADOS_EMPLEADO_NOMINA[e.estado] || e.estado}</span></td>
+      <td>${badgeEstadoNominaHTML(p?.estadoNomina || 'pendiente')}</td>
       <td><button class="btn btn-outline" style="width:auto;" data-nom-ver-detalle="${e.id}" type="button">Ver detalles →</button></td>
     </tr>
   `).join('');
@@ -301,9 +327,29 @@ function renderVistaDetalleNomina() {
   nomPendienteCambios = [];
 
   const semanas = obtenerSemanasDisponibles(empleado.id);
+  const estadoNomina = nomPeriodoEnEdicion.estadoNomina || 'pendiente';
+  const puedeValidar = estadoNomina === 'necesita_validacion_admin';
 
   cont.innerHTML = `
     <button class="btn btn-outline" id="nomVolverBtn" style="width:auto;margin-bottom:1rem;" type="button">← Volver a la lista</button>
+
+    <div class="cfg-card" style="margin-bottom:1.1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div>
+          <h3 class="cfg-card-title" style="margin-bottom:4px;">Estado de la nómina — ${formatearRangoSemanaNomina(nomPeriodoActual)}</h3>
+          ${badgeEstadoNominaHTML(estadoNomina)}
+          ${nomPeriodoEnEdicion.validacionRH ? `<p class="cfg-card-sub" style="margin-top:8px;">RH (${escapeHTMLNomina(nomPeriodoEnEdicion.validacionRH.usuarioNombre)}) envió esta nómina a validación el ${formatearFechaHoraNomina(nomPeriodoEnEdicion.validacionRH.fecha)}.</p>` : ''}
+          ${nomPeriodoEnEdicion.validacionAdmin ? `<p class="cfg-card-sub" style="margin-top:4px;">Validada por ${escapeHTMLNomina(nomPeriodoEnEdicion.validacionAdmin.usuarioNombre)} el ${formatearFechaHoraNomina(nomPeriodoEnEdicion.validacionAdmin.fecha)}.</p>` : ''}
+          ${estadoNomina === 'correccion_solicitada' && nomPeriodoEnEdicion.comentarioCorreccion ? `<p class="cfg-card-sub" style="margin-top:4px;"><strong>Comentario enviado a RH:</strong> ${escapeHTMLNomina(nomPeriodoEnEdicion.comentarioCorreccion)}</p>` : ''}
+        </div>
+        ${puedeValidar ? `
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-outline" id="nomSolicitarCorreccionBtn" type="button" style="width:auto;">🔄 Solicitar revisión nuevamente</button>
+            <button class="btn btn-primary" id="nomValidarNominaBtn" type="button" style="width:auto;">✅ Validar</button>
+          </div>
+        ` : ''}
+      </div>
+    </div>
 
     <div class="dash-two-col">
       <div class="cfg-card" style="margin-bottom:0;">
@@ -339,7 +385,7 @@ function renderVistaDetalleNomina() {
 
         <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
           <button class="btn btn-outline" id="nomVerHistorialBtn" type="button" style="width:auto;">🕘 Historial de ajustes</button>
-          <button class="btn btn-outline" id="nomRegistrarPagoBtn" type="button" style="width:auto;">Registrar pago</button>
+          <button class="btn btn-outline" id="nomRegistrarPagoBtn" type="button" style="width:auto;" ${estadoNomina !== 'validado_admin' && nomPeriodoEnEdicion.estadoPago?.estado !== 'pagada' ? 'disabled title="Esta nómina debe estar validada por Administración antes de registrar el pago."' : ''}>Registrar pago</button>
           <button class="btn btn-primary" id="nomGenerarPdfBtn" type="button" style="width:auto;">🧾 Generar comprobante</button>
         </div>
       </div>
@@ -351,8 +397,7 @@ function renderVistaDetalleNomina() {
       <div class="nom-semanas-lista" id="nomHistorialSemanas">
         ${semanas.map(s => {
           const p = obtenerPeriodosNomina()[`${empleado.id}__${s}`];
-          const pagada = p?.estadoPago?.estado === 'pagada';
-          return `<button type="button" class="nom-semana-chip ${s === nomPeriodoActual ? 'activa' : ''}" data-nom-semana="${s}">${formatearRangoSemanaNomina(s)} ${p ? `<span class="badge ${pagada ? 'badge-pagada' : 'badge-pendiente'}">${pagada ? 'Pagada' : 'Pendiente'}</span>` : '<span class="badge">Sin capturar</span>'}</button>`;
+          return `<button type="button" class="nom-semana-chip ${s === nomPeriodoActual ? 'activa' : ''}" data-nom-semana="${s}">${formatearRangoSemanaNomina(s)} ${p ? badgeEstadoNominaHTML(p.estadoNomina || 'pendiente') : '<span class="badge">Sin capturar</span>'}</button>`;
         }).join('')}
       </div>
     </div>
@@ -378,9 +423,70 @@ function renderVistaDetalleNomina() {
   document.getElementById('nomVerHistorialBtn').addEventListener('click', abrirModalHistorialAjustesNomina);
   document.getElementById('nomRegistrarPagoBtn').addEventListener('click', abrirModalRegistrarPagoNomina);
   document.getElementById('nomGenerarPdfBtn').addEventListener('click', generarComprobanteNomina);
+  document.getElementById('nomValidarNominaBtn')?.addEventListener('click', () => confirmarValidarNomina(empleado));
+  document.getElementById('nomSolicitarCorreccionBtn')?.addEventListener('click', () => abrirModalSolicitarCorreccionNomina(empleado));
 
   renderTablaConceptosNomina();
   renderResumenTotalesNomina();
+
+}
+
+// ============================================================
+// VALIDACIÓN RH ↔ ADMINISTRACIÓN
+// ============================================================
+
+function confirmarValidarNomina(empleado) {
+  abrirAutorizacionAdmin({
+    titulo: 'Validar nómina',
+    mensaje: `Vas a validar la nómina de <strong>${escapeHTMLNomina(empleado.nombre)}</strong> (${escapeHTMLNomina(formatearRangoSemanaNomina(nomPeriodoActual))}). RH será notificado y podrá registrarse el pago.`,
+    onConfirmar: () => {
+      const resultado = validarNominaAdmin(empleado.id, nomPeriodoActual, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre });
+      if (!resultado.ok) { mostrarToast(resultado.error); return; }
+      mostrarToast('Nómina validada.');
+      renderVistaDetalleNomina();
+    }
+  });
+}
+
+function abrirModalSolicitarCorreccionNomina(empleado) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.style.maxWidth = '440px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="auth-icon">🔄</div>
+    <h3>Solicitar revisión nuevamente</h3>
+    <p class="modal-sub">${escapeHTMLNomina(empleado.nombre)} · ${escapeHTMLNomina(formatearRangoSemanaNomina(nomPeriodoActual))}</p>
+    <label class="cfg-field-label">¿Qué debe corregir RH?</label>
+    <textarea id="nomCorreccionComentario" rows="4" style="width:100%;border:1px solid var(--mw-border);border-radius:8px;padding:0.6em 0.8em;font-family:inherit;"></textarea>
+    <div id="nomCorreccionError" class="auth-error" style="display:none;"></div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" id="nomCorreccionCancelarBtn" type="button">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1;" id="nomCorreccionConfirmarBtn" type="button">Enviar a RH</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  document.getElementById('nomCorreccionCancelarBtn')?.addEventListener('click', cerrar);
+
+  document.getElementById('nomCorreccionConfirmarBtn')?.addEventListener('click', () => {
+    const comentario = document.getElementById('nomCorreccionComentario').value.trim();
+    const error = document.getElementById('nomCorreccionError');
+    const resultado = solicitarCorreccionNomina(empleado.id, nomPeriodoActual, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre, comentario });
+    if (!resultado.ok) {
+      error.style.display = 'block';
+      error.textContent = resultado.error;
+      return;
+    }
+    cerrar();
+    mostrarToast('Se solicitó la corrección a RH.');
+    renderVistaDetalleNomina();
+  });
 
 }
 
@@ -1297,173 +1403,172 @@ function abrirModalConceptoNomina(id) {
 
 }
 
-// ---------- Solicitudes ----------
+// ---------- Solicitudes de alta/baja ----------
+//
+// RH es el único rol que solicita (ver js/rh-nomina.js); Administración
+// solo revisa, aprueba o deniega — nunca crea solicitudes desde aquí.
+
+let nomSolFiltro = 'pendientes';
 
 function renderDatosSolicitudes() {
 
   const cont = document.getElementById('nomDatosSolicitudes');
   const solicitudes = obtenerSolicitudesNomina();
-  const empleadosActivos = obtenerEmpleadosNomina().filter(e => e.estado === 'activo');
+  const altasPendientes = solicitudes.filter(s => s.tipo === 'alta' && s.estado === 'pendiente');
+  const bajasPendientes = solicitudes.filter(s => s.tipo === 'baja' && s.estado === 'pendiente');
+
+  let filtradas = solicitudes;
+  if (nomSolFiltro === 'pendientes') filtradas = filtradas.filter(s => s.estado === 'pendiente');
+  else if (nomSolFiltro === 'aprobadas') filtradas = filtradas.filter(s => s.estado === 'aprobada');
+  else if (nomSolFiltro === 'denegadas') filtradas = filtradas.filter(s => s.estado === 'rechazada');
+  else if (nomSolFiltro === 'altas') filtradas = filtradas.filter(s => s.tipo === 'alta');
+  else if (nomSolFiltro === 'bajas') filtradas = filtradas.filter(s => s.tipo === 'baja');
+
+  const nombreSolicitud = (s) => s.tipo === 'alta' ? s.datosAlta.nombre : (obtenerEmpleadoNominaPorId(s.empleadoId)?.nombre || '—');
 
   cont.innerHTML = `
+    <div class="dash-two-col" style="margin-bottom:1.1rem;">
+      <div class="cfg-card" style="margin-bottom:0;">
+        <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Altas pendientes</h3>
+        <p class="cfg-card-sub" style="margin-bottom:8px;">${altasPendientes.length} esperando revisión</p>
+        ${altasPendientes.length ? `
+          <div class="ct-detail-list" style="border-bottom:0;">
+            ${altasPendientes.map(s => `
+              <div class="ct-detail-row">
+                <div><strong>${escapeHTMLNomina(s.datosAlta.nombre)}</strong><span class="ct-detail-sub">Solicitada por ${escapeHTMLNomina(s.solicitadoPor)} · ${formatearFechaHoraNomina(s.fechaSolicitud)}</span></div>
+                <button type="button" class="btn btn-outline" style="width:auto;" data-nom-ver-solicitud="${s.id}">Ver detalles →</button>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p class="bp-sub" style="margin:0;">No hay altas pendientes.</p>`}
+      </div>
+      <div class="cfg-card" style="margin-bottom:0;">
+        <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Bajas pendientes</h3>
+        <p class="cfg-card-sub" style="margin-bottom:8px;">${bajasPendientes.length} esperando revisión</p>
+        ${bajasPendientes.length ? `
+          <div class="ct-detail-list" style="border-bottom:0;">
+            ${bajasPendientes.map(s => `
+              <div class="ct-detail-row">
+                <div><strong>${escapeHTMLNomina(nombreSolicitud(s))}</strong><span class="ct-detail-sub">Solicitada por ${escapeHTMLNomina(s.solicitadoPor)} · ${formatearFechaHoraNomina(s.fechaSolicitud)}</span></div>
+                <button type="button" class="btn btn-outline" style="width:auto;" data-nom-ver-solicitud="${s.id}">Ver detalles →</button>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p class="bp-sub" style="margin:0;">No hay bajas pendientes.</p>`}
+      </div>
+    </div>
+
     <div class="cfg-card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
         <div>
-          <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Solicitudes de alta y baja</h3>
-          <p class="cfg-card-sub" style="margin-bottom:0;">Las altas y bajas nunca se ejecutan solas — siempre requieren aprobación de Administrativo.</p>
+          <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Todas las solicitudes</h3>
+          <p class="cfg-card-sub" style="margin-bottom:0;">RH solicita el alta/baja; Administración es quien aprueba o deniega. Ninguna solicitud se elimina del historial.</p>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-outline" id="nomSolicitarAltaBtn" style="width:auto;" type="button">+ Solicitar alta</button>
-          <button class="btn btn-outline" id="nomSolicitarBajaBtn" style="width:auto;" type="button">Solicitar baja</button>
-        </div>
+        <select id="nomSolFiltroSelect" style="width:auto;">
+          <option value="pendientes" ${nomSolFiltro === 'pendientes' ? 'selected' : ''}>Pendientes</option>
+          <option value="todas" ${nomSolFiltro === 'todas' ? 'selected' : ''}>Todas</option>
+          <option value="aprobadas" ${nomSolFiltro === 'aprobadas' ? 'selected' : ''}>Aprobadas</option>
+          <option value="denegadas" ${nomSolFiltro === 'denegadas' ? 'selected' : ''}>Denegadas</option>
+          <option value="altas" ${nomSolFiltro === 'altas' ? 'selected' : ''}>Altas</option>
+          <option value="bajas" ${nomSolFiltro === 'bajas' ? 'selected' : ''}>Bajas</option>
+        </select>
       </div>
       <div class="catalog-table-wrap cfg-tabla-wrap" style="margin-top:10px;">
         <table class="catalog-table">
-          <thead><tr><th>Empleado</th><th>Tipo</th><th>Fecha solicitud</th><th>Estado</th><th>Revisado por</th><th>Fecha resolución</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Empleado</th><th>Tipo</th><th>Fecha solicitud</th><th>Estado</th><th>Revisado por</th><th>Fecha resolución</th><th></th></tr></thead>
           <tbody>
-            ${solicitudes.length ? solicitudes.map(s => {
-              const nombre = s.tipo === 'alta' ? s.datosAlta.nombre : (obtenerEmpleadoNominaPorId(s.empleadoId)?.nombre || '—');
-              const estadoBadge = s.estado === 'pendiente' ? 'badge-pendiente' : (s.estado === 'aprobada' ? 'badge-pagada' : 'badge-pendiente');
+            ${filtradas.length ? filtradas.map(s => {
+              const estadoBadge = s.estado === 'pendiente' ? 'badge-pendiente' : (s.estado === 'aprobada' ? 'badge-pagada' : 'badge-correccion');
               return `
                 <tr>
-                  <td>${escapeHTMLNomina(nombre)}</td>
+                  <td>${escapeHTMLNomina(nombreSolicitud(s))}</td>
                   <td>${s.tipo === 'alta' ? 'Alta' : 'Baja'}</td>
                   <td>${formatearFechaHoraNomina(s.fechaSolicitud)}</td>
-                  <td><span class="badge ${estadoBadge}">${s.estado === 'pendiente' ? 'Pendiente' : s.estado === 'aprobada' ? 'Aprobada' : 'Rechazada'}</span>${s.estado === 'rechazada' && s.motivoRechazo ? `<div class="catalog-product-id">${escapeHTMLNomina(s.motivoRechazo)}</div>` : ''}</td>
+                  <td><span class="badge ${estadoBadge}">${s.estado === 'pendiente' ? 'Pendiente' : s.estado === 'aprobada' ? 'Aprobada' : 'Denegada'}</span></td>
                   <td>${escapeHTMLNomina(s.revisadoPor || '—')}</td>
                   <td>${s.fechaResolucion ? formatearFechaHoraNomina(s.fechaResolucion) : '—'}</td>
-                  <td style="white-space:nowrap;">
-                    ${s.estado === 'pendiente' ? `
-                      <button type="button" class="comm-icon-btn" data-nom-aprobar-solicitud="${s.id}" title="Aprobar">✓</button>
-                      <button type="button" class="comm-icon-btn" data-nom-rechazar-solicitud="${s.id}" title="Rechazar">✕</button>
-                    ` : '—'}
-                  </td>
+                  <td><button type="button" class="btn btn-outline" style="width:auto;" data-nom-ver-solicitud="${s.id}">Ver detalles →</button></td>
                 </tr>
               `;
-            }).join('') : `<tr><td colspan="7" class="catalog-empty-cell">Todavía no hay solicitudes.</td></tr>`}
+            }).join('') : `<tr><td colspan="7" class="catalog-empty-cell">No hay solicitudes con ese filtro.</td></tr>`}
           </tbody>
         </table>
       </div>
     </div>
   `;
 
-  document.getElementById('nomSolicitarAltaBtn').addEventListener('click', abrirModalSolicitudAlta);
-  document.getElementById('nomSolicitarBajaBtn').addEventListener('click', () => abrirModalSolicitudBaja(empleadosActivos));
-  cont.querySelectorAll('[data-nom-aprobar-solicitud]').forEach(btn => btn.addEventListener('click', () => confirmarAprobarSolicitud(btn.getAttribute('data-nom-aprobar-solicitud'))));
-  cont.querySelectorAll('[data-nom-rechazar-solicitud]').forEach(btn => btn.addEventListener('click', () => abrirModalRechazarSolicitud(btn.getAttribute('data-nom-rechazar-solicitud'))));
-
-}
-
-function abrirModalSolicitudAlta() {
-
-  const overlay = document.getElementById('modalOverlay');
-  const box = document.getElementById('modalBox');
-  if (!overlay || !box) return;
-
-  box.style.maxWidth = '440px';
-  box.innerHTML = `
-    <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">＋</div>
-    <h3>Solicitar alta de empleado</h3>
-    <p class="modal-sub">Queda pendiente de aprobación de Administrativo — no crea la cuenta de inmediato.</p>
-    <div class="cfg-form-grid" style="margin-top:10px;">
-      <label class="cfg-span-2">Nombre completo<input type="text" id="nomSolAltaNombre"></label>
-      <label>Número de empleado<input type="text" id="nomSolAltaNumero" placeholder="Ej. EMP010"></label>
-      <label>Cargo
-        <select id="nomSolAltaCargo">
-          <option value="staff">Staff</option>
-          <option value="rh">RH</option>
-          <option value="admin">Administrativo</option>
-        </select>
-      </label>
-      <label>Fecha de inicio<input type="date" id="nomSolAltaFecha" value="${new Date().toISOString().slice(0, 10)}"></label>
-      <label>Salario base semanal<input type="number" step="0.01" id="nomSolAltaSalario" value="0"></label>
-    </div>
-    <div id="nomSolAltaError" class="auth-error" style="display:none;"></div>
-    <div style="display:flex;gap:10px;margin-top:14px;">
-      <button class="btn btn-outline" style="flex:1;" id="nomSolAltaCancelarBtn" type="button">Cancelar</button>
-      <button class="btn btn-primary" style="flex:1;" id="nomSolAltaConfirmarBtn" type="button">Enviar solicitud</button>
-    </div>
-  `;
-
-  overlay.classList.add('open');
-  const cerrar = () => overlay.classList.remove('open');
-  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
-  document.getElementById('nomSolAltaCancelarBtn')?.addEventListener('click', cerrar);
-
-  document.getElementById('nomSolAltaConfirmarBtn')?.addEventListener('click', () => {
-    const datos = {
-      nombre: document.getElementById('nomSolAltaNombre').value.trim(),
-      numeroEmpleado: document.getElementById('nomSolAltaNumero').value.trim(),
-      cargo: document.getElementById('nomSolAltaCargo').value,
-      fechaInicio: document.getElementById('nomSolAltaFecha').value,
-      salarioBase: parseFloat(document.getElementById('nomSolAltaSalario').value) || 0,
-      solicitadoPor: ADMIN_IDENTIDAD.usuarioNombre
-    };
-    const error = document.getElementById('nomSolAltaError');
-    const resultado = crearSolicitudAltaNomina(datos);
-    if (!resultado.ok) {
-      error.style.display = 'block';
-      error.textContent = resultado.error;
-      return;
-    }
-    cerrar();
-    mostrarToast('Solicitud de alta enviada — pendiente de aprobación.');
+  document.getElementById('nomSolFiltroSelect').addEventListener('change', (e) => {
+    nomSolFiltro = e.target.value;
     renderDatosSolicitudes();
   });
+  cont.querySelectorAll('[data-nom-ver-solicitud]').forEach(btn => btn.addEventListener('click', () => abrirModalDetalleSolicitudNomina(btn.getAttribute('data-nom-ver-solicitud'))));
 
 }
 
-function abrirModalSolicitudBaja(empleadosActivos) {
+function abrirModalDetalleSolicitudNomina(id) {
 
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
-  if (!overlay || !box) return;
+  const solicitud = obtenerSolicitudesNomina().find(s => s.id === id);
+  if (!overlay || !box || !solicitud) return;
 
-  box.style.maxWidth = '440px';
-  box.innerHTML = `
-    <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon danger">−</div>
-    <h3>Solicitar baja de empleado</h3>
-    <p class="modal-sub">No elimina al empleado de inmediato — queda pendiente de aprobación.</p>
-    <div class="cfg-form-grid" style="margin-top:10px;">
-      <label class="cfg-span-2">Empleado
-        <select id="nomSolBajaEmpleado">
-          ${empleadosActivos.map(e => `<option value="${e.id}">${escapeHTMLNomina(e.nombre)} (${escapeHTMLNomina(e.numeroEmpleado)})</option>`).join('')}
-        </select>
-      </label>
-      <label>Fecha efectiva de baja<input type="date" id="nomSolBajaFecha" value="${new Date().toISOString().slice(0, 10)}"></label>
-      <label class="cfg-span-2">Motivo<textarea id="nomSolBajaMotivo" rows="3"></textarea></label>
+  const esAlta = solicitud.tipo === 'alta';
+  const empleadoBaja = !esAlta ? obtenerEmpleadoNominaPorId(solicitud.empleadoId) : null;
+
+  const detalle = esAlta ? `
+    <div class="detail-grid" style="margin-top:10px;">
+      <div><span>Nombre completo</span><strong>${escapeHTMLNomina(solicitud.datosAlta.nombre)}</strong></div>
+      <div><span>Fecha de ingreso</span><strong>${formatearFechaNomina(solicitud.datosAlta.fechaInicio)}</strong></div>
+      <div><span>Puesto</span><strong>${escapeHTMLNomina(CARGOS_NOMINA[solicitud.datosAlta.cargo] || solicitud.datosAlta.cargo)}</strong></div>
+      <div><span>Número de empleado</span><strong>${escapeHTMLNomina(solicitud.datosAlta.numeroEmpleado)}</strong></div>
+      <div><span>Salario base semanal</span><strong>${fmtMoneyNomina(solicitud.datosAlta.salarioBase)}</strong></div>
+      <div><span>Pago por hora extra</span><strong>${fmtMoneyNomina(solicitud.datosAlta.pagoHoraExtra)}</strong></div>
+      <div><span>Correo</span><strong>${escapeHTMLNomina(solicitud.datosAlta.correo || '—')}</strong></div>
+      <div><span>Celular</span><strong>${escapeHTMLNomina(solicitud.datosAlta.celular || '—')}</strong></div>
     </div>
-    <div id="nomSolBajaError" class="auth-error" style="display:none;"></div>
-    <div style="display:flex;gap:10px;margin-top:14px;">
-      <button class="btn btn-outline" style="flex:1;" id="nomSolBajaCancelarBtn" type="button">Cancelar</button>
-      <button class="btn btn-danger" style="flex:1;" id="nomSolBajaConfirmarBtn" type="button">Enviar solicitud</button>
+    ${solicitud.datosAlta.fotoUrl ? `<div style="margin-top:10px;"><img src="${escapeHTMLNomina(solicitud.datosAlta.fotoUrl)}" alt="Foto" style="width:64px;height:64px;object-fit:cover;border-radius:50%;"></div>` : ''}
+  ` : `
+    <div class="detail-grid" style="margin-top:10px;">
+      <div><span>Empleado</span><strong>${escapeHTMLNomina(empleadoBaja?.nombre || '—')}</strong></div>
+      <div><span>Fecha efectiva de baja</span><strong>${formatearFechaNomina(solicitud.fechaEfectivaBaja)}</strong></div>
+      <div class="cfg-span-2"><span>Motivo de baja</span><strong>${escapeHTMLNomina(solicitud.motivoBaja)}</strong></div>
+      ${solicitud.observaciones ? `<div class="cfg-span-2"><span>Observaciones</span><strong>${escapeHTMLNomina(solicitud.observaciones)}</strong></div>` : ''}
     </div>
   `;
 
-  overlay.classList.add('open');
-  const cerrar = () => overlay.classList.remove('open');
-  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
-  document.getElementById('nomSolBajaCancelarBtn')?.addEventListener('click', cerrar);
+  const resolucion = solicitud.estado !== 'pendiente' ? `
+    <div class="modal-note" style="margin-top:10px;">
+      <strong>${solicitud.estado === 'aprobada' ? 'Aprobada' : 'Denegada'}</strong> por ${escapeHTMLNomina(solicitud.revisadoPor || '—')} el ${formatearFechaHoraNomina(solicitud.fechaResolucion)}.
+      ${solicitud.motivoRechazo ? `<br>Motivo: ${escapeHTMLNomina(solicitud.motivoRechazo)}` : ''}
+    </div>
+  ` : '';
 
-  document.getElementById('nomSolBajaConfirmarBtn')?.addEventListener('click', () => {
-    const datos = {
-      empleadoId: document.getElementById('nomSolBajaEmpleado').value,
-      motivoBaja: document.getElementById('nomSolBajaMotivo').value.trim(),
-      fechaEfectivaBaja: document.getElementById('nomSolBajaFecha').value,
-      solicitadoPor: ADMIN_IDENTIDAD.usuarioNombre
-    };
-    const error = document.getElementById('nomSolBajaError');
-    const resultado = crearSolicitudBajaNomina(datos);
-    if (!resultado.ok) {
-      error.style.display = 'block';
-      error.textContent = resultado.error;
-      return;
-    }
-    cerrar();
-    mostrarToast('Solicitud de baja enviada — pendiente de aprobación.');
-    renderDatosSolicitudes();
+  box.style.maxWidth = '480px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="auth-icon">${esAlta ? '＋' : '−'}</div>
+    <h3>Solicitud de ${esAlta ? 'alta' : 'baja'}</h3>
+    <p class="modal-sub">Solicitada por ${escapeHTMLNomina(solicitud.solicitadoPor)} · ${formatearFechaHoraNomina(solicitud.fechaSolicitud)}</p>
+    ${detalle}
+    ${resolucion}
+    ${solicitud.estado === 'pendiente' ? `
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button class="btn btn-danger" style="flex:1;" id="nomSolDetalleDenegarBtn" type="button">❌ Denegar</button>
+        <button class="btn btn-primary" style="flex:1;" id="nomSolDetalleAprobarBtn" type="button">✅ Aprobar</button>
+      </div>
+    ` : ''}
+  `;
+
+  overlay.classList.add('open');
+  box.querySelector('[data-close]')?.addEventListener('click', () => overlay.classList.remove('open'));
+
+  document.getElementById('nomSolDetalleAprobarBtn')?.addEventListener('click', () => {
+    overlay.classList.remove('open');
+    confirmarAprobarSolicitud(solicitud.id);
+  });
+  document.getElementById('nomSolDetalleDenegarBtn')?.addEventListener('click', () => {
+    overlay.classList.remove('open');
+    abrirModalRechazarSolicitud(solicitud.id);
   });
 
 }
