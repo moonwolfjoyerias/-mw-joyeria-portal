@@ -817,11 +817,36 @@ function obtenerDireccionMWNomina() {
   return 'Ignacio Aldama #400 Local 21, Centro Histórico, San Luis Potosí, San Luis Potosí, CP 78000';
 }
 
-// Recibo con el mismo formato que usaba RH en Excel (dirección, datos de la
-// colaboradora, tabla con PERCEPCIONES/DEDUCCIONES y un TOTAL a un costado
-// que abarca toda la tabla, texto de conformidad y línea de firma). El
-// recibo se arma una sola vez y se imprime duplicado en la misma hoja para
-// poder cortarse a la mitad, tal como lo hacía la plantilla original.
+// Réplica visual literal del machote real de RH (PRUEBA_CAMI.xlsx, hoja
+// "Cam"): mismo grid de 8 columnas A:H con las mismas proporciones,
+// mismo lila #DAC2EC en las franjas, mismo bloque de TOTAL combinado
+// verticalmente (G:H) junto a PERCEPCIONES/DEDUCCIONES, mismos tres
+// pares concepto/importe por fila. No es un rediseño — es la misma
+// plantilla con los datos reales del empleado/periodo en vez de los
+// datos de ejemplo del Excel. Los datos cambian; el diseño no.
+
+// Proporciones reales de columnas del Excel (A:H), normalizadas a %.
+const NOM_RECIBO_COL_WIDTHS = ['16.98%', '12.52%', '15.46%', '12.52%', '13.47%', '10.54%', '6.91%', '11.60%'];
+const NOM_RECIBO_COLOR_LILA = '#DAC2EC';
+const NOM_RECIBO_BORDE = '1px solid #000';
+
+function nomReciboColgroup() {
+  return `<colgroup>${NOM_RECIBO_COL_WIDTHS.map(w => `<col style="width:${w};">`).join('')}</colgroup>`;
+}
+
+// Agrupa una lista de conceptos en filas de 3 pares (concepto/importe),
+// igual que la plantilla original — nunca menos de 2 filas por sección,
+// aunque no haya suficientes conceptos reales (las celdas vacías
+// también forman parte de la geometría de la plantilla).
+function agruparConceptosEnFilasDe3Nomina(lista) {
+  const filas = [];
+  const totalFilas = Math.max(2, Math.ceil(lista.length / 3));
+  for (let i = 0; i < totalFilas; i++) {
+    filas.push([lista[i * 3] || null, lista[i * 3 + 1] || null, lista[i * 3 + 2] || null]);
+  }
+  return filas;
+}
+
 function construirBloqueReciboNomina(empleado, periodo) {
 
   const lunes = new Date(`${periodo.periodoKey}T00:00:00`);
@@ -833,65 +858,100 @@ function construirBloqueReciboNomina(empleado, periodo) {
   const estadoPago = periodo.estadoPago || { estado: 'pendiente' };
   const fechaPagoTexto = estadoPago.estado === 'pagada' ? formatearFechaDMYNomina(estadoPago.fechaPago) : 'Pendiente';
 
-  // Filas de la tabla: encabezado + fila de fechas + PERCEPCIONES + sus
-  // conceptos + DEDUCCIONES + sus conceptos (mínimo 1 fila cada sección).
-  const filasPercepciones = percepciones.length || 1;
-  const filasDeducciones = deducciones.length || 1;
-  const totalFilas = 2 + 1 + filasPercepciones + 1 + filasDeducciones;
+  const filasPercepciones = agruparConceptosEnFilasDe3Nomina(percepciones);
+  const filasDeducciones = agruparConceptosEnFilasDe3Nomina(deducciones);
 
-  const filaConcepto = (c) => `
+  // Filas que abarca el bloque de TOTAL combinado (G:H), igual que
+  // G9:G15/H9:H15 en el Excel: desde la fila de periodo hasta la última
+  // fila de deducciones.
+  const totalFilasCombinadas = 1 + 1 + filasPercepciones.length + 1 + filasDeducciones.length;
+
+  const sinBorde = 'border:none;padding:1px 4px;';
+  const bordeGrid = `border:${NOM_RECIBO_BORDE};padding:3px 4px;`;
+
+  const bannerLila = (texto, colspan) => `
     <tr>
-      <td colspan="4" style="border:1px solid #5E1A8A;padding:4px 8px;font-size:10px;">${escapeHTMLNomina(c.nombre)}${c.cantidad !== 1 ? ` (${c.cantidad})` : ''}</td>
-      <td colspan="2" style="border:1px solid #5E1A8A;padding:4px 8px;font-size:10px;text-align:right;">${fmtMoneyNomina(c.total)}</td>
+      <td colspan="${colspan}" style="${bordeGrid}background:${NOM_RECIBO_COLOR_LILA};font-weight:700;text-align:center;vertical-align:middle;font-size:10.5px;">${texto}</td>
+    </tr>`;
+
+  const filaConceptosGrid = (fila) => `
+    <tr>
+      ${fila.map(c => `
+        <td style="${bordeGrid}font-weight:700;text-align:center;vertical-align:middle;font-size:9.5px;">${c ? escapeHTMLNomina(c.nombre) : ''}</td>
+        <td style="${bordeGrid}font-weight:700;text-align:center;vertical-align:middle;font-size:9.5px;">${c ? fmtMoneyNomina(c.total) : ''}</td>
+      `).join('')}
     </tr>`;
 
   return `
-    <div style="font-family:Poppins,Arial,sans-serif;color:#2A2230;padding:14px 18px;font-size:11px;">
+    <div style="font-family:Calibri,Arial,sans-serif;color:#000;padding:12px 14px;">
 
-      <div style="font-size:9px;text-align:center;color:#6B6270;margin-bottom:8px;">${escapeHTMLNomina(obtenerDireccionMWNomina())}</div>
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        ${nomReciboColgroup()}
+        <tbody>
 
-      <table style="width:100%;font-size:11px;margin-bottom:8px;border-collapse:collapse;">
-        <tr>
-          <td style="padding:2px 0;"><strong>Colaborador(a):</strong> ${escapeHTMLNomina(empleado.nombre)}</td>
-        </tr>
-        <tr>
-          <td style="padding:2px 0;width:60%;"><strong>Inicio de labores:</strong> ${formatearFechaDMYNomina(empleado.fechaInicio)}</td>
-          <td style="padding:2px 0;"><strong>ID EMPLEADO:</strong> ${escapeHTMLNomina(empleado.numeroEmpleado)}</td>
-        </tr>
-        <tr>
-          <td style="padding:2px 0;"><strong>Fecha de pago:</strong> ${fechaPagoTexto}</td>
-          <td style="padding:2px 0;"><strong>Método de pago:</strong> ${escapeHTMLNomina(empleado.metodoPago || 'Efectivo')}</td>
-        </tr>
+          <tr>
+            <td colspan="6" style="${sinBorde}font-size:8.5px;">${escapeHTMLNomina(obtenerDireccionMWNomina())}</td>
+            <td colspan="2" rowspan="4" style="${sinBorde}text-align:right;vertical-align:middle;">
+              <img src="../../assets/images/imagotipo-completo-negro.png" alt="MW JOYERÍA" style="width:100%;max-width:100px;height:auto;object-fit:contain;">
+            </td>
+          </tr>
+
+          <tr>
+            <td colspan="6" style="${sinBorde}font-size:9.5px;"><strong>Colaborador(a):</strong> ${escapeHTMLNomina(empleado.nombre)}</td>
+          </tr>
+
+          <tr>
+            <td style="${sinBorde}font-size:9.5px;"><strong>Inicio de labores:</strong></td>
+            <td style="${sinBorde}font-size:9.5px;">${formatearFechaDMYNomina(empleado.fechaInicio)}</td>
+            <td style="${sinBorde}font-size:9.5px;"><strong>ID EMPLEADO</strong></td>
+            <td style="${sinBorde}font-size:9.5px;">${escapeHTMLNomina(empleado.numeroEmpleado)}</td>
+            <td colspan="2" style="${sinBorde}"></td>
+          </tr>
+          <tr>
+            <td style="${sinBorde}font-size:9.5px;"><strong>Fecha de pago</strong></td>
+            <td style="${sinBorde}font-size:9.5px;">${fechaPagoTexto}</td>
+            <td style="${sinBorde}font-size:9.5px;"><strong>Metodo de pago</strong></td>
+            <td style="${sinBorde}font-size:9.5px;">${escapeHTMLNomina(empleado.metodoPago || 'Efectivo')}</td>
+            <td colspan="2" style="${sinBorde}"></td>
+          </tr>
+
+          <tr>
+            <td colspan="8" style="${bordeGrid}background:${NOM_RECIBO_COLOR_LILA};font-weight:700;text-align:center;vertical-align:middle;font-size:11px;">RECIBO DE PAGO</td>
+          </tr>
+
+          <tr>
+            <td style="${bordeGrid}background:${NOM_RECIBO_COLOR_LILA};text-align:center;vertical-align:middle;font-size:8.5px;"><strong>FECHA INICIAL:</strong></td>
+            <td style="${bordeGrid}background:${NOM_RECIBO_COLOR_LILA};text-align:center;vertical-align:middle;font-size:8.5px;">${formatearFechaDMYNomina(periodo.periodoKey)}</td>
+            <td style="${bordeGrid}background:${NOM_RECIBO_COLOR_LILA};text-align:center;vertical-align:middle;font-size:8.5px;"><strong>FECHA FINAL:</strong></td>
+            <td style="${bordeGrid}background:${NOM_RECIBO_COLOR_LILA};text-align:center;vertical-align:middle;font-size:8.5px;">${formatearFechaDMYNomina(domingo.toISOString().slice(0, 10))}</td>
+            <td style="${bordeGrid}background:${NOM_RECIBO_COLOR_LILA};text-align:center;vertical-align:middle;font-size:8.5px;"><strong>DIAS:</strong></td>
+            <td style="${bordeGrid}background:${NOM_RECIBO_COLOR_LILA};text-align:center;vertical-align:middle;font-size:8.5px;">7</td>
+            <td rowspan="${totalFilasCombinadas}" style="${bordeGrid}text-align:center;vertical-align:middle;font-weight:700;font-size:9.5px;">TOTAL</td>
+            <td rowspan="${totalFilasCombinadas}" style="${bordeGrid}text-align:center;vertical-align:middle;font-size:11px;">${fmtMoneyNomina(periodo.totalAPagar)}</td>
+          </tr>
+
+          ${bannerLila('PERCEPCIONES', 6)}
+          ${filasPercepciones.map(filaConceptosGrid).join('')}
+
+          ${bannerLila('DEDUCIONES', 6)}
+          ${filasDeducciones.map(filaConceptosGrid).join('')}
+
+        </tbody>
       </table>
 
-      <table style="width:100%;border-collapse:collapse;border:2px solid #5E1A8A;">
-        <tr>
-          <td colspan="4" style="background:#E3D2F5;border:1px solid #5E1A8A;padding:5px;text-align:center;font-weight:700;font-size:11px;">RECIBO DE PAGO</td>
-          <td rowspan="${totalFilas}" style="border:1px solid #5E1A8A;padding:4px;text-align:center;vertical-align:middle;width:14%;font-weight:700;font-size:10px;">TOTAL</td>
-          <td rowspan="${totalFilas}" style="border:1px solid #5E1A8A;padding:4px;text-align:center;vertical-align:middle;width:20%;font-weight:700;font-size:13px;color:#5E1A8A;">${fmtMoneyNomina(periodo.totalAPagar)}</td>
-        </tr>
-        <tr style="background:#F1EBFA;">
-          <td style="border:1px solid #5E1A8A;padding:4px;text-align:center;font-size:9px;"><strong>FECHA INICIAL:</strong> ${formatearFechaDMYNomina(periodo.periodoKey)}</td>
-          <td style="border:1px solid #5E1A8A;padding:4px;text-align:center;font-size:9px;"><strong>FECHA FINAL:</strong> ${formatearFechaDMYNomina(domingo.toISOString().slice(0, 10))}</td>
-          <td colspan="2" style="border:1px solid #5E1A8A;padding:4px;text-align:center;font-size:9px;"><strong>DÍAS:</strong> 7</td>
-        </tr>
-        <tr>
-          <td colspan="6" style="background:#E3D2F5;border:1px solid #5E1A8A;padding:4px;text-align:center;font-weight:700;font-size:10px;">PERCEPCIONES</td>
-        </tr>
-        ${percepciones.length ? percepciones.map(filaConcepto).join('') : `<tr><td colspan="4" style="border:1px solid #5E1A8A;padding:4px 8px;font-size:10px;color:#6B6270;">Sin percepciones</td><td colspan="2" style="border:1px solid #5E1A8A;padding:4px 8px;text-align:right;">$0.00</td></tr>`}
-        <tr>
-          <td colspan="6" style="background:#E3D2F5;border:1px solid #5E1A8A;padding:4px;text-align:center;font-weight:700;font-size:10px;">DEDUCCIONES</td>
-        </tr>
-        ${deducciones.length ? deducciones.map(filaConcepto).join('') : `<tr><td colspan="4" style="border:1px solid #5E1A8A;padding:4px 8px;font-size:10px;color:#6B6270;">Sin deducciones</td><td colspan="2" style="border:1px solid #5E1A8A;padding:4px 8px;text-align:right;">$0.00</td></tr>`}
-      </table>
-
-      <p style="font-size:8.5px;color:#6B6270;margin:8px 0 0;">Recibí el total anotado, quedando la empresa al corriente con el pago correspondiente al periodo arriba indicado, y estoy de acuerdo con el total recibido.</p>
-
-      <div style="text-align:center;margin-top:26px;">
-        <div style="border-top:1px solid #2A2230;width:230px;margin:0 auto;padding-top:4px;font-size:9px;">NOMBRE Y FIRMA</div>
+      <div style="font-size:8px;line-height:1.3;margin-top:6px;">
+        Recibi el total anotado, quedando la empresa al corriente con el pago correspondiente al periodo arriba<br>
+        indicado, y estoy de acuerdo con el total recibido.
       </div>
 
-      <div style="font-size:8.5px;color:#6B6270;margin-top:10px;">Copia MW JOYERÍA</div>
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-top:8px;">
+        ${nomReciboColgroup()}
+        <tbody>
+          <tr>
+            <td colspan="8" style="${bordeGrid}text-align:center;vertical-align:middle;font-size:9.5px;padding:10px 4px;">NOMBRE Y FIRMA</td>
+          </tr>
+        </tbody>
+      </table>
 
     </div>
   `;
@@ -903,8 +963,8 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
   return `
     <div style="background:#fff;">
       ${bloque}
-      <div style="border-top:1px dashed #9a8ea8;margin:0 18px;position:relative;">
-        <span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);background:#fff;padding:0 8px;font-size:9px;color:#6B6270;">✂ cortar aquí</span>
+      <div style="border-top:1px dashed #999;margin:4px 14px;position:relative;">
+        <span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);background:#fff;padding:0 8px;font-size:9px;color:#666;">✂ cortar aquí</span>
       </div>
       ${bloque}
     </div>

@@ -3556,7 +3556,7 @@ a:hover { color: var(--mw-gold); }
 .badge-pagada { background: #eaf7ec; color: #1f7a34; }
 
 .comm-pdf-template { position: fixed; left: -10000px; top: 0; width: 480px; background: #fff; }
-#nomPdfTemplate { width: 620px; }
+#nomPdfTemplate { width: 720px; }
 
 @media (max-width: 900px) {
   .comm-lider-header { flex-direction: column; align-items: stretch; }
