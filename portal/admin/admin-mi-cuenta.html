@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Admin MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=18">
+  <link rel="stylesheet" href="../../css/styles.css?v=24">
 </head>
 <body>
 
@@ -103,10 +103,40 @@
         </div>
       </header>
 
-      <div style="background:#fff;border:1px solid #e5dfe8;border-radius:12px;padding:3.5rem 2rem;text-align:center;color:#6c6380;">
-        <div style="font-size:2rem;margin-bottom:0.6rem;color:#C9A227;">✦</div>
-        <strong style="display:block;color:#2d145d;font-size:1.05rem;margin-bottom:0.4rem;">Próximamente</strong>
-        <p style="margin:0;font-size:0.9rem;">Esta sección del portal de Administración está en construcción.</p>
+      <div style="max-width:340px;margin:0 auto;">
+        <section class="profile-card" aria-labelledby="miCuentaTitulo">
+          <div class="profile-photo-wrap">
+            <div class="profile-photo-lg" id="miCuentaFotoPreview" style="overflow:hidden;">A</div>
+            <label class="change-photo-btn" for="miCuentaFotoInput" aria-label="Cambiar foto de perfil">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5.5-5.5L4 21"/></svg>
+            </label>
+            <input type="file" id="miCuentaFotoInput" accept="image/*" hidden>
+          </div>
+          <h2 id="miCuentaTitulo">Mi perfil</h2>
+          <p class="profile-name" id="miCuentaNombre">Claudia</p>
+          <p class="profile-team">Admin MW</p>
+
+          <div class="profile-field">
+            <label>Usuario</label>
+            <div class="field-row">
+              <span class="field-value" id="miCuentaUsuario">admin01</span>
+            </div>
+          </div>
+          <div class="profile-field">
+            <label>Teléfono</label>
+            <div class="field-row">
+              <span class="field-value" id="miCuentaTelefonoValor">Sin registrar</span>
+              <button class="change-link" type="button" id="miCuentaTelefonoBtn">Gestionar</button>
+            </div>
+          </div>
+          <div class="profile-field">
+            <label>Correo</label>
+            <div class="field-row">
+              <span class="field-value" id="miCuentaCorreoValor">Sin registrar</span>
+              <button class="change-link" type="button" id="miCuentaCorreoBtn">Gestionar</button>
+            </div>
+          </div>
+        </section>
       </div>
 
     </main>
@@ -117,5 +147,9 @@
   </div>
 
   <script src="../../js/portal-common.js"></script>
+  <script src="../../js/admin-comun.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/cuentas-internas-modelo.js"></script>
+  <script src="../../js/admin-mi-cuenta.js"></script>
 </body>
 </html>
