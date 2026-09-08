@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderPerfil() {
-  const iniciales = CUENTA_EJEMPLO.nombre.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+  const iniciales = typeof obtenerInicialesPerfil === 'function' ? obtenerInicialesPerfil(CUENTA_EJEMPLO.nombre) : CUENTA_EJEMPLO.nombre.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
   setText('perfilIniciales', iniciales);
   setText('perfilNombre', CUENTA_EJEMPLO.nombre);
   setText('perfilLider', `Equipo de ${CUENTA_EJEMPLO.lider}`);

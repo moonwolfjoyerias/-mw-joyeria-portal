@@ -261,7 +261,8 @@ function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
     agregarNotificacion({
       texto: `Solicitud aprobada: la solicitud para inscribir a ${solicitud.nombreCompleto} fue aprobada. La nueva Emprendedora ya tiene una cuenta y ha sido agregada a tu equipo.`,
       link: 'cuenta',
-      paraId: solicitud.solicitanteId
+      paraId: solicitud.solicitanteId,
+      rolDestino: 'emprendedora_lider'
     });
   }
 
@@ -304,7 +305,8 @@ function rechazarSolicitud(solicitudId, { adminId, adminNombre, motivo }) {
     agregarNotificacion({
       texto: `Solicitud rechazada: la solicitud para inscribir a ${solicitud.nombreCompleto} fue rechazada. Motivo: ${motivo}`,
       link: 'cuenta',
-      paraId: solicitud.solicitanteId
+      paraId: solicitud.solicitanteId,
+      rolDestino: 'emprendedora_lider'
     });
   }
 

@@ -229,7 +229,7 @@ function abrirModalApartar(nombreProducto) {
         <a href="https://wa.me/524448100805?text=${mensajeWa}" target="_blank" rel="noopener">444 810 0805</a>
       </p>
 
-      <button class="btn btn-primary" style="width:100%;" data-close>Pagar depósito</button>
+      <button class="btn btn-primary" style="width:100%;" id="yaPagueDepositoBtn">Ya pagué mi depósito</button>
     `;
     box.querySelectorAll('[data-copy]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -238,6 +238,24 @@ function abrirModalApartar(nombreProducto) {
         btn.textContent = 'Copiado ✓';
         setTimeout(() => { btn.textContent = original; }, 1500);
       });
+    });
+    document.getElementById('yaPagueDepositoBtn')?.addEventListener('click', () => {
+      if (typeof agregarNotificacion === 'function') {
+        const texto = `Avisó que ya pagó su depósito de $50 para apartar "${nombreProducto}" — confirma el depósito para abrir su ventana.`;
+        agregarNotificacion({ texto, link: 'apartados', rolDestino: 'staff' });
+        agregarNotificacion({ texto, link: 'apartados', rolDestino: 'rh' });
+      }
+      box.innerHTML = `
+        <button class="modal-close" data-close>&times;</button>
+        <div class="confirm-box">
+          <div class="check-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+          <h3>¡Listo!</h3>
+          <p class="modal-sub">Ya se notificó al equipo, en breve confirmarán tu depósito y se abrirá tu ventana para apartar.</p>
+          <button class="btn btn-primary" style="width:100%;" data-close>Cerrar</button>
+        </div>
+      `;
     });
   }
   overlay.classList.add('open');

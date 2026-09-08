@@ -9,21 +9,60 @@ document.addEventListener('DOMContentLoaded', () => {
   initModal();
   renderEventos();
   initEventsScroll();
+  initResumenDatePill();
 });
 
+// ---------- Iniciales a partir de un nombre ----------
+// Ej. "María Camila" → "MC". Reutilizable en cualquier burbuja de
+// perfil (encabezado, tarjeta de Mi cuenta, avatares en tablas) para
+// que dejen de estar escritas a mano — solo hace falta pasarle el
+// nombre real de la cuenta cuando exista.
+function obtenerInicialesPerfil(nombre) {
+  return String(nombre || '').trim().split(/\s+/).slice(0, 2).map(p => p.charAt(0).toUpperCase()).join('');
+}
+
+// ---------- Fecha del día (pill "Resumen operativo" en Apartados) ----------
+function initResumenDatePill() {
+  const el = document.getElementById('summaryDate');
+  if (!el) return;
+  const texto = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  el.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
 // ---------- Campana de notificaciones ----------
+// Cada rol solo ve su propia bandeja (Emprendedora/Líder, Staff o RH),
+// detectada automáticamente por la URL — ver obtenerRolPortalActual()
+// en notificaciones-modelo.js. Admin es la única excepción: en vez de
+// una bandeja filtrada, ve las tres divididas (renderNotificacionesAdminAgrupadas
+// en admin-comun.js, si esta página la cargó).
 function initNotifPanel() {
   const bell = document.getElementById('notifBell');
   const panel = document.getElementById('notifPanel');
   const badge = document.getElementById('notifBadge');
   if (!bell || !panel) return;
 
+  if (typeof renderNotificacionesAdminAgrupadas === 'function') {
+    renderNotificacionesAdminAgrupadas(panel, badge);
+    wireNotifBellToggle(bell, panel);
+    return;
+  }
+
   // Si la página cargó js/notificaciones-modelo.js, la lista puede
   // crecer en vivo (por ejemplo, al aprobar/rechazar una Solicitud de
-  // inscripción). Si no, se mantiene el arreglo estático de siempre.
-  const notificaciones = (typeof obtenerNotificacionesCompartidas === 'function')
-    ? obtenerNotificacionesCompartidas()
-    : (typeof NOTIFICACIONES_EJEMPLO !== 'undefined' ? NOTIFICACIONES_EJEMPLO : []);
+  // inscripción) y se filtra por la bandeja del rol actual. Si no, se
+  // mantiene el arreglo estático de siempre (ya solo tiene ejemplos de
+  // la bandeja de Emprendedora/Líder).
+  const rolActual = typeof obtenerRolPortalActual === 'function' ? obtenerRolPortalActual() : null;
+  let notificaciones;
+  if (typeof obtenerNotificacionesPorRol === 'function' && rolActual) {
+    notificaciones = obtenerNotificacionesPorRol(rolActual);
+  } else if (typeof obtenerNotificacionesCompartidas === 'function') {
+    notificaciones = obtenerNotificacionesCompartidas();
+  } else if (typeof NOTIFICACIONES_EJEMPLO !== 'undefined') {
+    notificaciones = rolActual ? NOTIFICACIONES_EJEMPLO.filter(n => (n.rolDestino || 'emprendedora_lider') === rolActual) : NOTIFICACIONES_EJEMPLO;
+  } else {
+    notificaciones = [];
+  }
 
   const noLeidas = notificaciones.filter(n => !n.leida).length;
 
@@ -41,6 +80,12 @@ function initNotifPanel() {
     panel.innerHTML = '<div class="notif-empty">No tienes notificaciones nuevas.</div>';
   }
 
+  wireNotifBellToggle(bell, panel);
+}
+
+// Abrir/cerrar el panel al hacer clic en la campana — se reutiliza tal
+// cual para el panel agrupado de Admin.
+function wireNotifBellToggle(bell, panel) {
   bell.addEventListener('click', (e) => {
     e.stopPropagation();
     closeProfileMenu();
