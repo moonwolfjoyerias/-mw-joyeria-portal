@@ -49,15 +49,15 @@ const ESTADOS_EMPLEADO_NOMINA = { activo: 'Activo', inactivo: 'Inactivo' };
 // salarial real en el sistema antes de esta página).
 function construirEmpleadosNominaEjemplo() {
   return [
-    { id: 'emp-staff01', numeroEmpleado: 'EMP001', nombre: 'Ana López', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '' },
-    { id: 'emp-staff02', numeroEmpleado: 'EMP002', nombre: 'Mariana Torres', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '' },
-    { id: 'emp-staff03', numeroEmpleado: 'EMP003', nombre: 'Carlos Reyes', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '' },
-    { id: 'emp-staff04', numeroEmpleado: 'EMP004', nombre: 'Fernanda Ibarra', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '' },
-    { id: 'emp-staff05', numeroEmpleado: 'EMP005', nombre: 'Jorge Salinas', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '' },
-    { id: 'emp-staff06', numeroEmpleado: 'EMP006', nombre: 'Paulina Gómez', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '' },
-    { id: 'emp-staff07', numeroEmpleado: 'EMP007', nombre: 'Luis Medina', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '' },
-    { id: 'emp-rh01', numeroEmpleado: 'EMP008', nombre: 'Recursos Humanos', cargo: 'rh', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 2600, pagoHoraExtra: 140, estado: 'activo', fotoUrl: '' },
-    { id: 'emp-admin01', numeroEmpleado: 'EMP009', nombre: 'Claudia', cargo: 'admin', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 3200, pagoHoraExtra: 170, estado: 'activo', fotoUrl: '' }
+    { id: 'emp-staff01', numeroEmpleado: 'EMP001', nombre: 'Ana López', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff02', numeroEmpleado: 'EMP002', nombre: 'Mariana Torres', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff03', numeroEmpleado: 'EMP003', nombre: 'Carlos Reyes', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff04', numeroEmpleado: 'EMP004', nombre: 'Fernanda Ibarra', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff05', numeroEmpleado: 'EMP005', nombre: 'Jorge Salinas', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff06', numeroEmpleado: 'EMP006', nombre: 'Paulina Gómez', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff07', numeroEmpleado: 'EMP007', nombre: 'Luis Medina', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-rh01', numeroEmpleado: 'EMP008', nombre: 'Recursos Humanos', cargo: 'rh', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 2600, pagoHoraExtra: 140, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-admin01', numeroEmpleado: 'EMP009', nombre: 'Claudia', cargo: 'admin', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 3200, pagoHoraExtra: 170, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' }
   ];
 }
 
@@ -85,7 +85,7 @@ function existeNumeroEmpleado(numeroEmpleado, excluirId) {
   return obtenerEmpleadosNomina().some(e => e.numeroEmpleado.toLowerCase() === String(numeroEmpleado || '').toLowerCase() && e.id !== excluirId);
 }
 
-function crearEmpleadoNomina({ numeroEmpleado, nombre, cargo, fechaInicio, salarioBase, pagoHoraExtra, fotoUrl }) {
+function crearEmpleadoNomina({ numeroEmpleado, nombre, cargo, fechaInicio, salarioBase, pagoHoraExtra, fotoUrl, metodoPago }) {
 
   numeroEmpleado = String(numeroEmpleado || '').trim();
   nombre = String(nombre || '').trim();
@@ -111,7 +111,8 @@ function crearEmpleadoNomina({ numeroEmpleado, nombre, cargo, fechaInicio, salar
     salarioBase: Number(salarioBase) || 0,
     pagoHoraExtra: Number(pagoHoraExtra) || 0,
     estado: 'activo',
-    fotoUrl: fotoUrl || ''
+    fotoUrl: fotoUrl || '',
+    metodoPago: metodoPago || 'Efectivo'
   };
 
   empleados.push(nuevo);
@@ -138,7 +139,8 @@ function editarEmpleadoNomina(id, cambios) {
     fechaInicio: cambios.fechaInicio ?? empleado.fechaInicio,
     salarioBase: cambios.salarioBase !== undefined ? Number(cambios.salarioBase) || 0 : empleado.salarioBase,
     pagoHoraExtra: cambios.pagoHoraExtra !== undefined ? Number(cambios.pagoHoraExtra) || 0 : empleado.pagoHoraExtra,
-    fotoUrl: cambios.fotoUrl ?? empleado.fotoUrl
+    fotoUrl: cambios.fotoUrl ?? empleado.fotoUrl,
+    metodoPago: cambios.metodoPago ?? empleado.metodoPago ?? 'Efectivo'
   });
 
   guardarEmpleadosNomina(empleados);
