@@ -109,6 +109,7 @@ function obtenerAuditoriaAdmin() {
 // existe, initNotifPanel la usa en vez de su propio render genérico.
 
 const NOTIF_ADMIN_GRUPOS = [
+  { rol: 'admin', titulo: 'Para Administración' },
   { rol: 'emprendedora_lider', titulo: 'Emprendedoras/Líderes' },
   { rol: 'staff', titulo: 'Staff' },
   { rol: 'rh', titulo: 'RH' }
