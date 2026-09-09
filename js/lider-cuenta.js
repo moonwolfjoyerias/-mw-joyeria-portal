@@ -60,9 +60,9 @@ function renderRifaLider() {
     const boletosExtra = Math.floor(extra / montoPorBoletoExtra);
     const totalBoletos = 1 + boletosExtra;
     const faltanteSiguiente = montoPorBoletoExtra - (extra % montoPorBoletoExtra);
-    let texto = totalBoletos === 1 ? '¡Ya tienes tu boleto para la rifa de este mes! 🎟️' : `¡Llevas ${totalBoletos} boletos para la rifa de este mes! 🎟️`;
+    let texto = totalBoletos === 1 ? '¡Ya tienes tu boleto para la rifa de este mes! <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 9a2 2 0 012-2h14a2 2 0 012 2v1a1.5 1.5 0 000 3v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1a1.5 1.5 0 000-3V9z"/><path d="M9 7v10"/></svg></span>' : `¡Llevas ${totalBoletos} boletos para la rifa de este mes! <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 9a2 2 0 012-2h14a2 2 0 012 2v1a1.5 1.5 0 000 3v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1a1.5 1.5 0 000-3V9z"/><path d="M9 7v10"/></svg></span>`;
     texto += ` Te faltan ${fmtMoney(faltanteSiguiente)} para tu siguiente boleto extra.`;
-    msg.textContent = texto;
+    msg.innerHTML = texto;
   }
 }
 

@@ -181,20 +181,20 @@ function construirTarjetaProximo(item) {
   const { persona, categoria, listo, progresoPct } = item;
   const tipoCuenta = persona.tipo === 'lider' ? 'Líder' : 'Emprendedora';
 
-  let icono = '⚡';
+  let icono = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>';
   let tituloTipo = '';
   let sub = '';
   let textoFalta = '';
 
   if (categoria === 'rango') {
-    icono = listo ? '⬆️' : '⚡';
+    icono = listo ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>' : '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>';
     tituloTipo = listo ? 'Lista para subir de rango' : 'Próximo rango';
     sub = `${tipoCuenta} · Rango ${rangoLabel(persona.rangoActualKey)}`;
     textoFalta = listo
       ? `Ya cumple todos los requisitos para <strong>${item.siguiente.label}</strong>.`
       : construirTextoFaltante(item.limitante, item.siguiente.label);
   } else {
-    icono = listo ? '🎁' : '⚡';
+    icono = listo ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M4 9h16M12 9v11"/><path d="M8 9c0-2 1-4 4-4s4 2 4 4"/></svg>' : '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>';
     tituloTipo = listo ? 'Lista para su recompensa' : 'Próxima recompensa';
     sub = `${tipoCuenta} · Reto de Constancia`;
     textoFalta = listo
@@ -254,16 +254,16 @@ function renderLogrosPlanMW(lista) {
 function construirTarjetaLogro(persona, logro) {
 
   const tipoCuenta = persona.tipo === 'lider' ? 'Líder' : 'Emprendedora';
-  let icono = '🏆';
+  let icono = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 4h10v4a5 5 0 01-10 0V4z"/><path d="M7 5H4a3 3 0 003 4M17 5h3a3 3 0 01-3 4"/><path d="M12 13v4"/><path d="M9 20h6"/><path d="M9.5 17h5l.5 3h-6l.5-3z"/></svg>';
   let titulo = '';
   let sub = tipoCuenta;
 
   if (logro.tipo === 'ascenso_rango') {
-    icono = logro.rangoNuevo === 'corona' ? '👑' : '🥇';
+    icono = logro.rangoNuevo === 'corona' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 18h16l-1.5-8-4 3-2.5-5-2.5 5-4-3L4 18z"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="15" r="5"/><path d="M9 10.5L7 3h3l2 6"/><path d="M15 10.5L17 3h-3l-2 6"/></svg>';
     titulo = `${nombreCompletoPersona(persona)} subió a ${rangoLabel(logro.rangoNuevo)}`;
     sub = `${tipoCuenta} · ${rangoLabel(logro.rangoAnterior)} → ${rangoLabel(logro.rangoNuevo)}`;
   } else if (logro.tipo === 'recompensa_constancia') {
-    icono = '🎁';
+    icono = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M4 9h16M12 9v11"/><path d="M8 9c0-2 1-4 4-4s4 2 4 4"/></svg>';
     titulo = `${nombreCompletoPersona(persona)} ganó ${logro.premio}`;
     sub = `${tipoCuenta} · Reto de Constancia · ${logro.hito} meses`;
   }
@@ -310,7 +310,7 @@ function abrirDetallePlanMW(personaId) {
   box.style.maxWidth = '520px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">✦</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z"/></svg></div>
     <h3>${escapeHTMLPersonas(nombreCompletoPersona(persona))}</h3>
     <p class="modal-sub">${tipoCuenta}${persona.tipo === 'lider' ? ` · Rango ${rangoLabel(persona.rangoActualKey)}` : ''}</p>
 

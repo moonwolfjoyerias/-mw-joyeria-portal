@@ -223,9 +223,9 @@ function filaActividadRH(a) {
       <td>${escapeHTMLAct(a.encargadoNombre || 'Sin asignar')}</td>
       <td><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span></td>
       <td style="white-space:nowrap;">
-        <button type="button" class="comm-icon-btn" data-act-editar="${a.id}" title="Editar">✎</button>
-        <button type="button" class="comm-icon-btn" data-act-detalle="${a.id}" title="Ver detalle e historial">⌕</button>
-        ${a.estado === 'enterado' ? `<button type="button" class="comm-icon-btn" data-act-firmar="${a.id}" title="Firmar por RH">✓</button>` : ''}
+        <button type="button" class="comm-icon-btn" data-act-editar="${a.id}" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></button>
+        <button type="button" class="comm-icon-btn" data-act-detalle="${a.id}" title="Ver detalle e historial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="6"/><path d="M20 20l-5.5-5.5"/></svg></button>
+        ${a.estado === 'enterado' ? `<button type="button" class="comm-icon-btn" data-act-firmar="${a.id}" title="Firmar por RH"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></button>` : ''}
       </td>
     </tr>
   `;
@@ -295,7 +295,7 @@ function abrirModalCrearActividad() {
     <label for="actZonaSelect">Zona / vitrina</label>
     <select id="actZonaSelect">
       ${zonas.map(z => `<option value="${escapeHTMLAct(z)}">${escapeHTMLAct(z)}</option>`).join('')}
-      <option value="__nueva__">➕ Otra zona (especificar)</option>
+      <option value="__nueva__">+ Otra zona (especificar)</option>
     </select>
     <div id="actZonaNuevaWrap" style="display:none;margin-top:8px;">
       <label for="actZonaNueva">Nombre de la nueva zona</label>
@@ -397,7 +397,7 @@ function abrirModalEditarActividad(id) {
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModalAct()">×</button>
-    <div class="auth-icon">✎</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></div>
     <h3>Editar actividad</h3>
     <p class="modal-sub">${escapeHTMLAct(a.nombre)} — ${escapeHTMLAct(a.zona)}</p>
 
@@ -525,7 +525,7 @@ function renderPasoSeleccionSorteo() {
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModalAct()">×</button>
-    <div class="auth-icon">🎲</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none"/></svg></div>
     <h3>Sortear actividades</h3>
     <p class="modal-sub">El sorteo reparte ZONAS/VITRINAS completas entre el Staff activo para la semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)} — todas las actividades de una misma zona quedan con el mismo encargado.</p>
 
@@ -545,7 +545,7 @@ function renderPasoSeleccionSorteo() {
 
     <div id="actSorteoError" class="auth-error" style="display:none;"></div>
 
-    <button class="btn btn-primary" style="width:100%;margin-top:12px;" id="actSortearAhoraBtn" ${zonasDisponibles.length ? '' : 'disabled'}>🎲 Sortear</button>
+    <button class="btn btn-primary" style="width:100%;margin-top:12px;" id="actSortearAhoraBtn" ${zonasDisponibles.length ? '' : 'disabled'}><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none"/></svg></span> Sortear</button>
   `;
 
   document.getElementById('actSorteoTodo')?.addEventListener('change', (e) => {
@@ -577,7 +577,7 @@ function renderPasoPreviewSorteo() {
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModalAct()">×</button>
-    <div class="auth-icon">🎲</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none"/></svg></div>
     <h3>Resultado del sorteo</h3>
     <p class="modal-sub">Revisa el reparto por zona antes de guardarlo. Puedes cambiar cualquier encargado a mano.</p>
 
@@ -598,7 +598,7 @@ function renderPasoPreviewSorteo() {
     </div>
 
     <div style="display:flex;gap:10px;margin-top:12px;">
-      <button class="btn btn-outline" style="flex:1;" id="actRepetirSorteoBtn" type="button">🎲 Repetir sorteo</button>
+      <button class="btn btn-outline" style="flex:1;" id="actRepetirSorteoBtn" type="button"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none"/></svg></span> Repetir sorteo</button>
       <button class="btn btn-primary" style="flex:1;" id="actGuardarRepartoBtn" type="button">Guardar reparto</button>
     </div>
   `;

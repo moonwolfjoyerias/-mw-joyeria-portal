@@ -182,7 +182,7 @@ function renderTabla() {
       <tr>
         <td colspan="6" class="empty-cell">
           <div class="empty-state">
-            <div class="empty-icon">✦</div>
+            <div class="empty-icon"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z"/></svg></span></div>
             <strong>No se encontraron ventanas de apartado</strong>
             <span>Prueba con otro filtro o búsqueda.</span>
           </div>
@@ -234,7 +234,7 @@ function crearFilaVentana(v) {
       <td>
         <span class="status ${estado.clase}">${estado.texto}</span>
         ${v.resolucionDeposito ? `<small style="display:block;margin-top:4px;color:#766d83;">${obtenerTextoResolucion(v.resolucionDeposito)}</small>` : ""}
-        ${vencidaAviso ? `<small style="display:block;margin-top:4px;color:#bd4c4c;">⚠ Vencida — pendiente de gestionar</small>` : ""}
+        ${vencidaAviso ? `<small style="display:block;margin-top:4px;color:#bd4c4c;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Vencida — pendiente de gestionar</small>` : ""}
       </td>
 
       <td>${obtenerTextoVencimiento(v)}</td>
@@ -339,13 +339,13 @@ function obtenerAccionesVentana(v) {
   let html = "";
 
   if (v.estado === "pendiente_deposito") {
-    html += `<button class="action-btn primary-action" data-confirmar-deposito="${v.id}"><span>✓</span> Confirmar depósito</button>`;
+    html += `<button class="action-btn primary-action" data-confirmar-deposito="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Confirmar depósito</button>`;
   }
 
   if (v.estado === "activa") {
 
     if (obtenerPiezasActivas(v).length) {
-      html += `<button class="action-btn primary-action" data-liquidar-ventana="${v.id}"><span>✓</span> Liquidar apartado</button>`;
+      html += `<button class="action-btn primary-action" data-liquidar-ventana="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Liquidar apartado</button>`;
       html += `<button class="action-btn danger-action" data-cancelar-ventana="${v.id}"><span>×</span> Cancelar apartado</button>`;
     }
 
@@ -375,7 +375,7 @@ function abrirModalConfirmarDeposito(ventanaId) {
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
-    <div class="auth-icon">✓</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
     <h3>Confirmar depósito</h3>
     <p class="modal-sub">Registra el depósito de ${escapeHTML(v.usuarioNombre)}. Algunas personas transfieren más de $50 — anota el monto exacto recibido. Este depósito respalda toda la ventana, no una sola pieza. El plazo de vencimiento empieza a contar a partir de ahora.</p>
 
@@ -452,7 +452,7 @@ function abrirModalResolucionDeposito(v) {
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
-    <div class="auth-icon">✓</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
     <h3>¿Qué hacer con el depósito?</h3>
     <p class="modal-sub">Vas a liquidar el apartado completo de ${escapeHTML(v.usuarioNombre)}. Tiene $${v.depositoApartadoDisponible} MXN de depósito disponible.</p>
 
@@ -482,11 +482,11 @@ function abrirModalLiquidar(v, decisionDeposito) {
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
-    <div class="auth-icon">✓</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
     <h3>Liquidar apartado</h3>
     <p class="modal-sub">${escapeHTML(v.usuarioNombre)} · ${piezasActivas.length} pieza${piezasActivas.length === 1 ? "" : "s"}</p>
 
-    ${decisionDeposito === "aplicar" ? `<div class="auth-warning"><span>✓</span><div><strong>Depósito aplicado</strong><small>Se descontaron $${v.depositoApartadoDisponible} MXN del total.</small></div></div>` : ""}
+    ${decisionDeposito === "aplicar" ? `<div class="auth-warning"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span><div><strong>Depósito aplicado</strong><small>Se descontaron $${v.depositoApartadoDisponible} MXN del total.</small></div></div>` : ""}
 
     <label for="liquidarMonto">Monto a cobrar</label>
     <input id="liquidarMonto" type="number" min="0" step="0.01" value="${montoEsperado}">
@@ -598,7 +598,7 @@ function abrirAutorizacion(accion) {
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
-    <div class="auth-icon ${esPeligrosa ? "danger" : ""}">${esPeligrosa ? "!" : "✓"}</div>
+    <div class="auth-icon ${esPeligrosa ? "danger" : ""}">${esPeligrosa ? "!" : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg>'}</div>
     <h3>${titulos[accion.tipo] || "Autorizar acción"}</h3>
     <p class="modal-sub">Ingresa tus credenciales para registrar quién realizó este cambio.</p>
 
@@ -608,7 +608,7 @@ function abrirAutorizacion(accion) {
     </div>
 
     <div class="auth-warning">
-      <span>⚠</span>
+      <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span>
       <div>
         <strong>Autorización de personal</strong>
         <small>Ingresa tus credenciales para registrar esta acción.</small>

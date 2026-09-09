@@ -222,7 +222,7 @@ function mostrarModalPagoConMonto(piezas, totalFinal, metaDeposito = null) {
     btn.addEventListener('click', () => {
       navigator.clipboard?.writeText(btn.getAttribute('data-copy'));
       const original = btn.textContent;
-      btn.textContent = 'Copiado ✓';
+      btn.innerHTML = 'Copiado <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span>';
       setTimeout(() => { btn.textContent = original; }, 1500);
     });
   });

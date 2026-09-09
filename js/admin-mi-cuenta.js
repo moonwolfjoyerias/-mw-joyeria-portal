@@ -80,7 +80,7 @@ function abrirModalEditarCampoCuentaAdmin(campo) {
   box.style.maxWidth = '380px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">✎</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></div>
     <h3>${config.titulo}</h3>
     <label class="cfg-field-label">${config.label}</label>
     <input type="${config.tipo}" id="miCuentaCampoInput" value="${escapeHTMLMiCuentaAdmin(config.valor)}" placeholder="${config.placeholder}">

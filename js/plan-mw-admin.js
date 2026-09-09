@@ -170,7 +170,7 @@ function abrirConfirmarAscensoRango(persona, onExito) {
 
       if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('cambio_rango_confirmado'))) {
         agregarNotificacion({
-          texto: `¡Felicidades! Tu rango subió a ${siguienteLabel}. Sigue así ✦`,
+          texto: `¡Felicidades! Tu rango subió a ${siguienteLabel}. Sigue así <span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z"/></svg></span>`,
           link: 'cuenta',
           paraId: actual.id,
           rolDestino: 'emprendedora_lider'
@@ -277,7 +277,7 @@ function abrirConfirmarRecompensaConstancia(persona, onExito) {
 
       if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('recompensa_constancia_entregada'))) {
         agregarNotificacion({
-          texto: `¡Felicidades! Ganaste "${premio}" por cumplir ${meses} meses del Reto de Constancia 🎉`,
+          texto: `¡Felicidades! Ganaste "${premio}" por cumplir ${meses} meses del Reto de Constancia <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20l5-13"/><path d="M9 7l2 2M13 4l1 2M6 15l2 1"/><circle cx="17" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="11" r="1" fill="currentColor" stroke="none"/></svg></span>`,
           link: 'cuenta',
           paraId: actual.id,
           rolDestino: 'emprendedora_lider'

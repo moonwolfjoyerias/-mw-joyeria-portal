@@ -213,7 +213,17 @@ a:hover { color: var(--mw-gold); }
 .hero .lede strong { color: var(--mw-purple); }
 .hero-actions { display: flex; gap: 0.9rem; margin-bottom: 3rem; flex-wrap: wrap; }
 .hero-actions .btn { font-size: 1.02rem; padding: 0.85em 1.8em; }
-.hero-actions .btn::after { content: " ✦"; font-size: 0.8em; }
+.hero-actions .btn::after {
+  content: '';
+  display: inline-block;
+  width: 0.68em;
+  height: 0.68em;
+  margin-left: 0.35em;
+  vertical-align: -0.05em;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z'/%3E%3C/svg%3E") no-repeat center / contain;
+}
 
 .trust-badges {
   display: grid;
@@ -2878,10 +2888,15 @@ a:hover { color: var(--mw-gold); }
 }
 
 .section-head h2:after {
-  content: '✦';
-  color: var(--mw-gold);
-  font-size: 12px;
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
   margin-left: 10px;
+  vertical-align: -1px;
+  background-color: var(--mw-gold);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z'/%3E%3C/svg%3E") no-repeat center / contain;
 }
 
 .table-footer {
@@ -3226,6 +3241,23 @@ a:hover { color: var(--mw-gold); }
   background: linear-gradient(135deg, #fff0f0 0%, #ffe5e5 100%);
   color: #b94c4c;
 }
+.auth-icon svg { width: 26px; height: 26px; }
+
+/* Icono en línea con texto (botones, encabezados, leyendas, badges) —
+   reemplaza los glifos/emoji que antes se usaban como iconos. Hereda
+   el color del texto (currentColor) y se escala con el tamaño de
+   fuente del elemento que lo contiene, igual que un carácter más. */
+.icon-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.15em;
+  flex-shrink: 0;
+}
+.icon-inline svg { width: 100%; height: 100%; }
+h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75em; vertical-align: 0.02em; }
 
 /* Mensaje de error dentro de un modal — antes solo estaba definido
    dentro de .catalog-modal, por eso se veía sin color en los modales

@@ -35,7 +35,7 @@ function abrirAutorizacionAdmin({ titulo = 'Autorización', mensaje, peligrosa =
 
   box.innerHTML = `
     <button class="modal-close" data-close>×</button>
-    <div class="auth-icon ${peligrosa ? 'danger' : ''}">${peligrosa ? '!' : '✓'}</div>
+    <div class="auth-icon ${peligrosa ? 'danger' : ''}">${peligrosa ? '!' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg>'}</div>
     <h3>${titulo}</h3>
     <p class="modal-sub">${mensaje}</p>
     <div class="modal-note"><strong>Administración.</strong> Esta acción quedará registrada a tu nombre.</div>

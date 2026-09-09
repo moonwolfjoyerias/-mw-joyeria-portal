@@ -201,7 +201,7 @@ function abrirModalApartar(nombreProducto) {
       <button class="modal-close" data-close>&times;</button>
       <h3>Apartar: ${nombreProducto}</h3>
       <p class="modal-sub">Esta pieza se agregó a tu ventana activa — no necesitas volver a depositar.</p>
-      <div class="modal-note">⚠️ Vista de prueba: el sistema de apartados todavía no está conectado. Esta acción no reserva la pieza de verdad todavía.</div>
+      <div class="modal-note"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Vista de prueba: el sistema de apartados todavía no está conectado. Esta acción no reserva la pieza de verdad todavía.</div>
       <button class="btn btn-primary" style="width:100%;" data-close>Entendido</button>
     `;
   } else {
@@ -235,7 +235,7 @@ function abrirModalApartar(nombreProducto) {
       btn.addEventListener('click', () => {
         navigator.clipboard?.writeText(btn.getAttribute('data-copy'));
         const original = btn.textContent;
-        btn.textContent = 'Copiado ✓';
+        btn.innerHTML = 'Copiado <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span>';
         setTimeout(() => { btn.textContent = original; }, 1500);
       });
     });

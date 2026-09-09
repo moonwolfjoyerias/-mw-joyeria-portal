@@ -160,8 +160,8 @@ function crearTarjetaResultadoPersona(p, todas) {
           <span class="badge estado-badge ${p.estado}">${ESTADOS_CUENTA_PERSONA[p.estado] || p.estado}</span>
           <span class="badge">${CATEGORIAS_PERSONA[p.categoria] || p.categoria}</span>
           ${p.tipo === 'lider' ? `<span class="badge">${rangoLabel(p.rangoActualKey)}</span>` : ''}
-          ${p.ascensoPendiente ? `<span class="badge badge-ascenso">⬆ Sube de rango</span>` : ''}
-          ${p.recompensaPendiente ? `<span class="badge badge-ascenso">🎁 Recompensa lista</span>` : ''}
+          ${p.ascensoPendiente ? `<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></span> Sube de rango</span>` : ''}
+          ${p.recompensaPendiente ? `<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M4 9h16M12 9v11"/><path d="M8 9c0-2 1-4 4-4s4 2 4 4"/></svg></span> Recompensa lista</span>` : ''}
         </span>
         <span class="persona-result-meta">
           ${lider ? `Líder: ${escapeHTMLPersonas(nombreCompletoPersona(lider))}` : 'Sin líder asignada'}
@@ -221,8 +221,8 @@ function renderDetallePersona() {
           <span class="badge estado-badge ${persona.estado}">${ESTADOS_CUENTA_PERSONA[persona.estado] || persona.estado}</span>
           <span class="badge">${CATEGORIAS_PERSONA[persona.categoria] || persona.categoria}</span>
           ${esLider ? `<span class="badge">${rangoLabel(persona.rangoActualKey)}</span>` : ''}
-          ${persona.ascensoPendiente ? `<span class="badge badge-ascenso">⬆ Sube de rango</span>` : ''}
-          ${persona.recompensaPendiente ? `<span class="badge badge-ascenso">🎁 Recompensa lista</span>` : ''}
+          ${persona.ascensoPendiente ? `<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></span> Sube de rango</span>` : ''}
+          ${persona.recompensaPendiente ? `<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M4 9h16M12 9v11"/><path d="M8 9c0-2 1-4 4-4s4 2 4 4"/></svg></span> Recompensa lista</span>` : ''}
         </div>
       </div>
       <button class="modal-close" type="button" id="cerrarPerfilBtn" style="position:static;">×</button>
@@ -663,7 +663,7 @@ function renderSeccionPlanMWPersona(persona) {
     <div class="detail-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:10px;">
       ${HITOS_CONSTANCIA_PERSONA.map(h => {
         const otorgado = (hitosOtorgados || []).some(o => o.meses === h.meses);
-        const marca = otorgado ? '✓ ' : (mesesCumplidos >= h.meses ? '⏳ ' : '');
+        const marca = otorgado ? '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> ' : (mesesCumplidos >= h.meses ? '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span> ' : '');
         return `
           <div>
             <span>${h.meses} meses</span>
@@ -676,7 +676,7 @@ function renderSeccionPlanMWPersona(persona) {
     ${persona.recompensaPendiente ? `
       <div class="ascenso-banner">
         <div>
-          <strong>🎁 ¡Cumplió un hito del Reto de Constancia!</strong>
+          <strong><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M4 9h16M12 9v11"/><path d="M8 9c0-2 1-4 4-4s4 2 4 4"/></svg></span> ¡Cumplió un hito del Reto de Constancia!</strong>
           <p>${persona.recompensaPendiente.meses} meses acumulados. Confirma la entrega de: ${escapeHTMLPersonas(persona.recompensaPendiente.premio)}.</p>
         </div>
         <button class="btn btn-primary" id="confirmarRecompensaBtn" type="button">Confirmar recompensa</button>
@@ -914,7 +914,7 @@ function construirRangoChecklistHTML(persona) {
   if (!siguiente) {
     return `
       <div class="rank-progress-main">
-        <h3>Rango actual: ${rangoLabel(persona.rangoActualKey).toUpperCase()} ✦</h3>
+        <h3>Rango actual: ${rangoLabel(persona.rangoActualKey).toUpperCase()} <span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z"/></svg></span></h3>
         <p class="rp-sub">Ya está en el rango más alto.</p>
         <div class="timeline-wrap timeline-dark">
           <div class="timeline-track"><div class="timeline-fill" style="width:${pctFill}%"></div></div>
@@ -926,7 +926,7 @@ function construirRangoChecklistHTML(persona) {
 
   return `
     <div class="rank-progress-main">
-      <h3>Rango actual: ${rangoLabel(persona.rangoActualKey).toUpperCase()} ✦</h3>
+      <h3>Rango actual: ${rangoLabel(persona.rangoActualKey).toUpperCase()} <span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z"/></svg></span></h3>
       <p class="rp-sub">Progreso hacia ${siguiente.label.toUpperCase()}</p>
       <div class="timeline-wrap timeline-dark">
         <div class="timeline-track"><div class="timeline-fill" style="width:${pctFill}%"></div></div>
@@ -949,7 +949,7 @@ function construirRangoChecklistHTML(persona) {
     ${persona.ascensoPendiente ? `
       <div class="ascenso-banner">
         <div>
-          <strong>🎉 ¡Lista para subir de rango!</strong>
+          <strong><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20l5-13"/><path d="M9 7l2 2M13 4l1 2M6 15l2 1"/><circle cx="17" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="11" r="1" fill="currentColor" stroke="none"/></svg></span> ¡Lista para subir de rango!</strong>
           <p>Cumple todos los requisitos para ${rangoLabel(persona.ascensoPendiente.rangoKey)}. Confirma su ascenso y prepara sus premios.</p>
         </div>
         <button class="btn btn-primary" id="confirmarAscensoBtn" type="button">Confirmar subida de rango</button>
