@@ -30,7 +30,9 @@
   --shadow-hover: 0 6px 20px rgba(94, 26, 138, 0.14);
 }
 
-* { box-sizing: border-box; }
+*,
+*::before,
+*::after { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -4203,14 +4205,6 @@ textarea {
   background: #fbf9fc;
 }
 
-.catalog-table-wrap.compact {
-  zoom: 1;
-}
-
-.table-wrap.compact {
-  zoom: 1;
-}
-
 .table-wrap.compact th,
 .table-wrap.compact td {
   padding-top: 8px;
@@ -4437,4 +4431,206 @@ textarea {
   .calendar-day { min-width: 0; }
   .org-tree-card { padding: 1rem 0.75rem; }
   .org-tree { justify-content: flex-start; }
+}
+
+/* =========================================================
+   Escala compacta del portal privado
+   Reduce espacio y proporciones en CSS, sin zoom ni transformaciones.
+   ========================================================= */
+
+.layout-portal .sidebar {
+  width: 205px;
+  padding: 1.15rem 0.8rem;
+}
+
+.layout-portal .sidebar .brand-link {
+  gap: 0.45rem;
+  margin-bottom: 1.35rem;
+}
+
+.layout-portal .sidebar .brand-link img { height: 27px; }
+.layout-portal .sidebar nav a { gap: 0.55rem; padding: 0.5em 0.65em; font-size: 0.86rem; }
+.layout-portal .sidebar nav a svg { width: 16px; height: 16px; }
+
+.layout-portal .main-content {
+  padding: 1.25rem 1.5rem;
+}
+
+.layout-portal .portal-header {
+  margin-bottom: 1.25rem;
+  gap: 0.75rem;
+}
+
+.layout-portal .portal-header h1 {
+  font-size: clamp(1.45rem, 1.7vw, 1.7rem);
+}
+
+.layout-portal .portal-header .portal-sub { font-size: 0.86rem; }
+.layout-portal .portal-header-actions { gap: 0.65rem; }
+.layout-portal .notif-bell { width: 38px; height: 38px; }
+.layout-portal .profile-avatar { width: 30px; height: 30px; font-size: 0.8rem; }
+.layout-portal .profile-btn { gap: 0.45rem; padding-right: 0.7rem; }
+.layout-portal .profile-btn strong { font-size: 0.78rem; }
+.layout-portal .profile-btn .profile-role { font-size: 0.65rem; }
+
+.layout-portal .card,
+.layout-portal .cfg-card,
+.layout-portal .dash-card,
+.layout-portal .wishlist-hero,
+.layout-portal .profile-card,
+.layout-portal .benefit-panel,
+.layout-portal .next-rank-panel,
+.layout-portal .org-tree-card {
+  padding: 1rem 1.1rem;
+}
+
+.layout-portal .stat-cards { gap: 0.75rem; margin-bottom: 1.25rem; }
+.layout-portal .stat-card { padding: 0.95rem; gap: 0.75rem; }
+.layout-portal .stat-card .icon-circle { width: 40px; height: 40px; }
+.layout-portal .stat-card .icon-circle svg { width: 19px; height: 19px; }
+.layout-portal .stat-card .stat-num { font-size: 1.6rem; }
+.layout-portal .stat-card h4 { font-size: 0.78rem; }
+
+.layout-portal .dash-two-col,
+.layout-portal .calendar-page-layout,
+.layout-portal .account-layout,
+.layout-portal .rank-progress-section,
+.layout-portal .people-layout,
+.layout-portal .cfg-layout,
+.layout-portal .catalog-layout {
+  gap: 1.1rem;
+}
+
+.layout-portal .catalog-layout .filter-panel { width: 215px; padding: 1rem; }
+.layout-portal .catalog-product-grid { gap: 0.9rem; }
+.layout-portal .catalog-product-card .cp-body { padding: 0.7rem 0.8rem 0.85rem; }
+.layout-portal .catalog-product-card h4 { font-size: 0.84rem; }
+.layout-portal .catalog-product-card .cp-price .price-emprendedora { font-size: 0.98rem; }
+
+.layout-portal .promo-banner { min-height: 230px; margin-bottom: 1.35rem; }
+.layout-portal .promo-banner .promo-content { padding: 1.7rem 1.9rem; }
+.layout-portal .promo-banner h2 { font-size: 1.85rem; }
+
+.layout-portal .events-row { gap: 0.8rem; }
+.layout-portal .event-card { flex-basis: 275px; }
+
+.layout-portal .countdown-box { padding: 1.35rem 1.5rem; margin-bottom: 1.3rem; }
+.layout-portal .countdown-timer .num { font-size: 2rem; min-width: 50px; }
+.layout-portal .apartados-list { gap: 0.7rem; margin-bottom: 4.5rem; }
+.layout-portal .apartado-row { padding: 0.8rem; gap: 0.75rem; }
+.layout-portal .apartado-photo { width: 58px; height: 58px; }
+
+.layout-portal .wishlist-hero { margin-bottom: 1.35rem; }
+.layout-portal .wishlist-form-grid { gap: 1rem; }
+.layout-portal .solicitudes-grid { gap: 0.85rem; }
+
+.layout-portal .calendar-main { padding: 1.1rem; }
+.layout-portal .calendar-page-layout { gap: 1.15rem; }
+.layout-portal .calendar-day { padding: 0.3rem; }
+
+.layout-portal .profile-card { padding: 1.2rem 1.1rem; }
+.layout-portal .profile-photo-wrap,
+.layout-portal .profile-photo-lg { width: 82px; height: 82px; }
+.layout-portal .benefits-col { gap: 1.15rem; }
+.layout-portal .benefit-panel { padding: 1.2rem 1.35rem; }
+
+.layout-portal .rank-hero { padding: 1.2rem 1.45rem; margin-bottom: 1.3rem; }
+.layout-portal .rank-badge-circle { width: 68px; height: 68px; }
+.layout-portal .rank-hero-text h2 { font-size: 1.7rem; }
+.layout-portal .rank-progress-main { padding: 1.3rem 1.5rem; }
+.layout-portal .rank-checklist { margin-top: 1.25rem; gap: 0.55rem; }
+.layout-portal .check-item { padding: 0.55em 0.8em; font-size: 0.82rem; }
+.layout-portal .team-levels-grid { gap: 0.75rem; }
+.layout-portal .team-level-card { padding: 0.95rem; }
+
+.layout-portal .org-tree-card { margin-top: 1.3rem; }
+.layout-portal .org-tree-wrap { padding: 0.75rem 0; }
+.layout-portal .org-node { padding: 0.6em 0.9em; }
+
+.layout-portal .catalog-table th,
+.layout-portal .catalog-table td,
+.layout-portal .table-wrap th,
+.layout-portal .table-wrap td {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.layout-portal .catalog-table th,
+.layout-portal .catalog-table td { font-size: 0.68rem; }
+.layout-portal .catalog-product-cell { min-width: 170px; }
+.layout-portal .catalog-actions { width: 132px; }
+.layout-portal .catalog-actions .action-btn { width: 132px; height: 28px; }
+
+.layout-portal .form-grid,
+.layout-portal .cfg-form-grid { gap: 9px 12px; }
+.layout-portal .form-field input,
+.layout-portal .form-field select { height: 36px; padding: 7px 9px; }
+.layout-portal .form-field label { font-size: 9px; margin-bottom: 4px; }
+.layout-portal .cfg-form-grid input,
+.layout-portal .cfg-form-grid select,
+.layout-portal .cfg-form-grid textarea { padding: 0.45em 0.65em; }
+.layout-portal .cfg-toggle-row { gap: 8px; font-size: 0.78rem; }
+
+.layout-portal .btn { font-size: 0.88rem; padding: 0.58em 1.25em; }
+.layout-portal .catalog-add-btn { height: 38px; padding-inline: 14px; }
+.layout-portal .action-btn { height: 28px; }
+
+.layout-portal .modal-overlay,
+.layout-portal .catalog-modal-overlay { padding: 1rem; }
+.layout-portal .modal-box,
+.layout-portal .catalog-modal,
+.layout-portal .catalog-modal.modal-box { padding: 1.35rem; }
+.layout-portal .modal-box h3,
+.layout-portal .catalog-modal-heading h3 { font-size: 1.12rem; }
+
+@media (max-width: 1400px) {
+  .layout-portal .sidebar { width: 198px; }
+  .layout-portal .main-content { padding-inline: 1.25rem; }
+  .layout-portal .stat-cards.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .layout-portal .team-levels-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1200px) {
+  .layout-portal .sidebar { width: 190px; }
+  .layout-portal .main-content { padding: 1rem 1.15rem; }
+  .layout-portal .stat-cards,
+  .layout-portal .stat-cards.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .layout-portal .team-levels-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .layout-portal .account-layout { grid-template-columns: 250px minmax(0, 1fr); }
+}
+
+@media (max-width: 1024px) {
+  .layout-portal .sidebar { width: 180px; }
+  .layout-portal .sidebar nav a { font-size: 0.82rem; }
+  .layout-portal .main-content { padding: 0.9rem 1rem; }
+  .layout-portal .portal-header h1 { font-size: 1.45rem; }
+  .layout-portal .catalog-layout .filter-panel { width: 195px; }
+  .layout-portal .catalog-product-grid { grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .layout-portal .sidebar { width: 100%; padding: 0.8rem; }
+  .layout-portal .sidebar .brand-link { margin-bottom: 0.75rem; }
+  .layout-portal .main-content { padding: 0.85rem; }
+  .layout-portal .portal-header h1 { font-size: 1.35rem; }
+  .layout-portal .stat-cards,
+  .layout-portal .stat-cards.cols-4,
+  .layout-portal .team-levels-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .layout-portal .catalog-layout { gap: 0.8rem; }
+  .layout-portal .catalog-layout .filter-panel { width: 100%; }
+  .layout-portal .rank-hero-text h2 { font-size: 1.45rem; }
+}
+
+@media (max-width: 480px) {
+  .layout-portal .main-content { padding: 0.7rem; }
+  .layout-portal .stat-cards,
+  .layout-portal .stat-cards.cols-4,
+  .layout-portal .team-levels-grid { grid-template-columns: minmax(0, 1fr); }
+  .layout-portal .portal-header-actions { width: 100%; }
+  .layout-portal .card,
+  .layout-portal .cfg-card,
+  .layout-portal .dash-card { padding: 0.85rem; }
+  .layout-portal .catalog-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .layout-portal .catalog-product-card h4 { font-size: 0.78rem; }
+  .layout-portal .btn { font-size: 0.82rem; }
 }
