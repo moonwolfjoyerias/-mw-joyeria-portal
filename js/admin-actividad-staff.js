@@ -336,7 +336,6 @@ function renderTablaActividadesAdmin() {
 function filaActividadAdmin(a) {
   return `
     <tr>
-      <td></td>
       <td><strong>${escapeHTMLAct(a.nombre)}</strong></td>
       <td><span class="catalog-description">${escapeHTMLAct(a.zona)}</span></td>
       <td>${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : '<span class="catalog-description">Sin definir</span>'}</td>
