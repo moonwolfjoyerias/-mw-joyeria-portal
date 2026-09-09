@@ -22,6 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCalendario();
   renderProximosEventos();
 
+  // Enlace directo desde una notificación (?evento=ID) — abre ese
+  // evento de una vez, en vez de dejar a la persona a buscarlo.
+  const eventoDesdeUrl = new URLSearchParams(window.location.search).get('evento');
+  if (eventoDesdeUrl) abrirModalEvento(eventoDesdeUrl);
+
   document.getElementById('mesAnteriorBtn').addEventListener('click', () => {
     mesMostradoIdx -= 1;
     renderCalendario();
