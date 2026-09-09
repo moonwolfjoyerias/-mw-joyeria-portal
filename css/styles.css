@@ -3640,6 +3640,39 @@ a:hover { color: var(--mw-gold); }
 .act-historial-item small { display: block; color: var(--mw-text-muted); margin-top: 2px; }
 .act-identificar-box { max-width: 380px; margin: 40px auto; text-align: center; }
 
+.act-checklist-item.act-checklist-todo { border-bottom: 1px solid var(--mw-border); margin-bottom: 4px; padding-bottom: 0.6em; }
+.act-dias-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 10px; margin-top: 4px; }
+.act-dia-check { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; padding: 0.15em 0; }
+.act-dia-check input { width: 16px; height: 16px; }
+
+.act-sorteo-zona-card { border: 1px solid var(--mw-border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; background: #fff; }
+.act-sorteo-zona-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.act-sorteo-zona-header strong { color: var(--mw-purple); font-size: 0.92rem; }
+.act-sorteo-zona-header select { max-width: 200px; }
+.act-sorteo-zona-lista { margin: 8px 0 0; padding-left: 18px; font-size: 0.82rem; color: var(--mw-text-muted); }
+.act-sorteo-zona-lista li { margin-bottom: 2px; }
+
+/* Página "Mis actividades" de Staff — encabezado + indicadores + tabla
+   agrupada por zona con separadores visuales claros. */
+.act-mis-header { margin-bottom: 4px; }
+.act-mis-header h2 { font-family: var(--font-heading); color: var(--mw-purple); font-size: 1.3rem; margin: 0; }
+.act-mis-header p { color: var(--mw-text-muted); font-size: 0.88rem; margin: 4px 0 0; }
+.act-mis-semana { font-size: 0.82rem; color: var(--mw-text-muted); margin-top: 2px; }
+
+.act-stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0 20px; }
+.act-stat-pill { background: #fff; border: 1px solid var(--mw-border); border-radius: 10px; padding: 10px 18px; min-width: 110px; text-align: left; }
+.act-stat-pill .act-stat-num { display: block; font-family: var(--font-heading); font-size: 1.5rem; color: var(--mw-purple); line-height: 1.1; }
+.act-stat-pill .act-stat-label { font-size: 0.72rem; color: var(--mw-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.act-mis-zona-block { margin-bottom: 22px; }
+.act-mis-zona-block:last-child { margin-bottom: 0; }
+.act-mis-zona-titulo { display: flex; align-items: center; gap: 10px; font-family: var(--font-heading); color: var(--mw-purple); font-size: 1rem; margin: 0 0 8px; }
+.act-mis-zona-titulo::after { content: ''; flex: 1; height: 1px; background: var(--mw-border); }
+.act-mis-tabla { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--mw-border); border-radius: 10px; overflow: hidden; }
+.act-mis-tabla th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--mw-text-muted); background: #faf7fb; padding: 10px 14px; border-bottom: 1px solid var(--mw-border); }
+.act-mis-tabla td { padding: 12px 14px; border-bottom: 1px solid #f0ecf0; font-size: 0.88rem; color: var(--mw-text); vertical-align: middle; }
+.act-mis-tabla tr:last-child td { border-bottom: none; }
+
 @media (max-width: 900px) {
   .comm-lider-header { flex-direction: column; align-items: stretch; }
   .comm-lider-totales { justify-content: space-between; }

@@ -89,9 +89,10 @@ function identificarStaffActual() {
 
   document.getElementById('actIdentificarWrap').hidden = true;
   document.getElementById('actMisActividadesWrap').hidden = false;
-  document.getElementById('actYoLabel').textContent = `Hola, ${empleado.nombre} — estas son tus actividades.`;
+  document.getElementById('actYoLabel').textContent = `Hola, ${empleado.nombre}`;
+  document.getElementById('actMisSemanaLabel').textContent = `Semana del ${formatearRangoSemanaActividadStaff(semanaKeyActualActividadStaff())}`;
 
-  renderTablaMisActividades();
+  renderMisActividades();
 
 }
 
@@ -106,38 +107,79 @@ function cerrarSesionStaffActual() {
 }
 
 // ============================================================
-// MIS ACTIVIDADES
+// MIS ACTIVIDADES — rediseño visual: indicadores + tabla agrupada por
+// zona, con separadores claros entre cada una (sección 8 del prompt).
+// Solo la semana actual (el encabezado ya deja claro cuál es).
 // ============================================================
 
-function renderTablaMisActividades() {
+function agruparPorZonaMisAct(asignaciones) {
+  const zonasOrden = zonasCatalogoActividadesStaff();
+  const grupos = new Map();
+  asignaciones.forEach(a => {
+    if (!grupos.has(a.zona)) grupos.set(a.zona, []);
+    grupos.get(a.zona).push(a);
+  });
+  const zonasFinal = [...zonasOrden.filter(z => grupos.has(z)), ...[...grupos.keys()].filter(z => !zonasOrden.includes(z))];
+  return zonasFinal.map(z => ({ zona: z, items: grupos.get(z) }));
+}
 
-  const tbody = document.getElementById('actMisTableBody');
-  if (!tbody || !identidadStaffActual) return;
+function renderMisActividades() {
 
+  const cont = document.getElementById('actMisContenido');
+  if (!cont || !identidadStaffActual) return;
+
+  const semanaActual = semanaKeyActualActividadStaff();
   const lista = obtenerAsignacionesActividadStaff()
-    .filter(a => a.encargadoId === identidadStaffActual.usuarioId && a.estado !== 'borrador')
-    .sort((a, b) => b.semanaKey.localeCompare(a.semanaKey));
+    .filter(a => a.encargadoId === identidadStaffActual.usuarioId && a.semanaKey === semanaActual && a.estado !== 'borrador');
 
-  const count = document.getElementById('actMisResultCount');
-  if (count) count.textContent = `${lista.length} actividad${lista.length === 1 ? '' : 'es'}`;
+  document.getElementById('actStatTotal').textContent = lista.length;
+  document.getElementById('actStatPendientes').textContent = lista.filter(a => a.estado === 'anunciado').length;
+  document.getElementById('actStatEnterado').textContent = lista.filter(a => a.estado === 'enterado').length;
+  document.getElementById('actStatCompletadas').textContent = lista.filter(a => a.estado === 'firmado_rh').length;
 
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="catalog-empty-cell"><strong>Todavía no tienes actividades anunciadas</strong><span>RH avisará aquí en cuanto te asignen alguna.</span></td></tr>`;
+    cont.innerHTML = `
+      <section class="catalog-table-card">
+        <div class="catalog-empty-cell" style="padding:30px;">
+          <strong>Todavía no tienes actividades anunciadas para esta semana</strong>
+          <span>RH avisará aquí en cuanto te asignen alguna.</span>
+        </div>
+      </section>
+    `;
     return;
   }
 
-  tbody.innerHTML = lista.map(a => `
-    <tr>
-      <td><strong>${escapeHTMLMisAct(a.nombre)}</strong></td>
-      <td><span class="catalog-description">${escapeHTMLMisAct(a.zona)}</span></td>
-      <td>${PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] || '—'}</td>
-      <td><span class="catalog-description">${formatearRangoSemanaActividadStaff(a.semanaKey)}</span></td>
-      <td><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span></td>
-      <td>${a.estado === 'anunciado' ? `<button type="button" class="btn btn-primary" style="width:auto;padding:0.5em 1em;" data-mis-act-enterado="${a.id}">Enterado</button>` : ''}</td>
-    </tr>
+  const grupos = agruparPorZonaMisAct(lista);
+
+  cont.innerHTML = grupos.map(g => `
+    <div class="act-mis-zona-block">
+      <h3 class="act-mis-zona-titulo">${escapeHTMLMisAct(g.zona)}</h3>
+      <table class="act-mis-tabla">
+        <thead>
+          <tr>
+            <th>Actividad</th>
+            <th>Periodicidad</th>
+            <th>Día</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${g.items.map(a => `
+            <tr>
+              <td><strong>${escapeHTMLMisAct(a.nombre)}</strong></td>
+              <td>${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : 'Sin definir'}</td>
+              <td>${escapeHTMLMisAct(formatearDiasAsignacionActividadStaff(a))}</td>
+              <td><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span></td>
+              <td>${a.estado === 'anunciado' ? `<button type="button" class="btn btn-primary" style="width:auto;padding:0.5em 1em;" data-mis-act-enterado="${a.id}">Enterado</button>` : ''}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
   `).join('');
 
-  tbody.querySelectorAll('[data-mis-act-enterado]').forEach(btn => {
+  cont.querySelectorAll('[data-mis-act-enterado]').forEach(btn => {
     btn.addEventListener('click', () => confirmarEnteradoMisAct(btn.getAttribute('data-mis-act-enterado')));
   });
 
@@ -172,7 +214,7 @@ function confirmarEnteradoMisAct(id) {
     });
     cerrarModalMisAct();
     if (!resultado.ok) { mostrarToast(resultado.error); return; }
-    renderTablaMisActividades();
+    renderMisActividades();
     mostrarToast('Confirmado — gracias.');
   });
 

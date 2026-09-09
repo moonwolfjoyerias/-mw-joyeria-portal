@@ -1,7 +1,9 @@
 // MW JOYERÍA — Admin: Actividades del Staff
 //
 // Dos vistas (ver js/rh-actividad-staff.js para la versión de RH, con
-// las mismas capacidades de organizar/sortear/anunciar/firmar):
+// las mismas capacidades de organizar/sortear/anunciar/firmar — las
+// actividades base ya están precargadas, ver asegurarAsignacionesBaseSemana
+// en el modelo):
 // - "Semana en organización": mismo flujo operativo que ya tiene RH.
 // - "Todas las actividades": supervisión — historial completo de TODAS
 //   las semanas, filtrable por semana/empleado/zona/estado (sección 9
@@ -15,7 +17,6 @@
 let actSemanaKey = semanaKeyActualActividadStaff ? semanaKeyActualActividadStaff() : '';
 let actFiltroTexto = '';
 let actFiltroEstado = '';
-let sorteoSeleccionCatalogo = new Set();
 let sorteoResultadoPreview = null;
 
 let actVistaActual = 'semana';
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('actSemanaInput');
   if (input) input.value = formatearFechaISOActividadStaff(hoy);
 
+  asegurarAsignacionesBaseSemana(actSemanaKey);
   actualizarEtiquetaSemanaAct();
   renderTablaActividadesAdmin();
   inicializarEventosActividadStaffAdmin();
@@ -57,6 +59,7 @@ function inicializarEventosActividadStaffAdmin() {
 
   document.getElementById('actSemanaInput')?.addEventListener('change', (e) => {
     actSemanaKey = semanaKeyDesdeFechaActividadStaff(e.target.value);
+    asegurarAsignacionesBaseSemana(actSemanaKey);
     actualizarEtiquetaSemanaAct();
     renderTablaActividadesAdmin();
   });
@@ -139,7 +142,7 @@ function renderTablaTodasAct() {
   const tbody = document.getElementById('actTodasTableBody');
   if (!tbody) return;
 
-  let lista = obtenerAsignacionesActividadStaff();
+  let lista = obtenerAsignacionesActividadStaff().filter(a => a.estado !== 'borrador');
 
   if (actTodasFiltroTexto) {
     lista = lista.filter(a => a.nombre.toLowerCase().includes(actTodasFiltroTexto) || a.zona.toLowerCase().includes(actTodasFiltroTexto));
@@ -156,7 +159,7 @@ function renderTablaTodasAct() {
   if (count) count.textContent = `${lista.length} actividad${lista.length === 1 ? '' : 'es'}`;
 
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="catalog-empty-cell"><strong>No hay actividades con estos filtros</strong><span>Prueba con otro criterio.</span></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="catalog-empty-cell"><strong>No hay actividades con estos filtros</strong><span>Prueba con otro criterio.</span></td></tr>`;
     return;
   }
 
@@ -165,6 +168,7 @@ function renderTablaTodasAct() {
       <td><strong>${escapeHTMLAct(a.nombre)}</strong></td>
       <td><span class="catalog-description">${escapeHTMLAct(a.zona)}</span></td>
       <td><span class="catalog-description">${formatearRangoSemanaActividadStaff(a.semanaKey)}</span></td>
+      <td>${escapeHTMLAct(formatearDiasAsignacionActividadStaff(a))}</td>
       <td>${escapeHTMLAct(a.encargadoNombre || 'Sin asignar')}</td>
       <td><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span></td>
       <td><button class="action-btn detail-action" data-act-detalle="${a.id}"><span>⌕</span> Ver detalle</button></td>
@@ -226,6 +230,66 @@ function agruparPorZonaAct(asignaciones) {
 }
 
 // ============================================================
+// CAMPOS DE PERIODICIDAD (compartidos entre Crear y Editar)
+// ============================================================
+//
+// Solo tres periodicidades (sección 3 del prompt): Diaria (sin días),
+// X días (varios días de la semana, checkboxes) y Semanalmente (un
+// único día, select). El bloque de días se muestra/oculta según lo
+// que se elija.
+
+function construirCamposPeriodicidadAct(prefix, periodicidadActual, diasActuales) {
+  const dias = diasActuales || [];
+  return `
+    <label for="${prefix}Periodicidad">Periodicidad</label>
+    <select id="${prefix}Periodicidad">
+      <option value="">Sin definir</option>
+      ${Object.entries(PERIODICIDADES_ACTIVIDAD_STAFF).map(([k, v]) => `<option value="${k}" ${k === periodicidadActual ? 'selected' : ''}>${v}</option>`).join('')}
+    </select>
+
+    <div id="${prefix}DiaSemanalWrap" style="display:${periodicidadActual === 'semanal' ? 'block' : 'none'};margin-top:8px;">
+      <label for="${prefix}DiaSemana">Día de la semana</label>
+      <select id="${prefix}DiaSemana">
+        <option value="">Selecciona...</option>
+        ${ORDEN_DIAS_ACTIVIDAD_STAFF.map(d => `<option value="${d}" ${dias[0] === d ? 'selected' : ''}>${DIAS_SEMANA_ACTIVIDAD_STAFF[d]}</option>`).join('')}
+      </select>
+    </div>
+
+    <div id="${prefix}DiasMultiWrap" style="display:${periodicidadActual === 'x_dias' ? 'block' : 'none'};margin-top:8px;">
+      <label>Días de la semana</label>
+      <div class="act-dias-grid">
+        ${ORDEN_DIAS_ACTIVIDAD_STAFF.map(d => `
+          <label class="act-dia-check">
+            <input type="checkbox" data-dia-multi="${prefix}" value="${d}" ${dias.includes(d) ? 'checked' : ''}>
+            ${DIAS_SEMANA_ACTIVIDAD_STAFF[d]}
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function wireCamposPeriodicidadAct(prefix) {
+  document.getElementById(`${prefix}Periodicidad`)?.addEventListener('change', (e) => {
+    const val = e.target.value;
+    document.getElementById(`${prefix}DiaSemanalWrap`).style.display = val === 'semanal' ? 'block' : 'none';
+    document.getElementById(`${prefix}DiasMultiWrap`).style.display = val === 'x_dias' ? 'block' : 'none';
+  });
+}
+
+function leerCamposPeriodicidadAct(prefix) {
+  const periodicidad = document.getElementById(`${prefix}Periodicidad`).value || null;
+  let dias = [];
+  if (periodicidad === 'semanal') {
+    const d = document.getElementById(`${prefix}DiaSemana`).value;
+    dias = d ? [d] : [];
+  } else if (periodicidad === 'x_dias') {
+    dias = Array.from(document.querySelectorAll(`[data-dia-multi="${prefix}"]:checked`)).map(el => el.value);
+  }
+  return { periodicidad, dias };
+}
+
+// ============================================================
 // TABLA PRINCIPAL
 // ============================================================
 
@@ -249,13 +313,13 @@ function renderTablaActividadesAdmin() {
   if (count) count.textContent = `${lista.length} actividad${lista.length === 1 ? '' : 'es'}`;
 
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="7" class="catalog-empty-cell"><strong>No hay actividades para esta semana</strong><span>Crea una o sortea desde el catálogo.</span></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="catalog-empty-cell"><strong>No hay actividades para esta semana</strong><span>Prueba con otro filtro.</span></td></tr>`;
   } else {
 
     const grupos = agruparPorZonaAct(lista);
 
     tbody.innerHTML = grupos.map(g => `
-      <tr class="act-zona-row"><td colspan="7" style="background:#faf7fb;font-weight:700;color:var(--mw-purple);font-size:0.8rem;">${escapeHTMLAct(g.zona)}</td></tr>
+      <tr class="act-zona-row"><td colspan="8" style="background:#faf7fb;font-weight:700;color:var(--mw-purple);font-size:0.8rem;">${escapeHTMLAct(g.zona)}</td></tr>
       ${g.items.map(filaActividadAdmin).join('')}
     `).join('');
 
@@ -275,13 +339,14 @@ function filaActividadAdmin(a) {
       <td></td>
       <td><strong>${escapeHTMLAct(a.nombre)}</strong></td>
       <td><span class="catalog-description">${escapeHTMLAct(a.zona)}</span></td>
-      <td>${PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] || '—'}</td>
+      <td>${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : '<span class="catalog-description">Sin definir</span>'}</td>
+      <td>${escapeHTMLAct(formatearDiasAsignacionActividadStaff(a))}</td>
       <td>${escapeHTMLAct(a.encargadoNombre || 'Sin asignar')}</td>
       <td><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span></td>
       <td style="white-space:nowrap;">
         <button type="button" class="comm-icon-btn" data-act-editar="${a.id}" title="Editar">✎</button>
         <button type="button" class="comm-icon-btn" data-act-detalle="${a.id}" title="Ver detalle e historial">⌕</button>
-        ${a.estado === 'enterado' ? `<button type="button" class="comm-icon-btn" data-act-firmar="${a.id}" title="Firmar como realizada">✓</button>` : ''}
+        ${a.estado === 'enterado' ? `<button type="button" class="comm-icon-btn" data-act-firmar="${a.id}" title="Firmar por RH">✓</button>` : ''}
       </td>
     </tr>
   `;
@@ -314,20 +379,20 @@ function confirmarFirmarAdmin(id) {
   const a = obtenerAsignacionActividadStaffPorId(id);
   if (!a) return;
   abrirAutorizacionAdmin({
-    titulo: 'Firmar como realizada',
+    titulo: 'Firmar por RH',
     mensaje: `Confirmas que revisaste físicamente que "${escapeHTMLAct(a.nombre)}" (${escapeHTMLAct(a.zona)}) fue realizada por ${escapeHTMLAct(a.encargadoNombre)}.`,
     onConfirmar: () => {
       const resultado = firmarRHAsignacionActividadStaff(id, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre, usuarioRol: 'admin' });
       if (!resultado.ok) { mostrarToast(resultado.error); return; }
       registrarAuditoriaAdmin({ modulo: 'actividades_staff', accion: 'firmar_actividad', descripcion: `Actividad verificada y firmada: ${a.nombre} (${a.zona}) — encargado ${a.encargadoNombre}.` });
       renderTablaActividadesAdmin();
-      mostrarToast('Actividad firmada como realizada.');
+      mostrarToast('Actividad firmada por RH.');
     }
   });
 }
 
 // ============================================================
-// MODAL: CREAR ACTIVIDAD
+// MODAL: CREAR ACTIVIDAD (nombre libre — sin dropdown de catálogo)
 // ============================================================
 
 function abrirModalCrearActividad() {
@@ -336,7 +401,6 @@ function abrirModalCrearActividad() {
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
 
-  const catalogo = obtenerCatalogoActividadesStaff();
   const zonas = zonasCatalogoActividadesStaff();
   const staff = empleadosStaffActivosActividad();
 
@@ -344,31 +408,26 @@ function abrirModalCrearActividad() {
     <button class="modal-close" onclick="cerrarModalAct()">×</button>
     <div class="auth-icon">＋</div>
     <h3>Crear actividad</h3>
+    <p class="modal-sub">Para agregar una actividad nueva que no está en la lista base — escribe su nombre.</p>
 
-    <label for="actCatalogoSelect">Actividad</label>
-    <select id="actCatalogoSelect">
-      ${zonas.map(z => `
-        <optgroup label="${escapeHTMLAct(z)}">
-          ${catalogo.filter(c => c.zona === z).map(c => `<option value="${c.id}">${escapeHTMLAct(c.nombre)}</option>`).join('')}
-        </optgroup>
-      `).join('')}
-      <option value="__nueva__">➕ Otra actividad (especificar)</option>
+    <label for="actNombre">Nombre de la actividad</label>
+    <input type="text" id="actNombre" placeholder="Ej. Limpiar puerta de entrada">
+
+    <label for="actZonaSelect">Zona / vitrina</label>
+    <select id="actZonaSelect">
+      ${zonas.map(z => `<option value="${escapeHTMLAct(z)}">${escapeHTMLAct(z)}</option>`).join('')}
+      <option value="__nueva__">➕ Otra zona (especificar)</option>
     </select>
-
-    <div id="actNuevaWrap" style="display:none;margin-top:10px;">
-      <label for="actNombreNuevo">Nombre de la actividad nueva</label>
-      <input type="text" id="actNombreNuevo" placeholder="Ej. Limpiar espejos">
-      <label for="actZonaNueva">Zona / vitrina</label>
+    <div id="actZonaNuevaWrap" style="display:none;margin-top:8px;">
+      <label for="actZonaNueva">Nombre de la nueva zona</label>
       <input type="text" id="actZonaNueva" placeholder="Ej. Vitrina de relojes">
     </div>
 
-    <label for="actPeriodicidadSelect" style="margin-top:10px;">Periodicidad</label>
-    <select id="actPeriodicidadSelect">
-      <option value="">Selecciona...</option>
-      ${Object.entries(PERIODICIDADES_ACTIVIDAD_STAFF).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}
-    </select>
+    <div style="margin-top:10px;">
+      ${construirCamposPeriodicidadAct('actCrear', '', [])}
+    </div>
 
-    <label for="actEncargadoSelect">Encargado</label>
+    <label for="actEncargadoSelect" style="margin-top:10px;">Encargado</label>
     <select id="actEncargadoSelect">
       <option value="">Sin asignar (se definirá después)</option>
       ${staff.map(e => `<option value="${e.id}">${escapeHTMLAct(e.nombre)}</option>`).join('')}
@@ -386,31 +445,36 @@ function abrirModalCrearActividad() {
   `;
 
   overlay.classList.add('open');
+  wireCamposPeriodicidadAct('actCrear');
 
-  document.getElementById('actCatalogoSelect').addEventListener('change', (e) => {
-    document.getElementById('actNuevaWrap').style.display = e.target.value === '__nueva__' ? 'block' : 'none';
+  document.getElementById('actZonaSelect').addEventListener('change', (e) => {
+    document.getElementById('actZonaNuevaWrap').style.display = e.target.value === '__nueva__' ? 'block' : 'none';
   });
 
   document.getElementById('actGuardarBtn').addEventListener('click', () => {
 
-    const catalogoValue = document.getElementById('actCatalogoSelect').value;
-    const periodicidad = document.getElementById('actPeriodicidadSelect').value;
+    const nombre = document.getElementById('actNombre').value.trim();
+    const zonaValue = document.getElementById('actZonaSelect').value;
+    const zonaNueva = zonaValue === '__nueva__' ? document.getElementById('actZonaNueva').value.trim() : zonaValue;
+    const { periodicidad, dias } = leerCamposPeriodicidadAct('actCrear');
     const encargadoId = document.getElementById('actEncargadoSelect').value || null;
     const semanaFecha = document.getElementById('actSemanaSelect').value;
     const observaciones = document.getElementById('actObservaciones').value.trim();
-    const nombreNuevo = document.getElementById('actNombreNuevo')?.value.trim() || '';
-    const zonaNueva = document.getElementById('actZonaNueva')?.value.trim() || '';
     const error = document.getElementById('actFormError');
 
-    if (!periodicidad) { mostrarErrorAct(error, 'Selecciona una periodicidad.'); return; }
+    if (!nombre) { mostrarErrorAct(error, 'Escribe el nombre de la actividad.'); return; }
+    if (!zonaNueva) { mostrarErrorAct(error, 'Indica la zona/vitrina.'); return; }
     if (!semanaFecha) { mostrarErrorAct(error, 'Indica a qué semana corresponde.'); return; }
-    if (catalogoValue === '__nueva__' && !nombreNuevo) { mostrarErrorAct(error, 'Escribe el nombre de la nueva actividad.'); return; }
+    if (periodicidad) {
+      const validacion = validarPeriodicidadYDiasActividadStaff(periodicidad, dias);
+      if (!validacion.ok) { mostrarErrorAct(error, validacion.error); return; }
+    }
 
     const datos = {
-      actividadCatalogoId: catalogoValue !== '__nueva__' ? catalogoValue : null,
-      nombreNuevo: catalogoValue === '__nueva__' ? nombreNuevo : null,
-      zonaNueva: catalogoValue === '__nueva__' ? zonaNueva : null,
+      nombreNuevo: nombre,
+      zonaNueva,
       periodicidad,
+      dias,
       encargadoId,
       semanaKey: semanaKeyDesdeFechaActividadStaff(semanaFecha),
       observaciones
@@ -418,7 +482,7 @@ function abrirModalCrearActividad() {
 
     abrirAutorizacionAdmin({
       titulo: 'Crear actividad',
-      mensaje: `Vas a crear la actividad para la semana del ${formatearRangoSemanaActividadStaff(datos.semanaKey)}.`,
+      mensaje: `Vas a crear "${escapeHTMLAct(nombre)}" para la semana del ${formatearRangoSemanaActividadStaff(datos.semanaKey)}.`,
       onConfirmar: () => {
         const resultado = crearAsignacionActividadStaff({
           ...datos,
@@ -458,12 +522,9 @@ function abrirModalEditarActividad(id) {
     <h3>Editar actividad</h3>
     <p class="modal-sub">${escapeHTMLAct(a.nombre)} — ${escapeHTMLAct(a.zona)}</p>
 
-    <label for="actEditPeriodicidad">Periodicidad</label>
-    <select id="actEditPeriodicidad">
-      ${Object.entries(PERIODICIDADES_ACTIVIDAD_STAFF).map(([k, v]) => `<option value="${k}" ${k === a.periodicidad ? 'selected' : ''}>${v}</option>`).join('')}
-    </select>
+    ${construirCamposPeriodicidadAct('actEdit', a.periodicidad || '', a.dias || [])}
 
-    <label for="actEditEncargado">Encargado</label>
+    <label for="actEditEncargado" style="margin-top:10px;">Encargado</label>
     <select id="actEditEncargado">
       <option value="">Sin asignar</option>
       ${staff.map(e => `<option value="${e.id}" ${e.id === a.encargadoId ? 'selected' : ''}>${escapeHTMLAct(e.nombre)}</option>`).join('')}
@@ -477,15 +538,25 @@ function abrirModalEditarActividad(id) {
 
     ${a.estado !== 'borrador' ? '<div class="modal-note">Esta actividad ya fue anunciada — cualquier cambio quedará registrado en el historial.</div>' : ''}
 
+    <div id="actEditFormError" class="auth-error" style="display:none;"></div>
+
     <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="actGuardarEdicionBtn">Guardar cambios</button>
   `;
 
   overlay.classList.add('open');
+  wireCamposPeriodicidadAct('actEdit');
 
   document.getElementById('actGuardarEdicionBtn').addEventListener('click', () => {
 
+    const { periodicidad, dias } = leerCamposPeriodicidadAct('actEdit');
+    const error = document.getElementById('actEditFormError');
+
+    const validacion = validarPeriodicidadYDiasActividadStaff(periodicidad, dias);
+    if (!validacion.ok) { mostrarErrorAct(error, validacion.error); return; }
+
     const cambios = {
-      periodicidad: document.getElementById('actEditPeriodicidad').value,
+      periodicidad,
+      dias,
       encargadoId: document.getElementById('actEditEncargado').value || null,
       semanaKey: semanaKeyDesdeFechaActividadStaff(document.getElementById('actEditSemana').value),
       observaciones: document.getElementById('actEditObservaciones').value.trim()
@@ -527,7 +598,8 @@ function abrirDetalleActividad(id) {
 
     <div class="modal-context">
       <span>Zona</span><strong>${escapeHTMLAct(a.zona)}</strong>
-      <span>Periodicidad</span><strong>${PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] || '—'}</strong>
+      <span>Periodicidad</span><strong>${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : 'Sin definir'}</strong>
+      <span>Día</span><strong>${escapeHTMLAct(formatearDiasAsignacionActividadStaff(a))}</strong>
       <span>Encargado</span><strong>${escapeHTMLAct(a.encargadoNombre || 'Sin asignar')}</strong>
       <span>Semana</span><strong>${formatearRangoSemanaActividadStaff(a.semanaKey)}</strong>
       <span>Estado</span><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span>
@@ -554,15 +626,10 @@ function abrirDetalleActividad(id) {
 }
 
 // ============================================================
-// SORTEO ALEATORIO
+// SORTEO POR ZONA/VITRINA
 // ============================================================
 
 function abrirModalSorteo() {
-  sorteoSeleccionCatalogo = new Set(
-    obtenerAsignacionesPorSemanaActividadStaff(actSemanaKey)
-      .filter(a => a.estado === 'borrador')
-      .map(a => a.actividadCatalogoId)
-  );
   sorteoResultadoPreview = null;
   document.getElementById('modalOverlay')?.classList.add('open');
   renderPasoSeleccionSorteo();
@@ -573,88 +640,50 @@ function renderPasoSeleccionSorteo() {
   const box = document.getElementById('modalBox');
   if (!box) return;
 
-  const catalogo = obtenerCatalogoActividadesStaff();
   const zonas = zonasCatalogoActividadesStaff();
   const asignacionesSemana = obtenerAsignacionesPorSemanaActividadStaff(actSemanaKey);
-  const yaOcupadas = new Set(asignacionesSemana.filter(a => a.estado !== 'borrador').map(a => a.actividadCatalogoId));
+  const zonasDisponibles = zonas.filter(z => asignacionesSemana.some(a => a.zona === z && a.estado === 'borrador'));
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModalAct()">×</button>
     <div class="auth-icon">🎲</div>
     <h3>Sortear actividades</h3>
-    <p class="modal-sub">Elige qué actividades entran al sorteo de la semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}. Las ya anunciadas no pueden volver a sortearse.</p>
+    <p class="modal-sub">El sorteo reparte ZONAS/VITRINAS completas entre el Staff activo para la semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)} — todas las actividades de una misma zona quedan con el mismo encargado.</p>
 
-    <label for="actSorteoPeriodicidad">Periodicidad para las actividades nuevas de este sorteo</label>
-    <select id="actSorteoPeriodicidad">
-      <option value="">Selecciona...</option>
-      ${Object.entries(PERIODICIDADES_ACTIVIDAD_STAFF).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}
-    </select>
+    <label class="act-checklist-item act-checklist-todo">
+      <input type="checkbox" id="actSorteoTodo" ${zonasDisponibles.length ? '' : 'disabled'}>
+      <strong>Seleccionar todo</strong>
+    </label>
 
-    <div class="eyebrow" style="margin-top:14px;">Actividades a sortear</div>
     <div style="max-height:280px;overflow-y:auto;margin-top:6px;">
-      ${zonas.map(z => `
-        <div class="act-zona-group">
-          <div class="act-zona-title">${escapeHTMLAct(z)}</div>
-          ${catalogo.filter(c => c.zona === z).map(c => {
-            const bloqueada = yaOcupadas.has(c.id);
-            return `
-              <label class="act-checklist-item ${bloqueada ? 'ya-anunciada' : ''}">
-                <input type="checkbox" data-sorteo-cat="${c.id}" ${sorteoSeleccionCatalogo.has(c.id) ? 'checked' : ''} ${bloqueada ? 'disabled' : ''}>
-                ${escapeHTMLAct(c.nombre)}
-                ${bloqueada ? '<span class="act-checklist-tag">ya anunciada</span>' : ''}
-              </label>
-            `;
-          }).join('')}
-        </div>
-      `).join('')}
+      ${zonasDisponibles.length ? zonasDisponibles.map(z => `
+        <label class="act-checklist-item">
+          <input type="checkbox" data-sorteo-zona="${escapeHTMLAct(z)}">
+          ${escapeHTMLAct(z)}
+        </label>
+      `).join('') : '<p class="bp-sub">No hay zonas con actividades pendientes de organizar esta semana.</p>'}
     </div>
 
     <div id="actSorteoError" class="auth-error" style="display:none;"></div>
 
-    <button class="btn btn-primary" style="width:100%;margin-top:12px;" id="actSortearAhoraBtn">🎲 Sortear</button>
+    <button class="btn btn-primary" style="width:100%;margin-top:12px;" id="actSortearAhoraBtn" ${zonasDisponibles.length ? '' : 'disabled'}>🎲 Sortear</button>
   `;
 
-  box.querySelectorAll('[data-sorteo-cat]').forEach(chk => {
-    chk.addEventListener('change', () => {
-      const id = chk.getAttribute('data-sorteo-cat');
-      if (chk.checked) sorteoSeleccionCatalogo.add(id); else sorteoSeleccionCatalogo.delete(id);
-    });
+  document.getElementById('actSorteoTodo')?.addEventListener('change', (e) => {
+    box.querySelectorAll('[data-sorteo-zona]').forEach(chk => { chk.checked = e.target.checked; });
   });
 
-  document.getElementById('actSortearAhoraBtn').addEventListener('click', () => {
-
-    const periodicidad = document.getElementById('actSorteoPeriodicidad').value;
+  document.getElementById('actSortearAhoraBtn')?.addEventListener('click', () => {
+    const zonasElegidas = Array.from(box.querySelectorAll('[data-sorteo-zona]:checked')).map(chk => chk.getAttribute('data-sorteo-zona'));
     const error = document.getElementById('actSorteoError');
-
-    if (!periodicidad) { mostrarErrorAct(error, 'Selecciona la periodicidad para este sorteo.'); return; }
-    if (!sorteoSeleccionCatalogo.size) { mostrarErrorAct(error, 'Selecciona al menos una actividad.'); return; }
-
-    const idsParaSortear = [];
-    sorteoSeleccionCatalogo.forEach(catId => {
-      let existente = obtenerAsignacionesPorSemanaActividadStaff(actSemanaKey).find(a => a.actividadCatalogoId === catId && a.estado === 'borrador');
-      if (!existente) {
-        const resultado = crearAsignacionActividadStaff({
-          actividadCatalogoId: catId,
-          periodicidad,
-          encargadoId: null,
-          semanaKey: actSemanaKey,
-          creadoPorId: ADMIN_IDENTIDAD.usuarioId,
-          creadoPorNombre: ADMIN_IDENTIDAD.usuarioNombre,
-          creadoPorRol: 'admin'
-        });
-        if (resultado.ok) existente = resultado.asignacion;
-      }
-      if (existente) idsParaSortear.push(existente.id);
-    });
-
-    ejecutarSorteoYMostrarPreview(idsParaSortear);
-
+    if (!zonasElegidas.length) { mostrarErrorAct(error, 'Selecciona al menos una zona/vitrina.'); return; }
+    ejecutarSorteoYMostrarPreview(zonasElegidas);
   });
 
 }
 
-function ejecutarSorteoYMostrarPreview(idsParaSortear) {
-  const resultado = sortearActividadesStaff(idsParaSortear);
+function ejecutarSorteoYMostrarPreview(zonasElegidas) {
+  const resultado = sortearZonasActividadStaff(actSemanaKey, zonasElegidas);
   if (!resultado.ok) { mostrarToast(resultado.error); return; }
   sorteoResultadoPreview = resultado.resultado;
   renderPasoPreviewSorteo();
@@ -671,15 +700,20 @@ function renderPasoPreviewSorteo() {
     <button class="modal-close" onclick="cerrarModalAct()">×</button>
     <div class="auth-icon">🎲</div>
     <h3>Resultado del sorteo</h3>
-    <p class="modal-sub">Revisa el reparto antes de guardarlo. Puedes cambiar cualquier encargado a mano.</p>
+    <p class="modal-sub">Revisa el reparto por zona antes de guardarlo. Puedes cambiar cualquier encargado a mano.</p>
 
-    <div style="max-height:300px;overflow-y:auto;margin-top:8px;">
-      ${sorteoResultadoPreview.map((fila, i) => `
-        <div class="act-sorteo-row">
-          <span><strong>${escapeHTMLAct(fila.actividadNombre)}</strong><br><small style="color:var(--mw-text-muted);">${escapeHTMLAct(fila.zona)}</small></span>
-          <select data-sorteo-fila="${i}">
-            ${staff.map(e => `<option value="${e.id}" ${e.id === fila.encargadoId ? 'selected' : ''}>${escapeHTMLAct(e.nombre)}</option>`).join('')}
-          </select>
+    <div style="max-height:320px;overflow-y:auto;margin-top:8px;">
+      ${sorteoResultadoPreview.map((grupo, i) => `
+        <div class="act-sorteo-zona-card">
+          <div class="act-sorteo-zona-header">
+            <strong>${escapeHTMLAct(grupo.zona)}</strong>
+            <select data-sorteo-zona-fila="${i}">
+              ${staff.map(e => `<option value="${e.id}" ${e.id === grupo.encargadoId ? 'selected' : ''}>${escapeHTMLAct(e.nombre)}</option>`).join('')}
+            </select>
+          </div>
+          <ul class="act-sorteo-zona-lista">
+            ${grupo.actividades.map(act => `<li>${escapeHTMLAct(act.nombre)}</li>`).join('')}
+          </ul>
         </div>
       `).join('')}
     </div>
@@ -690,9 +724,9 @@ function renderPasoPreviewSorteo() {
     </div>
   `;
 
-  box.querySelectorAll('[data-sorteo-fila]').forEach(sel => {
+  box.querySelectorAll('[data-sorteo-zona-fila]').forEach(sel => {
     sel.addEventListener('change', () => {
-      const i = parseInt(sel.getAttribute('data-sorteo-fila'), 10);
+      const i = parseInt(sel.getAttribute('data-sorteo-zona-fila'), 10);
       const empleado = staff.find(e => e.id === sel.value);
       if (empleado) {
         sorteoResultadoPreview[i].encargadoId = empleado.id;
@@ -702,16 +736,15 @@ function renderPasoPreviewSorteo() {
   });
 
   document.getElementById('actRepetirSorteoBtn').addEventListener('click', () => {
-    const ids = sorteoResultadoPreview.map(f => f.asignacionId);
-    ejecutarSorteoYMostrarPreview(ids);
+    ejecutarSorteoYMostrarPreview(sorteoResultadoPreview.map(g => g.zona));
   });
 
   document.getElementById('actGuardarRepartoBtn').addEventListener('click', () => {
-    const cantidad = sorteoResultadoPreview.length;
-    aplicarResultadoSorteoActividadStaff(sorteoResultadoPreview, {
+    const cantidadZonas = sorteoResultadoPreview.length;
+    const resultado = aplicarResultadoSorteoZonasActividadStaff(sorteoResultadoPreview, {
       usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre, usuarioRol: 'admin'
     });
-    registrarAuditoriaAdmin({ modulo: 'actividades_staff', accion: 'sorteo_actividades', descripcion: `Reparto de ${cantidad} actividad(es) guardado para la semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}.` });
+    registrarAuditoriaAdmin({ modulo: 'actividades_staff', accion: 'sorteo_actividades', descripcion: `Reparto de ${cantidadZonas} zona(s) (${resultado.cantidad} actividad(es)) guardado para la semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}.` });
     cerrarModalAct();
     renderTablaActividadesAdmin();
     mostrarToast('Reparto guardado. Actividades listas para anunciar.');
@@ -720,7 +753,8 @@ function renderPasoPreviewSorteo() {
 }
 
 // ============================================================
-// REPORTE SEMANAL (PDF Carta)
+// REPORTE SEMANAL (PDF Carta) — agrupado por Zona → Actividad →
+// Encargado → Estado
 // ============================================================
 
 async function generarReporteSemanalAct() {
@@ -802,6 +836,19 @@ function agregarCanvasPaginadoAct(pdf, canvas) {
 function construirHTMLReporteSemanalAct(filas, semanaKey) {
 
   const fechaGeneracion = new Date().toLocaleString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const grupos = agruparPorZonaAct(filas);
+
+  const filaActividad = (f) => `
+    <tr>
+      <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(f.nombre)}</td>
+      <td style="border:1px solid #000;padding:5px;">${f.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[f.periodicidad] : 'Sin definir'}</td>
+      <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(formatearDiasAsignacionActividadStaff(f))}</td>
+      <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(f.encargadoNombre || '—')}</td>
+      <td style="border:1px solid #000;padding:5px;font-weight:700;${f.estadoReporteLabel === 'No se realizó' ? 'color:#a3272f;' : 'color:#1f7a34;'}">${f.estadoReporteLabel}</td>
+      <td style="border:1px solid #000;padding:5px;">${f.fechaEnterado ? formatearFechaHoraAct(f.fechaEnterado) : '—'}</td>
+      <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(f.firmadoPorNombre || '—')}</td>
+    </tr>
+  `;
 
   return `
     <div style="font-family:Calibri,Arial,sans-serif;color:#000;padding:20px;background:#fff;width:720px;">
@@ -818,8 +865,8 @@ function construirHTMLReporteSemanalAct(filas, semanaKey) {
         <thead>
           <tr style="background:#DAC2EC;">
             <th style="border:1px solid #000;padding:5px;text-align:left;">Actividad</th>
-            <th style="border:1px solid #000;padding:5px;text-align:left;">Zona</th>
             <th style="border:1px solid #000;padding:5px;text-align:left;">Periodicidad</th>
+            <th style="border:1px solid #000;padding:5px;text-align:left;">Día</th>
             <th style="border:1px solid #000;padding:5px;text-align:left;">Encargado</th>
             <th style="border:1px solid #000;padding:5px;text-align:left;">Estado final</th>
             <th style="border:1px solid #000;padding:5px;text-align:left;">Fecha de confirmación</th>
@@ -827,16 +874,9 @@ function construirHTMLReporteSemanalAct(filas, semanaKey) {
           </tr>
         </thead>
         <tbody>
-          ${filas.length ? filas.map(f => `
-            <tr>
-              <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(f.nombre)}</td>
-              <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(f.zona)}</td>
-              <td style="border:1px solid #000;padding:5px;">${PERIODICIDADES_ACTIVIDAD_STAFF[f.periodicidad] || '—'}</td>
-              <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(f.encargadoNombre || '—')}</td>
-              <td style="border:1px solid #000;padding:5px;font-weight:700;${f.estadoReporteLabel === 'No se realizó' ? 'color:#a3272f;' : 'color:#1f7a34;'}">${f.estadoReporteLabel}</td>
-              <td style="border:1px solid #000;padding:5px;">${f.fechaEnterado ? formatearFechaHoraAct(f.fechaEnterado) : '—'}</td>
-              <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(f.firmadoPorNombre || '—')}</td>
-            </tr>
+          ${grupos.length ? grupos.map(g => `
+            <tr><td colspan="7" style="border:1px solid #000;padding:5px;background:#f3ecf7;font-weight:700;">${escapeHTMLAct(g.zona)}</td></tr>
+            ${g.items.map(filaActividad).join('')}
           `).join('') : `<tr><td colspan="7" style="border:1px solid #000;padding:10px;text-align:center;">No se anunciaron actividades esta semana.</td></tr>`}
         </tbody>
       </table>

@@ -58,7 +58,7 @@
       <header class="portal-header">
         <div>
           <h1>Mis actividades ✦</h1>
-          <p class="portal-sub">Consulta las actividades de limpieza y orden que te fueron asignadas esta semana.</p>
+          <p class="portal-sub">Actividades asignadas para esta semana</p>
         </div>
 
         <div class="portal-header-actions">
@@ -109,30 +109,33 @@
       <div id="actMisActividadesWrap" hidden>
 
         <div class="catalog-toolbar">
-          <span class="portal-sub" id="actYoLabel" style="margin:0;"></span>
+          <div class="act-mis-header">
+            <span id="actYoLabel"></span>
+            <p class="act-mis-semana" id="actMisSemanaLabel"></p>
+          </div>
           <button type="button" class="btn btn-outline" style="width:auto;margin-left:auto;" id="actCambiarUsuarioBtn">Cambiar de usuario</button>
         </div>
 
-        <section class="catalog-table-card">
-          <div class="catalog-table-wrap">
-            <table class="catalog-table">
-              <thead>
-                <tr>
-                  <th>Actividad</th>
-                  <th>Zona</th>
-                  <th>Periodicidad</th>
-                  <th>Semana</th>
-                  <th>Estado</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="actMisTableBody"></tbody>
-            </table>
+        <div class="act-stat-row">
+          <div class="act-stat-pill">
+            <span class="act-stat-num" id="actStatTotal">0</span>
+            <span class="act-stat-label">Mis actividades</span>
           </div>
-          <div class="table-footer">
-            <span id="actMisResultCount">Mostrando resultados</span>
+          <div class="act-stat-pill">
+            <span class="act-stat-num" id="actStatPendientes">0</span>
+            <span class="act-stat-label">Pendientes</span>
           </div>
-        </section>
+          <div class="act-stat-pill">
+            <span class="act-stat-num" id="actStatEnterado">0</span>
+            <span class="act-stat-label">Enterado</span>
+          </div>
+          <div class="act-stat-pill">
+            <span class="act-stat-num" id="actStatCompletadas">0</span>
+            <span class="act-stat-label">Completadas</span>
+          </div>
+        </div>
+
+        <div id="actMisContenido"></div>
 
       </div>
 
