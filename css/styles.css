@@ -4459,14 +4459,22 @@ textarea {
 .layout-portal .portal-header {
   margin-bottom: 1.25rem;
   gap: 0.75rem;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.layout-portal .portal-header > div:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .layout-portal .portal-header h1 {
   font-size: clamp(1.45rem, 1.7vw, 1.7rem);
+  overflow-wrap: anywhere;
 }
 
-.layout-portal .portal-header .portal-sub { font-size: 0.86rem; }
-.layout-portal .portal-header-actions { gap: 0.65rem; }
+.layout-portal .portal-header .portal-sub { font-size: 0.86rem; overflow-wrap: anywhere; }
+.layout-portal .portal-header-actions { gap: 0.65rem; flex: 0 0 auto; white-space: nowrap; }
 .layout-portal .notif-bell { width: 38px; height: 38px; }
 .layout-portal .profile-avatar { width: 30px; height: 30px; font-size: 0.8rem; }
 .layout-portal .profile-btn { gap: 0.45rem; padding-right: 0.7rem; }
@@ -4612,6 +4620,8 @@ textarea {
   .layout-portal .sidebar { width: 100%; padding: 0.8rem; }
   .layout-portal .sidebar .brand-link { margin-bottom: 0.75rem; }
   .layout-portal .main-content { padding: 0.85rem; }
+  .layout-portal .portal-header { flex-wrap: wrap; align-items: flex-start; }
+  .layout-portal .portal-header-actions { width: 100%; justify-content: flex-end; }
   .layout-portal .portal-header h1 { font-size: 1.35rem; }
   .layout-portal .stat-cards,
   .layout-portal .stat-cards.cols-4,
