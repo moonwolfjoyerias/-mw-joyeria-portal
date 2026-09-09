@@ -1893,22 +1893,14 @@ a:hover { color: var(--mw-gold); }
 }
 
 .catalog-table-wrap {
-  overflow-x: auto;
-}
-.compact-toggle-btn {
-  width: auto;
-  white-space: nowrap;
-}
-.compact-toggle-btn.active {
-  background: var(--mw-purple);
-  color: #fff;
-  border-color: var(--mw-purple);
+  overflow-x: visible;
 }
 
 .catalog-table {
   width: 100%;
-  min-width: 1280px;
+  min-width: 0;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .catalog-table th {
@@ -1919,7 +1911,8 @@ a:hover { color: var(--mw-gold); }
   font-size: 0.68rem;
   font-weight: 600;
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .catalog-table td {
@@ -1928,6 +1921,8 @@ a:hover { color: var(--mw-gold); }
   color: #40375a;
   font-size: 0.7rem;
   vertical-align: middle;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .catalog-table tbody tr:last-child td { border-bottom: 0; }
@@ -3602,7 +3597,7 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 .comm-nivel-body { margin-top: 0.6rem; }
 
 .comm-tabla-wrap { max-height: 380px; overflow: auto; border-radius: 10px; border: 1px solid #eee8ed; }
-.comm-tabla-wrap .catalog-table { min-width: 900px; }
+.comm-tabla-wrap .catalog-table { min-width: 0; }
 .comm-tabla-wrap thead th {
   position: sticky;
   top: 0;
@@ -4181,15 +4176,28 @@ textarea {
 .comm-tabla-wrap,
 .cfg-tabla-wrap {
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: visible;
+
+.layout-portal table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+}
+
+.layout-portal table th,
+.layout-portal table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
   overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
 }
 
 .table-wrap table {
   width: 100%;
-  min-width: 720px;
+  min-width: 0;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .table-wrap th,
@@ -4200,28 +4208,25 @@ textarea {
 }
 
 .table-wrap th {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   color: var(--mw-purple-dark);
   background: #fbf9fc;
 }
 
-.table-wrap.compact th,
-.table-wrap.compact td {
-  padding-top: 8px;
-  padding-bottom: 8px;
-}
-
-.catalog-table-wrap.compact .catalog-table th,
-.catalog-table-wrap.compact .catalog-table td {
-  padding-top: 7px;
-  padding-bottom: 7px;
-}
-
 .catalog-table,
 .comm-tabla-wrap .catalog-table {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  min-width: 0;
 }
+.table-wrap td,
+.comm-tabla-wrap td,
+.cfg-tabla-wrap td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.modal-overlay,
+.catalog-modal-overlay {
 
 .modal-overlay,
 .catalog-modal-overlay {
