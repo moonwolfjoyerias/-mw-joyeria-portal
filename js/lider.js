@@ -66,13 +66,13 @@ function renderProgresoRango() {
   const tituloProgreso = document.getElementById('progresoTitulo');
   const subProgreso = document.getElementById('progresoSub');
   if (siguiente) {
-    tituloProgreso.textContent = `Progreso hacia ${siguiente.label.toUpperCase()} ✦`;
+    tituloProgreso.innerHTML = `Progreso hacia ${siguiente.label.toUpperCase()} <span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z"/></svg></span>`;
     const faltante = Math.max(0, siguiente.produccion - produccionGrupalMes);
     subProgreso.textContent = faltante > 0
       ? `Te faltan ${fmtMoney(faltante)} de producción grupal para alcanzar ${siguiente.label}.`
       : `¡Ya cumples la producción grupal para ${siguiente.label}! Revisa los demás requisitos abajo.`;
   } else {
-    tituloProgreso.textContent = '¡Estás en el rango más alto! ✦';
+    tituloProgreso.innerHTML = '¡Estás en el rango más alto! <span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z"/></svg></span>';
     subProgreso.textContent = 'Sigue así para mantenerte en Corona el próximo mes.';
   }
 

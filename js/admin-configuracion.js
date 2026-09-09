@@ -83,21 +83,21 @@ function actualizarPillConfig(modo) {
   if (!pill) return;
 
   if (modo === 'error') {
-    pill.textContent = '🔴 Error de sincronización';
+    pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Error de sincronización';
     pill.className = 'cfg-sync-pill error';
     return;
   }
   if (!navigator.onLine) {
-    pill.textContent = '🟠 Guardado localmente — esperando conexión';
+    pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Guardado localmente — esperando conexión';
     pill.className = 'cfg-sync-pill offline';
     return;
   }
   if (modo === 'guardando') {
-    pill.textContent = '🟡 Guardando...';
+    pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Guardando...';
     pill.className = 'cfg-sync-pill guardando';
     return;
   }
-  pill.textContent = '🟢 Guardado';
+  pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Guardado';
   pill.className = 'cfg-sync-pill ok';
 }
 
@@ -170,7 +170,7 @@ function construirCeldaVersionada({ tipo, parametro, seccion, etiqueta, tipoValo
         data-valor-real="${escapeAttributePersonas(valorReal)}"
         data-valor-mostrado="${escapeAttributePersonas(valorMostrado)}"
         tabindex="0"
-    ><span class="cfg-celda-texto">${formatearValorTipo(valorMostrado, tipoValor)}</span><button type="button" class="cfg-icon-btn" data-cfg-historial="${clave}" title="Ver historial">🕘</button></td>
+    ><span class="cfg-celda-texto">${formatearValorTipo(valorMostrado, tipoValor)}</span><button type="button" class="cfg-icon-btn" data-cfg-historial="${clave}" title="Ver historial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button></td>
   `;
 }
 
@@ -319,7 +319,7 @@ function finalizarEdicionCeldaConfig(td, modo) {
 
 function pintarCeldaConfig(td, valor, pendiente) {
   const tipoValor = td.dataset.tipoValor;
-  td.innerHTML = `<span class="cfg-celda-texto">${formatearValorTipo(valor, tipoValor)}</span><button type="button" class="cfg-icon-btn" data-cfg-historial="${td.dataset.clave}" title="Ver historial">🕘</button>`;
+  td.innerHTML = `<span class="cfg-celda-texto">${formatearValorTipo(valor, tipoValor)}</span><button type="button" class="cfg-icon-btn" data-cfg-historial="${td.dataset.clave}" title="Ver historial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>`;
   td.className = `cfg-celda-editable ${pendiente ? 'pendiente' : ''}`;
   td.querySelector('[data-cfg-historial]').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -392,7 +392,7 @@ function abrirConfirmacionCambiosVersion() {
   box.style.maxWidth = '480px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon danger">⚠️</div>
+    <div class="auth-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></div>
     <h3>Confirmar cambios de configuración</h3>
     <p class="modal-sub">Esta modificación puede afectar cálculos, comisiones, pagos o recompensas.</p>
 
@@ -471,7 +471,7 @@ function abrirHistorialParametroConfig({ tipo, parametro, etiqueta, seccion, tip
   box.style.maxWidth = '480px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">🕘</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
     <h3>Historial — ${escapeHTMLPersonas(etiqueta)}</h3>
     <p class="modal-sub">${escapeHTMLPersonas(seccion)}</p>
     <div class="ct-detail-list" style="border-bottom:0;">
@@ -595,7 +595,7 @@ function renderSeccionSistema() {
       <button class="btn btn-primary" id="cfgGuardarSistema" type="button" style="width:auto;margin-top:10px;">Guardar cambios</button>
 
       <div class="cfg-disclosure">
-        🔒 Por seguridad, esta pantalla nunca muestra ni permite editar contraseñas, claves privadas, secretos de Firebase, API keys ni credenciales de ningún servicio.
+        <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span> Por seguridad, esta pantalla nunca muestra ni permite editar contraseñas, claves privadas, secretos de Firebase, API keys ni credenciales de ningún servicio.
       </div>
     </div>
   `;
@@ -819,7 +819,7 @@ function renderSeccionApartadosConfig() {
   cont.innerHTML = `
     <div class="cfg-card">
       <h3 class="cfg-card-title">Reglas de Apartados</h3>
-      <p class="cfg-card-sub">⚠️ Cualquier cambio aquí solo aplica a ventanas de apartado <strong>nuevas</strong> — las que ya están abiertas conservan su depósito y fecha de vencimiento tal como se calcularon.</p>
+      <p class="cfg-card-sub"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Cualquier cambio aquí solo aplica a ventanas de apartado <strong>nuevas</strong> — las que ya están abiertas conservan su depósito y fecha de vencimiento tal como se calcularon.</p>
       <div class="catalog-table-wrap cfg-tabla-wrap">
         <table class="catalog-table">
           <thead><tr><th>Depósito base</th><th>Ventana nacional</th><th>Ventana foránea</th></tr></thead>
@@ -845,13 +845,13 @@ function renderSeccionUsuarios() {
 
   const cont = document.getElementById('seccion-usuarios');
   const filas = [
-    ['Dashboard / Catálogo / Apartados / Calendario / Lista de deseos / Actividad', '✓', '✓', '✓', '—', '—'],
-    ['Nómina', '✓', '✓', '—', '—', '—'],
-    ['Comisiones', '✓', '—', '—', 'equipo propio', '—'],
-    ['Plan MW (seguimiento y alertas)', '✓', '—', '—', '—', '—'],
-    ['Solicitudes de inscripción / INE', '✓', '—', '—', '—', '—'],
-    ['Configuración', '✓', '—', '—', '—', '—'],
-    ['Su propia cuenta / equipo', '✓', '✓', '✓', '✓', '✓']
+    ['Dashboard / Catálogo / Apartados / Calendario / Lista de deseos / Actividad', 'si', 'si', 'si', '—', '—'],
+    ['Nómina', 'si', 'si', '—', '—', '—'],
+    ['Comisiones', 'si', '—', '—', 'equipo propio', '—'],
+    ['Plan MW (seguimiento y alertas)', 'si', '—', '—', '—', '—'],
+    ['Solicitudes de inscripción / INE', 'si', '—', '—', '—', '—'],
+    ['Configuración', 'si', '—', '—', '—', '—'],
+    ['Su propia cuenta / equipo', 'si', 'si', 'si', 'si', 'si']
   ];
 
   const personas = typeof obtenerPersonas === 'function' ? obtenerPersonas() : [];
@@ -866,13 +866,13 @@ function renderSeccionUsuarios() {
         <table class="catalog-table">
           <thead><tr><th>Permiso</th><th>Administrativo</th><th>RH</th><th>Staff</th><th>Líder</th><th>Emprendedora</th></tr></thead>
           <tbody>
-            ${filas.map(f => `<tr>${f.map((c, i) => i === 0 ? `<td>${escapeHTMLPersonas(c)}</td>` : `<td style="text-align:center;">${c}</td>`).join('')}</tr>`).join('')}
+            ${filas.map(f => `<tr>${f.map((c, i) => i === 0 ? `<td>${escapeHTMLPersonas(c)}</td>` : `<td style="text-align:center;">${c === 'si' ? '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span>' : c}</td>`).join('')}</tr>`).join('')}
           </tbody>
         </table>
       </div>
 
       <div class="cfg-disclosure">
-        ⚠️ <strong>Límite de seguridad real:</strong> hoy este acceso se controla solo con qué liga existe en el menú de cada portal (JavaScript) — no hay reglas de seguridad de Firebase todavía, así que técnicamente no es una barrera infranqueable. Ocultar un botón no reemplaza una regla de seguridad real. Esto queda pendiente para cuando el sistema se conecte a Firebase con Security Rules.
+        <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> <strong>Límite de seguridad real:</strong> hoy este acceso se controla solo con qué liga existe en el menú de cada portal (JavaScript) — no hay reglas de seguridad de Firebase todavía, así que técnicamente no es una barrera infranqueable. Ocultar un botón no reemplaza una regla de seguridad real. Esto queda pendiente para cuando el sistema se conecte a Firebase con Security Rules.
         <br><br>
         Tampoco existe hoy más de una cuenta de Administrativo, así que la regla "un admin no puede darse permisos financieros a sí mismo sin confirmación especial" no aplica todavía — se deja documentada aquí para cuando exista un sistema de múltiples cuentas de Admin.
       </div>
@@ -898,11 +898,11 @@ function renderSeccionUsuarios() {
                 <td><span class="badge ${p.estado === 'activa' ? 'badge-pagada' : 'badge-pendiente'}">${escapeHTMLPersonas(ESTADOS_CUENTA_PERSONA[p.estado] || p.estado)}</span></td>
                 <td style="white-space:nowrap;">
                   <span class="cfg-password-texto" data-password-real="${escapeAttributePersonas(p.password || '(sin contraseña)')}" style="font-family:monospace;">••••••••</span>
-                  <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar">👁</button>
+                  <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
                 </td>
                 <td style="white-space:nowrap;">
-                  <button type="button" class="cfg-icon-btn" data-cfg-reset-persona="${p.id}" title="Restablecer contraseña">🔑</button>
-                  <button type="button" class="cfg-icon-btn" data-cfg-eliminar-persona="${p.id}" title="Eliminar cuenta">🗑</button>
+                  <button type="button" class="cfg-icon-btn" data-cfg-reset-persona="${p.id}" title="Restablecer contraseña"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7.5" cy="15.5" r="3.5"/><path d="M10 13L19 4"/><path d="M15 8l2 2"/></svg></button>
+                  <button type="button" class="cfg-icon-btn" data-cfg-eliminar-persona="${p.id}" title="Eliminar cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
                 </td>
               </tr>
             `).join('') : `<tr><td colspan="6" class="catalog-empty-cell">Todavía no hay cuentas registradas.</td></tr>`}
@@ -930,11 +930,11 @@ function renderSeccionUsuarios() {
                 <td>${escapeHTMLPersonas(ROLES_CUENTA_INTERNA[c.rol] || c.rol)}</td>
                 <td style="white-space:nowrap;">
                   <span class="cfg-password-texto" data-password-real="${escapeAttributePersonas(c.password || '(sin contraseña)')}" style="font-family:monospace;">••••••••</span>
-                  <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar">👁</button>
+                  <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
                 </td>
                 <td style="white-space:nowrap;">
-                  <button type="button" class="cfg-icon-btn" data-cfg-reset-interna="${c.id}" title="Restablecer contraseña">🔑</button>
-                  <button type="button" class="cfg-icon-btn" data-cfg-eliminar-interna="${c.id}" title="Eliminar cuenta">🗑</button>
+                  <button type="button" class="cfg-icon-btn" data-cfg-reset-interna="${c.id}" title="Restablecer contraseña"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7.5" cy="15.5" r="3.5"/><path d="M10 13L19 4"/><path d="M15 8l2 2"/></svg></button>
+                  <button type="button" class="cfg-icon-btn" data-cfg-eliminar-interna="${c.id}" title="Eliminar cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
                 </td>
               </tr>
             `).join('') : `<tr><td colspan="5" class="catalog-empty-cell">Todavía no hay cuentas registradas.</td></tr>`}
@@ -943,7 +943,7 @@ function renderSeccionUsuarios() {
       </div>
 
       <div class="cfg-disclosure">
-        ⚠️ Las contraseñas se guardan en texto plano para que puedas recuperarlas si alguien las olvida — esto es aceptable únicamente porque este portal todavía no tiene un backend real. Con Firebase Auth, esto se reemplazará por "restablecer contraseña" en vez de "ver la contraseña actual".
+        <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Las contraseñas se guardan en texto plano para que puedas recuperarlas si alguien las olvida — esto es aceptable únicamente porque este portal todavía no tiene un backend real. Con Firebase Auth, esto se reemplazará por "restablecer contraseña" en vez de "ver la contraseña actual".
         <br><br>
         <code>admin01</code> y <code>rh01</code> son las cuentas fijas de esta demo (Claudia y Recursos Humanos). Eliminarlas aquí no cierra su acceso al portal, porque ese acceso todavía no depende de esta lista — es solo la cuenta que usan para reautorizar acciones en Apartados/Catálogo/etc.
       </div>
@@ -959,7 +959,7 @@ function renderSeccionUsuarios() {
       if (!span) return;
       const mostrando = span.textContent === span.dataset.passwordReal;
       span.textContent = mostrando ? '••••••••' : span.dataset.passwordReal;
-      btn.textContent = mostrando ? '👁' : '🙈';
+      btn.innerHTML = mostrando ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3.5 3.5l17 17"/><path d="M10.6 5.2A10.6 10.6 0 0112 5c6.5 0 10 7 10 7a15.6 15.6 0 01-3.4 4.2M6.5 6.6A15.7 15.7 0 002 12s3.5 7 10 7a10.4 10.4 0 004.1-.8"/><path d="M9.9 10a3 3 0 004.1 4.1"/></svg>';
     });
   });
 
@@ -1226,7 +1226,7 @@ function abrirModalResetPassword(tipo, id) {
   box.style.maxWidth = '400px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">🔑</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7.5" cy="15.5" r="3.5"/><path d="M10 13L19 4"/><path d="M15 8l2 2"/></svg></div>
     <h3>Restablecer contraseña</h3>
     <p class="modal-sub">${escapeHTMLPersonas(nombre)} · usuario ${escapeHTMLPersonas(usuario)}</p>
     <label class="cfg-field-label">Nueva contraseña</label>

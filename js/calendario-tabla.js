@@ -231,7 +231,7 @@ function renderFilaEvento(ev) {
 
       <td>
         <div class="catalog-actions">
-          <button class="action-btn primary-action" data-editar="${ev.id}"><span>✎</span> Editar</button>
+          <button class="action-btn primary-action" data-editar="${ev.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></span> Editar</button>
           <button class="action-btn danger-action" data-eliminar="${ev.id}"><span>×</span> Eliminar</button>
         </div>
       </td>
@@ -263,7 +263,7 @@ function abrirModalEventoCalendario(evento = null) {
 
     <button class="modal-close" data-close>×</button>
 
-    <div class="auth-icon">${editando ? '✎' : '+'}</div>
+    <div class="auth-icon">${editando ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M5 12h14"/></svg>'}</div>
 
     <h3>${editando ? 'Editar evento' : 'Agregar evento'}</h3>
 
@@ -457,7 +457,7 @@ function solicitarAutorizacionCalendario(tipo, id, datos = null) {
 
     <button class="modal-close" data-close>×</button>
 
-    <div class="auth-icon ${tipo === 'eliminar' ? 'danger' : ''}">${tipo === 'eliminar' ? '!' : '✓'}</div>
+    <div class="auth-icon ${tipo === 'eliminar' ? 'danger' : ''}">${tipo === 'eliminar' ? '!' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg>'}</div>
 
     <h3>${titulo}</h3>
 
@@ -475,7 +475,7 @@ function solicitarAutorizacionCalendario(tipo, id, datos = null) {
     </div>
 
     <div class="auth-warning">
-      <span>🔐</span>
+      <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
       <div>
         <strong>Acción registrada</strong>
         <small>El sistema guardará el usuario, fecha y hora de esta modificación.</small>

@@ -149,23 +149,23 @@ function actualizarPillSync(modo) {
   if (!pill) return;
 
   if (!navigator.onLine) {
-    pill.textContent = '🔴 Sin conexión — cambios guardados localmente';
+    pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Sin conexión — cambios guardados localmente';
     pill.className = 'comm-sync-pill offline';
     return;
   }
 
   if (modo === 'guardando') {
-    pill.textContent = '🟡 Guardando...';
+    pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Guardando...';
     pill.className = 'comm-sync-pill guardando';
     return;
   }
 
   const hayAjustes = comisionesData.some(l => l.tieneAjustes);
   if (hayAjustes) {
-    pill.textContent = '🟠 Hay ajustes manuales';
+    pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Hay ajustes manuales';
     pill.className = 'comm-sync-pill ajustes';
   } else {
-    pill.textContent = '🟢 Todos los cálculos actualizados';
+    pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Todos los cálculos actualizados';
     pill.className = 'comm-sync-pill ok';
   }
 }
@@ -229,7 +229,7 @@ function construirCardLider(r) {
             <span>· Equipo: ${r.totalEquipo}</span>
             <span>· ${info.label} (paga ${info.fechaPago})</span>
             <span class="badge ${estadoPagoClase}">${estadoPagoLabel}</span>
-            ${r.tieneAjustes ? '<span class="badge badge-ascenso">🟠 Con ajustes manuales</span>' : ''}
+            ${r.tieneAjustes ? '<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Con ajustes manuales</span>' : ''}
           </div>
         </div>
         <div class="comm-lider-totales">
@@ -246,7 +246,7 @@ function construirCardLider(r) {
             <strong>${fmtMoneyComm(r.totalComision)}</strong>
           </div>
           <button class="btn btn-outline comm-ver-equipo-btn" type="button" data-toggle-equipo="${r.lider.id}">${expandedLideres.has(r.lider.id) ? '－ Ocultar equipo' : '＋ Ver equipo'}</button>
-          <button class="btn btn-outline comm-ver-equipo-btn" type="button" data-generar-pdf="${r.lider.id}">🧾 Generar PDF</button>
+          <button class="btn btn-outline comm-ver-equipo-btn" type="button" data-generar-pdf="${r.lider.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h12v20l-2-1.5L14 22l-2-1.5L10 22l-2-1.5L6 22V2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span> Generar PDF</button>
         </div>
       </div>
 
@@ -273,7 +273,7 @@ function construirBloqueBono(r) {
   const b = r.bono;
   return `
     <div class="comm-bono-block">
-      <span>🎖️ <strong>Bono por rango — ${rangoLabel(b.rango)}</strong> (una sola vez, ascenso del ${formatearFechaPersonas(b.fechaAscenso)}): <strong>${fmtMoneyComm(b.monto)}</strong>. No se suma a la comisión — se paga aparte.</span>
+      <span><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="15" r="5"/><path d="M9 10.5L7 3h3l2 6"/><path d="M15 10.5L17 3h-3l-2 6"/></svg></span> <strong>Bono por rango — ${rangoLabel(b.rango)}</strong> (una sola vez, ascenso del ${formatearFechaPersonas(b.fechaAscenso)}): <strong>${fmtMoneyComm(b.monto)}</strong>. No se suma a la comisión — se paga aparte.</span>
       ${b.pagado
         ? `<span class="badge badge-pagada">Pagado el ${formatearFechaPersonas(b.fechaPago)} por ${escapeHTMLPersonas(b.registradoPor)}</span>`
         : `<button class="btn btn-outline" type="button" style="width:auto;" data-pagar-bono="${b.clave}" data-lider-bono="${r.lider.id}">Marcar como pagado</button>`}
@@ -335,7 +335,7 @@ function construirFilaComisionHTML(liderId, f) {
       <td>
         ${ajustada ? `${diferencia >= 0 ? '+' : ''}${fmtMoneyComm(diferencia)}` : '—'}
         ${ajustada ? `<button type="button" class="comm-icon-btn" data-restaurar="${f.clave}" data-lider="${liderId}" data-persona="${f.persona.id}" title="Restaurar cálculo automático">↺</button>` : ''}
-        <button type="button" class="comm-icon-btn" data-historial="${f.clave}" data-lider="${liderId}" data-persona="${f.persona.id}" title="Ver historial de cambios">🕘</button>
+        <button type="button" class="comm-icon-btn" data-historial="${f.clave}" data-lider="${liderId}" data-persona="${f.persona.id}" title="Ver historial de cambios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>
       </td>
       <td class="comm-celda-editable ${ajustada ? 'ajustado' : 'calc'}"
           data-editable-comision
@@ -580,7 +580,7 @@ function abrirHistorialAjuste(liderId, personaId) {
   box.style.maxWidth = '480px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">🕘</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
     <h3>Historial de ajustes</h3>
     <p class="modal-sub">${escapeHTMLPersonas(nombreCompletoPersona(persona || {}))} · ${formatearPeriodoLabelComisiones(periodoActual)} · ${subPeriodoActual === 'p1' ? 'Periodo 1' : 'Periodo 2'}</p>
     ${historial.length ? `
@@ -615,7 +615,7 @@ function abrirModalPago(liderId) {
     box.style.maxWidth = '420px';
     box.innerHTML = `
       <button class="modal-close" data-close>&times;</button>
-      <div class="auth-icon">✓</div>
+      <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
       <h3>Pago registrado</h3>
       <div class="detail-grid">
         <div><span>Fecha de pago</span><strong>${formatearFechaPersonas(r.estadoPago.fechaPago)}</strong></div>
@@ -951,7 +951,7 @@ function abrirModalComprobanteGeneral() {
   box.style.maxWidth = '440px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">🧾</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h12v20l-2-1.5L14 22l-2-1.5L10 22l-2-1.5L6 22V2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div>
     <h3>Comprobante de todas las comisiones</h3>
     <p class="modal-sub">¿Lo quieres solo de este periodo o del mes completo?</p>
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">

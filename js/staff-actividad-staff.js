@@ -194,7 +194,7 @@ function confirmarEnteradoMisAct(id) {
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModalMisAct()">×</button>
-    <div class="auth-icon">✓</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
     <h3>Confirmar actividad</h3>
     <p class="modal-sub">Confirmas que te enteraste de "${escapeHTMLMisAct(a.nombre)}" (${escapeHTMLMisAct(a.zona)}) para la semana del ${formatearRangoSemanaActividadStaff(a.semanaKey)}.</p>
     <div class="modal-note">Se registrará tu nombre, fecha y hora. RH revisará después que la actividad se haya realizado.</div>

@@ -157,7 +157,7 @@ function abrirModalEvento(id) {
       <span>${dia} ${mes} · ${ev.hora}</span>
     </div>
     <p class="modal-sub" style="margin-bottom:1.2rem;">${ev.descripcion}</p>
-    <p class="modal-sub" style="margin-bottom:1rem;">📍 ${ev.lugarTexto}</p>
+    <p class="modal-sub" style="margin-bottom:1rem;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-7.58 7-12a7 7 0 10-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span> ${ev.lugarTexto}</p>
     <a href="${ev.enlace}" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%; display:block; text-align:center; box-sizing:border-box;">${textoBoton}</a>
   `;
   overlay.classList.add('open');

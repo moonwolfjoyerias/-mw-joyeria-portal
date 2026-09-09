@@ -95,7 +95,7 @@ function abrirDetalleSolicitudAdmin(id) {
   box.style.maxWidth = '520px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">👤</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
     <h3>Solicitud de inscripción</h3>
     <p class="modal-sub">Revisada como parte del proceso de alta de nuevas Emprendedoras.</p>
 
@@ -116,7 +116,7 @@ function abrirDetalleSolicitudAdmin(id) {
     </div>
 
     <div class="modal-note confidential-warning">
-      🔒 Información confidencial. Uso exclusivo administrativo.
+      <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span> Información confidencial. Uso exclusivo administrativo.
     </div>
     <div class="ine-preview">
       <img src="${solicitud.ineUrl}" alt="INE de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}">
@@ -211,7 +211,7 @@ function mostrarPantallaCredencialesAdmin({ solicitud, persona, credenciales }) 
   box.style.maxWidth = '460px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">✓</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
     <h3>Cuenta creada correctamente</h3>
     <p class="modal-sub">Entrega estas credenciales manualmente a la nueva Emprendedora. No se envían por correo automáticamente.</p>
 
@@ -309,7 +309,7 @@ function abrirModalRechazarAdmin(solicitud) {
 function copiarTextoSolAdmin(texto, boton) {
   navigator.clipboard?.writeText(texto);
   const original = boton.textContent;
-  boton.textContent = 'Copiado ✓';
+  boton.innerHTML = 'Copiado <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span>';
   setTimeout(() => { boton.textContent = original; }, 1500);
 }
 

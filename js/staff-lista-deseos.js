@@ -139,7 +139,7 @@ function renderTablaDeseosStaff() {
       <td><span class="catalog-description">${escapeHTML(resumenPiezasLD(s.piezas))}</span></td>
       <td><span class="badge ${BADGE_ESTADOS_LISTA_DESEOS[s.estado] || 'badge-pendiente'}">${ESTADOS_LISTA_DESEOS[s.estado] || s.estado}</span></td>
       <td><span class="catalog-description">${formatearFechaHoraLD(s.fechaCreacion)}</span></td>
-      <td><button class="action-btn detail-action" data-ld-detalle="${s.id}"><span>⌕</span> Ver detalle</button></td>
+      <td><button class="action-btn detail-action" data-ld-detalle="${s.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="6"/><path d="M20 20l-5.5-5.5"/></svg></span> Ver detalle</button></td>
     </tr>
   `).join('');
 
@@ -272,7 +272,7 @@ function renderPiezasFormularioLD() {
       <input type="text" placeholder="Variante (opcional)" class="ld-pieza-variante" value="${escapeHTML(p.variante)}">
       <input type="number" min="1" placeholder="Cantidad" class="ld-pieza-cantidad" value="${p.cantidad}">
       <input type="text" placeholder="Observaciones (opcional)" class="ld-pieza-observaciones" value="${escapeHTML(p.observaciones)}">
-      ${piezasFormulario.length > 1 ? `<button type="button" class="comm-icon-btn" data-quitar-pieza="${i}" title="Quitar">🗑</button>` : ''}
+      ${piezasFormulario.length > 1 ? `<button type="button" class="comm-icon-btn" data-quitar-pieza="${i}" title="Quitar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>` : ''}
     </div>
   `).join('');
   cont.querySelectorAll('[data-quitar-pieza]').forEach(btn => {
@@ -380,7 +380,7 @@ function renderTablaResurtidoStaff() {
       <td>${s.cantidadSugerida || '—'}</td>
       <td><span class="badge ${BADGE_ESTADOS_RESURTIDO[s.estado]}">${ESTADOS_RESURTIDO[s.estado]}</span></td>
       <td><span class="catalog-description">${formatearFechaHoraLD(s.fechaSolicitud)}</span></td>
-      <td><button class="action-btn detail-action" data-res-detalle="${s.id}"><span>⌕</span> Ver detalle</button></td>
+      <td><button class="action-btn detail-action" data-res-detalle="${s.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="6"/><path d="M20 20l-5.5-5.5"/></svg></span> Ver detalle</button></td>
     </tr>
   `).join('');
 
@@ -398,7 +398,7 @@ function abrirModalNuevaResurtido() {
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModalLD()">×</button>
-    <div class="auth-icon">📦</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v9l9 5 9-5V8"/><path d="M12 13v9"/></svg></div>
     <h3>Solicitar resurtido</h3>
     <p class="modal-sub">Avisa a Administración que hace falta resurtir una pieza o tipo de pieza — puede ser por categoría, sin necesidad de una persona específica.</p>
 
@@ -499,7 +499,7 @@ function abrirAutorizacionListaDeseos(accion) {
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModalLD()">×</button>
-    <div class="auth-icon">✓</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
     <h3>${titulos[accion.tipo] || 'Autorizar acción'}</h3>
     <p class="modal-sub">Ingresa tus credenciales para registrar quién realizó este cambio.</p>
 

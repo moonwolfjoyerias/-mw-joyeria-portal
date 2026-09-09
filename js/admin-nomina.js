@@ -154,21 +154,21 @@ function actualizarPillNomina(modo) {
   if (!pill) return;
 
   if (modo === 'error') {
-    pill.textContent = '🔴 Error de sincronización';
+    pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Error de sincronización';
     pill.className = 'cfg-sync-pill error';
     return;
   }
   if (!navigator.onLine) {
-    pill.textContent = '🟠 Cambios guardados localmente — esperando conexión';
+    pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Cambios guardados localmente — esperando conexión';
     pill.className = 'cfg-sync-pill offline';
     return;
   }
   if (modo === 'guardando') {
-    pill.textContent = '🟡 Guardando...';
+    pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Guardando...';
     pill.className = 'cfg-sync-pill guardando';
     return;
   }
-  pill.textContent = '🟢 Guardado';
+  pill.innerHTML = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Guardado';
   pill.className = 'cfg-sync-pill ok';
 }
 
@@ -344,8 +344,8 @@ function renderVistaDetalleNomina() {
         </div>
         ${puedeValidar ? `
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-outline" id="nomSolicitarCorreccionBtn" type="button" style="width:auto;">🔄 Solicitar revisión nuevamente</button>
-            <button class="btn btn-primary" id="nomValidarNominaBtn" type="button" style="width:auto;">✅ Validar</button>
+            <button class="btn btn-outline" id="nomSolicitarCorreccionBtn" type="button" style="width:auto;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12a8 8 0 0114-5.3"/><path d="M20 12a8 8 0 01-14 5.3"/><path d="M17 4v4h-4"/><path d="M7 20v-4h4"/></svg></span> Solicitar revisión nuevamente</button>
+            <button class="btn btn-primary" id="nomValidarNominaBtn" type="button" style="width:auto;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Validar</button>
           </div>
         ` : ''}
       </div>
@@ -384,9 +384,9 @@ function renderVistaDetalleNomina() {
         <div id="nomResumenTotales" class="nom-resumen-totales"></div>
 
         <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
-          <button class="btn btn-outline" id="nomVerHistorialBtn" type="button" style="width:auto;">🕘 Historial de ajustes</button>
+          <button class="btn btn-outline" id="nomVerHistorialBtn" type="button" style="width:auto;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span> Historial de ajustes</button>
           <button class="btn btn-outline" id="nomRegistrarPagoBtn" type="button" style="width:auto;" ${estadoNomina !== 'validado_admin' && nomPeriodoEnEdicion.estadoPago?.estado !== 'pagada' ? 'disabled title="Esta nómina debe estar validada por Administración antes de registrar el pago."' : ''}>Registrar pago</button>
-          <button class="btn btn-primary" id="nomGenerarPdfBtn" type="button" style="width:auto;">🧾 Generar comprobante</button>
+          <button class="btn btn-primary" id="nomGenerarPdfBtn" type="button" style="width:auto;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h12v20l-2-1.5L14 22l-2-1.5L10 22l-2-1.5L6 22V2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span> Generar comprobante</button>
         </div>
       </div>
     </div>
@@ -457,7 +457,7 @@ function abrirModalSolicitarCorreccionNomina(empleado) {
   box.style.maxWidth = '440px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">🔄</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12a8 8 0 0114-5.3"/><path d="M20 12a8 8 0 01-14 5.3"/><path d="M17 4v4h-4"/><path d="M7 20v-4h4"/></svg></div>
     <h3>Solicitar revisión nuevamente</h3>
     <p class="modal-sub">${escapeHTMLNomina(empleado.nombre)} · ${escapeHTMLNomina(formatearRangoSemanaNomina(nomPeriodoActual))}</p>
     <label class="cfg-field-label">¿Qué debe corregir RH?</label>
@@ -497,7 +497,7 @@ function renderTablaConceptosNomina() {
 
   body.innerHTML = nomPeriodoEnEdicion.conceptos.map(fila => `
     <tr data-fila-id="${fila.filaId}">
-      <td>${escapeHTMLNomina(fila.nombre)}${fila.conceptoId === 'sueldo_base' || fila.conceptoId === 'horas_extra' ? '' : ` <button type="button" class="comm-icon-btn" data-nom-eliminar-fila="${fila.filaId}" title="Eliminar concepto">🗑</button>`}</td>
+      <td>${escapeHTMLNomina(fila.nombre)}${fila.conceptoId === 'sueldo_base' || fila.conceptoId === 'horas_extra' ? '' : ` <button type="button" class="comm-icon-btn" data-nom-eliminar-fila="${fila.filaId}" title="Eliminar concepto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>`}</td>
       <td class="nom-celda-editable" data-fila-id="${fila.filaId}" data-campo="cantidad" tabindex="0">${fila.cantidad}</td>
       <td class="nom-celda-editable" data-fila-id="${fila.filaId}" data-campo="importe" tabindex="0">${fmtMoneyNomina(fila.importe)}</td>
       <td><span class="badge ${fila.tipo === 'percepcion' ? 'badge-pagada' : 'badge-pendiente'}">${fila.tipo === 'percepcion' ? 'Percepción' : 'Deducción'}</span></td>
@@ -762,7 +762,7 @@ function abrirModalHistorialAjustesNomina() {
   box.style.maxWidth = '480px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">🕘</div>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
     <h3>Historial de ajustes</h3>
     <p class="modal-sub">${formatearRangoSemanaNomina(nomPeriodoActual)}</p>
     ${historial.length ? `
@@ -799,7 +799,7 @@ function abrirModalRegistrarPagoNomina() {
     box.style.maxWidth = '400px';
     box.innerHTML = `
       <button class="modal-close" data-close>&times;</button>
-      <div class="auth-icon">✓</div>
+      <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
       <h3>Pago registrado</h3>
       <div class="detail-grid">
         <div><span>Fecha de pago</span><strong>${formatearFechaNomina(ep.fechaPago)}</strong></div>
@@ -1167,9 +1167,9 @@ function renderDatosEmpleados() {
                 <td>${fmtMoneyNomina(e.pagoHoraExtra)}</td>
                 <td><span class="badge ${e.estado === 'activo' ? 'badge-pagada' : 'badge-pendiente'}">${ESTADOS_EMPLEADO_NOMINA[e.estado]}</span></td>
                 <td style="white-space:nowrap;">
-                  <button type="button" class="comm-icon-btn" data-nom-editar-empleado="${e.id}" title="Editar">✎</button>
+                  <button type="button" class="comm-icon-btn" data-nom-editar-empleado="${e.id}" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></button>
                   ${e.estado === 'activo'
-                    ? `<button type="button" class="comm-icon-btn" data-nom-baja-empleado="${e.id}" title="Dar de baja">⏻</button>`
+                    ? `<button type="button" class="comm-icon-btn" data-nom-baja-empleado="${e.id}" title="Dar de baja"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 108 0"/></svg></button>`
                     : `<button type="button" class="comm-icon-btn" data-nom-reactivar-empleado="${e.id}" title="Reactivar">↺</button>`}
                 </td>
               </tr>
@@ -1224,7 +1224,7 @@ function abrirModalEmpleadoNomina(id) {
   box.style.maxWidth = '460px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">${empleado ? '✎' : '＋'}</div>
+    <div class="auth-icon">${empleado ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M5 12h14"/></svg>'}</div>
     <h3>${empleado ? 'Editar empleado' : 'Agregar empleado'}</h3>
     <div class="cfg-form-grid" style="margin-top:10px;">
       <label class="cfg-span-2">Nombre completo<input type="text" id="nomEmpNombre" value="${escapeHTMLNomina(empleado?.nombre || '')}"></label>
@@ -1353,11 +1353,11 @@ function renderDatosConceptos() {
               <tr>
                 <td>${escapeHTMLNomina(c.nombre)}${c.fijo ? ' <span class="catalog-product-id">(fijo)</span>' : ''}</td>
                 <td><span class="badge ${c.tipo === 'percepcion' ? 'badge-pagada' : 'badge-pendiente'}">${c.tipo === 'percepcion' ? 'Percepción' : 'Deducción'}</span></td>
-                <td>${c.activo ? '✓' : '—'}</td>
+                <td>${c.activo ? '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span>' : '—'}</td>
                 <td style="white-space:nowrap;">
-                  <button type="button" class="comm-icon-btn" data-nom-editar-concepto="${c.id}" title="Editar">✎</button>
+                  <button type="button" class="comm-icon-btn" data-nom-editar-concepto="${c.id}" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></button>
                   ${!c.fijo ? (c.activo
-                    ? `<button type="button" class="comm-icon-btn" data-nom-desactivar-concepto="${c.id}" title="Desactivar">⏻</button>`
+                    ? `<button type="button" class="comm-icon-btn" data-nom-desactivar-concepto="${c.id}" title="Desactivar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 108 0"/></svg></button>`
                     : `<button type="button" class="comm-icon-btn" data-nom-activar-concepto="${c.id}" title="Activar">↺</button>`) : ''}
                 </td>
               </tr>
@@ -1394,7 +1394,7 @@ function abrirModalConceptoNomina(id) {
   box.style.maxWidth = '400px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon">${concepto ? '✎' : '＋'}</div>
+    <div class="auth-icon">${concepto ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M5 12h14"/></svg>'}</div>
     <h3>${concepto ? 'Editar concepto' : 'Agregar concepto'}</h3>
     <div class="cfg-form-grid" style="margin-top:10px;">
       <label class="cfg-span-2">Nombre<input type="text" id="nomConceptoNombre" value="${escapeHTMLNomina(concepto?.nombre || '')}"></label>
@@ -1586,8 +1586,8 @@ function abrirModalDetalleSolicitudNomina(id) {
     ${resolucion}
     ${solicitud.estado === 'pendiente' ? `
       <div style="display:flex;gap:10px;margin-top:14px;">
-        <button class="btn btn-danger" style="flex:1;" id="nomSolDetalleDenegarBtn" type="button">❌ Denegar</button>
-        <button class="btn btn-primary" style="flex:1;" id="nomSolDetalleAprobarBtn" type="button">✅ Aprobar</button>
+        <button class="btn btn-danger" style="flex:1;" id="nomSolDetalleDenegarBtn" type="button"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6L6 18"/></svg></span> Denegar</button>
+        <button class="btn btn-primary" style="flex:1;" id="nomSolDetalleAprobarBtn" type="button"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Aprobar</button>
       </div>
     ` : ''}
   `;
@@ -1634,7 +1634,7 @@ function abrirModalRechazarSolicitud(id) {
   box.style.maxWidth = '400px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <div class="auth-icon danger">✕</div>
+    <div class="auth-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
     <h3>Rechazar solicitud</h3>
     <label class="cfg-field-label">Motivo del rechazo</label>
     <textarea id="nomRechazoMotivo" rows="3" style="width:100%;border:1px solid var(--mw-border);border-radius:8px;padding:0.6em 0.8em;font-family:inherit;"></textarea>

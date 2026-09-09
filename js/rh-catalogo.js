@@ -223,7 +223,7 @@ function renderProducto(p) {
       <td><span class="catalog-stock ${stockClass}">${stockText}<small>${disponibilidad}</small></span></td>
       <td>
         <div class="catalog-actions">
-          <button class="action-btn primary-action" data-editar="${p.id}"><span>✎</span> Editar</button>
+          <button class="action-btn primary-action" data-editar="${p.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></span> Editar</button>
           <button class="action-btn detail-action" data-stock="${p.id}"><span>◇</span> Existencia</button>
           <button class="action-btn danger-action" data-eliminar="${p.id}"><span>×</span> Eliminar</button>
         </div>
@@ -257,7 +257,7 @@ function abrirModalProducto(producto = null) {
 
   box.innerHTML = `
     <button class="modal-close" data-close>×</button>
-    <div class="auth-icon">${editando ? '✎' : '+'}</div>
+    <div class="auth-icon">${editando ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M5 12h14"/></svg>'}</div>
     <h3>${editando ? 'Editar producto' : 'Agregar producto'}</h3>
     <p class="modal-sub">${editando ? 'Modifica la información del artículo.' : 'Agrega un nuevo artículo al catálogo de MW Joyería.'}</p>
 
@@ -268,7 +268,7 @@ function abrirModalProducto(producto = null) {
       <div class="image-upload-info">
         <strong>Foto del artículo</strong>
         <label class="upload-image-btn">
-          <span>📷</span>
+          <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.2-1.8a1.5 1.5 0 011.25-.7h3.1a1.5 1.5 0 011.25.7L16 7h2.5A1.5 1.5 0 0120 8.5v9A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5v-9z"/><circle cx="12" cy="13" r="3.4"/></svg></span>
           Seleccionar imagen
           <input type="file" id="productoImagen" accept="image/*" hidden>
         </label>
