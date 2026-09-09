@@ -1862,9 +1862,6 @@ a:hover { color: var(--mw-gold); }
 .catalog-table-wrap {
   overflow-x: auto;
 }
-.catalog-table-wrap.compact {
-  zoom: 0.72;
-}
 .compact-toggle-btn {
   width: auto;
   white-space: nowrap;
@@ -4004,4 +4001,376 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 
 @media (max-width: 900px) {
   .nom-nav-principal, .nom-nav-datos { flex-direction: row; }
+}
+
+/* =========================================================
+   Ajustes responsive globales
+   Mantienen la interfaz existente y confinan el desplazamiento a
+   componentes que realmente necesitan más ancho, como las tablas.
+   ========================================================= */
+
+img,
+svg,
+video,
+iframe {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+.layout-portal > *,
+.main-content > *,
+.main-content .card,
+.main-content .cfg-card,
+.main-content .dash-card,
+.main-content .catalog-table-card,
+.main-content .table-card {
+  min-width: 0;
+}
+
+.main-content {
+  padding: clamp(1.25rem, 2.5vw, 2rem);
+}
+
+.card-grid,
+.product-grid,
+.benefit-cards,
+.local-gallery,
+.stat-cards,
+.team-levels-grid,
+.catalog-product-grid,
+.staff-catalog-grid,
+.employee-grid,
+.solicitudes-grid,
+.planmw-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+.product-grid,
+.benefit-cards,
+.local-gallery {
+  min-width: 0;
+}
+
+.hero,
+.page-hero,
+.contact-hero,
+.rewards-section,
+.calendar-page-layout,
+.account-layout,
+.people-layout,
+.cfg-layout,
+.rank-progress-section {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.hero > *,
+.page-hero > *,
+.contact-hero > *,
+.rewards-section > *,
+.calendar-page-layout > *,
+.account-layout > *,
+.people-layout > *,
+.cfg-layout > *,
+.rank-progress-section > * {
+  min-width: 0;
+}
+
+.catalog-toolbar,
+.people-toolbar,
+.comm-toolbar,
+.planmw-toolbar,
+.section-head,
+.events-section-header {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.catalog-toolbar > *,
+.people-toolbar > *,
+.comm-toolbar > *,
+.planmw-toolbar > *,
+.section-head > * {
+  min-width: 0;
+}
+
+.catalog-search {
+  max-width: 100%;
+  flex: 1 1 220px;
+}
+
+.table-card,
+.catalog-table-card {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.table-wrap,
+.catalog-table-wrap,
+.comm-tabla-wrap,
+.cfg-tabla-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.table-wrap th,
+.table-wrap td {
+  padding: 0.7rem 0.8rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table-wrap th {
+  white-space: nowrap;
+  color: var(--mw-purple-dark);
+  background: #fbf9fc;
+}
+
+.catalog-table-wrap.compact {
+  zoom: 1;
+}
+
+.table-wrap.compact {
+  zoom: 1;
+}
+
+.table-wrap.compact th,
+.table-wrap.compact td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.catalog-table-wrap.compact .catalog-table th,
+.catalog-table-wrap.compact .catalog-table td {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+.catalog-table,
+.comm-tabla-wrap .catalog-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.modal-overlay,
+.catalog-modal-overlay {
+  padding: clamp(0.75rem, 3vw, 1.5rem);
+}
+
+.modal-box,
+.catalog-modal,
+.catalog-modal.modal-box {
+  width: min(100%, 720px);
+  max-height: min(92vh, 900px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.modal-box > *,
+.catalog-modal > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.form-grid,
+.cfg-form-grid,
+.wishlist-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea,
+.cfg-form-grid input,
+.cfg-form-grid select,
+.cfg-form-grid textarea,
+.wishlist-form-grid input,
+.wishlist-form-grid select,
+.wishlist-form-grid textarea {
+  min-width: 0;
+}
+
+.cart-summary-bar {
+  min-width: 0;
+  padding-inline: clamp(1rem, 3vw, 2rem);
+}
+
+.cart-summary-bar > *,
+.cfg-barra-guardar > *,
+.comm-recuperar-banner > *,
+.comm-pago-block > * {
+  min-width: 0;
+}
+
+.cfg-barra-guardar {
+  max-width: calc(100vw - 1.5rem);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.rank-hero,
+.rank-hero-left,
+.profile-field .field-row,
+.commission-ticket .ct-row,
+.commission-ticket .ct-detail-row {
+  min-width: 0;
+}
+
+.rank-hero-text,
+.profile-field .field-value,
+.commission-ticket .ct-level,
+.commission-ticket .ct-detail-row > div:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1100px) {
+  .hero h1 { font-size: clamp(2.8rem, 5vw, 4rem); }
+  .hero { gap: 2rem; }
+  .page-hero,
+  .contact-hero,
+  .rewards-section,
+  .account-layout,
+  .rank-progress-section {
+    gap: 1.5rem;
+  }
+  .team-levels-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .hero,
+  .page-hero,
+  .contact-hero,
+  .rewards-section,
+  .calendar-page-layout,
+  .account-layout,
+  .people-layout,
+  .cfg-layout,
+  .rank-progress-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stat-cards,
+  .stat-cards.cols-4,
+  .team-levels-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catalog-layout { min-width: 0; }
+  .filter-panel { max-width: 100%; }
+  .rank-hero { align-items: stretch; }
+  .rank-hero-left { align-items: flex-start; }
+  .cart-summary-bar { left: 0; }
+}
+
+@media (max-width: 720px) {
+  .main-content { padding: 1rem; }
+  .topbar { padding-inline: 1rem; }
+  .sidebar { padding: 1rem; }
+  .sidebar .brand-link { margin-bottom: 1rem; }
+  .sidebar nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.25rem; }
+  .sidebar nav a { margin-bottom: 0; }
+
+  .hero,
+  .page-hero,
+  .contact-hero,
+  .collection-block,
+  .local-gallery,
+  .benefit-cards,
+  .site-footer { padding-inline: 1rem; }
+
+  .hero h1 { font-size: clamp(2.35rem, 11vw, 3.2rem); }
+  .trust-badges { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .product-grid,
+  .benefit-cards,
+  .local-gallery,
+  .stat-cards,
+  .stat-cards.cols-4,
+  .team-levels-grid,
+  .form-grid,
+  .cfg-form-grid,
+  .wishlist-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portal-header-actions { width: 100%; justify-content: flex-end; }
+  .notif-panel { right: 0; width: min(300px, calc(100vw - 2rem)); }
+  .profile-btn { max-width: 100%; }
+  .profile-btn .profile-info { min-width: 0; }
+  .profile-btn strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .catalog-toolbar,
+  .catalog-toolbar > *,
+  .comm-actions-row-btns,
+  .comm-actions-row-btns .btn,
+  .cfg-recuperar-acciones,
+  .cfg-recuperar-acciones .btn,
+  .catalog-form-actions,
+  .catalog-form-actions .btn,
+  .profile-actions,
+  .profile-actions .btn {
+    width: 100%;
+  }
+
+  .catalog-toolbar { align-items: stretch; }
+  .catalog-toolbar select,
+  .catalog-search { width: 100%; }
+  .catalog-form-actions,
+  .profile-actions { flex-direction: column; }
+  .comm-recuperar-banner,
+  .cfg-recuperar-banner { align-items: stretch; flex-direction: column; }
+  .cfg-barra-guardar { left: 0.75rem; right: 0.75rem; max-width: none; }
+
+  .apartado-row { align-items: flex-start; }
+  .apartado-prices { margin-left: 0; width: 100%; text-align: left; }
+  .apartado-actions { width: 100%; flex-wrap: wrap; }
+  .apartado-actions button { flex: 1 1 120px; }
+  .copy-field { align-items: flex-start; gap: 0.6rem; flex-wrap: wrap; }
+  .copy-field .cf-value { overflow-wrap: anywhere; }
+  .countdown-timer .unit { min-width: 0; }
+
+  .rank-hero-left { flex-wrap: wrap; }
+  .rank-hero-text { flex: 1 1 180px; }
+  .rank-hero-text .rh-tag { margin-left: 0; }
+  .rank-hero-photo { width: 100%; }
+  .check-item { align-items: flex-start; flex-wrap: wrap; }
+  .check-item .check-values { white-space: normal; margin-left: 2.1rem; }
+
+  .people-detail-card { padding: 1rem; }
+  .people-detail-header h3 { overflow-wrap: anywhere; }
+  .ld-pieza-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .act-sorteo-zona-header { align-items: stretch; flex-direction: column; }
+  .act-sorteo-zona-header select { max-width: none; width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .topbar .logo .logo-main { font-size: 1rem; }
+  .topbar .logo .logo-sub { letter-spacing: 0.2em; }
+  .portal-header h1 { font-size: 1.55rem; }
+  .portal-header-actions { gap: 0.5rem; }
+  .profile-btn { padding-right: 0.55rem; }
+  .profile-btn .profile-role { display: none; }
+  .modal-box,
+  .catalog-modal { padding: 1.25rem; }
+  .catalog-modal .modal-context { grid-template-columns: 1fr; }
+  .image-upload-area { flex-direction: column; align-items: stretch; }
+  .image-preview { margin: 0 auto; }
+  .calendar-main { overflow: hidden; }
+  .calendar-grid { min-width: 0; }
+  .calendar-day { min-width: 0; }
+  .org-tree-card { padding: 1rem 0.75rem; }
+  .org-tree { justify-content: flex-start; }
 }
