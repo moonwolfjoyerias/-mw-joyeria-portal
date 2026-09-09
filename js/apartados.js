@@ -58,7 +58,6 @@ function notificarEquipoOperativo(texto, nombrePersona) {
   if (typeof agregarNotificacion !== 'function') return;
   const query = nombrePersona ? `?buscar=${encodeURIComponent(nombrePersona)}` : '';
   agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff' });
-  agregarNotificacion({ texto, link: `rh-apartados.html${query}`, rolDestino: 'rh' });
 }
 
 function obtenerEstadoDepositoPortal() {

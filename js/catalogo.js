@@ -245,7 +245,6 @@ function abrirModalApartar(nombreProducto) {
         const texto = `${nombrePersona || 'Una emprendedora'} avisó que ya pagó su depósito de $50 para apartar "${nombreProducto}" — confirma el depósito para abrir su ventana.`;
         const query = nombrePersona ? `?buscar=${encodeURIComponent(nombrePersona)}` : '';
         agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff' });
-        agregarNotificacion({ texto, link: `rh-apartados.html${query}`, rolDestino: 'rh' });
       }
       box.innerHTML = `
         <button class="modal-close" data-close>&times;</button>
