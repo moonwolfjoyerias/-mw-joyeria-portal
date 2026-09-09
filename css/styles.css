@@ -3618,6 +3618,27 @@ a:hover { color: var(--mw-gold); }
 
 .comm-pdf-template { position: fixed; left: -10000px; top: 0; width: 480px; background: #fff; }
 #nomPdfTemplate { width: 720px; }
+#actPdfTemplate { width: 720px; }
+
+/* Actividades del Staff — checklist de catálogo agrupado por zona,
+   filas de sorteo y línea de tiempo del historial. */
+.act-zona-group { margin-bottom: 14px; }
+.act-zona-title { font-size: 0.78rem; font-weight: 700; color: var(--mw-purple); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.act-checklist-item { display: flex; align-items: center; gap: 8px; padding: 0.4em 0.2em; border-bottom: 1px solid var(--mw-border); font-size: 0.87rem; }
+.act-checklist-item:last-child { border-bottom: none; }
+.act-checklist-item input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; }
+.act-checklist-item.ya-anunciada { opacity: 0.55; }
+.act-checklist-item .act-checklist-tag { margin-left: auto; font-size: 0.72rem; color: var(--mw-text-muted); }
+.act-sorteo-row { display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 10px; align-items: center; padding: 0.5em 0.2em; border-bottom: 1px solid var(--mw-border); font-size: 0.87rem; }
+.act-sorteo-row:last-child { border-bottom: none; }
+.act-sorteo-row select { width: 100%; }
+@media (max-width: 720px) {
+  .act-sorteo-row { grid-template-columns: 1fr; gap: 4px; }
+}
+.act-historial-item { border-left: 2px solid var(--mw-lilac-soft); padding: 2px 0 10px 14px; margin-left: 4px; position: relative; font-size: 0.85rem; }
+.act-historial-item::before { content: ''; position: absolute; left: -5px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--mw-purple); }
+.act-historial-item small { display: block; color: var(--mw-text-muted); margin-top: 2px; }
+.act-identificar-box { max-width: 380px; margin: 40px auto; text-align: center; }
 
 @media (max-width: 900px) {
   .comm-lider-header { flex-direction: column; align-items: stretch; }

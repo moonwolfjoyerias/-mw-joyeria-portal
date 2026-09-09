@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Staff MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=16">
+  <link rel="stylesheet" href="../../css/styles.css?v=17">
 </head>
 <body>
 
@@ -31,7 +31,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
           Apartados
         </a>
-        <a href="../staff/staff-calendario.html" class="active">
+        <a href="../staff/staff-calendario.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
           Calendario
         </a>
@@ -39,7 +39,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
           Lista de deseos
         </a>
-        <a href="../staff/staff-actividad-staff.html">
+        <a href="../staff/staff-actividad-staff.html" class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           Mis actividades
         </a>
@@ -57,8 +57,8 @@
     <main class="main-content">
       <header class="portal-header">
         <div>
-          <h1>Calendario MW ✦</h1>
-          <p class="portal-sub">Agrega, edita o elimina las actividades del calendario. Cada acción pide tu usuario y contraseña.</p>
+          <h1>Mis actividades ✦</h1>
+          <p class="portal-sub">Consulta las actividades de limpieza y orden que te fueron asignadas esta semana.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -83,109 +83,58 @@
         </div>
       </header>
 
-      <!-- RESUMEN -->
-      <div class="section-head">
-        <h2>Resumen del calendario</h2>
+      <!-- PASO 1: IDENTIFICACIÓN (sin sesión persistente, igual que el resto de Staff) -->
+      <div id="actIdentificarWrap" class="act-identificar-box">
+        <div class="auth-icon">🙋</div>
+        <h3>¿Quién eres?</h3>
+        <p class="modal-sub">Ingresa tu usuario y contraseña de personal para ver únicamente tus actividades.</p>
+
+        <label for="actIdUsuario">Usuario del personal</label>
+        <input id="actIdUsuario" type="text" autocomplete="off" placeholder="Ej. staff01">
+
+        <label for="actIdPassword">Contraseña</label>
+        <div class="password-wrap">
+          <input id="actIdPassword" type="password" placeholder="Contraseña">
+          <button type="button" id="actIdTogglePassword">Mostrar</button>
+        </div>
+
+        <div id="actIdError" class="auth-error" style="display:none;"></div>
+
+        <button class="btn btn-primary" style="width:100%;" id="actIdEntrarBtn">Ver mis actividades</button>
+
+        <p class="demo-note">DEMO · Usuario: staff01 · Contraseña: 1234</p>
       </div>
 
-      <section class="stat-cards catalog-summary">
+      <!-- PASO 2: MIS ACTIVIDADES -->
+      <div id="actMisActividadesWrap" hidden>
 
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-          </div>
-          <div>
-            <h4>Total de eventos</h4>
-            <span class="stat-num" id="totalEventos">0</span>
-            <span class="stat-link">Registrados en el calendario</span>
-          </div>
+        <div class="catalog-toolbar">
+          <span class="portal-sub" id="actYoLabel" style="margin:0;"></span>
+          <button type="button" class="btn btn-outline" style="width:auto;margin-left:auto;" id="actCambiarUsuarioBtn">Cambiar de usuario</button>
         </div>
 
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 7L10 17l-5-5"/><path d="M4 4h16v16H4z"/></svg>
+        <section class="catalog-table-card">
+          <div class="catalog-table-wrap">
+            <table class="catalog-table">
+              <thead>
+                <tr>
+                  <th>Actividad</th>
+                  <th>Zona</th>
+                  <th>Periodicidad</th>
+                  <th>Semana</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="actMisTableBody"></tbody>
+            </table>
           </div>
-          <div>
-            <h4>Próximos</h4>
-            <span class="stat-num" id="proximosEventos">0</span>
-            <span class="stat-link">A partir de hoy</span>
+          <div class="table-footer">
+            <span id="actMisResultCount">Mostrando resultados</span>
           </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-7.58 7-12a7 7 0 10-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
-          </div>
-          <div>
-            <h4>Presenciales</h4>
-            <span class="stat-num" id="eventosPresenciales">0</span>
-            <span class="stat-link">Con ubicación física</span>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
-          </div>
-          <div>
-            <h4>Virtuales</h4>
-            <span class="stat-num" id="eventosVirtuales">0</span>
-            <span class="stat-link">En línea (Zoom)</span>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- ACCIONES -->
-      <div class="section-head catalog-section-head">
-        <h2>Eventos del calendario</h2>
-
-        <button class="catalog-add-btn" id="agregarEventoBtn">
-          <span>＋</span>
-          Agregar evento
-        </button>
-      </div>
-
-      <!-- FILTROS -->
-      <div class="catalog-toolbar">
-
-        <button type="button" class="action-btn detail-action compact-toggle-btn" data-compactar-tabla=".catalog-table-wrap"><span>🔍</span><span class="compact-toggle-label">Vista compacta</span></button>
-
-        <div class="catalog-search">
-          <span>⌕</span>
-          <input type="search" id="searchInput" placeholder="Buscar por título, lugar o descripción...">
-        </div>
-
-        <select id="filterTipo">
-          <option value="">Todos los tipos</option>
-          <option value="presencial">Presencial</option>
-          <option value="virtual">Virtual</option>
-        </select>
+        </section>
 
       </div>
-
-      <!-- TABLA -->
-      <section class="catalog-table-card">
-        <div class="catalog-table-wrap">
-          <table class="catalog-table">
-            <thead>
-              <tr>
-                <th>Evento</th>
-                <th>Descripción</th>
-                <th>Tipo</th>
-                <th>Fecha / hora</th>
-                <th>Lugar / enlace</th>
-                <th>Acciones</th>
-                <th>Última acción</th>
-              </tr>
-            </thead>
-            <tbody id="calendarioTableBody"></tbody>
-          </table>
-        </div>
-        <div class="table-footer">
-          <span id="resultCount">Mostrando resultados</span>
-        </div>
-      </section>
 
     </main>
   </div>
@@ -196,7 +145,6 @@
 
   <script src="../../js/notificaciones-ejemplo.js"></script>
   <script src="../../js/eventos-ejemplo.js"></script>
-  <script src="../../js/eventos-modelo.js"></script>
   <script>
   const PORTAL_LINKS = {
     inicio: '../staff/staff-portal.html',
@@ -210,10 +158,11 @@
   </script>
   <script src="../../js/portal-common.js"></script>
   <script src="../../js/notificaciones-modelo.js"></script>
-  <script src="../../js/calendario-tabla-ejemplo.js"></script>
+  <script src="../../js/nomina-modelo.js"></script>
+  <script src="../../js/actividades-staff-modelo.js"></script>
+  <script src="../../js/staff-apartados-ejemplo.js"></script>
   <script src="../../js/cuentas-internas-modelo.js"></script>
-  <script src="../../js/personas-ejemplo.js"></script>
-  <script src="../../js/calendario-tabla.js"></script>
-  <script src="../../js/tabla-compacta.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
+  <script src="../../js/staff-actividad-staff.js"></script>
 </body>
 </html>
