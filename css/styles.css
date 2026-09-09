@@ -1099,7 +1099,25 @@ a:hover { color: var(--mw-gold); }
   margin-bottom: 1.1rem;
   box-sizing: border-box;
 }
-.modal-close { position: absolute; top: 0.9rem; right: 1rem; background: none; border: none; font-size: 1.4rem; color: var(--mw-text-muted); cursor: pointer; line-height: 1; }
+.modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  border-radius: 50%;
+  font-size: 1.2rem;
+  color: var(--mw-text-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+.modal-close:hover { color: var(--mw-purple); background: var(--mw-lilac-soft); border-color: var(--mw-lilac); }
+.modal-close:focus-visible { outline: 2px solid var(--mw-gold); outline-offset: 2px; }
 .modal-note { font-size: 0.76rem; color: var(--mw-purple-dark); background: var(--mw-lilac-soft); padding: 0.6em 0.8em; border-radius: var(--radius-sm); margin-bottom: 1.1rem; }
 
 @media (max-width: 900px) {
@@ -1329,8 +1347,21 @@ a:hover { color: var(--mw-gold); }
 .status-badge.bingo { background: #FCE8B8; color: #8A5A0A; }
 .status-badge.disponible { background: #DCF3E4; color: #1F7A44; }
 
-.sc-menu-btn { background: none; border: none; cursor: pointer; color: var(--mw-text-muted); padding: 0.2em; }
-.sc-menu-btn:hover { color: var(--mw-purple); }
+.sc-menu-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--mw-purple);
+  padding: 0;
+}
+.sc-menu-btn:hover { color: var(--mw-purple-dark); background: var(--mw-lilac-soft); border-color: var(--mw-lilac); }
+.sc-menu-btn:focus-visible { outline: 2px solid var(--mw-gold); outline-offset: 2px; }
 .sc-menu { position: absolute; top: 34px; right: 10px; background: #fff; border: 1px solid var(--mw-border); border-radius: var(--radius-sm); box-shadow: var(--shadow-hover); display: none; z-index: 10; overflow: hidden; }
 .sc-menu.open { display: block; }
 .sc-menu button { display: block; width: 100%; text-align: left; padding: 0.6em 1em; font-size: 0.82rem; background: none; border: none; color: #B3312C; cursor: pointer; white-space: nowrap; }
@@ -2281,17 +2312,26 @@ a:hover { color: var(--mw-gold); }
   position: absolute;
   right: 17px;
   top: 13px;
-  border: 0;
-  background: transparent;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--mw-border);
+  border-radius: 50%;
+  background: #fff;
   color: #776c82;
-  font-size: 27px;
+  font-size: 1.2rem;
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
 .catalog-modal-close:hover {
   color: var(--mw-purple);
+  background: var(--mw-lilac-soft);
+  border-color: var(--mw-lilac);
 }
+.catalog-modal-close:focus-visible { outline: 2px solid var(--mw-gold); outline-offset: 2px; }
 
 .catalog-modal-heading {
   margin-bottom: 22px;
@@ -3583,15 +3623,22 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   color: var(--mw-text);
 }
 .comm-icon-btn {
-  border: none;
-  background: none;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--mw-border);
+  background: #fff;
   cursor: pointer;
-  color: var(--mw-text-muted);
+  color: var(--mw-purple);
   font-size: 0.85rem;
-  padding: 2px 4px;
+  padding: 0;
   border-radius: 4px;
 }
-.comm-icon-btn:hover { color: var(--mw-purple); background: var(--mw-lilac-soft); }
+.comm-icon-btn:hover { color: var(--mw-purple-dark); background: var(--mw-lilac-soft); border-color: var(--mw-lilac); }
+.comm-icon-btn:focus-visible { outline: 2px solid var(--mw-gold); outline-offset: 2px; border-color: var(--mw-purple); }
+.comm-icon-btn svg { width: 16px; height: 16px; }
 
 .comm-highlight-row { animation: commHighlight 2.2s ease; }
 @keyframes commHighlight {
