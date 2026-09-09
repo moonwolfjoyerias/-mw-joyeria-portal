@@ -744,6 +744,47 @@ function sanitizarNombreArchivoNomina(t) {
   return String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
+// Coloca dos copias idénticas (la misma imagen, sin re-renderizar) del
+// comprobante dentro de una página Carta (612x792pt): una centrada en la
+// mitad superior, otra centrada en la mitad inferior, escaladas de forma
+// proporcional para que quepan completas — nunca se recorta la columna H,
+// nunca se deja un tamaño de página personalizado. La línea divisoria es
+// un trazo vectorial negro exactamente al 50% de la altura, sin texto.
+function colocarComprobanteEnPDFLetterNomina(pdf, canvas) {
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const mitad = pageHeight / 2;
+
+  const margenX = 24;
+  const margenExtremos = 24;
+  const separacionDivisor = 10;
+
+  const anchoDisponible = pageWidth - margenX * 2;
+  const altoDisponibleCopia = mitad - margenExtremos - separacionDivisor;
+
+  const aspecto = canvas.height / canvas.width;
+  let anchoCopia = anchoDisponible;
+  let altoCopia = anchoCopia * aspecto;
+  if (altoCopia > altoDisponibleCopia) {
+    altoCopia = altoDisponibleCopia;
+    anchoCopia = altoCopia / aspecto;
+  }
+
+  const x = (pageWidth - anchoCopia) / 2;
+  const yArriba = margenExtremos + (altoDisponibleCopia - altoCopia) / 2;
+  const yAbajo = mitad + separacionDivisor + (altoDisponibleCopia - altoCopia) / 2;
+
+  const imgData = canvas.toDataURL('image/png');
+  pdf.addImage(imgData, 'PNG', x, yArriba, anchoCopia, altoCopia);
+  pdf.addImage(imgData, 'PNG', x, yAbajo, anchoCopia, altoCopia);
+
+  pdf.setDrawColor(0, 0, 0);
+  pdf.setLineWidth(0.75);
+  pdf.line(0, mitad, pageWidth, mitad);
+
+}
+
 function generarComprobanteNomina() {
 
   const empleado = obtenerEmpleadoNominaPorId(nomEmpleadoActualId);
@@ -778,10 +819,15 @@ async function ejecutarGeneracionComprobanteNomina(empleado) {
     if (document.fonts?.ready) await document.fonts.ready;
 
     const canvas = await html2canvas(contenedor, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
-    const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: [canvas.width, canvas.height] });
-    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+
+    // PDF Carta fijo (612x792pt = 8.5"x11"). Nunca un tamaño personalizado:
+    // el comprobante se escala proporcionalmente para caber completo (las
+    // 8 columnas A:H nunca se recortan), nunca al revés. Dos copias
+    // idénticas del mismo bloque — mitad superior y mitad inferior — con
+    // una única línea negra divisoria exactamente al 50% de la altura.
+    const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'letter' });
+    colocarComprobanteEnPDFLetterNomina(pdf, canvas);
 
     const nombreArchivo = sanitizarNombreArchivoNomina(empleado.nombre);
     const periodoArchivo = sanitizarNombreArchivoNomina(formatearRangoSemanaNomina(nomPeriodoActual));
@@ -925,14 +971,10 @@ function construirBloqueReciboNomina(empleado, periodo) {
         indicado, y estoy de acuerdo con el total recibido.
       </div>
 
-      <table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-top:8px;">
-        ${nomReciboColgroup()}
-        <tbody>
-          <tr>
-            <td colspan="8" style="${bordeGrid}text-align:center;vertical-align:middle;font-size:9.5px;padding:10px 4px;">NOMBRE Y FIRMA</td>
-          </tr>
-        </tbody>
-      </table>
+      <div style="margin-top:22px;padding:0 40px;">
+        <div style="border-top:1px solid #000;width:100%;height:0;"></div>
+        <div style="text-align:center;font-size:9.5px;margin-top:3px;">Nombre y Firma</div>
+      </div>
 
     </div>
   `;
@@ -940,16 +982,7 @@ function construirBloqueReciboNomina(empleado, periodo) {
 }
 
 function construirHTMLComprobanteNomina(empleado, periodo) {
-  const bloque = construirBloqueReciboNomina(empleado, periodo);
-  return `
-    <div style="background:#fff;">
-      ${bloque}
-      <div style="border-top:1px dashed #999;margin:4px 14px;position:relative;">
-        <span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);background:#fff;padding:0 8px;font-size:9px;color:#666;">✂ cortar aquí</span>
-      </div>
-      ${bloque}
-    </div>
-  `;
+  return `<div style="background:#fff;">${construirBloqueReciboNomina(empleado, periodo)}</div>`;
 }
 
 // ============================================================
