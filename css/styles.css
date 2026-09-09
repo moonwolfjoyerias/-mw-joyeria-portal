@@ -3870,15 +3870,32 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 }
 .cfg-celda-texto { margin-right: 4px; }
 .cfg-icon-btn {
-  border: none;
-  background: none;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--mw-border);
+  background: #fff;
   cursor: pointer;
-  color: var(--mw-text-muted);
+  color: var(--mw-purple);
   font-size: 0.78rem;
-  padding: 2px 4px;
+  padding: 0;
   border-radius: 4px;
+  vertical-align: middle;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.cfg-icon-btn:hover { color: var(--mw-purple); background: var(--mw-lilac-soft); }
+.cfg-icon-btn:hover {
+  color: var(--mw-purple-dark);
+  background: var(--mw-lilac-soft);
+  border-color: var(--mw-lilac);
+}
+.cfg-icon-btn:focus-visible {
+  outline: 2px solid var(--mw-gold);
+  outline-offset: 2px;
+  border-color: var(--mw-purple);
+}
+.cfg-icon-btn svg { width: 16px; height: 16px; }
 
 .cfg-field-label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--mw-text-muted); margin: 12px 0 4px; }
 #cfgVigenciaInput, #cfgMotivoInput {
