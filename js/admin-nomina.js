@@ -1096,7 +1096,7 @@ function construirBloqueReciboNomina(empleado, periodo) {
         indicado, y estoy de acuerdo con el total recibido.
       </div>
 
-      <div style="margin-top:22px;padding:0 40px;">
+      <div style="margin-top:46px;padding:0 40px;">
         <div style="border-top:1px solid #000;width:100%;height:0;"></div>
         <div style="text-align:center;font-size:9.5px;margin-top:3px;">Nombre y Firma</div>
       </div>
