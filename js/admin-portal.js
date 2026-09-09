@@ -67,8 +67,8 @@ function renderResumenGeneral() {
   setTextDash('dashSolicitudesPendientes', solicitudes.filter(s => s.estado === 'pendiente').length);
 
   // Lista de deseos — misma fuente que Staff/RH/Admin.
-  const deseos = typeof cargarDeseosStaffActuales === 'function' ? cargarDeseosStaffActuales() : [];
-  setTextDash('dashDeseosActivos', deseos.filter(d => d.estado === 'pendiente' || d.estado === 'en_revision').length);
+  const deseos = typeof obtenerListaDeseos === 'function' ? obtenerListaDeseos() : [];
+  setTextDash('dashDeseosActivos', deseos.filter(d => d.estado === 'pendiente' || d.estado === 'en_seguimiento').length);
 
   // Configuración — cuántos cambios hay en el historial.
   const historialConfig = typeof obtenerHistorialCambiosConfig === 'function' ? obtenerHistorialCambiosConfig() : [];

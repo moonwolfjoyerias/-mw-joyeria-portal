@@ -3600,6 +3600,22 @@ a:hover { color: var(--mw-gold); }
 .badge-validado { background: #e6f6f4; color: #12766a; }
 .badge-correccion { background: #fbe7e9; color: #a3272f; }
 
+/* Lista de deseos — buscador de Emprendedora + filas de piezas */
+.ld-search-results { max-height: 180px; overflow-y: auto; border: 1px solid var(--mw-border); border-radius: 8px; margin-top: 6px; }
+.ld-search-results:empty { border: none; margin-top: 0; }
+.ld-search-result { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; padding: 0.55em 0.8em; border: none; background: #fff; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid var(--mw-border); }
+.ld-search-result:last-child { border-bottom: none; }
+.ld-search-result:hover { background: var(--mw-lilac-soft); }
+.ld-search-result span { color: var(--mw-text-muted); font-size: 0.78rem; }
+.ld-search-empty { padding: 0.6em 0.8em; color: var(--mw-text-muted); font-size: 0.82rem; }
+.ld-persona-chip { display: inline-flex; align-items: center; gap: 8px; background: var(--mw-lilac-soft); color: var(--mw-purple); border-radius: 999px; padding: 0.35em 0.5em 0.35em 0.9em; font-size: 0.85rem; font-weight: 600; margin-top: 8px; }
+.ld-persona-chip button { border: none; background: rgba(0,0,0,0.08); color: inherit; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 0.9rem; line-height: 1; }
+.ld-pieza-row { display: grid; grid-template-columns: 1.4fr 1.2fr 0.7fr 1.4fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+.ld-pieza-row input { width: 100%; }
+@media (max-width: 720px) {
+  .ld-pieza-row { grid-template-columns: 1fr 1fr; }
+}
+
 .comm-pdf-template { position: fixed; left: -10000px; top: 0; width: 480px; background: #fff; }
 #nomPdfTemplate { width: 720px; }
 

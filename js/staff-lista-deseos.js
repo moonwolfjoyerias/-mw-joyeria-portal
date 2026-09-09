@@ -1,479 +1,615 @@
-// MW JOYERÍA — Staff: Lista de deseos
+// MW JOYERÍA — Staff: Lista de deseos y Solicitud de resurtido
 //
-// Permite:
-// - Ver todas las solicitudes de las emprendedoras
-// - Avanzar el estado de cada solicitud (pendiente → en revisión → ¡bingo! → disponible)
-// - Ver el detalle completo de una solicitud
+// Dos pestañas independientes (ver js/lista-deseos-modelo.js):
+// - "Mis solicitudes": listaDeseos creadas por Staff (piezas para una
+//   Emprendedora o para público en general).
+// - "Solicitar resurtido": solicitudesResurtido creadas por Staff,
+//   avisando a Administración — Staff nunca las administra (eso es
+//   exclusivo de Administración, ver js/admin-lista-deseos.js).
 //
-// Toda acción exige usuario y contraseña del empleado, igual que en
-// Catálogo, Apartados y Calendario.
+// No existe una sesión individual de Staff (ver js/staff-apartados.js):
+// cada acción sensible vuelve a pedir usuario/contraseña de empleado,
+// y "mis solicitudes" en la práctica es "las que creó el equipo de
+// Staff" (rol, no persona) — mismo criterio que ya usa Apartados, donde
+// cualquier Staff puede actuar sobre cualquier ventana del equipo.
 //
-// ⚠️ TEMPORAL: localStorage simula la base de datos compartida hasta
-// integrar Firestore en Fase 3.
+// ⚠️ TEMPORAL: localStorage simula la base de datos compartida.
 
-let deseosStaff = [];
-let accionDeseoPendiente = null;
+let ldVista = 'deseos';
+let ldFiltroTexto = '';
+let ldFiltroEstado = '';
+let resFiltroTexto = '';
+let resFiltroEstado = '';
 
-// La carga inicial (semilla + localStorage) vive en
-// cargarDeseosStaffActuales() (staff-deseos-ejemplo.js) para que
-// Inicio y Lista de deseos siempre muestren los mismos datos.
+let piezasFormulario = [];
+let personaSeleccionadaForm = null; // { id, nombre }
+let accionPendiente = null; // { tipo, datos }
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  deseosStaff = cargarDeseosStaffActuales();
-  renderResumenDeseos();
-  renderTablaDeseos();
-  inicializarEventosDeseos();
+  renderTablaDeseosStaff();
+  renderTablaResurtidoStaff();
+  inicializarEventosListaDeseos();
+
+  document.addEventListener('click', (e) => {
+    document.querySelectorAll('.sc-menu.open').forEach(menu => menu.classList.remove('open'));
+  });
 
 });
 
-
 // ============================================================
-// GUARDAR
-// ============================================================
-
-function guardarDeseosStaff() {
-  localStorage.setItem(DESEOS_STAFF_STORAGE_KEY, JSON.stringify(deseosStaff));
-}
-
-
-// ============================================================
-// EVENTOS
+// NAVEGACIÓN ENTRE PESTAÑAS
 // ============================================================
 
-function inicializarEventosDeseos() {
+function inicializarEventosListaDeseos() {
 
-  const search = document.getElementById('searchInput');
-
-  if (search) {
-    search.addEventListener('input', renderTablaDeseos);
-  }
-
-
-  const estado = document.getElementById('filterEstado');
-
-  if (estado) {
-    estado.addEventListener('change', renderTablaDeseos);
-  }
-
-
-  const overlay = document.getElementById('modalOverlay');
-
-  if (overlay) {
-
-    overlay.addEventListener('click', (e) => {
-
-      if (e.target === overlay) {
-        cerrarModalDeseo();
-      }
-
-    });
-
-  }
-
-}
-
-
-// ============================================================
-// RESUMEN
-// ============================================================
-
-function renderResumenDeseos() {
-
-  const valores = {
-    totalDeseos: deseosStaff.length,
-    deseosPendientes: deseosStaff.filter(d => d.estado === 'pendiente').length,
-    deseosEnRevision: deseosStaff.filter(d => d.estado === 'en_revision').length,
-    deseosDisponibles: deseosStaff.filter(d => d.estado === 'disponible').length
-  };
-
-  Object.entries(valores).forEach(([id, valor]) => {
-    const elemento = document.getElementById(id);
-    if (elemento) elemento.textContent = valor;
-  });
-
-}
-
-
-// ============================================================
-// TABLA
-// ============================================================
-
-function renderTablaDeseos() {
-
-  const tbody = document.getElementById('deseosTableBody');
-
-  if (!tbody) return;
-
-  renderResumenDeseos();
-
-  const search =
-    document.getElementById('searchInput')?.value
-      .toLowerCase()
-      .trim() || '';
-
-  const estado =
-    document.getElementById('filterEstado')?.value || '';
-
-  const deseos = deseosStaff.filter(d => {
-
-    if (
-      search &&
-      !d.emprendedora.toLowerCase().includes(search) &&
-      !d.titulo.toLowerCase().includes(search) &&
-      !(d.descripcion || '').toLowerCase().includes(search)
-    ) {
-      return false;
-    }
-
-    if (estado && d.estado !== estado) {
-      return false;
-    }
-
-    return true;
-
-  });
-
-
-  const count = document.getElementById('resultCount');
-
-  if (count) {
-    count.textContent =
-      `${deseos.length} solicitud${deseos.length === 1 ? '' : 'es'}`;
-  }
-
-
-  if (!deseos.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8" class="catalog-empty-cell">
-          <strong>No encontramos solicitudes</strong>
-          <span>Prueba con otro filtro o búsqueda.</span>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-
-  tbody.innerHTML = deseos.map(renderFilaDeseo).join('');
-
-
-  tbody.querySelectorAll('[data-avanzar]').forEach(btn => {
-
+  document.querySelectorAll('#ldNavPrincipal [data-ld-vista]').forEach(btn => {
     btn.addEventListener('click', () => {
-      solicitarAutorizacionDeseo(btn.dataset.avanzar, btn.dataset.id);
+      ldVista = btn.getAttribute('data-ld-vista');
+      document.querySelectorAll('#ldNavPrincipal [data-ld-vista]').forEach(b => b.classList.toggle('active', b === btn));
+      document.getElementById('ldVistaDeseos').hidden = ldVista !== 'deseos';
+      document.getElementById('ldVistaResurtido').hidden = ldVista !== 'resurtido';
     });
-
   });
 
-
-  tbody.querySelectorAll('[data-detalle]').forEach(btn => {
-
-    btn.addEventListener('click', () => {
-      abrirDetalleDeseo(btn.dataset.detalle);
-    });
-
+  document.getElementById('ldSearchInput')?.addEventListener('input', (e) => {
+    ldFiltroTexto = e.target.value.trim().toLowerCase();
+    renderTablaDeseosStaff();
   });
-
-}
-
-
-function renderFilaDeseo(d) {
-
-  const estado = ESTADOS_DESEOS_STAFF[d.estado] || { label: d.estado, clase: '' };
-
-  return `
-    <tr>
-      <td>
-        <div class="catalog-product-cell">
-          <span class="profile-avatar">${escapeHTML(d.iniciales || '')}</span>
-          <div>
-            <strong>${escapeHTML(d.emprendedora)}</strong>
-            <div class="catalog-description">${escapeHTML(d.telefono || '')}</div>
-          </div>
-        </div>
-      </td>
-
-      <td><strong>${escapeHTML(d.titulo)}</strong></td>
-
-      <td><span class="catalog-description">${escapeHTML(d.descripcion || 'Sin descripción')}</span></td>
-
-      <td>
-        ${d.tieneFoto
-          ? `<div class="catalog-product-cell"><img src="../../assets/images/isotipo-morado.png" alt=""><span class="catalog-description">Adjunta</span></div>`
-          : `<span class="catalog-description">Sin foto</span>`
-        }
-      </td>
-
-      <td><span class="catalog-description">${escapeHTML(d.fecha || '')}</span></td>
-
-      <td><span class="wishlist-status ${estado.clase}">${escapeHTML(estado.label)}</span></td>
-
-      <td>
-        <div class="catalog-actions">
-          ${obtenerAccionDeseo(d)}
-          <button class="action-btn detail-action" data-detalle="${d.id}"><span>⌕</span> Ver detalle</button>
-        </div>
-      </td>
-
-      <td>
-        <strong>${escapeHTML(d.ultimaAccion?.texto || 'Sin registro')}</strong>
-        <div class="catalog-description">${escapeHTML(d.ultimaAccion?.usuario || '')}${d.ultimaAccion?.fecha ? ` · ${escapeHTML(d.ultimaAccion.fecha)}` : ''}</div>
-      </td>
-    </tr>
-  `;
-
-}
-
-
-function obtenerAccionDeseo(d) {
-
-  if (d.estado === 'pendiente') {
-    return `<button class="action-btn primary-action" data-avanzar="en_revision" data-id="${d.id}"><span>✓</span> Marcar en revisión</button>`;
-  }
-
-  if (d.estado === 'en_revision') {
-    return `<button class="action-btn primary-action" data-avanzar="bingo" data-id="${d.id}"><span>✓</span> Marcar ¡Bingo!</button>`;
-  }
-
-  if (d.estado === 'bingo') {
-    return `<button class="action-btn primary-action" data-avanzar="disponible" data-id="${d.id}"><span>✓</span> Marcar disponible</button>`;
-  }
-
-  return '';
-
-}
-
-
-// ============================================================
-// DETALLE
-// ============================================================
-
-function abrirDetalleDeseo(id) {
-
-  const overlay = document.getElementById('modalOverlay');
-  const box = document.getElementById('modalBox');
-  const d = deseosStaff.find(item => item.id === id);
-
-  if (!overlay || !box || !d) return;
-
-  const estado = ESTADOS_DESEOS_STAFF[d.estado] || { label: d.estado, clase: '' };
-
-  box.innerHTML = `
-
-    <button class="modal-close" data-close>×</button>
-
-    <span class="eyebrow">${escapeHTML(d.id)}</span>
-
-    <h3 style="margin-top:5px;">Detalle de la solicitud</h3>
-
-    <div class="modal-context">
-      <span>Emprendedora</span><strong>${escapeHTML(d.emprendedora)}</strong>
-      <span>Teléfono</span><strong>${escapeHTML(d.telefono || 'Sin teléfono')}</strong>
-      <span>Pieza deseada</span><strong>${escapeHTML(d.titulo)}</strong>
-      <span>Descripción</span><strong>${escapeHTML(d.descripcion || 'Sin descripción')}</strong>
-      <span>Foto de referencia</span><strong>${d.tieneFoto ? 'Adjunta' : 'Sin foto'}</strong>
-      <span>Fecha de solicitud</span><strong>${escapeHTML(d.fecha || '')}</strong>
-      <span>Estado</span><span class="wishlist-status ${estado.clase}">${escapeHTML(estado.label)}</span>
-    </div>
-
-    <div class="modal-note">
-      <strong>Última acción:</strong>
-      ${escapeHTML(d.ultimaAccion?.texto || 'Sin registro')}
-      ${d.ultimaAccion?.usuario ? ` · ${escapeHTML(d.ultimaAccion.usuario)}` : ''}
-      ${d.ultimaAccion?.fecha ? ` · ${escapeHTML(d.ultimaAccion.fecha)}` : ''}
-    </div>
-
-    <button class="btn btn-outline" style="width:100%;" data-close>Cerrar</button>
-
-  `;
-
-  overlay.classList.add('open');
-
-  box.querySelector('[data-close]')?.addEventListener('click', cerrarModalDeseo);
-
-}
-
-
-// ============================================================
-// AUTENTICACIÓN PARA ACCIONES
-// ============================================================
-
-function solicitarAutorizacionDeseo(nuevoEstado, id) {
-
-  accionDeseoPendiente = { nuevoEstado, id };
-
-  const overlay = document.getElementById('modalOverlay');
-  const box = document.getElementById('modalBox');
-  const deseo = deseosStaff.find(d => d.id === id);
-
-  if (!overlay || !box || !deseo) return;
-
-  const etiquetas = {
-    en_revision: { titulo: 'Marcar en revisión', descripcion: 'Confirma que tu equipo ya está buscando esta pieza.' },
-    bingo: { titulo: 'Marcar ¡Bingo!', descripcion: 'Confirma que encontraron una pieza igual o parecida para pedirla.' },
-    disponible: { titulo: 'Marcar disponible', descripcion: 'La pieza ya está disponible — recuerda notificar a la emprendedora.' }
-  };
-
-  const info = etiquetas[nuevoEstado] || { titulo: 'Autorizar acción', descripcion: 'Ingresa tus credenciales para continuar.' };
-
-  box.innerHTML = `
-
-    <button class="modal-close" data-close>×</button>
-
-    <div class="auth-icon">✓</div>
-
-    <h3>${info.titulo}</h3>
-
-    <p class="modal-sub">${info.descripcion}</p>
-
-    <div class="modal-context">
-      <span>Emprendedora</span><strong>${escapeHTML(deseo.emprendedora)}</strong>
-      <span>Pieza deseada</span><strong>${escapeHTML(deseo.titulo)}</strong>
-    </div>
-
-    <div class="auth-warning">
-      <span>🔐</span>
-      <div>
-        <strong>Acción registrada</strong>
-        <small>El sistema guardará el usuario, fecha y hora de esta modificación.</small>
-      </div>
-    </div>
-
-    <label for="deseoUsuario">Usuario de empleado</label>
-    <input id="deseoUsuario" type="text" autocomplete="username" placeholder="Ej. staff01">
-
-    <label for="deseoPassword">Contraseña</label>
-    <div class="password-wrap">
-      <input id="deseoPassword" type="password" autocomplete="current-password" placeholder="Contraseña">
-      <button type="button" id="mostrarPasswordDeseo">Ver</button>
-    </div>
-
-    <div id="authError" style="display:none;" class="auth-error"></div>
-
-    <button class="btn btn-primary" id="autorizarDeseoBtn" style="width:100%;">Autorizar y continuar</button>
-
-    <p class="demo-note">
-      Demo: usuario <strong>staff01</strong> · contraseña <strong>1234</strong>
-    </p>
-
-  `;
-
-  overlay.classList.add('open');
-
-  document.getElementById('mostrarPasswordDeseo')?.addEventListener('click', () => {
-    const input = document.getElementById('deseoPassword');
-    if (!input) return;
-    input.type = input.type === 'password' ? 'text' : 'password';
+  document.getElementById('ldFilterEstado')?.addEventListener('change', (e) => {
+    ldFiltroEstado = e.target.value;
+    renderTablaDeseosStaff();
   });
+  document.getElementById('ldNuevaSolicitudBtn')?.addEventListener('click', abrirModalNuevaSolicitudDeseos);
 
-  document.getElementById('autorizarDeseoBtn')?.addEventListener('click', validarAutorizacionDeseo);
+  document.getElementById('resSearchInput')?.addEventListener('input', (e) => {
+    resFiltroTexto = e.target.value.trim().toLowerCase();
+    renderTablaResurtidoStaff();
+  });
+  document.getElementById('resFilterEstado')?.addEventListener('change', (e) => {
+    resFiltroEstado = e.target.value;
+    renderTablaResurtidoStaff();
+  });
+  document.getElementById('resNuevaSolicitudBtn')?.addEventListener('click', abrirModalNuevaResurtido);
 
-  box.querySelector('[data-close]')?.addEventListener('click', () => {
-    accionDeseoPendiente = null;
-    cerrarModalDeseo();
+  document.getElementById('modalOverlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'modalOverlay') cerrarModalLD();
   });
 
 }
 
-
-function validarAutorizacionDeseo() {
-
-  const usuario = document.getElementById('deseoUsuario')?.value.trim();
-  const password = document.getElementById('deseoPassword')?.value;
-  const error = document.getElementById('authError');
-
-  // También acepta cuentas creadas desde Admin → Configuración →
-  // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js).
-  const empleado = STAFF_USUARIOS_EJEMPLO.find(
-    u => u.usuario === usuario && u.password === password
-  ) || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null);
-
-  if (!empleado) {
-
-    if (error) {
-      error.style.display = 'block';
-      error.textContent = 'Usuario o contraseña incorrectos.';
-    }
-
-    return;
-
-  }
-
-  ejecutarAccionDeseo(empleado);
-
+function cerrarModalLD() {
+  document.getElementById('modalOverlay')?.classList.remove('open');
 }
 
-
 // ============================================================
-// EJECUTAR ACCIÓN
+// FORMATO
 // ============================================================
 
-function ejecutarAccionDeseo(empleado) {
-
-  if (!accionDeseoPendiente) return;
-
-  const deseo = deseosStaff.find(d => d.id === accionDeseoPendiente.id);
-
-  if (!deseo) return;
-
-  const textos = {
-    en_revision: 'Marcada en revisión',
-    bingo: 'Coincidencia encontrada',
-    disponible: 'Marcada disponible'
-  };
-
-  deseo.estado = accionDeseoPendiente.nuevoEstado;
-
-  deseo.ultimaAccion = {
-    texto: textos[accionDeseoPendiente.nuevoEstado] || 'Actualizada',
-    usuario: empleado.nombre,
-    fecha: new Date().toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
-  };
-
-  guardarDeseosStaff();
-
-  registrarAuditoria({
-    usuarioId: empleado.usuario,
-    usuarioNombre: empleado.nombre,
-    rol: 'staff',
-    modulo: 'lista_deseos',
-    accion: 'avanzar_estado',
-    descripcion: `Solicitud "${deseo.titulo}" → ${textos[accionDeseoPendiente.nuevoEstado] || accionDeseoPendiente.nuevoEstado}`
-  });
-  cerrarModalDeseo();
-  renderTablaDeseos();
-
-  mostrarToast(`Solicitud actualizada por ${empleado.nombre}.`);
-
-  accionDeseoPendiente = null;
-
+function formatearFechaHoraLD(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-
-// ============================================================
-// UTILIDADES
-// ============================================================
-
-function cerrarModalDeseo() {
-
-  const overlay = document.getElementById('modalOverlay');
-
-  if (overlay) {
-    overlay.classList.remove('open');
-  }
-
+function resumenPiezasLD(piezas) {
+  if (!piezas.length) return '—';
+  const primera = piezas[0].producto;
+  return piezas.length === 1 ? primera : `${primera} (+${piezas.length - 1} más)`;
 }
-
 
 function escapeHTML(texto) {
-
   return String(texto ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
 
+// ============================================================
+// TABLA: LISTA DE DESEOS
+// ============================================================
+
+function renderTablaDeseosStaff() {
+
+  const tbody = document.getElementById('ldTableBody');
+  if (!tbody) return;
+
+  let solicitudes = obtenerListaDeseos().filter(s => s.creadoPorRol === 'staff');
+
+  if (ldFiltroTexto) {
+    solicitudes = solicitudes.filter(s =>
+      (s.personaNombre || 'público en general').toLowerCase().includes(ldFiltroTexto) ||
+      s.piezas.some(p => p.producto.toLowerCase().includes(ldFiltroTexto))
+    );
+  }
+  if (ldFiltroEstado) solicitudes = solicitudes.filter(s => s.estado === ldFiltroEstado);
+
+  const count = document.getElementById('ldResultCount');
+  if (count) count.textContent = `${solicitudes.length} solicitud${solicitudes.length === 1 ? '' : 'es'}`;
+
+  if (!solicitudes.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="catalog-empty-cell"><strong>No hay solicitudes</strong><span>Prueba con otro filtro o crea una nueva.</span></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = solicitudes.map(s => `
+    <tr>
+      <td><strong>${s.destinatario === 'emprendedora' ? escapeHTML(s.personaNombre) : 'Público en general'}</strong></td>
+      <td><span class="catalog-description">${escapeHTML(resumenPiezasLD(s.piezas))}</span></td>
+      <td><span class="badge ${BADGE_ESTADOS_LISTA_DESEOS[s.estado] || 'badge-pendiente'}">${ESTADOS_LISTA_DESEOS[s.estado] || s.estado}</span></td>
+      <td><span class="catalog-description">${formatearFechaHoraLD(s.fechaCreacion)}</span></td>
+      <td><button class="action-btn detail-action" data-ld-detalle="${s.id}"><span>⌕</span> Ver detalle</button></td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('[data-ld-detalle]').forEach(btn => {
+    btn.addEventListener('click', () => abrirDetalleSolicitudDeseos(btn.getAttribute('data-ld-detalle')));
+  });
+
+}
+
+// ============================================================
+// MODAL: NUEVA SOLICITUD DE LISTA DE DESEOS
+// ============================================================
+
+function abrirModalNuevaSolicitudDeseos() {
+
+  personaSeleccionadaForm = null;
+  piezasFormulario = [{ producto: '', variante: '', cantidad: 1, observaciones: '' }];
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModalLD()">×</button>
+    <div class="auth-icon">＋</div>
+    <h3>Nueva solicitud de lista de deseos</h3>
+
+    <label for="ldDestinatario">¿Para quién es esta solicitud?</label>
+    <select id="ldDestinatario" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+      <option value="emprendedora">Para una Emprendedora</option>
+      <option value="publico">Público en general</option>
+    </select>
+
+    <div id="ldBuscarEmprendedoraWrap" style="margin-top:10px;">
+      <label for="ldBuscarEmprendedora">Buscar Emprendedora (nombre o número de cuenta)</label>
+      <input type="text" id="ldBuscarEmprendedora" placeholder="Ej. Valeria Ramírez o MW0012">
+      <div id="ldResultadosBusqueda" class="ld-search-results"></div>
+      <div id="ldPersonaSeleccionada"></div>
+    </div>
+
+    <div class="eyebrow" style="margin-top:16px;">Piezas solicitadas</div>
+    <div id="ldPiezasWrap"></div>
+    <button type="button" class="btn btn-outline" style="width:100%;margin-top:6px;" id="ldAgregarPiezaBtn">＋ Agregar otra pieza</button>
+
+    <div id="ldFormError" class="auth-error" style="display:none;margin-top:10px;"></div>
+
+    <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="ldContinuarBtn">Continuar</button>
+  `;
+
+  overlay.classList.add('open');
+  renderPiezasFormularioLD();
+
+  document.getElementById('ldDestinatario').addEventListener('change', (e) => {
+    document.getElementById('ldBuscarEmprendedoraWrap').style.display = e.target.value === 'emprendedora' ? 'block' : 'none';
+    if (e.target.value === 'publico') personaSeleccionadaForm = null;
+  });
+
+  document.getElementById('ldBuscarEmprendedora')?.addEventListener('input', (e) => {
+    const resultados = buscarEmprendedorasListaDeseos(e.target.value);
+    const cont = document.getElementById('ldResultadosBusqueda');
+    if (!e.target.value.trim()) { cont.innerHTML = ''; return; }
+    cont.innerHTML = resultados.length
+      ? resultados.map(p => `<button type="button" class="ld-search-result" data-persona="${p.id}">${escapeHTML(nombreCompletoPersona(p))} <span>${escapeHTML(p.usuario || 'sin cuenta')}</span></button>`).join('')
+      : '<div class="ld-search-empty">Sin coincidencias.</div>';
+    cont.querySelectorAll('[data-persona]').forEach(b => {
+      b.addEventListener('click', () => {
+        const persona = obtenerPersonaPorId(b.getAttribute('data-persona'));
+        if (!persona) return;
+        personaSeleccionadaForm = { id: persona.id, nombre: nombreCompletoPersona(persona) };
+        document.getElementById('ldBuscarEmprendedora').value = '';
+        cont.innerHTML = '';
+        pintarPersonaSeleccionadaLD();
+      });
+    });
+  });
+
+  document.getElementById('ldAgregarPiezaBtn')?.addEventListener('click', () => {
+    leerPiezasFormularioLD();
+    piezasFormulario.push({ producto: '', variante: '', cantidad: 1, observaciones: '' });
+    renderPiezasFormularioLD();
+  });
+
+  document.getElementById('ldContinuarBtn')?.addEventListener('click', () => {
+
+    const destinatario = document.getElementById('ldDestinatario').value;
+    const error = document.getElementById('ldFormError');
+
+    leerPiezasFormularioLD();
+    const piezasValidas = piezasFormulario.filter(p => p.producto.trim());
+
+    if (destinatario === 'emprendedora' && !personaSeleccionadaForm) {
+      error.style.display = 'block';
+      error.textContent = 'Busca y selecciona a la Emprendedora.';
+      return;
+    }
+    if (!piezasValidas.length) {
+      error.style.display = 'block';
+      error.textContent = 'Agrega al menos una pieza con su producto.';
+      return;
+    }
+
+    abrirAutorizacionListaDeseos({
+      tipo: 'crear_deseo',
+      datos: { destinatario, personaId: destinatario === 'emprendedora' ? personaSeleccionadaForm.id : null, piezas: piezasValidas },
+      resumenPersona: destinatario === 'emprendedora' ? personaSeleccionadaForm.nombre : 'Público en general'
+    });
+
+  });
+
+}
+
+function pintarPersonaSeleccionadaLD() {
+  const cont = document.getElementById('ldPersonaSeleccionada');
+  if (!cont) return;
+  cont.innerHTML = personaSeleccionadaForm
+    ? `<div class="ld-persona-chip">${escapeHTML(personaSeleccionadaForm.nombre)} <button type="button" id="ldQuitarPersonaBtn">×</button></div>`
+    : '';
+  document.getElementById('ldQuitarPersonaBtn')?.addEventListener('click', () => {
+    personaSeleccionadaForm = null;
+    pintarPersonaSeleccionadaLD();
+  });
+}
+
+function renderPiezasFormularioLD() {
+  const cont = document.getElementById('ldPiezasWrap');
+  if (!cont) return;
+  cont.innerHTML = piezasFormulario.map((p, i) => `
+    <div class="ld-pieza-row" data-pieza-index="${i}">
+      <input type="text" placeholder="Producto" class="ld-pieza-producto" value="${escapeHTML(p.producto)}">
+      <input type="text" placeholder="Variante (opcional)" class="ld-pieza-variante" value="${escapeHTML(p.variante)}">
+      <input type="number" min="1" placeholder="Cantidad" class="ld-pieza-cantidad" value="${p.cantidad}">
+      <input type="text" placeholder="Observaciones (opcional)" class="ld-pieza-observaciones" value="${escapeHTML(p.observaciones)}">
+      ${piezasFormulario.length > 1 ? `<button type="button" class="comm-icon-btn" data-quitar-pieza="${i}" title="Quitar">🗑</button>` : ''}
+    </div>
+  `).join('');
+  cont.querySelectorAll('[data-quitar-pieza]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      leerPiezasFormularioLD();
+      piezasFormulario.splice(parseInt(btn.getAttribute('data-quitar-pieza'), 10), 1);
+      renderPiezasFormularioLD();
+    });
+  });
+}
+
+function leerPiezasFormularioLD() {
+  document.querySelectorAll('#ldPiezasWrap .ld-pieza-row').forEach((row, i) => {
+    if (!piezasFormulario[i]) return;
+    piezasFormulario[i] = {
+      producto: row.querySelector('.ld-pieza-producto')?.value.trim() || '',
+      variante: row.querySelector('.ld-pieza-variante')?.value.trim() || '',
+      cantidad: parseInt(row.querySelector('.ld-pieza-cantidad')?.value, 10) || 1,
+      observaciones: row.querySelector('.ld-pieza-observaciones')?.value.trim() || ''
+    };
+  });
+}
+
+// ============================================================
+// DETALLE DE SOLICITUD (LISTA DE DESEOS)
+// ============================================================
+
+function abrirDetalleSolicitudDeseos(id) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  const s = obtenerSolicitudListaDeseosPorId(id);
+  if (!overlay || !box || !s) return;
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModalLD()">×</button>
+    <span class="eyebrow">${escapeHTML(s.id)}</span>
+    <h3 style="margin-top:5px;">Detalle de la solicitud</h3>
+
+    <div class="modal-context">
+      <span>Para</span><strong>${s.destinatario === 'emprendedora' ? escapeHTML(s.personaNombre) : 'Público en general'}</strong>
+      <span>Creada por</span><strong>${escapeHTML(s.creadoPorNombre)} (${ROLES_CREADOR_DESEOS[s.creadoPorRol] || s.creadoPorRol})</strong>
+      <span>Fecha</span><strong>${formatearFechaHoraLD(s.fechaCreacion)}</strong>
+      <span>Estado</span><span class="badge ${BADGE_ESTADOS_LISTA_DESEOS[s.estado]}">${ESTADOS_LISTA_DESEOS[s.estado]}</span>
+    </div>
+
+    <div class="eyebrow" style="margin-top:14px;">Piezas</div>
+    ${s.piezas.map(p => `
+      <div class="log-box" style="margin-bottom:8px;">
+        <strong>${escapeHTML(p.producto)}${p.variante ? ` — ${escapeHTML(p.variante)}` : ''}</strong>
+        <small>Cantidad: ${p.cantidad}${p.observaciones ? ` · ${escapeHTML(p.observaciones)}` : ''}</small>
+      </div>
+    `).join('')}
+
+    ${s.comentarioEstado ? `<div class="modal-note"><strong>Comentario:</strong> ${escapeHTML(s.comentarioEstado)}</div>` : ''}
+
+    <div class="eyebrow" style="margin-top:14px;">Actualizar estado</div>
+    <select id="ldNuevoEstado" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+      ${Object.entries(ESTADOS_LISTA_DESEOS).map(([k, label]) => `<option value="${k}" ${k === s.estado ? 'selected' : ''}>${label}</option>`).join('')}
+    </select>
+    <input type="text" id="ldComentarioEstado" placeholder="Comentario (opcional)" style="margin-top:8px;">
+    <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="ldGuardarEstadoBtn">Guardar estado</button>
+  `;
+
+  overlay.classList.add('open');
+
+  document.getElementById('ldGuardarEstadoBtn')?.addEventListener('click', () => {
+    const nuevoEstado = document.getElementById('ldNuevoEstado').value;
+    const comentario = document.getElementById('ldComentarioEstado').value.trim();
+    abrirAutorizacionListaDeseos({
+      tipo: 'cambiar_estado_deseo',
+      datos: { id: s.id, nuevoEstado, comentario },
+      resumenPersona: s.destinatario === 'emprendedora' ? s.personaNombre : 'Público en general'
+    });
+  });
+
+}
+
+// ============================================================
+// TABLA: SOLICITUDES DE RESURTIDO
+// ============================================================
+
+function renderTablaResurtidoStaff() {
+
+  const tbody = document.getElementById('resTableBody');
+  if (!tbody) return;
+
+  let solicitudes = obtenerSolicitudesResurtido().filter(s => s.solicitadoPorRol === 'staff');
+
+  if (resFiltroTexto) solicitudes = solicitudes.filter(s => s.producto.toLowerCase().includes(resFiltroTexto));
+  if (resFiltroEstado) solicitudes = solicitudes.filter(s => s.estado === resFiltroEstado);
+
+  const count = document.getElementById('resResultCount');
+  if (count) count.textContent = `${solicitudes.length} solicitud${solicitudes.length === 1 ? '' : 'es'}`;
+
+  if (!solicitudes.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="catalog-empty-cell"><strong>No hay solicitudes de resurtido</strong><span>Crea una cuando haga falta avisar a Administración.</span></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = solicitudes.map(s => `
+    <tr>
+      <td><strong>${escapeHTML(s.producto)}</strong></td>
+      <td><span class="catalog-description">${escapeHTML(s.variante || '—')}</span></td>
+      <td>${s.cantidadSugerida || '—'}</td>
+      <td><span class="badge ${BADGE_ESTADOS_RESURTIDO[s.estado]}">${ESTADOS_RESURTIDO[s.estado]}</span></td>
+      <td><span class="catalog-description">${formatearFechaHoraLD(s.fechaSolicitud)}</span></td>
+      <td><button class="action-btn detail-action" data-res-detalle="${s.id}"><span>⌕</span> Ver detalle</button></td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('[data-res-detalle]').forEach(btn => {
+    btn.addEventListener('click', () => abrirDetalleResurtido(btn.getAttribute('data-res-detalle')));
+  });
+
+}
+
+function abrirModalNuevaResurtido() {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModalLD()">×</button>
+    <div class="auth-icon">📦</div>
+    <h3>Solicitar resurtido</h3>
+    <p class="modal-sub">Avisa a Administración que hace falta resurtir una pieza o tipo de pieza — puede ser por categoría, sin necesidad de una persona específica.</p>
+
+    <label for="resProducto">Producto o tipo de pieza</label>
+    <input type="text" id="resProducto" placeholder="Ej. Cadenas blancas">
+
+    <label for="resVariante">Variante (opcional)</label>
+    <input type="text" id="resVariante" placeholder="Ej. 45cm eslabón fino">
+
+    <label for="resCantidad">Cantidad sugerida (opcional)</label>
+    <input type="number" min="1" id="resCantidad" placeholder="Ej. 20">
+
+    <label for="resComentario">Motivo / comentario</label>
+    <textarea id="resComentario" rows="3" placeholder="Ej. Varias Emprendedoras han solicitado este modelo y actualmente no hay disponibilidad."></textarea>
+
+    <div id="resFormError" class="auth-error" style="display:none;"></div>
+
+    <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="resContinuarBtn">Continuar</button>
+  `;
+
+  overlay.classList.add('open');
+
+  document.getElementById('resContinuarBtn')?.addEventListener('click', () => {
+    const producto = document.getElementById('resProducto').value.trim();
+    const error = document.getElementById('resFormError');
+    if (!producto) {
+      error.style.display = 'block';
+      error.textContent = 'Indica el producto o tipo de pieza.';
+      return;
+    }
+    const datos = {
+      producto,
+      variante: document.getElementById('resVariante').value.trim(),
+      cantidadSugerida: document.getElementById('resCantidad').value,
+      comentario: document.getElementById('resComentario').value.trim()
+    };
+    abrirAutorizacionListaDeseos({ tipo: 'crear_resurtido', datos, resumenPersona: producto });
+  });
+
+}
+
+function abrirDetalleResurtido(id) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  const s = obtenerSolicitudResurtidoPorId(id);
+  if (!overlay || !box || !s) return;
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModalLD()">×</button>
+    <span class="eyebrow">${escapeHTML(s.id)}</span>
+    <h3 style="margin-top:5px;">Solicitud de resurtido</h3>
+
+    <div class="modal-context">
+      <span>Producto</span><strong>${escapeHTML(s.producto)}</strong>
+      <span>Variante</span><strong>${escapeHTML(s.variante || '—')}</strong>
+      <span>Cantidad sugerida</span><strong>${s.cantidadSugerida || '—'}</strong>
+      <span>Motivo</span><strong>${escapeHTML(s.comentario || '—')}</strong>
+      <span>Solicitado por</span><strong>${escapeHTML(s.solicitadoPorNombre)}</strong>
+      <span>Fecha</span><strong>${formatearFechaHoraLD(s.fechaSolicitud)}</strong>
+      <span>Estado</span><span class="badge ${BADGE_ESTADOS_RESURTIDO[s.estado]}">${ESTADOS_RESURTIDO[s.estado]}</span>
+    </div>
+
+    ${s.observaciones.length ? `
+      <div class="eyebrow" style="margin-top:14px;">Observaciones de Administración</div>
+      ${s.observaciones.map(o => `
+        <div class="log-box" style="margin-bottom:8px;">
+          <strong>${escapeHTML(o.texto)}</strong>
+          <small>${escapeHTML(o.usuarioNombre)} · ${formatearFechaHoraLD(o.fecha)}</small>
+        </div>
+      `).join('')}
+    ` : `<p class="bp-sub" style="margin-top:10px;">Todavía sin observaciones de Administración.</p>`}
+
+    <button class="btn btn-outline" style="width:100%;margin-top:10px;" onclick="cerrarModalLD()">Cerrar</button>
+  `;
+
+  overlay.classList.add('open');
+
+}
+
+// ============================================================
+// AUTORIZACIÓN (usuario + contraseña de empleado — igual que Apartados)
+// ============================================================
+
+function abrirAutorizacionListaDeseos(accion) {
+
+  accionPendiente = accion;
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const titulos = {
+    crear_deseo: 'Autorizar nueva solicitud',
+    crear_resurtido: 'Autorizar solicitud de resurtido',
+    cambiar_estado_deseo: 'Autorizar cambio de estado'
+  };
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModalLD()">×</button>
+    <div class="auth-icon">✓</div>
+    <h3>${titulos[accion.tipo] || 'Autorizar acción'}</h3>
+    <p class="modal-sub">Ingresa tus credenciales para registrar quién realizó este cambio.</p>
+
+    <div class="modal-context">
+      <span>Para / Producto</span><strong>${escapeHTML(accion.resumenPersona || '')}</strong>
+    </div>
+
+    <label for="ldAuthUsuario">Usuario del personal</label>
+    <input id="ldAuthUsuario" type="text" autocomplete="off" placeholder="Ej. staff01">
+
+    <label for="ldAuthPassword">Contraseña</label>
+    <div class="password-wrap">
+      <input id="ldAuthPassword" type="password" placeholder="Contraseña">
+      <button type="button" id="ldTogglePassword">Mostrar</button>
+    </div>
+
+    <div id="ldAuthError" class="auth-error" style="display:none;"></div>
+
+    <button class="btn btn-primary" style="width:100%;" id="ldAutorizarBtn">Autorizar acción</button>
+
+    <p class="demo-note">DEMO · Usuario: staff01 · Contraseña: 1234</p>
+  `;
+
+  overlay.classList.add('open');
+
+  document.getElementById('ldTogglePassword')?.addEventListener('click', () => {
+    const input = document.getElementById('ldAuthPassword');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+
+  document.getElementById('ldAutorizarBtn')?.addEventListener('click', validarAutorizacionListaDeseos);
+
+  setTimeout(() => document.getElementById('ldAuthUsuario')?.focus(), 100);
+
+}
+
+function validarAutorizacionListaDeseos() {
+
+  const usuario = document.getElementById('ldAuthUsuario')?.value.trim();
+  const password = document.getElementById('ldAuthPassword')?.value;
+  const error = document.getElementById('ldAuthError');
+
+  const personal = PERSONAL_EJEMPLO.find(p => p.usuario === usuario && p.password === password)
+    || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null);
+
+  if (!personal) {
+    if (error) {
+      error.style.display = 'block';
+      error.textContent = 'Usuario o contraseña incorrectos.';
+    }
+    return;
+  }
+
+  ejecutarAccionListaDeseos(personal);
+
+}
+
+function ejecutarAccionListaDeseos(personal) {
+
+  if (!accionPendiente) return;
+
+  const identidad = { usuarioId: personal.usuario, usuarioNombre: personal.nombre, usuarioRol: 'staff' };
+  let resultado;
+
+  if (accionPendiente.tipo === 'crear_deseo') {
+
+    resultado = crearSolicitudListaDeseos({
+      ...accionPendiente.datos,
+      creadoPorId: identidad.usuarioId,
+      creadoPorNombre: identidad.usuarioNombre,
+      creadoPorRol: 'staff'
+    });
+    if (!resultado.ok) { mostrarErrorAutorizacionLD(resultado.error); return; }
+    cerrarModalLD();
+    renderTablaDeseosStaff();
+    mostrarToast('Solicitud creada.');
+
+  } else if (accionPendiente.tipo === 'crear_resurtido') {
+
+    resultado = crearSolicitudResurtido({
+      ...accionPendiente.datos,
+      solicitadoPorId: identidad.usuarioId,
+      solicitadoPorNombre: identidad.usuarioNombre,
+      solicitadoPorRol: 'staff'
+    });
+    if (!resultado.ok) { mostrarErrorAutorizacionLD(resultado.error); return; }
+    cerrarModalLD();
+    renderTablaResurtidoStaff();
+    mostrarToast('Solicitud de resurtido enviada — se notificó a Administración.');
+
+  } else if (accionPendiente.tipo === 'cambiar_estado_deseo') {
+
+    resultado = actualizarEstadoListaDeseos(accionPendiente.datos.id, accionPendiente.datos.nuevoEstado, {
+      usuarioId: identidad.usuarioId, usuarioNombre: identidad.usuarioNombre, usuarioRol: 'staff', comentario: accionPendiente.datos.comentario
+    });
+    if (!resultado.ok) { mostrarErrorAutorizacionLD(resultado.error); return; }
+    cerrarModalLD();
+    renderTablaDeseosStaff();
+    mostrarToast('Estado actualizado.');
+
+  }
+
+  accionPendiente = null;
+
+}
+
+function mostrarErrorAutorizacionLD(mensaje) {
+  const error = document.getElementById('ldAuthError');
+  if (error) {
+    error.style.display = 'block';
+    error.textContent = mensaje;
+  }
 }

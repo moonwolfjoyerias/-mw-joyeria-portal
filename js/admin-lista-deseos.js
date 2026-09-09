@@ -1,310 +1,119 @@
-// MW JOYERÍA — Lista de deseos Admin
+// MW JOYERÍA — Admin: Lista de deseos y Solicitudes de resurtido
 //
-// Mismo comportamiento que Staff/RH: ver todas las solicitudes de las
-// emprendedoras, avanzar el estado de cada una (pendiente → en
-// revisión → ¡bingo! → disponible) y ver el detalle completo. Misma
-// fuente de datos que Staff (cargarDeseosStaffActuales(),
-// staff-deseos-ejemplo.js) — misma clave de localStorage
-// (mw-staff-deseos-v1), sin lista independiente para Admin.
-//
-// Igual que RH: avanzar el estado NO pide usuario/contraseña de nuevo
-// — muestra el modal de Autorización (ver js/admin-comun.js) y queda
-// en la auditoría (rol "admin"). Ver detalle es informativo, no
-// requiere autorización.
+// Dos secciones (ver js/lista-deseos-modelo.js):
+// - "💜 Listas de deseos": TODAS las solicitudes creadas por
+//   Staff/RH/Admin, filtrables por Emprendedora/público, producto,
+//   estado, fecha y usuario que la creó — Administración puede crear
+//   solicitudes y cambiar el estado de cualquiera (no solo las suyas).
+// - "📦 Solicitudes de resurtido": TODAS las solicitudes de Staff/RH
+//   — Administración es el único rol que las administra (ver detalle,
+//   marcar revisada/atendida, agregar observaciones).
 
-let deseosStaff = [];
+let ldVista = 'deseos';
+let ldFiltroTexto = '';
+let ldFiltroDestinatario = '';
+let ldFiltroEstado = '';
+let ldFiltroCreador = '';
+let ldFiltroDesde = '';
+let ldFiltroHasta = '';
+let resFiltroTexto = '';
+let resFiltroEstado = '';
+
+let piezasFormulario = [];
+let personaSeleccionadaForm = null; // { id, nombre }
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  deseosStaff = cargarDeseosStaffActuales();
-  renderResumenDeseos();
-  renderTablaDeseos();
-  inicializarEventosDeseos();
+  renderTablaDeseosAdmin();
+  renderTablaResurtidoAdmin();
+  inicializarEventosListaDeseosAdmin();
+
+  // Enlace directo desde una notificación de resurtido
+  // (?resurtido=ID) — abre esa solicitud de una vez.
+  const resurtidoDesdeUrl = new URLSearchParams(window.location.search).get('resurtido');
+  if (resurtidoDesdeUrl) {
+    ldVista = 'resurtido';
+    document.querySelectorAll('#ldNavPrincipal [data-ld-vista]').forEach(b => b.classList.toggle('active', b.getAttribute('data-ld-vista') === 'resurtido'));
+    document.getElementById('ldVistaDeseos').hidden = true;
+    document.getElementById('ldVistaResurtido').hidden = false;
+    abrirDetalleResurtidoAdmin(resurtidoDesdeUrl);
+  }
 
 });
 
-
 // ============================================================
-// GUARDAR
-// ============================================================
-
-function guardarDeseosStaff() {
-  localStorage.setItem(DESEOS_STAFF_STORAGE_KEY, JSON.stringify(deseosStaff));
-}
-
-
-// ============================================================
-// EVENTOS
+// NAVEGACIÓN ENTRE SECCIONES
 // ============================================================
 
-function inicializarEventosDeseos() {
+function inicializarEventosListaDeseosAdmin() {
 
-  document.getElementById('searchInput')?.addEventListener('input', renderTablaDeseos);
-  document.getElementById('filterEstado')?.addEventListener('change', renderTablaDeseos);
+  document.querySelectorAll('#ldNavPrincipal [data-ld-vista]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      ldVista = btn.getAttribute('data-ld-vista');
+      document.querySelectorAll('#ldNavPrincipal [data-ld-vista]').forEach(b => b.classList.toggle('active', b === btn));
+      document.getElementById('ldVistaDeseos').hidden = ldVista !== 'deseos';
+      document.getElementById('ldVistaResurtido').hidden = ldVista !== 'resurtido';
+    });
+  });
+
+  document.getElementById('ldSearchInput')?.addEventListener('input', (e) => {
+    ldFiltroTexto = e.target.value.trim().toLowerCase();
+    renderTablaDeseosAdmin();
+  });
+  document.getElementById('ldFilterDestinatario')?.addEventListener('change', (e) => {
+    ldFiltroDestinatario = e.target.value;
+    renderTablaDeseosAdmin();
+  });
+  document.getElementById('ldFilterEstado')?.addEventListener('change', (e) => {
+    ldFiltroEstado = e.target.value;
+    renderTablaDeseosAdmin();
+  });
+  document.getElementById('ldFilterCreador')?.addEventListener('change', (e) => {
+    ldFiltroCreador = e.target.value;
+    renderTablaDeseosAdmin();
+  });
+  document.getElementById('ldFilterDesde')?.addEventListener('change', (e) => {
+    ldFiltroDesde = e.target.value;
+    renderTablaDeseosAdmin();
+  });
+  document.getElementById('ldFilterHasta')?.addEventListener('change', (e) => {
+    ldFiltroHasta = e.target.value;
+    renderTablaDeseosAdmin();
+  });
+  document.getElementById('ldNuevaSolicitudBtn')?.addEventListener('click', abrirModalNuevaSolicitudDeseos);
+
+  document.getElementById('resSearchInput')?.addEventListener('input', (e) => {
+    resFiltroTexto = e.target.value.trim().toLowerCase();
+    renderTablaResurtidoAdmin();
+  });
+  document.getElementById('resFilterEstado')?.addEventListener('change', (e) => {
+    resFiltroEstado = e.target.value;
+    renderTablaResurtidoAdmin();
+  });
 
   document.getElementById('modalOverlay')?.addEventListener('click', (e) => {
-    if (e.target.id === 'modalOverlay') cerrarModalDeseo();
+    if (e.target.id === 'modalOverlay') cerrarModalLD();
   });
 
 }
 
-
-// ============================================================
-// RESUMEN
-// ============================================================
-
-function renderResumenDeseos() {
-
-  const valores = {
-    totalDeseos: deseosStaff.length,
-    deseosPendientes: deseosStaff.filter(d => d.estado === 'pendiente').length,
-    deseosEnRevision: deseosStaff.filter(d => d.estado === 'en_revision').length,
-    deseosDisponibles: deseosStaff.filter(d => d.estado === 'disponible').length
-  };
-
-  Object.entries(valores).forEach(([id, valor]) => {
-    const elemento = document.getElementById(id);
-    if (elemento) elemento.textContent = valor;
-  });
-
-}
-
-
-// ============================================================
-// TABLA
-// ============================================================
-
-function renderTablaDeseos() {
-
-  const tbody = document.getElementById('deseosTableBody');
-  if (!tbody) return;
-
-  renderResumenDeseos();
-
-  const search = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
-  const estado = document.getElementById('filterEstado')?.value || '';
-
-  const deseos = deseosStaff.filter(d => {
-
-    if (
-      search &&
-      !d.emprendedora.toLowerCase().includes(search) &&
-      !d.titulo.toLowerCase().includes(search) &&
-      !(d.descripcion || '').toLowerCase().includes(search)
-    ) return false;
-
-    if (estado && d.estado !== estado) return false;
-
-    return true;
-
-  });
-
-  const count = document.getElementById('resultCount');
-  if (count) count.textContent = `${deseos.length} solicitud${deseos.length === 1 ? '' : 'es'}`;
-
-  if (!deseos.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8" class="catalog-empty-cell">
-          <strong>No encontramos solicitudes</strong>
-          <span>Prueba con otro filtro o búsqueda.</span>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  tbody.innerHTML = deseos.map(renderFilaDeseo).join('');
-
-  tbody.querySelectorAll('[data-avanzar]').forEach(btn => {
-    btn.addEventListener('click', () => confirmarAvanzarDeseo(btn.dataset.avanzar, btn.dataset.id));
-  });
-
-  tbody.querySelectorAll('[data-detalle]').forEach(btn => {
-    btn.addEventListener('click', () => abrirDetalleDeseo(btn.dataset.detalle));
-  });
-
-}
-
-
-function renderFilaDeseo(d) {
-
-  const estado = ESTADOS_DESEOS_STAFF[d.estado] || { label: d.estado, clase: '' };
-
-  return `
-    <tr>
-      <td>
-        <div class="catalog-product-cell">
-          <span class="profile-avatar">${escapeHTML(d.iniciales || '')}</span>
-          <div>
-            <strong>${escapeHTML(d.emprendedora)}</strong>
-            <div class="catalog-description">${escapeHTML(d.telefono || '')}</div>
-          </div>
-        </div>
-      </td>
-
-      <td><strong>${escapeHTML(d.titulo)}</strong></td>
-
-      <td><span class="catalog-description">${escapeHTML(d.descripcion || 'Sin descripción')}</span></td>
-
-      <td>
-        ${d.tieneFoto
-          ? `<div class="catalog-product-cell"><img src="../../assets/images/isotipo-morado.png" alt=""><span class="catalog-description">Adjunta</span></div>`
-          : `<span class="catalog-description">Sin foto</span>`
-        }
-      </td>
-
-      <td><span class="catalog-description">${escapeHTML(d.fecha || '')}</span></td>
-
-      <td><span class="wishlist-status ${estado.clase}">${escapeHTML(estado.label)}</span></td>
-
-      <td>
-        <div class="catalog-actions">
-          ${obtenerAccionDeseo(d)}
-          <button class="action-btn detail-action" data-detalle="${d.id}"><span>⌕</span> Ver detalle</button>
-        </div>
-      </td>
-
-      <td>
-        <strong>${escapeHTML(d.ultimaAccion?.texto || 'Sin registro')}</strong>
-        <div class="catalog-description">${escapeHTML(d.ultimaAccion?.usuario || '')}${d.ultimaAccion?.fecha ? ` · ${escapeHTML(d.ultimaAccion.fecha)}` : ''}</div>
-      </td>
-    </tr>
-  `;
-
-}
-
-
-function obtenerAccionDeseo(d) {
-
-  if (d.estado === 'pendiente') {
-    return `<button class="action-btn primary-action" data-avanzar="en_revision" data-id="${d.id}"><span>✓</span> Marcar en revisión</button>`;
-  }
-
-  if (d.estado === 'en_revision') {
-    return `<button class="action-btn primary-action" data-avanzar="bingo" data-id="${d.id}"><span>✓</span> Marcar ¡Bingo!</button>`;
-  }
-
-  if (d.estado === 'bingo') {
-    return `<button class="action-btn primary-action" data-avanzar="disponible" data-id="${d.id}"><span>✓</span> Marcar disponible</button>`;
-  }
-
-  return '';
-
-}
-
-
-// ============================================================
-// DETALLE (informativo, no requiere autorización)
-// ============================================================
-
-function abrirDetalleDeseo(id) {
-
-  const overlay = document.getElementById('modalOverlay');
-  const box = document.getElementById('modalBox');
-  const d = deseosStaff.find(item => item.id === id);
-
-  if (!overlay || !box || !d) return;
-
-  const estado = ESTADOS_DESEOS_STAFF[d.estado] || { label: d.estado, clase: '' };
-
-  box.innerHTML = `
-
-    <button class="modal-close" data-close>×</button>
-
-    <span class="eyebrow">${escapeHTML(d.id)}</span>
-
-    <h3 style="margin-top:5px;">Detalle de la solicitud</h3>
-
-    <div class="modal-context">
-      <span>Emprendedora</span><strong>${escapeHTML(d.emprendedora)}</strong>
-      <span>Teléfono</span><strong>${escapeHTML(d.telefono || 'Sin teléfono')}</strong>
-      <span>Pieza deseada</span><strong>${escapeHTML(d.titulo)}</strong>
-      <span>Descripción</span><strong>${escapeHTML(d.descripcion || 'Sin descripción')}</strong>
-      <span>Foto de referencia</span><strong>${d.tieneFoto ? 'Adjunta' : 'Sin foto'}</strong>
-      <span>Fecha de solicitud</span><strong>${escapeHTML(d.fecha || '')}</strong>
-      <span>Estado</span><span class="wishlist-status ${estado.clase}">${escapeHTML(estado.label)}</span>
-    </div>
-
-    <div class="modal-note">
-      <strong>Última acción:</strong>
-      ${escapeHTML(d.ultimaAccion?.texto || 'Sin registro')}
-      ${d.ultimaAccion?.usuario ? ` · ${escapeHTML(d.ultimaAccion.usuario)}` : ''}
-      ${d.ultimaAccion?.fecha ? ` · ${escapeHTML(d.ultimaAccion.fecha)}` : ''}
-    </div>
-
-    <button class="btn btn-outline" style="width:100%;" data-close>Cerrar</button>
-
-  `;
-
-  overlay.classList.add('open');
-
-  box.querySelector('[data-close]')?.addEventListener('click', cerrarModalDeseo);
-
-}
-
-
-// ============================================================
-// AVANZAR ESTADO (acción sensible: cambia estado — sí requiere
-// autorización, pero sin volver a pedir credenciales)
-// ============================================================
-
-function confirmarAvanzarDeseo(nuevoEstado, id) {
-
-  const deseo = deseosStaff.find(d => d.id === id);
-  if (!deseo) return;
-
-  const etiquetas = {
-    en_revision: { titulo: 'Marcar en revisión', mensaje: `Estás a punto de marcar "${deseo.titulo}" de ${deseo.emprendedora} como en revisión.` },
-    bingo: { titulo: 'Marcar ¡Bingo!', mensaje: `Estás a punto de marcar "${deseo.titulo}" de ${deseo.emprendedora} como ¡Bingo! — ya encontraron una pieza para pedir.` },
-    disponible: { titulo: 'Marcar disponible', mensaje: `Estás a punto de marcar "${deseo.titulo}" de ${deseo.emprendedora} como disponible. Recuerda notificar a la emprendedora.` }
-  };
-
-  const info = etiquetas[nuevoEstado] || { titulo: 'Autorización', mensaje: `Estás a punto de actualizar la solicitud de ${deseo.emprendedora}.` };
-
-  abrirAutorizacionAdmin({
-    titulo: info.titulo,
-    mensaje: info.mensaje,
-    onConfirmar: () => avanzarDeseo(id, nuevoEstado)
-  });
-
-}
-
-function avanzarDeseo(id, nuevoEstado) {
-
-  const deseo = deseosStaff.find(d => d.id === id);
-  if (!deseo) return;
-
-  const textos = {
-    en_revision: 'Marcada en revisión',
-    bingo: 'Coincidencia encontrada',
-    disponible: 'Marcada disponible'
-  };
-
-  deseo.estado = nuevoEstado;
-
-  deseo.ultimaAccion = {
-    texto: textos[nuevoEstado] || 'Actualizada',
-    usuario: ADMIN_IDENTIDAD.usuarioNombre,
-    fecha: new Date().toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
-  };
-
-  guardarDeseosStaff();
-  cerrarModalDeseo();
-  renderTablaDeseos();
-
-  registrarAuditoriaAdmin({ modulo: 'lista_deseos', accion: 'avanzar_estado', descripcion: `Solicitud "${deseo.titulo}" de ${deseo.emprendedora} → ${textos[nuevoEstado] || nuevoEstado}` });
-  mostrarToast(`Solicitud actualizada por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
-
-}
-
-
-// ============================================================
-// UTILIDADES
-// ============================================================
-
-function cerrarModalDeseo() {
+function cerrarModalLD() {
   document.getElementById('modalOverlay')?.classList.remove('open');
+}
+
+// ============================================================
+// FORMATO
+// ============================================================
+
+function formatearFechaHoraLD(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function resumenPiezasLD(piezas) {
+  if (!piezas.length) return '—';
+  const primera = piezas[0].producto;
+  return piezas.length === 1 ? primera : `${primera} (+${piezas.length - 1} más)`;
 }
 
 function escapeHTML(texto) {
@@ -314,4 +123,402 @@ function escapeHTML(texto) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// ============================================================
+// TABLA: LISTAS DE DESEOS (todas)
+// ============================================================
+
+function renderTablaDeseosAdmin() {
+
+  const tbody = document.getElementById('ldTableBody');
+  if (!tbody) return;
+
+  let solicitudes = obtenerListaDeseos();
+
+  if (ldFiltroTexto) {
+    solicitudes = solicitudes.filter(s =>
+      (s.personaNombre || 'público en general').toLowerCase().includes(ldFiltroTexto) ||
+      s.piezas.some(p => p.producto.toLowerCase().includes(ldFiltroTexto))
+    );
+  }
+  if (ldFiltroDestinatario) solicitudes = solicitudes.filter(s => s.destinatario === ldFiltroDestinatario);
+  if (ldFiltroEstado) solicitudes = solicitudes.filter(s => s.estado === ldFiltroEstado);
+  if (ldFiltroCreador) solicitudes = solicitudes.filter(s => s.creadoPorRol === ldFiltroCreador);
+  if (ldFiltroDesde) solicitudes = solicitudes.filter(s => s.fechaCreacion.slice(0, 10) >= ldFiltroDesde);
+  if (ldFiltroHasta) solicitudes = solicitudes.filter(s => s.fechaCreacion.slice(0, 10) <= ldFiltroHasta);
+
+  const count = document.getElementById('ldResultCount');
+  if (count) count.textContent = `${solicitudes.length} solicitud${solicitudes.length === 1 ? '' : 'es'}`;
+
+  if (!solicitudes.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="catalog-empty-cell"><strong>No hay solicitudes</strong><span>Prueba con otro filtro.</span></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = solicitudes.map(s => `
+    <tr>
+      <td><strong>${s.destinatario === 'emprendedora' ? escapeHTML(s.personaNombre) : 'Público en general'}</strong></td>
+      <td><span class="catalog-description">${escapeHTML(resumenPiezasLD(s.piezas))}</span></td>
+      <td>${escapeHTML(s.creadoPorNombre)}<div class="catalog-description">${ROLES_CREADOR_DESEOS[s.creadoPorRol] || s.creadoPorRol}</div></td>
+      <td><span class="badge ${BADGE_ESTADOS_LISTA_DESEOS[s.estado] || 'badge-pendiente'}">${ESTADOS_LISTA_DESEOS[s.estado] || s.estado}</span></td>
+      <td><span class="catalog-description">${formatearFechaHoraLD(s.fechaCreacion)}</span></td>
+      <td><button class="action-btn detail-action" data-ld-detalle="${s.id}"><span>⌕</span> Ver detalle</button></td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('[data-ld-detalle]').forEach(btn => {
+    btn.addEventListener('click', () => abrirDetalleSolicitudDeseosAdmin(btn.getAttribute('data-ld-detalle')));
+  });
+
+}
+
+// ============================================================
+// MODAL: NUEVA SOLICITUD DE LISTA DE DESEOS
+// ============================================================
+
+function abrirModalNuevaSolicitudDeseos() {
+
+  personaSeleccionadaForm = null;
+  piezasFormulario = [{ producto: '', variante: '', cantidad: 1, observaciones: '' }];
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModalLD()">×</button>
+    <div class="auth-icon">＋</div>
+    <h3>Nueva solicitud de lista de deseos</h3>
+
+    <label for="ldDestinatario">¿Para quién es esta solicitud?</label>
+    <select id="ldDestinatario" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+      <option value="emprendedora">Para una Emprendedora</option>
+      <option value="publico">Público en general</option>
+    </select>
+
+    <div id="ldBuscarEmprendedoraWrap" style="margin-top:10px;">
+      <label for="ldBuscarEmprendedora">Buscar Emprendedora (nombre o número de cuenta)</label>
+      <input type="text" id="ldBuscarEmprendedora" placeholder="Ej. Valeria Ramírez o MW0012">
+      <div id="ldResultadosBusqueda" class="ld-search-results"></div>
+      <div id="ldPersonaSeleccionada"></div>
+    </div>
+
+    <div class="eyebrow" style="margin-top:16px;">Piezas solicitadas</div>
+    <div id="ldPiezasWrap"></div>
+    <button type="button" class="btn btn-outline" style="width:100%;margin-top:6px;" id="ldAgregarPiezaBtn">＋ Agregar otra pieza</button>
+
+    <div id="ldFormError" class="auth-error" style="display:none;margin-top:10px;"></div>
+
+    <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="ldContinuarBtn">Crear solicitud</button>
+  `;
+
+  overlay.classList.add('open');
+  renderPiezasFormularioLD();
+
+  document.getElementById('ldDestinatario').addEventListener('change', (e) => {
+    document.getElementById('ldBuscarEmprendedoraWrap').style.display = e.target.value === 'emprendedora' ? 'block' : 'none';
+    if (e.target.value === 'publico') personaSeleccionadaForm = null;
+  });
+
+  document.getElementById('ldBuscarEmprendedora')?.addEventListener('input', (e) => {
+    const resultados = buscarEmprendedorasListaDeseos(e.target.value);
+    const cont = document.getElementById('ldResultadosBusqueda');
+    if (!e.target.value.trim()) { cont.innerHTML = ''; return; }
+    cont.innerHTML = resultados.length
+      ? resultados.map(p => `<button type="button" class="ld-search-result" data-persona="${p.id}">${escapeHTML(nombreCompletoPersona(p))} <span>${escapeHTML(p.usuario || 'sin cuenta')}</span></button>`).join('')
+      : '<div class="ld-search-empty">Sin coincidencias.</div>';
+    cont.querySelectorAll('[data-persona]').forEach(b => {
+      b.addEventListener('click', () => {
+        const persona = obtenerPersonaPorId(b.getAttribute('data-persona'));
+        if (!persona) return;
+        personaSeleccionadaForm = { id: persona.id, nombre: nombreCompletoPersona(persona) };
+        document.getElementById('ldBuscarEmprendedora').value = '';
+        cont.innerHTML = '';
+        pintarPersonaSeleccionadaLD();
+      });
+    });
+  });
+
+  document.getElementById('ldAgregarPiezaBtn')?.addEventListener('click', () => {
+    leerPiezasFormularioLD();
+    piezasFormulario.push({ producto: '', variante: '', cantidad: 1, observaciones: '' });
+    renderPiezasFormularioLD();
+  });
+
+  document.getElementById('ldContinuarBtn')?.addEventListener('click', () => {
+
+    const destinatario = document.getElementById('ldDestinatario').value;
+    const error = document.getElementById('ldFormError');
+
+    leerPiezasFormularioLD();
+    const piezasValidas = piezasFormulario.filter(p => p.producto.trim());
+
+    if (destinatario === 'emprendedora' && !personaSeleccionadaForm) {
+      error.style.display = 'block';
+      error.textContent = 'Busca y selecciona a la Emprendedora.';
+      return;
+    }
+    if (!piezasValidas.length) {
+      error.style.display = 'block';
+      error.textContent = 'Agrega al menos una pieza con su producto.';
+      return;
+    }
+
+    const resumenPersona = destinatario === 'emprendedora' ? personaSeleccionadaForm.nombre : 'Público en general';
+
+    abrirAutorizacionAdmin({
+      titulo: 'Crear solicitud de lista de deseos',
+      mensaje: `Vas a crear una solicitud para <strong>${escapeHTML(resumenPersona)}</strong> con ${piezasValidas.length} pieza${piezasValidas.length === 1 ? '' : 's'}.`,
+      onConfirmar: () => {
+        const resultado = crearSolicitudListaDeseos({
+          destinatario,
+          personaId: destinatario === 'emprendedora' ? personaSeleccionadaForm.id : null,
+          piezas: piezasValidas,
+          creadoPorId: ADMIN_IDENTIDAD.usuarioId,
+          creadoPorNombre: ADMIN_IDENTIDAD.usuarioNombre,
+          creadoPorRol: 'admin'
+        });
+        if (!resultado.ok) { mostrarToast(resultado.error); return; }
+        renderTablaDeseosAdmin();
+        mostrarToast('Solicitud creada.');
+      }
+    });
+
+  });
+
+}
+
+function pintarPersonaSeleccionadaLD() {
+  const cont = document.getElementById('ldPersonaSeleccionada');
+  if (!cont) return;
+  cont.innerHTML = personaSeleccionadaForm
+    ? `<div class="ld-persona-chip">${escapeHTML(personaSeleccionadaForm.nombre)} <button type="button" id="ldQuitarPersonaBtn">×</button></div>`
+    : '';
+  document.getElementById('ldQuitarPersonaBtn')?.addEventListener('click', () => {
+    personaSeleccionadaForm = null;
+    pintarPersonaSeleccionadaLD();
+  });
+}
+
+function renderPiezasFormularioLD() {
+  const cont = document.getElementById('ldPiezasWrap');
+  if (!cont) return;
+  cont.innerHTML = piezasFormulario.map((p, i) => `
+    <div class="ld-pieza-row" data-pieza-index="${i}">
+      <input type="text" placeholder="Producto" class="ld-pieza-producto" value="${escapeHTML(p.producto)}">
+      <input type="text" placeholder="Variante (opcional)" class="ld-pieza-variante" value="${escapeHTML(p.variante)}">
+      <input type="number" min="1" placeholder="Cantidad" class="ld-pieza-cantidad" value="${p.cantidad}">
+      <input type="text" placeholder="Observaciones (opcional)" class="ld-pieza-observaciones" value="${escapeHTML(p.observaciones)}">
+      ${piezasFormulario.length > 1 ? `<button type="button" class="comm-icon-btn" data-quitar-pieza="${i}" title="Quitar">🗑</button>` : ''}
+    </div>
+  `).join('');
+  cont.querySelectorAll('[data-quitar-pieza]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      leerPiezasFormularioLD();
+      piezasFormulario.splice(parseInt(btn.getAttribute('data-quitar-pieza'), 10), 1);
+      renderPiezasFormularioLD();
+    });
+  });
+}
+
+function leerPiezasFormularioLD() {
+  document.querySelectorAll('#ldPiezasWrap .ld-pieza-row').forEach((row, i) => {
+    if (!piezasFormulario[i]) return;
+    piezasFormulario[i] = {
+      producto: row.querySelector('.ld-pieza-producto')?.value.trim() || '',
+      variante: row.querySelector('.ld-pieza-variante')?.value.trim() || '',
+      cantidad: parseInt(row.querySelector('.ld-pieza-cantidad')?.value, 10) || 1,
+      observaciones: row.querySelector('.ld-pieza-observaciones')?.value.trim() || ''
+    };
+  });
+}
+
+// ============================================================
+// DETALLE DE SOLICITUD (LISTA DE DESEOS) — Admin puede cambiar
+// el estado de CUALQUIER solicitud, sin importar quién la creó.
+// ============================================================
+
+function abrirDetalleSolicitudDeseosAdmin(id) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  const s = obtenerSolicitudListaDeseosPorId(id);
+  if (!overlay || !box || !s) return;
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModalLD()">×</button>
+    <span class="eyebrow">${escapeHTML(s.id)}</span>
+    <h3 style="margin-top:5px;">Detalle de la solicitud</h3>
+
+    <div class="modal-context">
+      <span>Para</span><strong>${s.destinatario === 'emprendedora' ? escapeHTML(s.personaNombre) : 'Público en general'}</strong>
+      <span>Creada por</span><strong>${escapeHTML(s.creadoPorNombre)} (${ROLES_CREADOR_DESEOS[s.creadoPorRol] || s.creadoPorRol})</strong>
+      <span>Fecha</span><strong>${formatearFechaHoraLD(s.fechaCreacion)}</strong>
+      <span>Estado</span><span class="badge ${BADGE_ESTADOS_LISTA_DESEOS[s.estado]}">${ESTADOS_LISTA_DESEOS[s.estado]}</span>
+    </div>
+
+    <div class="eyebrow" style="margin-top:14px;">Piezas</div>
+    ${s.piezas.map(p => `
+      <div class="log-box" style="margin-bottom:8px;">
+        <strong>${escapeHTML(p.producto)}${p.variante ? ` — ${escapeHTML(p.variante)}` : ''}</strong>
+        <small>Cantidad: ${p.cantidad}${p.observaciones ? ` · ${escapeHTML(p.observaciones)}` : ''}</small>
+      </div>
+    `).join('')}
+
+    ${s.comentarioEstado ? `<div class="modal-note"><strong>Comentario:</strong> ${escapeHTML(s.comentarioEstado)}</div>` : ''}
+
+    <div class="eyebrow" style="margin-top:14px;">Actualizar estado</div>
+    <select id="ldNuevoEstado" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+      ${Object.entries(ESTADOS_LISTA_DESEOS).map(([k, label]) => `<option value="${k}" ${k === s.estado ? 'selected' : ''}>${label}</option>`).join('')}
+    </select>
+    <input type="text" id="ldComentarioEstado" placeholder="Comentario (opcional)" style="margin-top:8px;">
+    <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="ldGuardarEstadoBtn">Guardar estado</button>
+  `;
+
+  overlay.classList.add('open');
+
+  document.getElementById('ldGuardarEstadoBtn')?.addEventListener('click', () => {
+    const nuevoEstado = document.getElementById('ldNuevoEstado').value;
+    const comentario = document.getElementById('ldComentarioEstado').value.trim();
+    abrirAutorizacionAdmin({
+      titulo: 'Actualizar estado',
+      mensaje: `Vas a cambiar el estado de esta solicitud a <strong>${ESTADOS_LISTA_DESEOS[nuevoEstado]}</strong>.`,
+      onConfirmar: () => {
+        const resultado = actualizarEstadoListaDeseos(s.id, nuevoEstado, {
+          usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre, usuarioRol: 'admin', comentario
+        });
+        if (!resultado.ok) { mostrarToast(resultado.error); return; }
+        renderTablaDeseosAdmin();
+        mostrarToast('Estado actualizado.');
+      }
+    });
+  });
+
+}
+
+// ============================================================
+// TABLA: SOLICITUDES DE RESURTIDO (todas)
+// ============================================================
+
+function renderTablaResurtidoAdmin() {
+
+  const tbody = document.getElementById('resTableBody');
+  if (!tbody) return;
+
+  let solicitudes = obtenerSolicitudesResurtido();
+
+  if (resFiltroTexto) solicitudes = solicitudes.filter(s => s.producto.toLowerCase().includes(resFiltroTexto));
+  if (resFiltroEstado) solicitudes = solicitudes.filter(s => s.estado === resFiltroEstado);
+
+  const count = document.getElementById('resResultCount');
+  if (count) count.textContent = `${solicitudes.length} solicitud${solicitudes.length === 1 ? '' : 'es'}`;
+
+  if (!solicitudes.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="catalog-empty-cell"><strong>No hay solicitudes de resurtido</strong><span>Aquí aparecerán las que envíen Staff y RH.</span></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = solicitudes.map(s => `
+    <tr>
+      <td><strong>${escapeHTML(s.producto)}</strong></td>
+      <td><span class="catalog-description">${escapeHTML(s.variante || '—')}</span></td>
+      <td>${s.cantidadSugerida || '—'}</td>
+      <td>${escapeHTML(s.solicitadoPorNombre)}<div class="catalog-description">${ROLES_CREADOR_DESEOS[s.solicitadoPorRol] || s.solicitadoPorRol}</div></td>
+      <td><span class="badge ${BADGE_ESTADOS_RESURTIDO[s.estado]}">${ESTADOS_RESURTIDO[s.estado]}</span></td>
+      <td><span class="catalog-description">${formatearFechaHoraLD(s.fechaSolicitud)}</span></td>
+      <td><button class="action-btn detail-action" data-res-detalle="${s.id}"><span>⌕</span> Ver detalle</button></td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('[data-res-detalle]').forEach(btn => {
+    btn.addEventListener('click', () => abrirDetalleResurtidoAdmin(btn.getAttribute('data-res-detalle')));
+  });
+
+}
+
+function abrirDetalleResurtidoAdmin(id) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  const s = obtenerSolicitudResurtidoPorId(id);
+  if (!overlay || !box || !s) return;
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModalLD()">×</button>
+    <span class="eyebrow">${escapeHTML(s.id)}</span>
+    <h3 style="margin-top:5px;">Solicitud de resurtido</h3>
+
+    <div class="modal-context">
+      <span>Producto</span><strong>${escapeHTML(s.producto)}</strong>
+      <span>Variante</span><strong>${escapeHTML(s.variante || '—')}</strong>
+      <span>Cantidad sugerida</span><strong>${s.cantidadSugerida || '—'}</strong>
+      <span>Motivo</span><strong>${escapeHTML(s.comentario || '—')}</strong>
+      <span>Solicitado por</span><strong>${escapeHTML(s.solicitadoPorNombre)} (${ROLES_CREADOR_DESEOS[s.solicitadoPorRol] || s.solicitadoPorRol})</strong>
+      <span>Fecha</span><strong>${formatearFechaHoraLD(s.fechaSolicitud)}</strong>
+      <span>Estado</span><span class="badge ${BADGE_ESTADOS_RESURTIDO[s.estado]}">${ESTADOS_RESURTIDO[s.estado]}</span>
+      ${s.revisadoPorNombre ? `<span>Revisada por</span><strong>${escapeHTML(s.revisadoPorNombre)} · ${formatearFechaHoraLD(s.fechaRevisado)}</strong>` : ''}
+      ${s.atendidoPorNombre ? `<span>Atendida por</span><strong>${escapeHTML(s.atendidoPorNombre)} · ${formatearFechaHoraLD(s.fechaAtendido)}</strong>` : ''}
+    </div>
+
+    <div class="eyebrow" style="margin-top:14px;">Observaciones</div>
+    <div id="resObservacionesLista">
+      ${s.observaciones.length ? s.observaciones.map(o => `
+        <div class="log-box" style="margin-bottom:8px;">
+          <strong>${escapeHTML(o.texto)}</strong>
+          <small>${escapeHTML(o.usuarioNombre)} · ${formatearFechaHoraLD(o.fecha)}</small>
+        </div>
+      `).join('') : `<p class="bp-sub" style="margin:0;">Todavía sin observaciones.</p>`}
+    </div>
+
+    <label for="resNuevaObservacion" style="margin-top:10px;">Agregar observación</label>
+    <textarea id="resNuevaObservacion" rows="2" placeholder="Ej. Ya se apartó con el proveedor, llega la próxima semana."></textarea>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;" id="resAgregarObservacionBtn">Agregar observación</button>
+
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      ${s.estado === 'pendiente' ? `<button class="btn btn-outline" style="flex:1;" id="resMarcarRevisadaBtn">Marcar como revisada</button>` : ''}
+      ${s.estado !== 'atendida' ? `<button class="btn btn-primary" style="flex:1;" id="resMarcarAtendidaBtn">Marcar como atendida</button>` : ''}
+    </div>
+  `;
+
+  overlay.classList.add('open');
+
+  document.getElementById('resAgregarObservacionBtn')?.addEventListener('click', () => {
+    const texto = document.getElementById('resNuevaObservacion').value.trim();
+    if (!texto) { mostrarToast('Escribe una observación.'); return; }
+    const resultado = agregarObservacionResurtido(s.id, texto, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre });
+    if (!resultado.ok) { mostrarToast(resultado.error); return; }
+    mostrarToast('Observación agregada.');
+    renderTablaResurtidoAdmin();
+    abrirDetalleResurtidoAdmin(s.id);
+  });
+
+  document.getElementById('resMarcarRevisadaBtn')?.addEventListener('click', () => {
+    abrirAutorizacionAdmin({
+      titulo: 'Marcar como revisada',
+      mensaje: `Confirmas que ya revisaste la solicitud de resurtido de <strong>${escapeHTML(s.producto)}</strong>.`,
+      onConfirmar: () => {
+        const resultado = marcarResurtidoRevisada(s.id, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre });
+        if (!resultado.ok) { mostrarToast(resultado.error); return; }
+        mostrarToast('Solicitud marcada como revisada.');
+        renderTablaResurtidoAdmin();
+        cerrarModalLD();
+      }
+    });
+  });
+
+  document.getElementById('resMarcarAtendidaBtn')?.addEventListener('click', () => {
+    abrirAutorizacionAdmin({
+      titulo: 'Marcar como atendida',
+      mensaje: `Confirmas que el resurtido de <strong>${escapeHTML(s.producto)}</strong> ya se atendió. Se le avisará a quien la solicitó.`,
+      onConfirmar: () => {
+        const resultado = marcarResurtidoAtendida(s.id, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre });
+        if (!resultado.ok) { mostrarToast(resultado.error); return; }
+        mostrarToast('Solicitud marcada como atendida.');
+        renderTablaResurtidoAdmin();
+        cerrarModalLD();
+      }
+    });
+  });
+
 }
