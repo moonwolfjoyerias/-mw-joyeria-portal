@@ -25,13 +25,39 @@ const ACTIVIDADES_STAFF_CATALOGO_KEY = 'mw-actividades-staff-catalogo-v1';
 const ACTIVIDADES_STAFF_ASIGNACIONES_KEY = 'mw-actividades-staff-asignaciones-v1';
 const ACTIVIDADES_STAFF_HISTORIAL_KEY = 'mw-actividades-staff-historial-v1';
 
+// Solo estas tres — nunca quincenal/mensual/personalizada (corrección
+// posterior: la periodicidad ahora también define QUÉ DÍAS, no solo
+// cada cuánto). "x_dias" y "semanal" siempre traen un arreglo `dias`
+// (ver DIAS_SEMANA_ACTIVIDAD_STAFF); "diaria" no necesita días.
 const PERIODICIDADES_ACTIVIDAD_STAFF = {
   diaria: 'Diaria',
-  semanal: 'Semanal',
-  quincenal: 'Quincenal',
-  mensual: 'Mensual',
-  personalizada: 'Personalizada'
+  x_dias: 'X días',
+  semanal: 'Semanalmente'
 };
+
+const DIAS_SEMANA_ACTIVIDAD_STAFF = {
+  lunes: 'Lunes',
+  martes: 'Martes',
+  miercoles: 'Miércoles',
+  jueves: 'Jueves',
+  viernes: 'Viernes',
+  sabado: 'Sábado',
+  domingo: 'Domingo'
+};
+const ORDEN_DIAS_ACTIVIDAD_STAFF = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+
+// Texto de la columna "Día": "Todos los días" para diaria, o los días
+// elegidos en su orden natural de semana (nunca el orden en que se
+// marcaron), unidos con "/".
+function formatearDiasAsignacionActividadStaff(a) {
+  if (!a) return '—';
+  if (a.periodicidad === 'diaria') return 'Todos los días';
+  if (!a.dias || !a.dias.length) return '—';
+  return ORDEN_DIAS_ACTIVIDAD_STAFF
+    .filter(d => a.dias.includes(d))
+    .map(d => DIAS_SEMANA_ACTIVIDAD_STAFF[d])
+    .join('/');
+}
 
 // "borrador" es un estado interno de organización (todavía no existe
 // para Staff/RH/Admin como tal) — el flujo público que pide el prompt
@@ -239,10 +265,27 @@ function obtenerAsignacionesPorSemanaActividadStaff(semanaKey) {
   return obtenerAsignacionesActividadStaff().filter(a => a.semanaKey === semanaKey);
 }
 
+// Valida periodicidad + días (null/[] es válido SOLO cuando todavía no
+// se ha definido — ver asegurarAsignacionesBaseSemana). Cuando sí se
+// manda una periodicidad, exige los días que correspondan.
+function validarPeriodicidadYDiasActividadStaff(periodicidad, dias) {
+  if (!periodicidad) return { ok: true, periodicidad: null, dias: [] };
+  if (!PERIODICIDADES_ACTIVIDAD_STAFF[periodicidad]) return { ok: false, error: 'Selecciona una periodicidad válida.' };
+  if (periodicidad === 'diaria') return { ok: true, periodicidad, dias: [] };
+  const diasValidos = (dias || []).filter(d => DIAS_SEMANA_ACTIVIDAD_STAFF[d]);
+  if (periodicidad === 'x_dias' && !diasValidos.length) return { ok: false, error: 'Selecciona al menos un día de la semana.' };
+  if (periodicidad === 'semanal' && diasValidos.length !== 1) return { ok: false, error: 'Selecciona un único día de la semana.' };
+  return { ok: true, periodicidad, dias: diasValidos };
+}
+
 // Nombre/zona pueden venir de un catálogo existente (actividadCatalogoId)
 // o de una actividad nueva escrita a mano (nombreNuevo/zonaNueva), que
-// de paso queda guardada en el catálogo para reutilizarse después.
-function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaNueva, periodicidad, encargadoId, semanaKey, observaciones, creadoPorId, creadoPorNombre, creadoPorRol }) {
+// de paso queda guardada en el catálogo para reutilizarse después. La
+// periodicidad es OBLIGATORIA salvo cuando permitirSinPeriodicidad es
+// true (solo lo usa asegurarAsignacionesBaseSemana, para que las
+// actividades base aparezcan desde el inicio sin que nadie tenga que
+// definir todavía cada cuánto se hacen).
+function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaNueva, periodicidad, dias, encargadoId, semanaKey, observaciones, creadoPorId, creadoPorNombre, creadoPorRol, permitirSinPeriodicidad }) {
 
   let catalogoEntry = actividadCatalogoId ? obtenerActividadCatalogoStaffPorId(actividadCatalogoId) : null;
 
@@ -252,9 +295,10 @@ function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaN
     catalogoEntry = resultado.actividad;
   }
 
-  if (!PERIODICIDADES_ACTIVIDAD_STAFF[periodicidad]) {
-    return { ok: false, error: 'Selecciona una periodicidad válida.' };
-  }
+  if (!periodicidad && !permitirSinPeriodicidad) return { ok: false, error: 'Selecciona una periodicidad.' };
+  const validacion = validarPeriodicidadYDiasActividadStaff(periodicidad, dias);
+  if (!validacion.ok) return validacion;
+
   if (!semanaKey) return { ok: false, error: 'Indica a qué semana corresponde.' };
 
   if (encargadoId) {
@@ -270,7 +314,8 @@ function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaN
     actividadCatalogoId: catalogoEntry.id,
     nombre: catalogoEntry.nombre,
     zona: catalogoEntry.zona,
-    periodicidad,
+    periodicidad: validacion.periodicidad,
+    dias: validacion.dias,
     encargadoId: encargadoId || null,
     encargadoNombre: encargado ? encargado.nombre : '',
     semanaKey,
@@ -307,6 +352,62 @@ function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaN
 
 }
 
+// ============================================================
+// ACTIVIDADES BASE — deben aparecer YA cargadas, sin que nadie tenga
+// que crearlas una por una (corrección posterior). Se siembran de
+// forma perezosa la primera vez que se pide una semana: por cada
+// actividad del catálogo que todavía no tenga una asignación en esa
+// semana, se crea una en "borrador" sin periodicidad ni encargado
+// (RH/Admin los definen después) — nunca se asume la periodicidad.
+// Es idempotente: nunca duplica una actividad que ya exista para esa
+// semana, sea porque ya se sembró antes o porque alguien la creó a
+// mano.
+function asegurarAsignacionesBaseSemana(semanaKey) {
+
+  if (!semanaKey) return;
+
+  const catalogo = obtenerCatalogoActividadesStaff();
+  const existentes = obtenerAsignacionesPorSemanaActividadStaff(semanaKey);
+  const catalogoIdsExistentes = new Set(existentes.map(a => a.actividadCatalogoId));
+
+  const faltantes = catalogo.filter(c => !catalogoIdsExistentes.has(c.id));
+  if (!faltantes.length) return;
+
+  const asignaciones = obtenerAsignacionesActividadStaff();
+
+  faltantes.forEach(catalogoEntry => {
+    const nueva = {
+      id: `act-staff-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      actividadCatalogoId: catalogoEntry.id,
+      nombre: catalogoEntry.nombre,
+      zona: catalogoEntry.zona,
+      periodicidad: null,
+      dias: [],
+      encargadoId: null,
+      encargadoNombre: '',
+      semanaKey,
+      observaciones: '',
+      estado: 'borrador',
+      sorteada: false,
+      fechaCreacion: new Date().toISOString(),
+      fechaAnuncio: null,
+      fechaEnterado: null,
+      enteradoPorId: null,
+      enteradoPorNombre: null,
+      fechaFirmaRH: null,
+      firmadoPorId: null,
+      firmadoPorNombre: null,
+      creadoPorId: null,
+      creadoPorNombre: 'Sistema',
+      creadoPorRol: 'sistema'
+    };
+    asignaciones.push(nueva);
+  });
+
+  guardarAsignacionesActividadStaff(asignaciones);
+
+}
+
 // Edición general (periodicidad/semana/observaciones/encargado) — el
 // cambio de encargado siempre queda en el historial (sección 12 del
 // prompt), y cualquier cambio hecho DESPUÉS de anunciada también.
@@ -326,10 +427,14 @@ function actualizarAsignacionActividadStaff(id, cambios, { usuarioId, usuarioNom
     asignacion.encargadoId = cambios.encargadoId || null;
     asignacion.encargadoNombre = nuevoEncargado ? nuevoEncargado.nombre : '';
   }
-  if (cambios.periodicidad !== undefined && cambios.periodicidad !== asignacion.periodicidad) {
-    if (!PERIODICIDADES_ACTIVIDAD_STAFF[cambios.periodicidad]) return { ok: false, error: 'Selecciona una periodicidad válida.' };
-    cambiosTexto.push(`Periodicidad: ${PERIODICIDADES_ACTIVIDAD_STAFF[asignacion.periodicidad]} → ${PERIODICIDADES_ACTIVIDAD_STAFF[cambios.periodicidad]}.`);
-    asignacion.periodicidad = cambios.periodicidad;
+  if (cambios.periodicidad !== undefined && (cambios.periodicidad !== asignacion.periodicidad || JSON.stringify(cambios.dias || []) !== JSON.stringify(asignacion.dias || []))) {
+    const validacion = validarPeriodicidadYDiasActividadStaff(cambios.periodicidad, cambios.dias);
+    if (!validacion.ok) return validacion;
+    const anteriorTexto = asignacion.periodicidad ? `${PERIODICIDADES_ACTIVIDAD_STAFF[asignacion.periodicidad]} (${formatearDiasAsignacionActividadStaff(asignacion)})` : 'sin definir';
+    asignacion.periodicidad = validacion.periodicidad;
+    asignacion.dias = validacion.dias;
+    const nuevoTexto = asignacion.periodicidad ? `${PERIODICIDADES_ACTIVIDAD_STAFF[asignacion.periodicidad]} (${formatearDiasAsignacionActividadStaff(asignacion)})` : 'sin definir';
+    cambiosTexto.push(`Periodicidad: ${anteriorTexto} → ${nuevoTexto}.`);
   }
   if (cambios.semanaKey !== undefined && cambios.semanaKey !== asignacion.semanaKey) {
     cambiosTexto.push(`Semana: ${formatearRangoSemanaActividadStaff(asignacion.semanaKey)} → ${formatearRangoSemanaActividadStaff(cambios.semanaKey)}.`);
@@ -357,25 +462,44 @@ function actualizarAsignacionActividadStaff(id, cambios, { usuarioId, usuarioNom
 }
 
 // ============================================================
-// SORTEO ALEATORIO (reparto equilibrado entre Staff activo)
+// SORTEO POR ZONA/VITRINA (corrección posterior — reparto equilibrado
+// entre Staff activo, siempre por zona completa, nunca actividad por
+// actividad: todas las actividades de una misma zona quedan con el
+// mismo encargado, ver sección 4-5 del prompt).
 // ============================================================
 
 // No persiste nada — solo arma una propuesta para revisar antes de
-// guardarla (sección 6, puntos 5 y 7 del prompt).
-function sortearActividadesStaff(asignacionIds) {
+// guardarla. Reparte las ZONAS elegidas entre el Staff activo
+// (round-robin sobre listas barajadas, para un reparto equilibrado) y
+// agrupa, dentro de cada zona, las actividades de esa semana que
+// todavía están en "borrador" (las ya anunciadas no se tocan).
+function sortearZonasActividadStaff(semanaKey, zonas) {
 
   const staffActivos = empleadosStaffActivosActividad();
   if (!staffActivos.length) return { ok: false, error: 'No hay empleados de Staff activos para repartir actividades.' };
 
-  const actividades = asignacionIds.map(id => obtenerAsignacionActividadStaffPorId(id)).filter(a => a && a.estado === 'borrador');
-  if (!actividades.length) return { ok: false, error: 'Selecciona al menos una actividad en organización para sortear.' };
+  const zonasValidas = (zonas || []).filter(Boolean);
+  if (!zonasValidas.length) return { ok: false, error: 'Selecciona al menos una zona/vitrina para sortear.' };
 
-  const actividadesBarajadas = [...actividades].sort(() => Math.random() - 0.5);
+  const asignacionesSemana = obtenerAsignacionesPorSemanaActividadStaff(semanaKey);
+
+  const zonasConActividades = zonasValidas
+    .map(zona => ({ zona, actividades: asignacionesSemana.filter(a => a.zona === zona && a.estado === 'borrador') }))
+    .filter(z => z.actividades.length);
+
+  if (!zonasConActividades.length) return { ok: false, error: 'Las zonas seleccionadas no tienen actividades pendientes de organizar en esta semana.' };
+
+  const zonasBarajadas = [...zonasConActividades].sort(() => Math.random() - 0.5);
   const staffBarajado = [...staffActivos].sort(() => Math.random() - 0.5);
 
-  const resultado = actividadesBarajadas.map((a, i) => {
+  const resultado = zonasBarajadas.map((z, i) => {
     const encargado = staffBarajado[i % staffBarajado.length];
-    return { asignacionId: a.id, actividadNombre: a.nombre, zona: a.zona, encargadoId: encargado.id, encargadoNombre: encargado.nombre };
+    return {
+      zona: z.zona,
+      encargadoId: encargado.id,
+      encargadoNombre: encargado.nombre,
+      actividades: z.actividades.map(a => ({ asignacionId: a.id, nombre: a.nombre }))
+    };
   });
 
   return { ok: true, resultado };
@@ -384,25 +508,29 @@ function sortearActividadesStaff(asignacionIds) {
 
 // Persiste el resultado (ya revisado/editado a mano si hacía falta) —
 // las actividades siguen en "borrador" hasta que se anuncien aparte.
-function aplicarResultadoSorteoActividadStaff(resultado, { usuarioId, usuarioNombre, usuarioRol }) {
+// Un solo renglón de historial por actividad (para poder consultarlo
+// desde su propio detalle), mencionando que vino de un sorteo por zona.
+function aplicarResultadoSorteoZonasActividadStaff(resultado, { usuarioId, usuarioNombre, usuarioRol }) {
 
   const asignaciones = obtenerAsignacionesActividadStaff();
   let aplicadas = 0;
 
-  resultado.forEach(fila => {
-    const asignacion = asignaciones.find(a => a.id === fila.asignacionId);
-    if (!asignacion || asignacion.estado !== 'borrador') return;
-    const anterior = asignacion.encargadoNombre || 'sin asignar';
-    asignacion.encargadoId = fila.encargadoId;
-    asignacion.encargadoNombre = fila.encargadoNombre;
-    asignacion.sorteada = true;
-    aplicadas++;
-    registrarHistorialActividadStaff({
-      actividadId: asignacion.id,
-      estadoAnterior: asignacion.estado,
-      estadoNuevo: asignacion.estado,
-      usuarioId, usuarioNombre, usuarioRol,
-      comentario: `Encargado asignado por sorteo: ${anterior} → ${fila.encargadoNombre}.`
+  resultado.forEach(grupo => {
+    grupo.actividades.forEach(fila => {
+      const asignacion = asignaciones.find(a => a.id === fila.asignacionId);
+      if (!asignacion || asignacion.estado !== 'borrador') return;
+      const anterior = asignacion.encargadoNombre || 'sin asignar';
+      asignacion.encargadoId = grupo.encargadoId;
+      asignacion.encargadoNombre = grupo.encargadoNombre;
+      asignacion.sorteada = true;
+      aplicadas++;
+      registrarHistorialActividadStaff({
+        actividadId: asignacion.id,
+        estadoAnterior: asignacion.estado,
+        estadoNuevo: asignacion.estado,
+        usuarioId, usuarioNombre, usuarioRol,
+        comentario: `Encargado asignado por sorteo de zona (${grupo.zona}): ${anterior} → ${grupo.encargadoNombre}.`
+      });
     });
   });
 
