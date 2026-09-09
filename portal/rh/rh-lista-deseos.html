@@ -58,7 +58,7 @@
       <header class="portal-header">
         <div>
           <h1>Lista de deseos ✦</h1>
-          <p class="portal-sub">Revisa las piezas que buscan las emprendedoras y actualiza el estado de cada solicitud.</p>
+          <p class="portal-sub">Crea solicitudes de piezas para una Emprendedora o para público en general, y avisa a Administración cuando haya que resurtir algo.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -83,107 +83,94 @@
         </div>
       </header>
 
-      <!-- RESUMEN -->
-      <div class="section-head">
-        <h2>Resumen de solicitudes</h2>
-      </div>
+      <nav class="cfg-nav nom-nav-principal" id="ldNavPrincipal">
+        <button type="button" class="cfg-nav-item active" data-ld-vista="deseos">Mis solicitudes</button>
+        <button type="button" class="cfg-nav-item" data-ld-vista="resurtido">Solicitar resurtido</button>
+      </nav>
 
-      <section class="stat-cards catalog-summary">
+      <!-- VISTA: LISTA DE DESEOS -->
+      <div id="ldVistaDeseos" class="nom-vista">
 
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
+        <div class="catalog-toolbar">
+          <button type="button" class="action-btn detail-action compact-toggle-btn" data-compactar-tabla=".catalog-table-wrap"><span>🔍</span><span class="compact-toggle-label">Vista compacta</span></button>
+          <div class="catalog-search">
+            <span>⌕</span>
+            <input type="search" id="ldSearchInput" placeholder="Buscar por persona o producto...">
           </div>
-          <div>
-            <h4>Total de solicitudes</h4>
-            <span class="stat-num" id="totalDeseos">0</span>
-            <span class="stat-link">Registradas en la lista</span>
-          </div>
+          <select id="ldFilterEstado">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="en_seguimiento">En seguimiento</option>
+            <option value="disponible">Disponible</option>
+            <option value="atendida">Atendida</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+          <button class="btn btn-primary" id="ldNuevaSolicitudBtn" style="width:auto;" type="button">＋ Nueva solicitud</button>
         </div>
 
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        <section class="catalog-table-card">
+          <div class="catalog-table-wrap">
+            <table class="catalog-table">
+              <thead>
+                <tr>
+                  <th>Para</th>
+                  <th>Piezas</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="ldTableBody"></tbody>
+            </table>
           </div>
-          <div>
-            <h4>Pendientes</h4>
-            <span class="stat-num" id="deseosPendientes">0</span>
-            <span class="stat-link">Sin revisar</span>
+          <div class="table-footer">
+            <span id="ldResultCount">Mostrando resultados</span>
           </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg>
-          </div>
-          <div>
-            <h4>En revisión</h4>
-            <span class="stat-num" id="deseosEnRevision">0</span>
-            <span class="stat-link">Buscando coincidencia</span>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 7L10 17l-5-5"/><path d="M4 4h16v16H4z"/></svg>
-          </div>
-          <div>
-            <h4>Disponibles</h4>
-            <span class="stat-num" id="deseosDisponibles">0</span>
-            <span class="stat-link">Listas para notificar</span>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- ACCIONES -->
-      <div class="section-head catalog-section-head">
-        <h2>Solicitudes de emprendedoras</h2>
-      </div>
-
-      <!-- FILTROS -->
-      <div class="catalog-toolbar">
-
-        <button type="button" class="action-btn detail-action compact-toggle-btn" data-compactar-tabla=".catalog-table-wrap"><span>🔍</span><span class="compact-toggle-label">Vista compacta</span></button>
-
-        <div class="catalog-search">
-          <span>⌕</span>
-          <input type="search" id="searchInput" placeholder="Buscar por emprendedora o pieza...">
-        </div>
-
-        <select id="filterEstado">
-          <option value="">Todos los estados</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="en_revision">En revisión</option>
-          <option value="bingo">¡Bingo!</option>
-          <option value="disponible">Disponible</option>
-        </select>
+        </section>
 
       </div>
 
-      <!-- TABLA -->
-      <section class="catalog-table-card">
-        <div class="catalog-table-wrap">
-          <table class="catalog-table">
-            <thead>
-              <tr>
-                <th>Emprendedora</th>
-                <th>Pieza deseada</th>
-                <th>Descripción</th>
-                <th>Foto de referencia</th>
-                <th>Fecha</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-                <th>Última acción</th>
-              </tr>
-            </thead>
-            <tbody id="deseosTableBody"></tbody>
-          </table>
+      <!-- VISTA: SOLICITAR RESURTIDO -->
+      <div id="ldVistaResurtido" class="nom-vista" hidden>
+
+        <p class="portal-sub" style="margin-top:-0.4rem;">Avisa a Administración cuando haya que resurtir una pieza o tipo de pieza — por demanda frecuente o por falta de disponibilidad.</p>
+
+        <div class="catalog-toolbar">
+          <div class="catalog-search">
+            <span>⌕</span>
+            <input type="search" id="resSearchInput" placeholder="Buscar por producto...">
+          </div>
+          <select id="resFilterEstado">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="revisada">Revisada</option>
+            <option value="atendida">Atendida</option>
+          </select>
+          <button class="btn btn-primary" id="resNuevaSolicitudBtn" style="width:auto;" type="button">＋ Nueva solicitud de resurtido</button>
         </div>
-        <div class="table-footer">
-          <span id="resultCount">Mostrando resultados</span>
-        </div>
-      </section>
+
+        <section class="catalog-table-card">
+          <div class="catalog-table-wrap">
+            <table class="catalog-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Variante</th>
+                  <th>Cantidad sugerida</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="resTableBody"></tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            <span id="resResultCount">Mostrando resultados</span>
+          </div>
+        </section>
+
+      </div>
 
     </main>
   </div>
@@ -206,7 +193,10 @@
   </script>
   <script src="../../js/portal-common.js"></script>
   <script src="../../js/notificaciones-modelo.js"></script>
-  <script src="../../js/staff-deseos-ejemplo.js"></script>
+  <script src="../../js/personas-ejemplo.js"></script>
+  <script src="../../js/lista-deseos-modelo.js"></script>
+  <script src="../../js/cuentas-internas-modelo.js"></script>
+  <script src="../../js/auditoria-modelo.js"></script>
   <script src="../../js/rh-comun.js"></script>
   <script src="../../js/rh-lista-deseos.js"></script>
   <script src="../../js/tabla-compacta.js"></script>

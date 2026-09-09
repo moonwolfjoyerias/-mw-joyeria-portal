@@ -25,8 +25,8 @@ function actualizarResumenInicioRH() {
     ? calcularVentanasStaffActuales()
     : [];
 
-  const deseos = typeof cargarDeseosStaffActuales === 'function'
-    ? cargarDeseosStaffActuales()
+  const deseos = typeof obtenerListaDeseos === 'function'
+    ? obtenerListaDeseos()
     : [];
 
   const valores = {
