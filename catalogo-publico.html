@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo — MW Joyería</title>
+  <meta name="description" content="Catálogo público de joyería MW con piezas en oro laminado y acero inoxidable.">
+  <link rel="stylesheet" href="css/styles.css?v=29">
+</head>
+<body>
+
+  <header class="topbar">
+    <span class="logo">
+      <img src="assets/images/isotipo-blanco.png" alt="MOONWOLF Joyería">
+      <span class="logo-text">
+        <span class="logo-main">MOONWOLF</span>
+        <span class="logo-sub">JOYERÍA</span>
+      </span>
+    </span>
+
+    <button class="nav-toggle" id="navToggle" aria-label="Abrir menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+
+    <nav id="publicNav">
+      <a href="index.html">Inicio</a>
+      <a href="colecciones.html">Colecciones</a>
+      <a href="ventajas-plan.html">Plan MW</a>
+      <a href="nosotros.html">Nosotros</a>
+      <a href="contacto.html">Contacto</a>
+      <a href="login.html" class="btn btn-outline" style="margin-left:1.5rem; padding:0.4em 1.1em;">Iniciar sesión</a>
+    </nav>
+  </header>
+
+  <main class="page-shell" style="padding: 2.5rem 1.2rem 4rem;">
+    <section class="catalog-public-hero" style="max-width: 1200px; margin: 0 auto 1.5rem;">
+      <span class="eyebrow">Colección disponible</span>
+      <h1 style="margin:0.3rem 0 0.5rem;">Catálogo</h1>
+      <p class="lede" style="max-width: 700px;">Descubre nuestras piezas principales con precio etiqueta, materiales y categorías para elegir la mejor opción para ti.</p>
+    </section>
+
+    <div class="catalog-layout" style="max-width: 1200px; margin: 0 auto;">
+      <aside class="filter-panel">
+        <div class="filter-panel-header">
+          <h3>Filtros</h3>
+          <button id="clearFiltersBtn" type="button">Limpiar</button>
+        </div>
+
+        <div class="filter-group">
+          <h4>Material</h4>
+          <div id="filterMateriales"></div>
+        </div>
+
+        <div class="filter-group">
+          <h4>Categoría</h4>
+          <div id="filterCategorias"></div>
+        </div>
+
+        <div class="filter-group conditional visible">
+          <h4>Calidad</h4>
+          <div id="filterCalidad"></div>
+        </div>
+
+        <div class="filter-group conditional visible">
+          <h4>Color de oro</h4>
+          <div id="filterColorOro"></div>
+        </div>
+
+        <div class="filter-group">
+          <h4>Talla</h4>
+          <select id="filterTalla" style="width:100%; height:42px; border:1px solid var(--mw-border); border-radius:8px; padding:0 12px; color:var(--mw-text); background:#fff;">
+            <option value="">Todas</option>
+          </select>
+        </div>
+      </aside>
+
+      <div class="catalog-grid-wrap">
+        <div class="catalog-toolbar">
+          <span class="result-count" id="resultCount">0 piezas</span>
+        </div>
+        <div class="catalog-product-grid" id="catalogGrid"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div>
+        <a href="index.html" class="footer-logo">
+          <img src="assets/images/isotipo-blanco.png" alt="MOONWOLF Joyería">
+        </a>
+      </div>
+
+      <nav class="footer-nav">
+        <a href="index.html">Inicio</a>
+        <a href="colecciones.html">Colecciones</a>
+        <a href="ventajas-plan.html">Plan MW</a>
+        <a href="nosotros.html">Nosotros</a>
+        <a href="contacto.html">Contacto</a>
+      </nav>
+
+      <div class="footer-contact">
+        <a class="contact-line" href="https://www.google.com/maps/place/Joyer%C3%ADa+MW,+Ignacio+Aldama+400-int+16,+Centro+Historico,+78000+San+Luis+Potos%C3%AD,+S.L.P./@22.150358,-100.9774173,16z/data=!4m6!3m5!1s0x842aa38f698c8147:0xaab29c7c22411984!8m2!3d22.150358!4d-100.9774173!16s%2Fg%2F11yhfgv18k" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-7.58 7-12a7 7 0 10-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          <span>Centro Joyero San Luis, Ignacio Aldama 400-int Local 21, Centro Histórico, SLP</span>
+        </a>
+        <a class="contact-line" href="https://wa.me/524448100805" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a8.5 8.5 0 01-12.4 7.5L3 21l1.6-5.4A8.5 8.5 0 1121 12z"/></svg>
+          <span>444 810 0805 (WhatsApp)</span>
+        </a>
+        <div class="footer-social">
+          <a href="https://www.instagram.com/joyeria_mw.slp?igsh=MThlMjZqOHllZW82OQ%3D%3D&utm_source=qr" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
+          </a>
+          <a href="https://www.facebook.com/profile.php?id=100076055318249" target="_blank" rel="noopener" aria-label="Facebook">
+            <svg viewBox="0 0 24 24"><text x="12" y="17.5" text-anchor="middle" font-family="Georgia, serif" font-size="17" font-weight="bold" fill="currentColor">f</text></svg>
+          </a>
+          <a href="https://www.tiktok.com/@joyeria_mw.slp?_r=1&_t=ZS-98y79NLYu4S" target="_blank" rel="noopener" aria-label="TikTok">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 4v10.5a3.5 3.5 0 11-3-3.46"/><path d="M14 4c0 2.5 2 4.5 4.5 4.5"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2026 MW Joyería y Accesorios. Todos los derechos reservados.</div>
+  </footer>
+
+  <script src="js/nav-toggle.js"></script>
+  <script>
+    const CATALOGO_PUBLICO = [
+      {
+        id: 'prod-001',
+        nombre: 'Anillo Corazón',
+        descripcion: 'Anillo de corazón con acabado elegante para uso diario.',
+        material: 'oro-laminado',
+        categoria: 'Anillos',
+        calidad: 'premium',
+        colorOro: 'Amarillo',
+        talla: '6',
+        precioEtiqueta: 690,
+        imagen: 'assets/images/isotipo-morado.png'
+      },
+      {
+        id: 'prod-002',
+        nombre: 'Cadena Fina 45cm',
+        descripcion: 'Cadena fina de 45 cm, ideal para combinar con dijes.',
+        material: 'oro-laminado',
+        categoria: 'Cadenas',
+        calidad: 'estandar',
+        colorOro: 'Amarillo',
+        talla: '',
+        precioEtiqueta: 650,
+        imagen: 'assets/images/isotipo-morado.png'
+      },
+      {
+        id: 'prod-003',
+        nombre: 'Huggies Pequeños',
+        descripcion: 'Aretes tipo huggie pequeños y ligeros.',
+        material: 'oro-laminado',
+        categoria: 'Aretes',
+        calidad: 'premium',
+        colorOro: 'Blanco',
+        talla: '',
+        precioEtiqueta: 430,
+        imagen: 'assets/images/isotipo-morado.png'
+      },
+      {
+        id: 'prod-004',
+        nombre: 'Pulsera Eslabón',
+        descripcion: 'Pulsera de eslabón con acabado dorado.',
+        material: 'oro-laminado',
+        categoria: 'Pulseras',
+        calidad: 'premium',
+        colorOro: 'Amarillo',
+        talla: '18 cm',
+        precioEtiqueta: 750,
+        imagen: 'assets/images/isotipo-morado.png'
+      },
+      {
+        id: 'prod-005',
+        nombre: 'Aretes Flor',
+        descripcion: 'Aretes con diseño floral elegante.',
+        material: 'acero-inoxidable',
+        categoria: 'Aretes',
+        calidad: 'estandar',
+        colorOro: '',
+        talla: '',
+        precioEtiqueta: 320,
+        imagen: 'assets/images/isotipo-morado.png'
+      },
+      {
+        id: 'prod-006',
+        nombre: 'Dije Estrella',
+        descripcion: 'Dije de estrella para combinar con diferentes cadenas.',
+        material: 'oro-laminado',
+        categoria: 'Dijes',
+        calidad: 'premium',
+        colorOro: 'Amarillo',
+        talla: '',
+        precioEtiqueta: 350,
+        imagen: 'assets/images/isotipo-morado.png'
+      },
+      {
+        id: 'prod-007',
+        nombre: 'Exhibidor Individual',
+        descripcion: 'Exhibidor individual para presentación de joyería.',
+        material: 'exhibidores',
+        categoria: 'Exhibidores',
+        calidad: 'estandar',
+        colorOro: '',
+        talla: '',
+        precioEtiqueta: 149,
+        imagen: 'assets/images/isotipo-morado.png'
+      },
+      {
+        id: 'prod-008',
+        nombre: 'Souvenir MW',
+        descripcion: 'Souvenir de MW Joyería para obsequio.',
+        material: 'souvenirs',
+        categoria: 'Souvenirs',
+        calidad: 'estandar',
+        colorOro: '',
+        talla: '',
+        precioEtiqueta: 120,
+        imagen: 'assets/images/isotipo-morado.png'
+      }
+    ];
+
+    const MATERIAL_OPTIONS = [
+      { key: 'oro-laminado', label: 'Oro Laminado' },
+      { key: 'acero-inoxidable', label: 'Acero Inoxidable' },
+      { key: 'exhibidores', label: 'Exhibidores' },
+      { key: 'souvenirs', label: 'Souvenirs' },
+      { key: 'fantasia', label: 'Fantasía' },
+      { key: 'otros', label: 'Otros' }
+    ];
+
+    const CATEGORIAS_PUBLICAS = ['Anillos', 'Aretes', 'Cadenas', 'Pulseras', 'Dijes', 'Exhibidores', 'Souvenirs', 'Fantasía', 'Otros'];
+    const COLORES_ORO = ['Amarillo', 'Blanco', 'Rosa'];
+    const filtro = {
+      materiales: new Set(),
+      categorias: new Set(),
+      calidades: new Set(),
+      coloresOro: new Set(),
+      talla: ''
+    };
+
+    function categoriasDisponibles() {
+      const incluyeOro = filtro.materiales.size === 0 || filtro.materiales.has('oro-laminado');
+      const incluyeAcero = filtro.materiales.size === 0 || filtro.materiales.has('acero-inoxidable');
+      const set = new Set();
+      if (incluyeOro) ['Anillos', 'Cadenas', 'Aretes', 'Pulseras', 'Dijes'].forEach(c => set.add(c));
+      if (incluyeAcero) ['Aretes'].forEach(c => set.add(c));
+      if (filtro.materiales.size === 0 || filtro.materiales.has('exhibidores')) set.add('Exhibidores');
+      if (filtro.materiales.size === 0 || filtro.materiales.has('souvenirs')) set.add('Souvenirs');
+      return Array.from(set).sort();
+    }
+
+    function renderFiltroMateriales() {
+      const wrap = document.getElementById('filterMateriales');
+      if (!wrap) return;
+      wrap.innerHTML = MATERIAL_OPTIONS.map(m => `
+        <label class="filter-option">
+          <input type="checkbox" value="${m.key}" data-filter="material">
+          ${m.label}
+        </label>
+      `).join('');
+      wrap.querySelectorAll('input').forEach(cb => cb.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (e.target.checked) filtro.materiales.add(val); else filtro.materiales.delete(val);
+        renderFiltroCategorias();
+        toggleOroGroups();
+        aplicarFiltros();
+      }));
+    }
+
+    function renderFiltroCategorias() {
+      const wrap = document.getElementById('filterCategorias');
+      if (!wrap) return;
+      const cats = categoriasDisponibles();
+      filtro.categorias.forEach(c => { if (!cats.includes(c)) filtro.categorias.delete(c); });
+      wrap.innerHTML = cats.map(c => `
+        <label class="filter-option">
+          <input type="checkbox" value="${c}" data-filter="categoria" ${filtro.categorias.has(c) ? 'checked' : ''}>
+          ${c}
+        </label>
+      `).join('');
+      wrap.querySelectorAll('input').forEach(cb => cb.addEventListener('change', (e) => {
+        if (e.target.checked) filtro.categorias.add(e.target.value); else filtro.categorias.delete(e.target.value);
+        aplicarFiltros();
+      }));
+    }
+
+    function renderFiltroCalidad() {
+      const wrap = document.getElementById('filterCalidad');
+      if (!wrap) return;
+      wrap.innerHTML = ['estandar', 'premium'].map(q => `
+        <label class="filter-option">
+          <input type="checkbox" value="${q}" data-filter="calidad">
+          ${q === 'estandar' ? 'Estándar' : 'Premium'}
+        </label>
+      `).join('');
+      wrap.querySelectorAll('input').forEach(cb => cb.addEventListener('change', (e) => {
+        if (e.target.checked) filtro.calidades.add(e.target.value); else filtro.calidades.delete(e.target.value);
+        aplicarFiltros();
+      }));
+    }
+
+    function renderFiltroColorOro() {
+      const wrap = document.getElementById('filterColorOro');
+      if (!wrap) return;
+      wrap.innerHTML = COLORES_ORO.map(c => `
+        <label class="filter-option">
+          <input type="checkbox" value="${c}" data-filter="colorOro">
+          ${c}
+        </label>
+      `).join('');
+      wrap.querySelectorAll('input').forEach(cb => cb.addEventListener('change', (e) => {
+        if (e.target.checked) filtro.coloresOro.add(e.target.value); else filtro.coloresOro.delete(e.target.value);
+        aplicarFiltros();
+      }));
+    }
+
+    function renderFiltroTalla() {
+      const select = document.getElementById('filterTalla');
+      if (!select) return;
+      const tallas = Array.from(new Set(CATALOGO_PUBLICO.filter(p => p.talla).map(p => p.talla))).sort();
+      select.innerHTML = '<option value="">Todas</option>' + tallas.map(t => `<option value="${t}">${t}</option>`).join('');
+      select.addEventListener('change', (e) => {
+        filtro.talla = e.target.value;
+        aplicarFiltros();
+      });
+    }
+
+    function toggleOroGroups() {
+      const showOro = filtro.materiales.size === 0 || filtro.materiales.has('oro-laminado');
+      document.querySelectorAll('.filter-group.conditional').forEach(group => {
+        group.classList.toggle('visible', showOro);
+      });
+    }
+
+    function limpiarFiltros() {
+      filtro.materiales.clear();
+      filtro.categorias.clear();
+      filtro.calidades.clear();
+      filtro.coloresOro.clear();
+      filtro.talla = '';
+      document.querySelectorAll('.filter-panel input[type="checkbox"]').forEach(cb => cb.checked = false);
+      const tallaSelect = document.getElementById('filterTalla');
+      if (tallaSelect) tallaSelect.value = '';
+      renderFiltroCategorias();
+      toggleOroGroups();
+      aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+      const resultado = CATALOGO_PUBLICO.filter((p) => {
+        if (filtro.materiales.size > 0 && !filtro.materiales.has(p.material)) return false;
+        if (filtro.categorias.size > 0 && !filtro.categorias.has(p.categoria)) return false;
+        if (filtro.calidades.size > 0 && !filtro.calidades.has(p.calidad)) return false;
+        if (filtro.coloresOro.size > 0 && !filtro.coloresOro.has(p.colorOro)) return false;
+        if (filtro.talla && p.talla !== filtro.talla) return false;
+        return true;
+      });
+      renderProductos(resultado);
+    }
+
+    function renderProductos(productos) {
+      const grid = document.getElementById('catalogGrid');
+      const count = document.getElementById('resultCount');
+      if (!grid) return;
+      if (count) count.textContent = `${productos.length} pieza${productos.length === 1 ? '' : 's'}`;
+
+      if (productos.length === 0) {
+        grid.innerHTML = '<div class="catalog-empty">No hay piezas que coincidan con estos filtros.</div>';
+        return;
+      }
+
+      grid.innerHTML = productos.map((p) => `
+        <article class="catalog-product-card">
+          <div class="cp-photo">
+            <img src="${p.imagen}" alt="${p.nombre}">
+          </div>
+          <div class="cp-body">
+            <h4>${p.nombre}</h4>
+            <div class="cp-meta">${[p.categoria, p.colorOro, p.talla].filter(Boolean).join(' · ') || '&nbsp;'}</div>
+            <div class="cp-price">
+              <span class="price-emprendedora">$${p.precioEtiqueta} MXN</span>
+            </div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderFiltroMateriales();
+      renderFiltroCategorias();
+      renderFiltroCalidad();
+      renderFiltroColorOro();
+      renderFiltroTalla();
+      toggleOroGroups();
+      aplicarFiltros();
+
+      const clearBtn = document.getElementById('clearFiltersBtn');
+      if (clearBtn) clearBtn.addEventListener('click', limpiarFiltros);
+    });
+  </script>
+</body>
+</html>

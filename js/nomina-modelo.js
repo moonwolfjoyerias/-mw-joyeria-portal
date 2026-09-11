@@ -523,7 +523,8 @@ function enviarNominaAValidacion(empleadoId, periodoKey, { usuarioId, usuarioNom
     agregarNotificacion({
       texto: `La nómina de ${empleado.nombre} (${formatearRangoSemanaNomina(periodoKey)}) está lista para validación.`,
       link: `admin-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
-      rolDestino: 'admin'
+      rolDestino: 'admin',
+      tipo: 'nomina'
     });
   }
 
@@ -558,7 +559,8 @@ function validarNominaAdmin(empleadoId, periodoKey, { usuarioId, usuarioNombre }
     agregarNotificacion({
       texto: `La nómina de ${empleado.nombre} (${formatearRangoSemanaNomina(periodoKey)}) fue validada por Administración.`,
       link: `rh-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
-      rolDestino: 'rh'
+      rolDestino: 'rh',
+      tipo: 'nomina'
     });
   }
 
@@ -596,7 +598,8 @@ function solicitarCorreccionNomina(empleadoId, periodoKey, { usuarioId, usuarioN
     agregarNotificacion({
       texto: `La nómina de ${empleado.nombre} (${formatearRangoSemanaNomina(periodoKey)}) requiere correcciones. Revisa el comentario de Administración.`,
       link: `rh-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
-      rolDestino: 'rh'
+      rolDestino: 'rh',
+      tipo: 'nomina'
     });
   }
 
@@ -858,7 +861,8 @@ function aprobarSolicitudNomina(id, { usuarioAdminId, usuarioAdminNombre }) {
     agregarNotificacion({
       texto: solicitud.tipo === 'alta' ? `Alta aprobada: la solicitud de alta de ${nombreEmpleado} fue aprobada y su cuenta ya está creada.` : `Baja aprobada: la solicitud de baja de ${nombreEmpleado} fue aprobada.`,
       link: `rh-nomina.html?solicitud=${solicitud.id}`,
-      rolDestino: 'rh'
+      rolDestino: 'rh',
+      tipo: 'nomina'
     });
   }
 
@@ -893,7 +897,8 @@ function rechazarSolicitudNomina(id, { motivo, usuarioAdminId, usuarioAdminNombr
     agregarNotificacion({
       texto: solicitud.tipo === 'alta' ? `Alta denegada: la solicitud de alta de ${nombreEmpleado} fue denegada. Motivo: ${motivo}` : `Baja denegada: la solicitud de baja de ${nombreEmpleado} fue denegada. Motivo: ${motivo}`,
       link: `rh-nomina.html?solicitud=${solicitud.id}`,
-      rolDestino: 'rh'
+      rolDestino: 'rh',
+      tipo: 'nomina'
     });
   }
 
