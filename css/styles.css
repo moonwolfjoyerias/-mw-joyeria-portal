@@ -883,9 +883,10 @@ a:hover { color: var(--mw-gold); }
   flex-wrap: wrap;
   gap: 1rem;
 }
+.portal-header > *:first-child { flex: 1 1 260px; min-width: 0; }
 .portal-header h1 { font-size: 1.9rem; margin-bottom: 0.2rem; }
 .portal-header .portal-sub { color: var(--mw-text-muted); font-size: 0.95rem; margin: 0; }
-.portal-header-actions { display: flex; align-items: center; gap: 0.9rem; position: relative; }
+.portal-header-actions { display: flex; align-items: center; gap: 0.9rem; position: relative; flex-shrink: 0; }
 
 .notif-bell {
   position: relative;
@@ -3442,6 +3443,7 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 .proximo-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
 .proximo-card.listo { border-color: var(--mw-gold); background: linear-gradient(180deg, #fffdf6 0%, #fff 60%); }
 .proximo-tipo { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--mw-purple); margin-bottom: 0.5rem; }
+.proximo-tipo svg { width: 1em; height: 1em; vertical-align: -0.15em; }
 .proximo-card.listo .proximo-tipo { color: #8A6D14; }
 .proximo-nombre { display: block; font-family: var(--font-heading); font-size: 1.05rem; color: #2d145d; }
 .proximo-sub { display: block; font-size: 0.78rem; color: var(--mw-text-muted); margin: 0.15rem 0 0.9rem; }
@@ -3462,6 +3464,7 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 }
 .logro-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
 .logro-icon { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+.logro-icon svg { width: 1em; height: 1em; }
 .logro-card strong { display: block; color: #2d145d; font-size: 0.9rem; }
 .logro-sub { display: block; font-size: 0.78rem; color: var(--mw-purple); margin-top: 0.2rem; }
 .logro-fecha { display: block; font-size: 0.72rem; color: var(--mw-text-muted); margin-top: 0.3rem; }
@@ -3512,10 +3515,12 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   font-size: 0.82rem;
   font-family: inherit;
   color: var(--mw-text);
-  min-width: 170px;
+  width: 150px;
+  max-width: 150px;
 }
-.comm-toolbar-buscar { flex: 1 1 200px; }
-.comm-toolbar-buscar input { width: 100%; min-width: 0; }
+.comm-toolbar-buscar { flex: 1 1 180px; min-width: 0; }
+.comm-toolbar-buscar input { width: 100%; min-width: 0; max-width: none; }
+#nomPeriodoSelect { width: 195px; max-width: 195px; }
 
 .comm-sync-pill {
   margin-left: auto;
@@ -3638,6 +3643,7 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   padding: 2px 4px;
   border-radius: 4px;
 }
+.comm-icon-btn svg { width: 1em; height: 1em; display: block; }
 .comm-icon-btn:hover { color: var(--mw-purple); background: var(--mw-lilac-soft); }
 
 .comm-highlight-row { animation: commHighlight 2.2s ease; }
@@ -3686,11 +3692,8 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 .ld-search-empty { padding: 0.6em 0.8em; color: var(--mw-text-muted); font-size: 0.82rem; }
 .ld-persona-chip { display: inline-flex; align-items: center; gap: 8px; background: var(--mw-lilac-soft); color: var(--mw-purple); border-radius: 999px; padding: 0.35em 0.5em 0.35em 0.9em; font-size: 0.85rem; font-weight: 600; margin-top: 8px; }
 .ld-persona-chip button { border: none; background: rgba(0,0,0,0.08); color: inherit; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 0.9rem; line-height: 1; }
-.ld-pieza-row { display: grid; grid-template-columns: 1.4fr 1.2fr 0.7fr 1.4fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+.ld-pieza-row { display: grid; grid-template-columns: 2fr 0.7fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
 .ld-pieza-row input { width: 100%; }
-@media (max-width: 720px) {
-  .ld-pieza-row { grid-template-columns: 1fr 1fr; }
-}
 
 .comm-pdf-template { position: fixed; left: -10000px; top: 0; width: 480px; background: #fff; }
 #nomPdfTemplate { width: 720px; }
