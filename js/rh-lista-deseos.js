@@ -271,10 +271,8 @@ function renderPiezasFormularioLD() {
   if (!cont) return;
   cont.innerHTML = piezasFormulario.map((p, i) => `
     <div class="ld-pieza-row" data-pieza-index="${i}">
-      <input type="text" placeholder="Producto" class="ld-pieza-producto" value="${escapeHTML(p.producto)}">
-      <input type="text" placeholder="Variante (opcional)" class="ld-pieza-variante" value="${escapeHTML(p.variante)}">
-      <input type="number" min="1" placeholder="Cantidad" class="ld-pieza-cantidad" value="${p.cantidad}">
-      <input type="text" placeholder="Observaciones (opcional)" class="ld-pieza-observaciones" value="${escapeHTML(p.observaciones)}">
+      <input type="text" placeholder="Descripción del producto" class="ld-pieza-producto" value="${escapeHTML(p.producto)}">
+      <input type="number" min="1" placeholder="Piezas" class="ld-pieza-cantidad" value="${p.cantidad}">
       ${piezasFormulario.length > 1 ? `<button type="button" class="comm-icon-btn" data-quitar-pieza="${i}" title="Quitar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>` : ''}
     </div>
   `).join('');
@@ -292,9 +290,9 @@ function leerPiezasFormularioLD() {
     if (!piezasFormulario[i]) return;
     piezasFormulario[i] = {
       producto: row.querySelector('.ld-pieza-producto')?.value.trim() || '',
-      variante: row.querySelector('.ld-pieza-variante')?.value.trim() || '',
+      variante: '',
       cantidad: parseInt(row.querySelector('.ld-pieza-cantidad')?.value, 10) || 1,
-      observaciones: row.querySelector('.ld-pieza-observaciones')?.value.trim() || ''
+      observaciones: ''
     };
   });
 }

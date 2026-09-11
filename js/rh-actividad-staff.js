@@ -192,13 +192,13 @@ function renderTablaActividadesRH() {
   if (count) count.textContent = `${lista.length} actividad${lista.length === 1 ? '' : 'es'}`;
 
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="catalog-empty-cell"><strong>No hay actividades para esta semana</strong><span>Prueba con otro filtro.</span></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="catalog-empty-cell"><strong>No hay actividades para esta semana</strong><span>Prueba con otro filtro.</span></td></tr>`;
   } else {
 
     const grupos = agruparPorZonaAct(lista);
 
     tbody.innerHTML = grupos.map(g => `
-      <tr class="act-zona-row"><td colspan="8" style="background:#faf7fb;font-weight:700;color:var(--mw-purple);font-size:0.8rem;">${escapeHTMLAct(g.zona)}</td></tr>
+      <tr class="act-zona-row"><td colspan="7" style="background:#faf7fb;font-weight:700;color:var(--mw-purple);font-size:0.8rem;">${escapeHTMLAct(g.zona)}</td></tr>
       ${g.items.map(filaActividadRH).join('')}
     `).join('');
 
@@ -215,7 +215,6 @@ function renderTablaActividadesRH() {
 function filaActividadRH(a) {
   return `
     <tr>
-      <td></td>
       <td><strong>${escapeHTMLAct(a.nombre)}</strong></td>
       <td><span class="catalog-description">${escapeHTMLAct(a.zona)}</span></td>
       <td>${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : '<span class="catalog-description">Sin definir</span>'}</td>
