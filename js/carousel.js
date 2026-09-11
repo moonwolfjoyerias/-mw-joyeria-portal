@@ -7,13 +7,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initCarousel(carousel) {
+  // Reinicializable: si ya había un temporizador de una llamada anterior
+  // (p. ej. carousel.js corrió antes de que fotos-sitio-render.js
+  // reemplazara las diapositivas por las fotos reales), se limpia primero
+  // para no dejar dos intervalos corriendo sobre el mismo carrusel.
+  if (carousel._carouselTimer) clearInterval(carousel._carouselTimer);
+
   const slides = carousel.querySelectorAll('.carousel-slide');
   const dots = carousel.querySelectorAll('.dot');
   const prevBtn = carousel.querySelector('.carousel-arrow.prev');
   const nextBtn = carousel.querySelector('.carousel-arrow.next');
   const intervalMs = 4500;
   let current = 0;
-  let timer;
 
   if (slides.length === 0) return;
 
@@ -26,15 +31,15 @@ function initCarousel(carousel) {
   function next() { show((current + 1) % slides.length); }
   function prev() { show((current - 1 + slides.length) % slides.length); }
 
-  function startAuto() { timer = setInterval(next, intervalMs); }
-  function resetAuto() { clearInterval(timer); startAuto(); }
+  function startAuto() { carousel._carouselTimer = setInterval(next, intervalMs); }
+  function resetAuto() { clearInterval(carousel._carouselTimer); startAuto(); }
 
   if (nextBtn) nextBtn.addEventListener('click', () => { next(); resetAuto(); });
   if (prevBtn) prevBtn.addEventListener('click', () => { prev(); resetAuto(); });
   dots.forEach((dot, i) => dot.addEventListener('click', () => { show(i); resetAuto(); }));
 
   // Pausa el auto-avance si el mouse está encima (no molesta en touch/mobile)
-  carousel.addEventListener('mouseenter', () => clearInterval(timer));
+  carousel.addEventListener('mouseenter', () => clearInterval(carousel._carouselTimer));
   carousel.addEventListener('mouseleave', startAuto);
 
   show(0);
