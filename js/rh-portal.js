@@ -58,6 +58,9 @@ function renderRecordatoriosNomina() {
   setText('proximoPeriodoPago', fechaTexto);
   setText('diasParaPeriodoPago', diasRestantes === 0 ? 'Es hoy' : `En ${diasRestantes} día${diasRestantes === 1 ? '' : 's'}`);
 
+  const recordatorioHorarios = document.getElementById('recordatorioHorariosPersonal');
+  if (recordatorioHorarios) recordatorioHorarios.hidden = new Date().getDay() !== 6;
+
 }
 
 function obtenerProximoPeriodoPago() {

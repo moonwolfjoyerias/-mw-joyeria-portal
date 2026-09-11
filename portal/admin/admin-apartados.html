@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Admin MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=9">
+  <link rel="stylesheet" href="../../css/styles.css?v=30">
 </head>
 <body>
 
@@ -34,7 +34,7 @@
     .apartados-summary{grid-template-columns:repeat(4,minmax(0,1fr));gap:0.8rem;margin-bottom:1.25rem}.apartados-summary .stat-card{min-height:86px;padding:0.8rem 0.9rem;gap:0.7rem;align-items:center}.apartados-summary .icon-circle{width:34px;height:34px}.apartados-summary .icon-circle svg{width:17px;height:17px}.apartados-summary h4{font-size:0.72rem;margin-bottom:0.1rem}.apartados-summary .stat-num{font-size:1.35rem;margin-bottom:0.1rem}.apartados-summary .stat-link{font-size:0.68rem}
 
     .toolbar{display:flex;justify-content:flex-end;gap:12px;margin-bottom:9px}.filter-select,.search{height:39px;border:1px solid #ddd6e2;background:#fff;border-radius:8px;color:#4f4663}.filter-select{padding:0 32px 0 12px}.search{width:290px;padding:0 14px 0 34px;background-repeat:no-repeat;background-position:12px center;background-size:14px 14px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a19aa9' stroke-width='1.8'%3E%3Ccircle cx='10' cy='10' r='6'/%3E%3Cpath d='M20 20l-5.5-5.5'/%3E%3C/svg%3E")}.search::placeholder{color:#a19aa9}.quick-filters{display:none}
-    .table-card{background:#fff;border:1px solid #eae4eb;border-radius:12px;box-shadow:var(--shadow);overflow:hidden}.table-wrap{overflow:auto}.table-wrap.compact{zoom:0.72}table{width:100%;border-collapse:collapse}thead{background:#fff}th{min-height:45px;text-align:left;padding:8px 10px;border-bottom:1px solid #eee8ed;color:#371467;font-size:11px;font-weight:600;white-space:normal;line-height:1.25}td{padding:10px 10px;border-bottom:1px solid #f0ecf0;color:#40375a;vertical-align:middle;font-size:11px}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#fcf9fd}
+    .table-card{background:#fff;border:1px solid #eae4eb;border-radius:12px;box-shadow:var(--shadow);overflow:hidden}.table-wrap{overflow:visible}table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:0}thead{background:#fff}th{height:auto;text-align:left;padding:8px 10px;border-bottom:1px solid #eee8ed;color:#371467;font-size:11px;font-weight:600;white-space:normal;overflow-wrap:anywhere}td{padding:9px 10px;border-bottom:1px solid #f0ecf0;color:#40375a;vertical-align:middle;font-size:11px;overflow-wrap:anywhere;word-break:break-word}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#fcf9fd}
     .client-cell,.piece-cell,.deposit-cell{display:flex;align-items:center;gap:10px}.avatar{width:40px;height:40px;flex:0 0 40px;border-radius:50%;background:#eee4f4;color:#3e1767;display:grid;place-items:center;font-size:13px}.client-cell strong,.piece-cell strong,.date-cell strong,.deposit-cell strong,.last-action strong{display:block;font-size:11px;color:#29134d;font-weight:600}.client-cell small,.piece-cell small,.date-cell small,.deposit-cell small,.last-action small{display:block;color:#766d83;font-size:10px;margin-top:4px}.piece-thumb{width:56px;height:56px;border-radius:8px;background:linear-gradient(145deg,#fff,#f2e5d3);display:grid;place-items:center;color:#c49c39;font:500 15px Cinzel,serif;box-shadow:inset 0 0 0 1px #eee0cb}.deposit-cell{gap:7px}.dot{width:8px;height:8px;border-radius:50%;display:block;flex:0 0 8px}.dot-yellow{background:#e6b439}.dot-blue{background:#7185c7}.dot-green{background:#76ad50}.dot-red{background:#e67575}.dot-purple{background:#aa8ad1}
     .status{display:inline-flex;padding:6px 9px;border-radius:7px;font-size:10px;line-height:1.15;max-width:120px}.status-pending{background:var(--yellow-bg);color:#9a6716}.status-deposit{background:var(--blue-bg);color:#4f659f}.status-active{background:var(--green-bg);color:#4f8532}.status-expired{background:var(--red-bg);color:#bd4c4c}.status-cancelled{background:var(--purple-bg);color:#77529d}
     .actions-stack{display:flex;flex-direction:column;gap:5px;width:150px}.action-btn{height:27px;border-radius:6px;border:1px solid #ddd1e4;background:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;gap:6px}.action-btn span{font-size:11px}.primary-action{background:#3e096c;color:#fff;border-color:#3e096c}.primary-action:hover{background:#53128b}.danger-action{color:#bd4a4a;border-color:#e39a9a}.danger-action:hover{background:#fff5f5}.detail-action{color:#5b1689;border-color:#bfa8d2}.detail-action:hover{background:#faf4fd}.last-action{min-width:105px}
@@ -79,7 +79,7 @@
         </a>
         <a href="../admin/admin-emprendedoras-lideres.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M2 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M14 20c.3-2.6 2-4.5 4.5-4.5"/></svg>
-          Emprendedoras/Líderes
+          Emprendedoras
         </a>
         <a href="../admin/admin-comisiones.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
@@ -201,7 +201,7 @@
         <h2>Ventanas de apartado</h2>
         <button class="action-btn primary-action" style="width:auto;padding:0 16px;height:36px;" id="nuevaVentanaBtn"><span>+</span> Nueva ventana de apartado</button>
       </div>
-      <div class="toolbar"><button type="button" class="action-btn detail-action compact-toggle-btn" data-compactar-tabla=".table-wrap" style="width:auto;padding:0 10px;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="6"/><path d="M20 20l-5.5-5.5"/></svg></span><span class="compact-toggle-label">Vista compacta</span></button><select class="filter-select" id="statusSelect"><option value="todos">Todos los estados</option><option value="pendiente_deposito">Pendiente de depósito</option><option value="activa">Activa</option><option value="vencida">Vencida</option><option value="cerrada">Cerrada</option></select><input class="search" id="searchInput" placeholder="Buscar por nombre o pieza..." type="search"></div>
+      <div class="toolbar"><select class="filter-select" id="statusSelect"><option value="todos">Todos los estados</option><option value="pendiente_deposito">Pendiente de depósito</option><option value="activa">Activa</option><option value="vencida">Vencida</option><option value="cerrada">Cerrada</option></select><input class="search" id="searchInput" placeholder="Buscar por nombre o pieza..." type="search"></div>
 
       <section class="table-card">
         <div class="table-wrap"><table><thead><tr><th>Emprendedora/Líder</th><th>Categoría</th><th>Depósito</th><th>Estado de Apartado</th><th>Vencimiento</th><th>Acciones</th></tr></thead><tbody id="apartadosTableBody"></tbody></table></div>
@@ -225,7 +225,6 @@
   <script src="../../js/staff-apartados-ejemplo.js"></script>
   <script src="../../js/admin-comun.js"></script>
   <script src="../../js/admin-apartados.js"></script>
-  <script src="../../js/tabla-compacta.js"></script>
   <script src="../../js/portal-common.js"></script>
   <script src="../../js/notificaciones-ejemplo.js"></script>
   <script src="../../js/notificaciones-modelo.js"></script>

@@ -58,7 +58,34 @@ function notificarEquipoOperativo(texto, nombrePersona) {
   if (typeof agregarNotificacion !== 'function') return;
   const query = nombrePersona ? `?buscar=${encodeURIComponent(nombrePersona)}` : '';
   agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff' });
-  agregarNotificacion({ texto, link: `rh-apartados.html${query}`, rolDestino: 'rh' });
+}
+
+function obtenerEstadoDepositoPortal() {
+  const key = 'mw-deposito-persona-v1';
+  try {
+    const guardado = JSON.parse(localStorage.getItem(key) || '{}');
+    return {
+      tieneDeposito: Boolean(guardado.tieneDeposito),
+      aplicaDeposito: guardado.aplicaDeposito !== false,
+      actualizado: guardado.actualizado || null,
+    };
+  } catch (error) {
+    return { tieneDeposito: false, aplicaDeposito: true, actualizado: null };
+  }
+}
+
+function guardarEstadoDepositoPortal({ tieneDeposito, aplicaDeposito = true }) {
+  const key = 'mw-deposito-persona-v1';
+  const estado = {
+    tieneDeposito: Boolean(tieneDeposito),
+    aplicaDeposito: Boolean(aplicaDeposito),
+    actualizado: new Date().toISOString(),
+  };
+  try {
+    localStorage.setItem(key, JSON.stringify(estado));
+  } catch (error) {
+    // La demo sigue funcionando aunque no haya persistencia disponible.
+  }
 }
 
 // ---------- Render de la lista ----------
@@ -148,19 +175,21 @@ function abrirModalEditar(id) {
 }
 
 // ---------- Pago ----------
-function abrirModalPago() {
-  const piezas = apartadosActuales;
-  if (piezas.length === 0) return;
-  const total = piezas.reduce((sum, p) => sum + p.precioEmprendedora, 0);
+function obtenerNombreActualPortalParaNotificacion() {
+  return obtenerNombrePersonaActualPortal() || 'Una emprendedora';
+}
+
+function mostrarModalPagoConMonto(piezas, totalFinal, metaDeposito = null) {
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
-
   const mensajeWa = encodeURIComponent('¡Hola! Te envío mi comprobante de pago');
+  const nombrePersona = obtenerNombreActualPortalParaNotificacion();
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     <h3>Pagar tu apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'})</h3>
-    <p class="modal-sub">Total a pagar: <strong style="color:var(--mw-purple)">$${total} MXN</strong></p>
+    <p class="modal-sub">Total a pagar: <strong style="color:var(--mw-purple)">$${totalFinal} MXN</strong></p>
+    ${metaDeposito ? `<p class="modal-sub" style="margin-top:-.35rem; color:var(--mw-purple); font-weight:600;">${metaDeposito}</p>` : ''}
 
     <div class="bank-details-box">
       <div class="copy-field">
@@ -198,8 +227,7 @@ function abrirModalPago() {
   });
 
   document.getElementById('yaEnvieBtn').addEventListener('click', () => {
-    const nombrePersona = piezas[0]?.emprendedora;
-    notificarEquipoOperativo(`${nombrePersona || 'Una emprendedora'} avisó que ya transfirió el pago de su apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${total} MXN) — confirma el depósito en el sistema.`, nombrePersona);
+    notificarEquipoOperativo(`${nombrePersona} avisó que ya transfirió el pago de su apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${totalFinal} MXN) — confirma el depósito en el sistema.`, nombrePersona);
     box.innerHTML = `
       <button class="modal-close" data-close>&times;</button>
       <div class="confirm-box">
@@ -211,5 +239,58 @@ function abrirModalPago() {
         <button class="btn btn-primary" style="width:100%;" data-close>Cerrar</button>
       </div>
     `;
+  });
+}
+
+function abrirModalPago() {
+  const piezas = apartadosActuales;
+  if (piezas.length === 0) return;
+
+  const total = piezas.reduce((sum, p) => sum + p.precioEmprendedora, 0);
+  const esVip = piezas.every(p => p.categoria === 'vip');
+
+  if (esVip) {
+    guardarEstadoDepositoPortal({ tieneDeposito: false, aplicaDeposito: false });
+    mostrarModalPagoConMonto(piezas, total, 'Este apartado es VIP, así que no aplica depósito.');
+    return;
+  }
+
+  const estadoDeposito = obtenerEstadoDepositoPortal();
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  const nombrePersona = obtenerNombreActualPortalParaNotificacion();
+
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Tu depósito</h3>
+    <p class="modal-sub">Antes de confirmar el pago, decide qué quieres hacer con tu depósito de $50.</p>
+    <div style="display:grid;gap:12px;">
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #ddd5e3;border-radius:10px;cursor:pointer;">
+        <input type="radio" name="decisionDeposito" value="guardar" ${estadoDeposito.tieneDeposito ? 'checked' : ''}>
+        <span><strong>Guardar mi depósito</strong><br><small>Se mantiene en mi cuenta y pago el total completo.</small></span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #ddd5e3;border-radius:10px;cursor:pointer;">
+        <input type="radio" name="decisionDeposito" value="usar" ${!estadoDeposito.tieneDeposito ? 'checked' : ''}>
+        <span><strong>Usarlo en este pago</strong><br><small>Se descuenta $50 de mi cuenta y el resto se liquida normal.</small></span>
+      </label>
+    </div>
+    <button class="btn btn-primary" style="width:100%; margin-top:16px;" id="confirmarDepositoDecisionBtn">Continuar</button>
+  `;
+  overlay.classList.add('open');
+
+  document.getElementById('confirmarDepositoDecisionBtn').addEventListener('click', () => {
+    const decision = document.querySelector('input[name="decisionDeposito"]:checked')?.value || 'guardar';
+    const tieneDeposito = decision === 'guardar';
+    const totalFinal = tieneDeposito ? total : Math.max(0, total - 50);
+
+    guardarEstadoDepositoPortal({ tieneDeposito, aplicaDeposito: true });
+
+    if (tieneDeposito) {
+      notificarEquipoOperativo(`${nombrePersona} guardó su depósito de $50 y pagará el total completo de su apartado (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${total} MXN).`, nombrePersona);
+      mostrarModalPagoConMonto(piezas, totalFinal, 'Tu depósito quedó guardado y se notificó al equipo.');
+    } else {
+      notificarEquipoOperativo(`${nombrePersona} no tiene depósito; se descontaron $50 de su cuenta y el restante se liquidará con este pago (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${totalFinal} MXN).`, nombrePersona);
+      mostrarModalPagoConMonto(piezas, totalFinal, 'Se descontaron $50 de tu cuenta y se notificó al equipo.');
+    }
   });
 }
