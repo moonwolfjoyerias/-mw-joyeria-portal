@@ -38,23 +38,12 @@
     </div>
 
     <div class="page-hero-visual">
-      <div class="carousel">
+      <div class="carousel" data-foto-sitio-galeria="plan-mw:hero-carousel">
         <div class="carousel-slide active" style="background:linear-gradient(155deg, var(--mw-lilac-soft) 0%, var(--mw-cream) 55%, var(--mw-gold-soft) 100%);">
-          <img src="assets/images/isotipo-morado.png" alt="">
-        </div>
-        <div class="carousel-slide" style="background:linear-gradient(155deg, var(--mw-gold-soft) 0%, var(--mw-cream) 55%, var(--mw-lilac-soft) 100%);">
-          <img src="assets/images/isotipo-morado.png" alt="">
-        </div>
-        <div class="carousel-slide" style="background:linear-gradient(155deg, var(--mw-cream) 0%, var(--mw-lilac-soft) 55%, var(--mw-gold-soft) 100%);">
           <img src="assets/images/isotipo-morado.png" alt="">
         </div>
         <button class="carousel-arrow prev" aria-label="Imagen anterior">‹</button>
         <button class="carousel-arrow next" aria-label="Imagen siguiente">›</button>
-        <div class="carousel-dots">
-          <button class="dot active" aria-label="Ir a imagen 1"></button>
-          <button class="dot" aria-label="Ir a imagen 2"></button>
-          <button class="dot" aria-label="Ir a imagen 3"></button>
-        </div>
       </div>
     </div>
   </section>
@@ -163,9 +152,7 @@
       <h2>Recompensamos tu esfuerzo</h2>
       <p>Cada compra que haces suma para alcanzar nuevos logros. Conforme avanzas vas desbloqueando premios sorpresa — y si llegas hasta el final, te llevamos de viaje: un viaje a la playa para dos personas, todo incluido.</p>
     </div>
-    <div class="rewards-photo-placeholder">
-      <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.2-1.8a1.5 1.5 0 011.25-.7h3.1a1.5 1.5 0 011.25.7L16 7h2.5A1.5 1.5 0 0120 8.5v9A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5v-9z"/><circle cx="12" cy="13" r="3.4"/></svg></span> Espacio para foto de playa/viaje — se reemplaza cuando esté lista
-    </div>
+    <div class="rewards-photo-placeholder" data-foto-sitio="plan-mw:recompensa-viaje"></div>
   </section>
 
   <!-- Llamada a la acción -->
@@ -216,6 +203,8 @@
     <div class="footer-bottom">© 2026 MW Joyería y Accesorios. Todos los derechos reservados.</div>
   </footer>
 
+  <script src="js/fotos-sitio-modelo.js"></script>
+  <script src="js/fotos-sitio-render.js"></script>
   <script src="js/carousel.js"></script>
   <script src="js/nav-toggle.js"></script>
 </body>

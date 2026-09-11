@@ -270,6 +270,15 @@ a:hover { color: var(--mw-gold); }
   opacity: 0.16;
   filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg);
 }
+/* Diapositiva con fotografía real (Configuración → Fotografías del sitio):
+   ya no es el logo-marca de agua, así que llena el recuadro normal. */
+.carousel-slide.foto-real img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1;
+  filter: none;
+}
 .carousel-arrow {
   position: absolute;
   top: 50%;
@@ -628,6 +637,50 @@ a:hover { color: var(--mw-gold); }
 }
 .rewards-section h2 { font-size: 1.9rem; margin-bottom: 0.8rem; }
 .rewards-section p { color: var(--mw-text-muted); font-size: 1.02rem; line-height: 1.65; }
+
+/* ---------- Fotografías del sitio (Configuración → Fotografías del sitio) ---------- */
+/* Recuadro base para un espacio de fotografía fija. Sin fotografía
+   personalizada configurada, se ve como "predeterminada" (el logo MW en
+   tono suave sobre este mismo degradado — nunca queda un espacio roto);
+   con fotografía personalizada, pasa a marco de foto normal. */
+.photo-placeholder {
+  aspect-ratio: 4/3;
+  border-radius: var(--radius);
+  border: 1px dashed var(--mw-purple);
+  background: linear-gradient(155deg, var(--mw-lilac-soft) 0%, var(--mw-cream) 55%, var(--mw-gold-soft) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.photo-placeholder img,
+.rewards-photo-placeholder img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.photo-placeholder.foto-sitio-personalizada,
+.rewards-photo-placeholder.foto-sitio-personalizada {
+  border-style: solid;
+  border-color: var(--mw-border);
+  background: none;
+}
+.photo-placeholder.foto-sitio-personalizada img,
+.rewards-photo-placeholder.foto-sitio-personalizada img {
+  object-fit: cover;
+}
+.photo-placeholder.foto-sitio-predeterminada img,
+.rewards-photo-placeholder.foto-sitio-predeterminada img {
+  object-fit: contain;
+  padding: 20%;
+  opacity: 0.28;
+  filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg);
+}
+.photo-placeholder.foto-sitio-cargando,
+.rewards-photo-placeholder.foto-sitio-cargando {
+  opacity: 0.6;
+}
 .rewards-photo-placeholder {
   aspect-ratio: 4/3;
   border-radius: var(--radius);
@@ -636,8 +689,8 @@ a:hover { color: var(--mw-gold); }
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  padding: 1.5rem;
+  overflow: hidden;
+  position: relative;
   color: var(--mw-purple-dark);
   font-size: 0.85rem;
 }
@@ -716,16 +769,7 @@ a:hover { color: var(--mw-gold); }
 }
 .local-gallery .photo-placeholder {
   aspect-ratio: 1/1;
-  border-radius: var(--radius);
-  border: 1px dashed var(--mw-purple);
-  background: linear-gradient(155deg, var(--mw-lilac-soft) 0%, var(--mw-cream) 55%, var(--mw-gold-soft) 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
   font-size: 0.78rem;
-  color: var(--mw-purple-dark);
-  padding: 1rem;
 }
 
 .join-section {
@@ -3882,6 +3926,121 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   border-radius: 4px;
 }
 .cfg-icon-btn:hover { color: var(--mw-purple); background: var(--mw-lilac-soft); }
+
+/* ---------- Configuración → Fotografías del sitio ---------- */
+.foto-espacio {
+  padding: 1rem 0;
+  border-top: 1px solid var(--mw-border);
+}
+.foto-espacio:first-child { padding-top: 0; border-top: 0; }
+.foto-espacio-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 0.7rem;
+}
+.foto-espacio-header strong { display: block; color: #2d145d; font-size: 0.88rem; }
+.foto-espacio-ubicacion { display: block; color: var(--mw-text-muted); font-size: 0.74rem; margin-top: 2px; }
+
+.foto-espacio-unica {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.foto-espacio-thumb {
+  width: 84px;
+  height: 84px;
+  flex: 0 0 84px;
+  border-radius: 10px;
+  border: 1px solid var(--mw-border);
+  overflow: hidden;
+  background: linear-gradient(155deg, var(--mw-lilac-soft) 0%, var(--mw-cream) 55%, var(--mw-gold-soft) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.foto-espacio-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.foto-espacio-thumb.foto-espacio-thumb-predeterminada {
+  border-style: dashed;
+  border-color: var(--mw-purple);
+}
+.foto-espacio-thumb.foto-espacio-thumb-predeterminada img {
+  object-fit: contain;
+  padding: 22%;
+  opacity: 0.3;
+  filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg);
+}
+.foto-espacio-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.foto-espacio-acciones .btn { width: auto; height: 36px; padding: 0 14px; font-size: 0.76rem; margin-top: 0; }
+
+.foto-galeria-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+}
+.foto-galeria-item {
+  border: 1px solid var(--mw-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+.foto-galeria-item-foto {
+  aspect-ratio: 4/3;
+  background: linear-gradient(155deg, var(--mw-lilac-soft) 0%, var(--mw-cream) 55%, var(--mw-gold-soft) 100%);
+}
+.foto-galeria-item-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.foto-galeria-item-acciones {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px;
+  border-top: 1px solid var(--mw-border);
+}
+.foto-galeria-item-acciones .cfg-icon-btn { padding: 4px 6px; }
+.foto-galeria-item-acciones .cfg-icon-btn svg { width: 14px; height: 14px; }
+.foto-galeria-item-acciones .cfg-icon-btn.danger:hover { color: #b94a4a; background: #fff0f0; }
+.foto-galeria-item-acciones .cfg-icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.foto-galeria-item-acciones .cfg-icon-btn:disabled:hover { background: none; color: var(--mw-text-muted); }
+
+.foto-galeria-agregar {
+  aspect-ratio: 4/3;
+  border: 1px dashed var(--mw-purple);
+  border-radius: 10px;
+  background: #faf8fb;
+  color: var(--mw-purple);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.foto-galeria-agregar:hover { background: var(--mw-lilac-soft); }
+.foto-galeria-agregar svg { width: 20px; height: 20px; }
+
+.foto-upload-preview {
+  width: 100%;
+  aspect-ratio: 4/3;
+  border-radius: 10px;
+  border: 1px dashed var(--mw-border);
+  background: #faf8fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin: 10px 0;
+  color: var(--mw-text-muted);
+  font-size: 0.78rem;
+  text-align: center;
+  padding: 1rem;
+}
+.foto-upload-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .cfg-field-label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--mw-text-muted); margin: 12px 0 4px; }
 #cfgVigenciaInput, #cfgMotivoInput {

@@ -46,12 +46,12 @@
     </div>
 
     <div class="page-hero-visual">
-      <div class="photo-placeholder" style="height:100%;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.2-1.8a1.5 1.5 0 011.25-.7h3.1a1.5 1.5 0 011.25.7L16 7h2.5A1.5 1.5 0 0120 8.5v9A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5v-9z"/><circle cx="12" cy="13" r="3.4"/></svg></span> Foto — fachada o interior del local</div>
+      <div class="photo-placeholder" style="height:100%;" data-foto-sitio="nosotros:fachada-interior"></div>
     </div>
   </section>
 
   <section class="collection-block" style="display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:center;max-width:1280px;margin:0 auto 3rem;padding:0 2rem;">
-    <div class="photo-placeholder" style="min-height:320px;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.2-1.8a1.5 1.5 0 011.25-.7h3.1a1.5 1.5 0 011.25.7L16 7h2.5A1.5 1.5 0 0120 8.5v9A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5v-9z"/><circle cx="12" cy="13" r="3.4"/></svg></span> Foto — fundadoras / inicios de MW</div>
+    <div class="photo-placeholder" style="min-height:320px;" data-foto-sitio="nosotros:fundadoras"></div>
     <div>
       <span class="eyebrow" style="display:flex;align-items:center;gap:0.6rem;color:var(--mw-gold);font-size:0.82rem;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;margin-bottom:0.7rem;">Nuestra historia</span>
       <h2 style="font-size:2rem;margin-bottom:0.9rem;">De un sueño familiar a la Familia MW</h2>
@@ -87,10 +87,10 @@
   </section>
 
   <section class="local-gallery">
-    <div class="photo-placeholder"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.2-1.8a1.5 1.5 0 011.25-.7h3.1a1.5 1.5 0 011.25.7L16 7h2.5A1.5 1.5 0 0120 8.5v9A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5v-9z"/><circle cx="12" cy="13" r="3.4"/></svg></span> Equipo MW</div>
-    <div class="photo-placeholder"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.2-1.8a1.5 1.5 0 011.25-.7h3.1a1.5 1.5 0 011.25.7L16 7h2.5A1.5 1.5 0 0120 8.5v9A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5v-9z"/><circle cx="12" cy="13" r="3.4"/></svg></span> Taller / proceso de las piezas</div>
-    <div class="photo-placeholder"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.2-1.8a1.5 1.5 0 011.25-.7h3.1a1.5 1.5 0 011.25.7L16 7h2.5A1.5 1.5 0 0120 8.5v9A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5v-9z"/><circle cx="12" cy="13" r="3.4"/></svg></span> Familia MW en eventos</div>
-    <div class="photo-placeholder"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.2-1.8a1.5 1.5 0 011.25-.7h3.1a1.5 1.5 0 011.25.7L16 7h2.5A1.5 1.5 0 0120 8.5v9A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5v-9z"/><circle cx="12" cy="13" r="3.4"/></svg></span> Emprendedoras y líderes MW</div>
+    <div class="photo-placeholder" data-foto-sitio="nosotros:galeria-equipo"></div>
+    <div class="photo-placeholder" data-foto-sitio="nosotros:galeria-taller"></div>
+    <div class="photo-placeholder" data-foto-sitio="nosotros:galeria-eventos"></div>
+    <div class="photo-placeholder" data-foto-sitio="nosotros:galeria-emprendedoras"></div>
   </section>
 
   <section class="join-section">
@@ -143,6 +143,8 @@
     <div class="footer-bottom">© 2026 MW Joyería y Accesorios. Todos los derechos reservados.</div>
   </footer>
 
+  <script src="js/fotos-sitio-modelo.js"></script>
+  <script src="js/fotos-sitio-render.js"></script>
   <script src="js/nav-toggle.js"></script>
 </body>
 </html>

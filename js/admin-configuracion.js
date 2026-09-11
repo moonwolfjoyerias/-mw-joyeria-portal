@@ -130,6 +130,7 @@ function renderSeccionActual() {
     planMW: renderSeccionPlanMW,
     comisiones: renderSeccionComisionesConfig,
     apartados: renderSeccionApartadosConfig,
+    fotos: renderSeccionFotos,
     usuarios: renderSeccionUsuarios,
     notificaciones: renderSeccionNotificaciones,
     sistema: renderSeccionSistema,
@@ -834,6 +835,272 @@ function renderSeccionApartadosConfig() {
   `;
 
   wireEventosConfigTabla(cont);
+
+}
+
+// ============================================================
+// SECCIÓN: FOTOGRAFÍAS DEL SITIO
+// ============================================================
+// Administra las fotografías fijas del sitio público (banners, carruseles,
+// galerías). El catálogo de espacios y toda la lógica de guardado vive en
+// js/fotos-sitio-modelo.js — aquí solo se arma la interfaz visual.
+
+const FOTOS_SITIO_ICONO_ARRIBA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 15l6-6 6 6"/></svg>';
+const FOTOS_SITIO_ICONO_ABAJO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg>';
+const FOTOS_SITIO_ICONO_ELIMINAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>';
+const FOTOS_SITIO_ICONO_AGREGAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>';
+
+async function renderSeccionFotos() {
+
+  const cont = document.getElementById('seccion-fotos');
+  if (!cont) return;
+
+  cont.innerHTML = `<div class="cfg-card"><p class="cfg-card-sub" style="margin:0;">Cargando fotografías…</p></div>`;
+
+  const secciones = typeof obtenerSeccionesFotosSitio === 'function' ? obtenerSeccionesFotosSitio() : [];
+  const bloques = [];
+
+  for (const sec of secciones) {
+    const espacios = ESPACIOS_FOTOS_SITIO.filter(e => e.seccion === sec.seccion);
+    const filas = [];
+    for (const espacio of espacios) {
+      filas.push(await construirBloqueEspacioFoto(espacio));
+    }
+    bloques.push(`
+      <div class="cfg-card">
+        <h3 class="cfg-card-title">${escapeHTMLPersonas(sec.seccionLabel)}</h3>
+        ${filas.join('')}
+      </div>
+    `);
+  }
+
+  cont.innerHTML = `
+    <div class="cfg-card">
+      <h3 class="cfg-card-title">Fotografías del sitio</h3>
+      <p class="cfg-card-sub" style="margin:0;">Administra las fotografías fijas que aparecen en el sitio público. Mientras no subas una fotografía para un espacio, se muestra automáticamente el logo MW — nunca queda un espacio roto.</p>
+    </div>
+    ${bloques.join('')}
+  `;
+
+  wireSeccionFotos(cont);
+
+}
+
+async function construirBloqueEspacioFoto(espacio) {
+
+  const badge = (personalizada) => personalizada
+    ? `<span class="badge badge-pagada">Fotografía personalizada</span>`
+    : `<span class="badge badge-pendiente">Usando imagen predeterminada</span>`;
+
+  if (espacio.tipo === 'unica') {
+
+    const doc = obtenerFotosDeEspacio(espacio.seccion, espacio.ubicacion)[0] || null;
+    let src = LOGO_MW_FALLBACK_FOTOS_SITIO;
+    if (doc) {
+      try { src = (await resolverSrcFotoSitio(doc)) || LOGO_MW_FALLBACK_FOTOS_SITIO; } catch (error) { src = LOGO_MW_FALLBACK_FOTOS_SITIO; }
+    }
+    const personalizada = !!doc;
+
+    return `
+      <div class="foto-espacio">
+        <div class="foto-espacio-header">
+          <div>
+            <strong>${escapeHTMLPersonas(espacio.ubicacionLabel)}</strong>
+            <span class="foto-espacio-ubicacion">${escapeHTMLPersonas(espacio.dondeAparece)}</span>
+          </div>
+          ${badge(personalizada)}
+        </div>
+        <div class="foto-espacio-unica">
+          <div class="foto-espacio-thumb ${personalizada ? '' : 'foto-espacio-thumb-predeterminada'}">
+            <img src="${src}" alt="">
+          </div>
+          <div class="foto-espacio-acciones">
+            <button type="button" class="btn btn-outline" data-foto-cambiar="${espacio.seccion}:${espacio.ubicacion}">${personalizada ? 'Cambiar fotografía' : 'Agregar fotografía'}</button>
+            ${personalizada ? `<button type="button" class="btn btn-outline" data-foto-eliminar="${doc.id}">Eliminar</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+
+  }
+
+  // tipo "multiple": galería/carrusel — sin límite de fotos
+  const docs = obtenerFotosDeEspacio(espacio.seccion, espacio.ubicacion);
+  const items = [];
+  for (let i = 0; i < docs.length; i++) {
+    const doc = docs[i];
+    let src = LOGO_MW_FALLBACK_FOTOS_SITIO;
+    try { src = (await resolverSrcFotoSitio(doc)) || LOGO_MW_FALLBACK_FOTOS_SITIO; } catch (error) { src = LOGO_MW_FALLBACK_FOTOS_SITIO; }
+    items.push(`
+      <div class="foto-galeria-item">
+        <div class="foto-galeria-item-foto"><img src="${src}" alt=""></div>
+        <div class="foto-galeria-item-acciones">
+          <button type="button" class="cfg-icon-btn" data-foto-mover="${doc.id}:-1" title="Mover arriba" ${i === 0 ? 'disabled' : ''}>${FOTOS_SITIO_ICONO_ARRIBA}</button>
+          <button type="button" class="cfg-icon-btn" data-foto-mover="${doc.id}:1" title="Mover abajo" ${i === docs.length - 1 ? 'disabled' : ''}>${FOTOS_SITIO_ICONO_ABAJO}</button>
+          <button type="button" class="cfg-icon-btn danger" data-foto-eliminar="${doc.id}" title="Eliminar">${FOTOS_SITIO_ICONO_ELIMINAR}</button>
+        </div>
+      </div>
+    `);
+  }
+
+  return `
+    <div class="foto-espacio">
+      <div class="foto-espacio-header">
+        <div>
+          <strong>${escapeHTMLPersonas(espacio.ubicacionLabel)}</strong>
+          <span class="foto-espacio-ubicacion">${escapeHTMLPersonas(espacio.dondeAparece)} · ${docs.length} fotografía${docs.length === 1 ? '' : 's'}</span>
+        </div>
+        ${badge(docs.length > 0)}
+      </div>
+      <div class="foto-galeria-grid">
+        ${items.join('')}
+        <button type="button" class="foto-galeria-agregar" data-foto-agregar="${espacio.seccion}:${espacio.ubicacion}">
+          ${FOTOS_SITIO_ICONO_AGREGAR}
+          Agregar fotografía
+        </button>
+      </div>
+    </div>
+  `;
+
+}
+
+function wireSeccionFotos(cont) {
+
+  cont.querySelectorAll('[data-foto-cambiar], [data-foto-agregar]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [seccion, ubicacion] = (btn.getAttribute('data-foto-cambiar') || btn.getAttribute('data-foto-agregar')).split(':');
+      const espacio = obtenerEspacioFotoSitio(seccion, ubicacion);
+      if (espacio) abrirModalSubirFotoSitio(espacio);
+    });
+  });
+
+  cont.querySelectorAll('[data-foto-eliminar]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-foto-eliminar');
+      const doc = obtenerFotosSitioTodas().find(f => f.id === id);
+      if (!doc) return;
+      const espacio = obtenerEspacioFotoSitio(doc.seccion, doc.ubicacion);
+      abrirAutorizacionAdmin({
+        titulo: 'Eliminar fotografía',
+        peligrosa: true,
+        mensaje: `Vas a eliminar la fotografía de <strong>${escapeHTMLPersonas(espacio ? espacio.ubicacionLabel : doc.ubicacion)}</strong>. ${espacio && espacio.tipo === 'unica' ? 'El espacio volverá a mostrar el logo MW mientras no subas otra.' : 'Deja de mostrarse en la galería del sitio público.'}`,
+        onConfirmar: () => {
+          const resultado = eliminarFotoSitio(id, ADMIN_IDENTIDAD.usuarioNombre);
+          if (resultado.ok) {
+            if (typeof registrarAuditoriaAdmin === 'function') {
+              registrarAuditoriaAdmin({
+                modulo: 'fotos-sitio',
+                accion: 'eliminar_foto',
+                descripcion: `Fotografía eliminada — ${espacio ? `${espacio.seccionLabel} / ${espacio.ubicacionLabel}` : doc.ubicacion}`
+              });
+            }
+            mostrarToast('Fotografía eliminada.');
+            renderSeccionFotos();
+          }
+        }
+      });
+    });
+  });
+
+  cont.querySelectorAll('[data-foto-mover]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [id, direccion] = btn.getAttribute('data-foto-mover').split(':');
+      const resultado = reordenarFotoSitio(id, Number(direccion), ADMIN_IDENTIDAD.usuarioNombre);
+      if (resultado.ok) renderSeccionFotos();
+    });
+  });
+
+}
+
+function abrirModalSubirFotoSitio(espacio) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.style.maxWidth = '440px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="auth-icon">${FOTOS_SITIO_ICONO_AGREGAR}</div>
+    <h3>${escapeHTMLPersonas(espacio.ubicacionLabel)}</h3>
+    <p class="modal-sub">${escapeHTMLPersonas(espacio.dondeAparece)}</p>
+    <label style="display:block;color:#3b2a54;font-size:11px;font-weight:600;margin:12px 0 6px;">Fotografía</label>
+    <input type="file" id="fotoSitioArchivo" accept="image/*">
+    <div class="foto-upload-preview" id="fotoSitioPreview">Selecciona una imagen para ver la vista previa aquí.</div>
+    <div class="modal-note">JPG, PNG o WEBP — máximo 5 MB. Se muestra automáticamente en el sitio público al guardar.</div>
+    <div id="fotoSitioError" class="auth-error" style="display:none;"></div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" id="fotoSitioCancelarBtn" type="button">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1;" id="fotoSitioGuardarBtn" type="button">Guardar</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  document.getElementById('fotoSitioCancelarBtn')?.addEventListener('click', cerrar);
+
+  let archivoSeleccionado = null;
+
+  document.getElementById('fotoSitioArchivo')?.addEventListener('change', (e) => {
+    const archivo = e.target.files?.[0] || null;
+    const error = document.getElementById('fotoSitioError');
+    const preview = document.getElementById('fotoSitioPreview');
+    error.style.display = 'none';
+    archivoSeleccionado = null;
+
+    if (!archivo) return;
+
+    const validacion = validarArchivoFotoSitio(archivo);
+    if (!validacion.ok) {
+      error.style.display = 'block';
+      error.textContent = validacion.error;
+      preview.innerHTML = 'Selecciona una imagen para ver la vista previa aquí.';
+      return;
+    }
+
+    archivoSeleccionado = archivo;
+    const url = URL.createObjectURL(archivo);
+    preview.innerHTML = `<img src="${url}" alt="">`;
+  });
+
+  document.getElementById('fotoSitioGuardarBtn')?.addEventListener('click', async () => {
+
+    const error = document.getElementById('fotoSitioError');
+    error.style.display = 'none';
+
+    if (!archivoSeleccionado) {
+      error.style.display = 'block';
+      error.textContent = 'Selecciona una imagen antes de guardar.';
+      return;
+    }
+
+    const resultado = await subirFotoSitio({
+      seccion: espacio.seccion,
+      ubicacion: espacio.ubicacion,
+      archivo: archivoSeleccionado,
+      actualizadoPor: ADMIN_IDENTIDAD.usuarioNombre
+    });
+
+    if (!resultado.ok) {
+      error.style.display = 'block';
+      error.textContent = resultado.error;
+      return;
+    }
+
+    if (typeof registrarAuditoriaAdmin === 'function') {
+      registrarAuditoriaAdmin({
+        modulo: 'fotos-sitio',
+        accion: 'subir_foto',
+        descripcion: `Fotografía guardada — ${espacio.seccionLabel} / ${espacio.ubicacionLabel}`
+      });
+    }
+
+    cerrar();
+    mostrarToast('Fotografía guardada — ya se muestra en el sitio público.');
+    renderSeccionFotos();
+
+  });
 
 }
 
