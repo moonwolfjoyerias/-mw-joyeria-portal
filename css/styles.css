@@ -1877,23 +1877,24 @@ a:hover { color: var(--mw-gold); }
 
 .catalog-table {
   width: 100%;
-  min-width: 1280px;
+  table-layout: auto;
   border-collapse: collapse;
 }
 
 .catalog-table th {
-  height: 45px;
-  padding: 0 13px;
+  min-height: 45px;
+  padding: 8px 8px;
   border-bottom: 1px solid #eee8ed;
   color: #371467;
   font-size: 0.68rem;
   font-weight: 600;
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.25;
 }
 
 .catalog-table td {
-  padding: 10px 13px;
+  padding: 10px 8px;
   border-bottom: 1px solid #f0ecf0;
   color: #40375a;
   font-size: 0.7rem;
@@ -1913,7 +1914,7 @@ a:hover { color: var(--mw-gold); }
   display: flex;
   align-items: center;
   gap: 9px;
-  min-width: 190px;
+  min-width: 110px;
 }
 
 .catalog-product-cell img {
@@ -1928,7 +1929,7 @@ a:hover { color: var(--mw-gold); }
 }
 
 .catalog-product-cell strong { color: #29134d; font-size: 0.72rem; }
-.catalog-description { display: block; max-width: 180px; line-height: 1.4; color: #766d83; }
+.catalog-description { display: block; max-width: 160px; line-height: 1.4; color: #766d83; }
 .catalog-stock { display: block; color: #4f8532; font-weight: 600; white-space: nowrap; }
 .catalog-stock small { display: block; margin-top: 3px; color: #766d83; font-size: 0.62rem; font-weight: 400; }
 .catalog-stock.stock-empty { color: #bd4c4c; }
@@ -1938,7 +1939,7 @@ a:hover { color: var(--mw-gold); }
   display: flex;
   flex-direction: column;
   gap: 5px;
-  width: 145px;
+  width: 120px;
 }
 
 .action-btn {
@@ -1999,7 +2000,7 @@ a:hover { color: var(--mw-gold); }
   background: #fff1ef;
 }
 
-.catalog-actions .action-btn { width: 145px; }
+.catalog-actions .action-btn { width: 120px; }
 
 .catalog-empty-cell {
   height: 180px;
@@ -3563,7 +3564,6 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 .comm-nivel-body { margin-top: 0.6rem; }
 
 .comm-tabla-wrap { max-height: 380px; overflow: auto; border-radius: 10px; border: 1px solid #eee8ed; }
-.comm-tabla-wrap .catalog-table { min-width: 900px; }
 .comm-tabla-wrap thead th {
   position: sticky;
   top: 0;
