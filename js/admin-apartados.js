@@ -26,6 +26,7 @@ const ADMIN_EMPLEADO = { nombre: ADMIN_IDENTIDAD.usuarioNombre };
 document.addEventListener("DOMContentLoaded", () => {
 
   ventanas = calcularVentanasStaffActuales();
+  verificarApartadosVencidosPendientes();
 
   // Enlace directo desde una notificación (?buscar=NOMBRE) — precarga
   // el buscador y, si hay una sola coincidencia, la abre expandida.

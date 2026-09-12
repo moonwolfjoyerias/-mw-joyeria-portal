@@ -389,3 +389,42 @@ function obtenerIniciales(nombre) {
 function registrarAuditoria(texto, empleado) {
   return { texto, usuario: empleado?.nombre || 'Sistema', fecha: new Date().toISOString() };
 }
+
+// ============================================================
+// AVISO A ADMINISTRACIÓN — APARTADOS VENCIDOS
+// ============================================================
+
+// Avisa a Administración una sola vez por ventana cuando su plazo ya
+// venció (marca avisoVencimientoEnviado para no repetir el aviso cada
+// vez que se revisa) — ver js/admin-apartados.js. Vencer no cancela
+// nada por sí solo (ver nota arriba de ESTADOS_VENTANA_MODELO); esto
+// solo es el aviso para que Administración decida contactar o desapartar.
+function verificarApartadosVencidosPendientes() {
+
+  const ventanas = obtenerVentanasApartado();
+  let huboCambios = false;
+
+  ventanas.forEach(ventana => {
+
+    if (ventana.estado === 'activa' && ventanaEstaVencida(ventana) && !ventana.avisoVencimientoEnviado) {
+
+      ventana.avisoVencimientoEnviado = true;
+      huboCambios = true;
+
+      if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('apartado_vencido'))) {
+        const piezas = obtenerPiezasActivas(ventana).length;
+        agregarNotificacion({
+          texto: `El apartado de ${piezas} pieza${piezas === 1 ? '' : 's'} de ${ventana.usuarioNombre} ya venció.`,
+          link: `admin-apartados.html?buscar=${encodeURIComponent(ventana.usuarioNombre)}`,
+          rolDestino: 'admin',
+          origen: 'emprendedora_lider'
+        });
+      }
+
+    }
+
+  });
+
+  if (huboCambios) guardarVentanasApartado(ventanas);
+
+}

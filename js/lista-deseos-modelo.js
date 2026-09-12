@@ -342,7 +342,10 @@ function marcarResurtidoAtendida(id, { usuarioId, usuarioNombre }) {
   if (typeof agregarNotificacion === 'function' && solicitud.solicitadoPorRol) {
     agregarNotificacion({
       texto: `Tu solicitud de resurtido de ${solicitud.producto} fue marcada como atendida.`,
-      link: `${solicitud.solicitadoPorRol}-lista-deseos.html?resurtido=${solicitud.id}`,
+      // 'deseos' es una clave de PORTAL_LINKS (no un nombre de archivo
+      // literal) — cada página la resuelve a SU PROPIA lista de deseos,
+      // así el link funciona sin importar desde qué portal se muestre.
+      link: 'deseos',
       rolDestino: solicitud.solicitadoPorRol
     });
   }

@@ -120,7 +120,8 @@ function verificarAscensosPendientes() {
             texto: `${nombreCompletoPersona(persona)} cumple los requisitos para subir a ${siguiente.label}. Revisa y confirma su ascenso.`,
             link: `admin-emprendedoras-lideres.html?persona=${persona.id}&tab=equipo`,
             paraId: 'admin01',
-            rolDestino: 'admin'
+            rolDestino: 'admin',
+            origen: 'emprendedora_lider'
           });
         }
 
@@ -231,7 +232,8 @@ function verificarRecompensasConstancia() {
             texto: `${nombreCompletoPersona(persona)} cumplió ${proximidad.siguienteHito.meses} meses del Reto de Constancia. Confirma y prepara su premio: ${proximidad.siguienteHito.premio}.`,
             link: `admin-emprendedoras-lideres.html?persona=${persona.id}&tab=planmw`,
             paraId: 'admin01',
-            rolDestino: 'admin'
+            rolDestino: 'admin',
+            origen: 'emprendedora_lider'
           });
         }
 

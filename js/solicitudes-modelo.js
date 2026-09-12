@@ -131,6 +131,16 @@ function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, solicitan
   solicitudes.unshift(solicitud);
   guardarSolicitudes(solicitudes);
 
+  if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_creada'))) {
+    agregarNotificacion({
+      texto: `${solicitanteNombre} hizo una solicitud de inscripción para ${nombreCompleto}. Revísala.`,
+      link: `admin-solicitudes.html?solicitud=${solicitud.id}`,
+      paraId: 'admin01',
+      rolDestino: 'admin',
+      origen: 'emprendedora_lider'
+    });
+  }
+
   return { ok: true, solicitud };
 
 }

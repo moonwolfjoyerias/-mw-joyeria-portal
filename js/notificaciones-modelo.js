@@ -90,7 +90,12 @@ function guardarNotificacionesCompartidas(lista) {
 // rolDestino: en qué bandeja aparece (ver arriba). Si se omite, se
 // asume 'emprendedora_lider' (era el único rol con notificaciones
 // antes de dividirlas).
-function agregarNotificacion({ texto, link, paraId, rolDestino, tipo }) {
+// origen: SOLO tiene sentido dentro de la bandeja 'admin' — de dónde
+// viene el aviso ('emprendedora_lider' o 'rh'), para que Admin la vea
+// dividida en dos grupos separados (ver admin-comun.js →
+// renderNotificacionesAdminAgrupadas). Si se omite, se asume
+// 'emprendedora_lider' (era el único origen antes de dividirlos).
+function agregarNotificacion({ texto, link, paraId, rolDestino, tipo, origen }) {
   const lista = obtenerNotificacionesCompartidas();
   const nueva = normalizarNotificacion({
     id: `NOTIF-${Date.now()}`,
@@ -99,6 +104,7 @@ function agregarNotificacion({ texto, link, paraId, rolDestino, tipo }) {
     leida: false,
     paraId: paraId || null,
     tipo: tipo || null,
+    origen: origen || 'emprendedora_lider',
     rolDestino: ROLES_NOTIF_VALIDOS.includes(rolDestino) ? rolDestino : 'emprendedora_lider'
   });
 

@@ -260,15 +260,18 @@ function obtenerConfigSimple() {
       modoMantenimiento: false
     },
     // Solo eventos que YA disparan agregarNotificacion() en el sistema
-    // real (js/solicitudes-modelo.js, js/plan-mw-admin.js) — no se
-    // inventan eventos nuevos que no existen todavía.
+    // real (js/solicitudes-modelo.js, js/plan-mw-admin.js,
+    // js/apartados-modelo.js) — no se inventan eventos nuevos que no
+    // existen todavía.
     notificaciones: {
+      solicitud_creada: true,
       solicitud_aprobada: true,
       solicitud_rechazada: true,
       rango_candidata_detectada: true,
       cambio_rango_confirmado: true,
       constancia_hito_detectado: true,
-      recompensa_constancia_entregada: true
+      recompensa_constancia_entregada: true,
+      apartado_vencido: true
     }
   };
 
