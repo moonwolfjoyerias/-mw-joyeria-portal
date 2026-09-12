@@ -1,17 +1,24 @@
-// MW JOYERÍA — Mis apartados
-// Depende de APARTADOS_EJEMPLO, VENTANA_EJEMPLO y DATOS_BANCARIOS_EJEMPLO
-// (apartados-ejemplo.js), y reutiliza el modal genérico (#modalOverlay/#modalBox).
+// MW JOYERÍA — Mis apartados (Emprendedora / Líder)
+//
+// Las piezas y el estado del depósito que se muestran aquí vienen de
+// apartados-modelo.js — la MISMA fuente de datos que usan Staff/RH/Admin
+// para crear, liquidar y cancelar ventanas de apartado — filtrados a las
+// ventanas de la persona con sesión abierta (usuarioId = slugUsuarioId(nombre),
+// igual que como Staff las crea). Antes esta vista usaba un arreglo estático
+// (APARTADOS_EJEMPLO) totalmente desconectado del sistema real: una pieza
+// apartada por Staff nunca aparecía aquí. DATOS_BANCARIOS_EJEMPLO
+// (apartados-ejemplo.js) sigue usándose solo para los datos bancarios a
+// mostrar, y reutiliza el modal genérico (#modalOverlay/#modalBox).
 //
 // El apartado se paga completo, no por pieza: no hay selección
 // individual, "Pagar todo mi apartado" cobra el total de todas las
-// piezas activas juntas.
+// piezas activas juntas de UNA ventana (la ventana activa vigente).
 
-let apartadosActuales = [];
-let vencimientoTs = null;
+let usuarioIdActual = '';
 
 document.addEventListener('DOMContentLoaded', () => {
-  apartadosActuales = APARTADOS_EJEMPLO.map(p => ({ ...p }));
-  vencimientoTs = Date.now() + VENTANA_EJEMPLO.horasRestantes * 60 * 60 * 1000;
+  const nombreActual = (typeof obtenerNombrePersonaActualPortal === 'function' && obtenerNombrePersonaActualPortal()) || '';
+  usuarioIdActual = typeof slugUsuarioId === 'function' ? slugUsuarioId(nombreActual) : '';
 
   renderApartados();
   iniciarReloj();
@@ -20,6 +27,44 @@ document.addEventListener('DOMContentLoaded', () => {
   if (barBtn) barBtn.addEventListener('click', abrirModalPago);
 });
 
+// ---------- Datos propios (leídos del modelo real, no de ejemplo) ----------
+function obtenerVentanasPropias() {
+  if (!usuarioIdActual) return [];
+  return obtenerVentanasApartado().filter(v => v.usuarioId === usuarioIdActual && v.estado !== 'cerrada');
+}
+
+// Piezas activas de todas las ventanas propias, cada una junto a su
+// ventana (para poder editarla/quitarla y guardarla de vuelta).
+function obtenerPiezasPropiasConVentana() {
+  return obtenerVentanasPropias().flatMap(ventana =>
+    obtenerPiezasActivas(ventana).map(pieza => ({ pieza, ventana }))
+  );
+}
+
+// La ventana con depósito ya confirmado (estado 'activa') que vence más
+// pronto — es la única contra la que tiene sentido correr un cronómetro o
+// aceptar un pago. Una ventana 'pendiente_deposito' todavía no tiene un
+// vencimiento real corriendo (empieza a correr hasta que Staff confirma el
+// depósito), así que no cuenta aquí aunque sus piezas sí se muestren en la
+// lista.
+function obtenerVentanaActivaPrincipal() {
+  const activas = obtenerVentanasPropias().filter(v => v.estado === 'activa' && v.fechaVencimiento);
+  if (!activas.length) return null;
+  return activas.sort((a, b) => new Date(a.fechaVencimiento) - new Date(b.fechaVencimiento))[0];
+}
+
+// Aplica un cambio a una ventana propia y lo persiste en el almacén
+// compartido (una sola lectura/escritura para evitar pisar datos con una
+// segunda lectura desincronizada).
+function mutarVentanaPropia(ventanaId, mutador) {
+  const ventanas = obtenerVentanasApartado();
+  const ventana = ventanas.find(v => v.id === ventanaId);
+  if (!ventana) return null;
+  mutador(ventana);
+  guardarVentanasApartado(ventanas);
+  return ventana;
+}
+
 // ---------- Reloj compartido ----------
 function iniciarReloj() {
   actualizarReloj();
@@ -27,7 +72,16 @@ function iniciarReloj() {
 }
 
 function actualizarReloj() {
-  const restante = Math.max(0, vencimientoTs - Date.now());
+  const ventana = obtenerVentanaActivaPrincipal();
+  const box = document.querySelector('.countdown-box');
+
+  if (!ventana) {
+    if (box) box.style.display = 'none';
+    return;
+  }
+  if (box) box.style.display = '';
+
+  const restante = Math.max(0, new Date(ventana.fechaVencimiento).getTime() - Date.now());
   const dias = Math.floor(restante / (1000 * 60 * 60 * 24));
   const horas = Math.floor((restante / (1000 * 60 * 60)) % 24);
   const min = Math.floor((restante / (1000 * 60)) % 60);
@@ -45,47 +99,13 @@ function setText(id, val) {
 }
 
 // Avisa a Staff y RH de una acción que ellos deben revisar/confirmar
-// (quitar pieza, cambiar variante, avisar transferencia). Antes estos
-// flujos solo mostraban un toast que DECÍA "se le notificó al equipo"
-// sin de verdad notificar a nadie — esto lo vuelve real.
-//
-// nombrePersona: a quién pertenece el apartado — el texto lo nombra
-// explícitamente (antes decía "de un apartado" sin decir de quién) y
-// el link lleva directo a la fila de esa persona en la tabla operativa
-// de Staff/RH (?buscar=NOMBRE — ver js/staff-apartados.js /
-// js/rh-apartados.js), no a la lista genérica de apartados.
+// (quitar pieza, cambiar variante, avisar transferencia). El link lleva
+// directo a la fila de esa persona en la tabla operativa de Staff/RH
+// (?buscar=NOMBRE — ver js/staff-apartados.js / js/rh-apartados.js).
 function notificarEquipoOperativo(texto, nombrePersona) {
   if (typeof agregarNotificacion !== 'function') return;
   const query = nombrePersona ? `?buscar=${encodeURIComponent(nombrePersona)}` : '';
   agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff' });
-}
-
-function obtenerEstadoDepositoPortal() {
-  const key = 'mw-deposito-persona-v1';
-  try {
-    const guardado = JSON.parse(localStorage.getItem(key) || '{}');
-    return {
-      tieneDeposito: Boolean(guardado.tieneDeposito),
-      aplicaDeposito: guardado.aplicaDeposito !== false,
-      actualizado: guardado.actualizado || null,
-    };
-  } catch (error) {
-    return { tieneDeposito: false, aplicaDeposito: true, actualizado: null };
-  }
-}
-
-function guardarEstadoDepositoPortal({ tieneDeposito, aplicaDeposito = true }) {
-  const key = 'mw-deposito-persona-v1';
-  const estado = {
-    tieneDeposito: Boolean(tieneDeposito),
-    aplicaDeposito: Boolean(aplicaDeposito),
-    actualizado: new Date().toISOString(),
-  };
-  try {
-    localStorage.setItem(key, JSON.stringify(estado));
-  } catch (error) {
-    // La demo sigue funcionando aunque no haya persistencia disponible.
-  }
 }
 
 // ---------- Render de la lista ----------
@@ -95,7 +115,9 @@ function renderApartados() {
   const empty = document.getElementById('apartadosEmpty');
   if (!list) return;
 
-  if (apartadosActuales.length === 0) {
+  const items = obtenerPiezasPropiasConVentana();
+
+  if (items.length === 0) {
     if (wrap) wrap.style.display = 'none';
     if (empty) empty.style.display = 'block';
     actualizarResumen();
@@ -104,20 +126,19 @@ function renderApartados() {
   if (wrap) wrap.style.display = '';
   if (empty) empty.style.display = 'none';
 
-  list.innerHTML = apartadosActuales.map(p => `
-    <div class="apartado-row" data-id="${p.id}">
+  list.innerHTML = items.map(({ pieza }) => `
+    <div class="apartado-row" data-id="${pieza.id}">
       <div class="apartado-photo"><img src="../../assets/images/isotipo-morado.png" alt=""></div>
       <div class="apartado-info">
-        <h4>${p.nombre}</h4>
-        <span class="variant">${p.variante}</span>
+        <h4>${pieza.producto}</h4>
+        <span class="variant">${pieza.variante}</span>
       </div>
       <div class="apartado-prices">
-        <span class="price-public">$${p.precioPublico} MXN</span>
-        <span class="price-emprendedora">$${p.precioEmprendedora} MXN</span>
+        <span class="price-emprendedora">$${pieza.total} MXN</span>
       </div>
       <div class="apartado-actions">
-        <button data-editar="${p.id}">Editar</button>
-        <button class="quitar" data-quitar="${p.id}">Quitar</button>
+        <button data-editar="${pieza.id}">Editar</button>
+        <button class="quitar" data-quitar="${pieza.id}">Quitar</button>
       </div>
     </div>
   `).join('');
@@ -133,30 +154,43 @@ function renderApartados() {
 }
 
 function actualizarResumen() {
-  const total = apartadosActuales.reduce((sum, p) => sum + p.precioEmprendedora, 0);
-  setText('summaryCount', `${apartadosActuales.length} pieza${apartadosActuales.length === 1 ? '' : 's'} en tu apartado`);
+  const items = obtenerPiezasPropiasConVentana();
+  const total = items.reduce((sum, { pieza }) => sum + Number(pieza.total || 0), 0);
+  setText('summaryCount', `${items.length} pieza${items.length === 1 ? '' : 's'} en tu apartado`);
   setText('summaryTotal', `$${total} MXN`);
   const btn = document.getElementById('pagarSeleccionadasBtn');
-  if (btn) btn.disabled = apartadosActuales.length === 0;
+  const ventanaPago = obtenerVentanaActivaPrincipal();
+  if (btn) btn.disabled = !ventanaPago || obtenerPiezasActivas(ventanaPago).length === 0;
 }
 
 // ---------- Quitar / Editar ----------
 function quitarPieza(id) {
-  const pieza = apartadosActuales.find(p => p.id === id);
-  apartadosActuales = apartadosActuales.filter(p => p.id !== id);
+  const encontrado = obtenerPiezasPropiasConVentana().find(({ pieza }) => pieza.id === id);
+  if (!encontrado) return;
+  const { pieza, ventana } = encontrado;
+  const nombrePersona = ventana.usuarioNombre;
+  const nombrePieza = pieza.producto;
+  const variantePieza = pieza.variante;
+
+  mutarVentanaPropia(ventana.id, v => {
+    const p = v.apartados.find(x => x.id === id);
+    if (p) p.estado = 'cancelada';
+  });
+
   renderApartados();
-  if (pieza) notificarEquipoOperativo(`Se quitó "${pieza.nombre}" (${pieza.variante}) del apartado de ${pieza.emprendedora} — revisa si hay que liberar la pieza.`, pieza.emprendedora);
+  notificarEquipoOperativo(`Se quitó "${nombrePieza}" (${variantePieza}) del apartado de ${nombrePersona} — revisa si hay que liberar la pieza.`, nombrePersona);
   mostrarToast('Se le notificó al equipo de tus cambios');
 }
 
 function abrirModalEditar(id) {
-  const pieza = apartadosActuales.find(p => p.id === id);
-  if (!pieza) return;
+  const encontrado = obtenerPiezasPropiasConVentana().find(({ pieza }) => pieza.id === id);
+  if (!encontrado) return;
+  const { pieza, ventana } = encontrado;
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <h3>Editar: ${pieza.nombre}</h3>
+    <h3>Editar: ${pieza.producto}</h3>
     <p class="modal-sub">Cambia la variante de esta pieza.</p>
     <label for="editVariante">Talla / Color</label>
     <input type="text" id="editVariante" value="${pieza.variante}">
@@ -166,30 +200,31 @@ function abrirModalEditar(id) {
 
   document.getElementById('guardarEdicionBtn').addEventListener('click', () => {
     const nuevaVariante = document.getElementById('editVariante').value.trim();
-    if (nuevaVariante) pieza.variante = nuevaVariante;
+    if (nuevaVariante) {
+      mutarVentanaPropia(ventana.id, v => {
+        const p = v.apartados.find(x => x.id === id);
+        if (p) p.variante = nuevaVariante;
+      });
+    }
     overlay.classList.remove('open');
     renderApartados();
-    if (nuevaVariante) notificarEquipoOperativo(`Se cambió la variante de "${pieza.nombre}" a "${nuevaVariante}" en el apartado de ${pieza.emprendedora} — confirma que la pieza esté disponible.`, pieza.emprendedora);
+    if (nuevaVariante) notificarEquipoOperativo(`Se cambió la variante de "${pieza.producto}" a "${nuevaVariante}" en el apartado de ${ventana.usuarioNombre} — confirma que la pieza esté disponible.`, ventana.usuarioNombre);
     mostrarToast('Se le notificó al equipo de tus cambios');
   });
 }
 
 // ---------- Pago ----------
-function obtenerNombreActualPortalParaNotificacion() {
-  return obtenerNombrePersonaActualPortal() || 'Una emprendedora';
-}
-
-function mostrarModalPagoConMonto(piezas, totalFinal, metaDeposito = null) {
+function mostrarModalPagoConMonto(ventana, piezas, totalFinal, notaExtra, decisionDeposito) {
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
   const mensajeWa = encodeURIComponent('¡Hola! Te envío mi comprobante de pago');
-  const nombrePersona = obtenerNombreActualPortalParaNotificacion();
+  const nombrePersona = ventana.usuarioNombre;
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     <h3>Pagar tu apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'})</h3>
     <p class="modal-sub">Total a pagar: <strong style="color:var(--mw-purple)">$${totalFinal} MXN</strong></p>
-    ${metaDeposito ? `<p class="modal-sub" style="margin-top:-.35rem; color:var(--mw-purple); font-weight:600;">${metaDeposito}</p>` : ''}
+    ${notaExtra ? `<p class="modal-sub" style="margin-top:-.35rem; color:var(--mw-purple); font-weight:600;">${notaExtra}</p>` : ''}
 
     <div class="bank-details-box">
       <div class="copy-field">
@@ -227,7 +262,12 @@ function mostrarModalPagoConMonto(piezas, totalFinal, metaDeposito = null) {
   });
 
   document.getElementById('yaEnvieBtn').addEventListener('click', () => {
-    notificarEquipoOperativo(`${nombrePersona} avisó que ya transfirió el pago de su apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${totalFinal} MXN) — confirma el depósito en el sistema.`, nombrePersona);
+    const notaDeposito = decisionDeposito === 'aplicar'
+      ? ' — decidió aplicar su depósito a esta compra'
+      : decisionDeposito === 'credito'
+        ? ' — decidió guardar su depósito como crédito'
+        : '';
+    notificarEquipoOperativo(`${nombrePersona} avisó que ya transfirió el pago de su apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${totalFinal} MXN)${notaDeposito} — confirma el depósito y liquida el apartado en el sistema.`, nombrePersona);
     box.innerHTML = `
       <button class="modal-close" data-close>&times;</button>
       <div class="confirm-box">
@@ -243,35 +283,36 @@ function mostrarModalPagoConMonto(piezas, totalFinal, metaDeposito = null) {
 }
 
 function abrirModalPago() {
-  const piezas = apartadosActuales;
-  if (piezas.length === 0) return;
+  const ventana = obtenerVentanaActivaPrincipal();
+  if (!ventana) return;
+  const piezas = obtenerPiezasActivas(ventana);
+  if (!piezas.length) return;
 
-  const total = piezas.reduce((sum, p) => sum + p.precioEmprendedora, 0);
-  const esVip = piezas.every(p => p.categoria === 'vip');
+  const total = piezas.reduce((sum, p) => sum + Number(p.total || 0), 0);
+  const esVip = ventana.categoria === 'vip';
 
-  if (esVip) {
-    guardarEstadoDepositoPortal({ tieneDeposito: false, aplicaDeposito: false });
-    mostrarModalPagoConMonto(piezas, total, 'Este apartado es VIP, así que no aplica depósito.');
+  if (esVip || !ventana.depositoApartadoDisponible) {
+    mostrarModalPagoConMonto(ventana, piezas, total, esVip ? 'Este apartado es VIP, así que no aplica depósito.' : null);
     return;
   }
 
-  const estadoDeposito = obtenerEstadoDepositoPortal();
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
-  const nombrePersona = obtenerNombreActualPortalParaNotificacion();
+  const nombrePersona = ventana.usuarioNombre;
+  const montoDeposito = ventana.depositoApartadoDisponible;
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     <h3>Tu depósito</h3>
-    <p class="modal-sub">Antes de confirmar el pago, decide qué quieres hacer con tu depósito de $50.</p>
+    <p class="modal-sub">Antes de confirmar el pago, decide qué quieres hacer con tu depósito de $${montoDeposito}.</p>
     <div style="display:grid;gap:12px;">
       <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #ddd5e3;border-radius:10px;cursor:pointer;">
-        <input type="radio" name="decisionDeposito" value="guardar" ${estadoDeposito.tieneDeposito ? 'checked' : ''}>
-        <span><strong>Guardar mi depósito</strong><br><small>Se mantiene en mi cuenta y pago el total completo.</small></span>
+        <input type="radio" name="decisionDeposito" value="guardar" checked>
+        <span><strong>Guardar mi depósito</strong><br><small>Se mantiene como crédito para tu próximo apartado y pago el total completo.</small></span>
       </label>
       <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #ddd5e3;border-radius:10px;cursor:pointer;">
-        <input type="radio" name="decisionDeposito" value="usar" ${!estadoDeposito.tieneDeposito ? 'checked' : ''}>
-        <span><strong>Usarlo en este pago</strong><br><small>Se descuenta $50 de mi cuenta y el resto se liquida normal.</small></span>
+        <input type="radio" name="decisionDeposito" value="usar">
+        <span><strong>Usarlo en este pago</strong><br><small>Se descuenta $${montoDeposito} de mi cuenta y el resto se liquida normal.</small></span>
       </label>
     </div>
     <button class="btn btn-primary" style="width:100%; margin-top:16px;" id="confirmarDepositoDecisionBtn">Continuar</button>
@@ -280,17 +321,15 @@ function abrirModalPago() {
 
   document.getElementById('confirmarDepositoDecisionBtn').addEventListener('click', () => {
     const decision = document.querySelector('input[name="decisionDeposito"]:checked')?.value || 'guardar';
-    const tieneDeposito = decision === 'guardar';
-    const totalFinal = tieneDeposito ? total : Math.max(0, total - 50);
+    const usarDeposito = decision === 'usar';
+    const totalFinal = usarDeposito ? Math.max(0, total - montoDeposito) : total;
 
-    guardarEstadoDepositoPortal({ tieneDeposito, aplicaDeposito: true });
-
-    if (tieneDeposito) {
-      notificarEquipoOperativo(`${nombrePersona} guardó su depósito de $50 y pagará el total completo de su apartado (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${total} MXN).`, nombrePersona);
-      mostrarModalPagoConMonto(piezas, totalFinal, 'Tu depósito quedó guardado y se notificó al equipo.');
+    if (usarDeposito) {
+      notificarEquipoOperativo(`${nombrePersona} decidió usar su depósito de $${montoDeposito} en este pago (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${totalFinal} MXN).`, nombrePersona);
+      mostrarModalPagoConMonto(ventana, piezas, totalFinal, `Se descontará tu depósito de $${montoDeposito} y se notificó al equipo.`, 'aplicar');
     } else {
-      notificarEquipoOperativo(`${nombrePersona} no tiene depósito; se descontaron $50 de su cuenta y el restante se liquidará con este pago (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${totalFinal} MXN).`, nombrePersona);
-      mostrarModalPagoConMonto(piezas, totalFinal, 'Se descontaron $50 de tu cuenta y se notificó al equipo.');
+      notificarEquipoOperativo(`${nombrePersona} guardará su depósito de $${montoDeposito} como crédito y pagará el total completo de su apartado (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${total} MXN).`, nombrePersona);
+      mostrarModalPagoConMonto(ventana, piezas, total, 'Tu depósito quedó guardado como crédito y se notificó al equipo.', 'credito');
     }
   });
 }

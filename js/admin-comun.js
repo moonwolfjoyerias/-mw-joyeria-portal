@@ -10,12 +10,19 @@
 //
 // ⚠️ TEMPORAL: localStorage simula la base de datos / Firestore.
 
-// Identidad de sesión simulada de Admin (no hay login real todavía).
-const ADMIN_IDENTIDAD = {
-  usuarioId: 'admin01',
-  usuarioNombre: 'Claudia',
-  rol: 'admin'
-};
+// Identidad de quien inició sesión como Admin — antes era un valor fijo
+// ('admin01'/'Claudia') sin importar quién entrara; ahora viene de la
+// sesión real que crea js/auth-login.js (ver js/auth-guard.js, que se
+// carga antes que este archivo en el <head> de cada página).
+const ADMIN_IDENTIDAD = (function () {
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  if (sesion && sesion.rol === 'admin') {
+    return { usuarioId: sesion.cuentaId, usuarioNombre: sesion.nombre, rol: 'admin' };
+  }
+  // Respaldo si por algún motivo no hay sesión (no debería pasar: el
+  // guardia de js/auth-guard.js ya manda a login.html antes de esto).
+  return { usuarioId: 'admin01', usuarioNombre: 'Claudia', rol: 'admin' };
+})();
 
 const ADMIN_AUDITORIA_STORAGE_KEY = 'mw-auditoria-v1';
 

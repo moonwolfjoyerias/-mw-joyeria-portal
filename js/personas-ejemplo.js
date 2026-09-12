@@ -237,6 +237,13 @@ function obtenerPersonaPorId(id) {
   return obtenerPersonas().find(p => p.id === id) || null;
 }
 
+// Usado por js/auth-login.js para iniciar sesión como Emprendedora/Líder.
+// Una persona 'inactiva' o 'baja' no puede iniciar sesión aunque conozca
+// la contraseña, igual que una cuenta interna desactivada.
+function verificarCredencialPersona(usuario, password) {
+  return obtenerPersonas().find(p => p.usuario === usuario && p.password === password && p.estado === 'activa') || null;
+}
+
 function nombreCompletoPersona(p) {
   return [p.nombre, p.apellidos].filter(Boolean).join(' ');
 }

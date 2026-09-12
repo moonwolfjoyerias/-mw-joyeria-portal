@@ -9,12 +9,19 @@
 //
 // ⚠️ TEMPORAL: localStorage simula la base de datos / Firestore.
 
-// Identidad de sesión simulada de RH (no hay login real todavía).
-const RH_IDENTIDAD = {
-  usuarioId: 'rh01',
-  usuarioNombre: 'Recursos Humanos',
-  rol: 'rh'
-};
+// Identidad de quien inició sesión como RH — antes era un valor fijo
+// ('rh01'/'Recursos Humanos') sin importar quién entrara; ahora viene de
+// la sesión real que crea js/auth-login.js (ver js/auth-guard.js, que se
+// carga antes que este archivo en el <head> de cada página).
+const RH_IDENTIDAD = (function () {
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  if (sesion && sesion.rol === 'rh') {
+    return { usuarioId: sesion.cuentaId, usuarioNombre: sesion.nombre, rol: 'rh' };
+  }
+  // Respaldo si por algún motivo no hay sesión (no debería pasar: el
+  // guardia de js/auth-guard.js ya manda a login.html antes de esto).
+  return { usuarioId: 'rh01', usuarioNombre: 'Recursos Humanos', rol: 'rh' };
+})();
 
 const RH_AUDITORIA_STORAGE_KEY = 'mw-auditoria-v1';
 
