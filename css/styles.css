@@ -866,6 +866,20 @@ a:hover { color: var(--mw-gold); }
 .role-btn strong { display: block; font-family: var(--font-heading); color: var(--mw-purple); font-size: 0.95rem; }
 .role-btn .role-desc { font-size: 0.78rem; color: var(--mw-text-muted); }
 
+.login-form { text-align: left; }
+.login-form label { display: block; font-size: 0.82rem; color: var(--mw-purple); font-family: var(--font-heading); margin-bottom: 0.4rem; }
+.login-form input[type="text"], .login-form input[type="password"] {
+  width: 100%;
+  padding: 0.65em 0.8em;
+  border: 1.5px solid var(--mw-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  margin-bottom: 1.1rem;
+  box-sizing: border-box;
+}
+.login-form .auth-error { margin-bottom: 1.1rem; }
+
 /* ---------- Portal privado: sidebar con logo e íconos ---------- */
 .sidebar .brand-link { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 2rem; }
 .sidebar .brand-link img { height: 30px; width: auto; }

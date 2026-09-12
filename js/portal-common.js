@@ -22,12 +22,18 @@ function obtenerInicialesPerfil(nombre) {
 }
 
 // ---------- Nombre de la persona con sesión abierta (Emprendedora/Líder) ----------
-// 'me-emprendedora' / 'me-lider' son los registros de ejemplo que
-// representan a quien tiene la sesión abierta en cada portal (ver
-// js/personas-ejemplo.js) — se usa para que las notificaciones a
-// Staff/RH digan explícitamente de quién se trata en vez de un genérico
-// "una emprendedora" (ver js/catalogo.js, js/apartados.js).
+// Antes esto siempre devolvía a 'me-emprendedora' / 'me-lider' (los
+// registros de ejemplo de js/personas-ejemplo.js), sin importar quién
+// hubiera iniciado sesión de verdad. Ahora usa la sesión real que crea
+// js/auth-login.js (ver js/auth-guard.js) — se usa para que las
+// notificaciones a Staff/RH digan explícitamente de quién se trata en
+// vez de un genérico "una emprendedora" (ver js/catalogo.js, js/apartados.js).
 function obtenerNombrePersonaActualPortal() {
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  if (sesion && sesion.tipo === 'persona' && sesion.nombre) return sesion.nombre;
+
+  // Respaldo si por algún motivo no hay sesión (no debería pasar: el
+  // guardia de js/auth-guard.js ya manda a login.html antes de esto).
   if (typeof obtenerPersonaPorId !== 'function') return null;
   const esLider = window.location.pathname.includes('/portal/lider/');
   const persona = obtenerPersonaPorId(esLider ? 'me-lider' : 'me-emprendedora');
