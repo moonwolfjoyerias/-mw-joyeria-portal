@@ -15,6 +15,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('solicitudFilterEstado')?.addEventListener('change', renderListaSolicitudesAdmin);
   document.getElementById('solicitudOrden')?.addEventListener('change', renderListaSolicitudesAdmin);
 
+  // Enlace directo desde una notificación (?solicitud=ID) — abre de una
+  // vez el detalle de esa solicitud.
+  const solicitudDesdeUrl = new URLSearchParams(window.location.search).get('solicitud');
+  if (solicitudDesdeUrl) abrirDetalleSolicitudAdmin(solicitudDesdeUrl);
+
 });
 
 // ============================================================

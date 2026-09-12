@@ -115,12 +115,46 @@ function obtenerAuditoriaAdmin() {
 // porque admin-comun.js se carga en todas las páginas de Admin; si
 // existe, initNotifPanel la usa en vez de su propio render genérico.
 
+// Admin NUNCA ve la bandeja 'emprendedora_lider' (esos avisos son para
+// la propia Emprendedora/Líder sobre SU cuenta — boleto de rifa, evento,
+// su apartado confirmado — y su link solo tiene sentido dentro de su
+// propio portal; mostrarlos aquí llevaba a un 404). Lo que Admin SÍ debe
+// ver sobre Emprendedoras/Líderes son los avisos que YA le tocan a ella
+// (rolDestino:'admin'): ascensos de rango, solicitudes de inscripción y
+// apartados vencidos — divididos del resto de avisos de Administración
+// (los que le llegan de RH) usando el campo "origen".
 const NOTIF_ADMIN_GRUPOS = [
-  { rol: 'admin', titulo: 'Para Administración' },
-  { rol: 'emprendedora_lider', titulo: 'Emprendedoras/Líderes' },
+  { rol: 'admin', origen: 'emprendedora_lider', titulo: 'Emprendedoras/Líderes' },
+  { rol: 'admin', origen: 'rh', titulo: 'De Recursos Humanos' },
   { rol: 'staff', titulo: 'Staff' },
   { rol: 'rh', titulo: 'RH' }
 ];
+
+// Las bandejas 'staff' y 'rh' traen links pensados para mostrarse DENTRO
+// del portal de Staff/RH (una clave de PORTAL_LINKS como 'misActividades'
+// o 'deseos', o un nombre de archivo literal como "staff-apartados.html"
+// / "rh-nomina.html"). Solo 5 de las 14 páginas de Admin definen su
+// propio PORTAL_LINKS, así que depender de esa variable llevaba a un 404
+// en las otras 9 (empezando por el propio Dashboard). Admin tiene su
+// propia página equivalente para cada función compartida (admin-*.html),
+// así que este mapa fijo resuelve el link sin importar qué página de
+// Admin tenga abierta la campana.
+const ADMIN_NOTIF_LINK_MAP = {
+  inicio: 'admin-portal.html',
+  catalogo: 'admin-catalogo.html',
+  apartados: 'admin-apartados.html',
+  deseos: 'admin-lista-deseos.html',
+  misActividades: 'admin-actividad-staff.html',
+  calendario: 'admin-calendario.html',
+  notificaciones: 'admin-mi-cuenta.html'
+};
+
+function resolverLinkNotifAdmin(link) {
+  if (typeof link !== 'string') return link || '';
+  if (ADMIN_NOTIF_LINK_MAP[link]) return ADMIN_NOTIF_LINK_MAP[link];
+  if (/^(staff|rh)-/.test(link)) return link.replace(/^(staff|rh)-/, 'admin-');
+  return link; // Ya es un nombre de archivo admin-*.html (o similar).
+}
 
 // Cada bandeja se muestra como un desplegable independiente (<details>)
 // en vez de una lista plana larga — más fácil de escanear cuando hay
@@ -141,7 +175,10 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
 
   const grupos = NOTIF_ADMIN_GRUPOS.map(g => ({
     ...g,
-    items: todas.filter(n => (n.rolDestino || 'emprendedora_lider') === g.rol)
+    items: todas.filter(n =>
+      (n.rolDestino || 'emprendedora_lider') === g.rol &&
+      (!g.origen || (n.origen || 'emprendedora_lider') === g.origen)
+    )
   }));
 
   if (!grupos.some(g => g.items.length)) {
@@ -160,7 +197,7 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
         </summary>
         <div class="notif-group-items">
           ${g.items.map(n => `
-            <a class="notif-item" href="${(typeof PORTAL_LINKS !== 'undefined' && PORTAL_LINKS[n.link]) || n.link}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
+            <a class="notif-item" href="${resolverLinkNotifAdmin(n.link)}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
           `).join('')}
         </div>
       </details>

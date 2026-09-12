@@ -524,7 +524,8 @@ function enviarNominaAValidacion(empleadoId, periodoKey, { usuarioId, usuarioNom
       texto: `La nómina de ${empleado.nombre} (${formatearRangoSemanaNomina(periodoKey)}) está lista para validación.`,
       link: `admin-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
       rolDestino: 'admin',
-      tipo: 'nomina'
+      tipo: 'nomina',
+      origen: 'rh'
     });
   }
 
@@ -728,7 +729,8 @@ function crearSolicitudAltaNomina({ nombre, fechaInicio, salarioBase, pagoHoraEx
     agregarNotificacion({
       texto: `Nueva solicitud de alta: RH solicitó el alta de ${nombre}. Requiere revisión de Administración.`,
       link: `admin-nomina.html?solicitud=${nueva.id}`,
-      rolDestino: 'admin'
+      rolDestino: 'admin',
+      origen: 'rh'
     });
   }
 
@@ -773,7 +775,8 @@ function crearSolicitudBajaNomina({ empleadoId, motivoBaja, fechaEfectivaBaja, o
     agregarNotificacion({
       texto: `Nueva solicitud de baja: RH solicitó la baja de ${nombreCompletoEmpleadoNomina(empleado)}. Requiere revisión de Administración.`,
       link: `admin-nomina.html?solicitud=${nueva.id}`,
-      rolDestino: 'admin'
+      rolDestino: 'admin',
+      origen: 'rh'
     });
   }
 

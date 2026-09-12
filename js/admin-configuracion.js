@@ -620,12 +620,14 @@ function renderSeccionSistema() {
 // ============================================================
 
 const EVENTOS_NOTIF_CONFIG = [
+  { clave: 'solicitud_creada', label: 'Nueva solicitud de inscripción recibida (avisa a Admin)' },
   { clave: 'solicitud_aprobada', label: 'Solicitud de inscripción aprobada' },
   { clave: 'solicitud_rechazada', label: 'Solicitud de inscripción rechazada' },
   { clave: 'rango_candidata_detectada', label: 'Una líder cumple los requisitos de un nuevo rango (avisa a Admin)' },
   { clave: 'cambio_rango_confirmado', label: 'Cambio de rango confirmado (avisa a la persona)' },
   { clave: 'constancia_hito_detectado', label: 'Se cumplió un hito del Reto de Constancia (avisa a Admin)' },
-  { clave: 'recompensa_constancia_entregada', label: 'Recompensa de Constancia entregada (avisa a la persona)' }
+  { clave: 'recompensa_constancia_entregada', label: 'Recompensa de Constancia entregada (avisa a la persona)' },
+  { clave: 'apartado_vencido', label: 'El plazo de un apartado ya venció (avisa a Admin)' }
 ];
 
 function renderSeccionNotificaciones() {
