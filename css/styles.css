@@ -3943,6 +3943,7 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   border-radius: 4px;
 }
 .cfg-icon-btn:hover { color: var(--mw-purple); background: var(--mw-lilac-soft); }
+.cfg-icon-btn svg { width: 1em; height: 1em; display: block; }
 
 /* ---------- Configuración → Fotografías del sitio ---------- */
 .foto-espacio {
