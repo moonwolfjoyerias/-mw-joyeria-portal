@@ -292,8 +292,13 @@ function crearSolicitudResurtido({ producto, variante, cantidadSugerida, comenta
     const rolLabel = ROLES_CREADOR_DESEOS[solicitadoPorRol] || solicitadoPorRol;
     agregarNotificacion({
       texto: `Solicitud de resurtido: ${solicitadoPorNombre} (${rolLabel}) solicita revisar el resurtido de ${producto}.${nueva.comentario ? ` Motivo: ${nueva.comentario}` : ''}`,
-      link: `admin-lista-deseos.html?resurtido=${nueva.id}`,
-      rolDestino: 'admin'
+      // Es una función compartida de Staff (igual que Catálogo, Apartados,
+      // Calendario) — va en la bandeja 'staff', NUNCA en la de Admin sobre
+      // Emprendedoras/Líderes. 'deseos' es una clave de PORTAL_LINKS (no
+      // un nombre de archivo literal), así resuelve bien sin importar
+      // desde qué portal se muestre (Staff, o el grupo "Staff" de Admin).
+      link: 'deseos',
+      rolDestino: 'staff'
     });
   }
 
