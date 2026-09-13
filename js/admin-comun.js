@@ -165,6 +165,19 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
 
   if (!panel) return;
 
+  // Estas 3 revisiones (ascensos de rango, hitos de Constancia y
+  // apartados vencidos) antes solo se disparaban desde las 2-3 páginas
+  // dueñas de cada tema (Emprendedoras/Líderes, Plan MW, Apartados) —
+  // por eso el número de notificaciones sin leer cambiaba según qué
+  // página hubiera visitado Admin antes. Se ejecutan aquí porque esta
+  // función SÍ corre en las 14 páginas de Admin (personas-ejemplo.js,
+  // apartados-modelo.js y plan-mw-admin.js ya se cargan en todas), así
+  // el conteo es siempre el mismo sin importar desde dónde se abra la
+  // campana.
+  if (typeof verificarAscensosPendientes === 'function') verificarAscensosPendientes();
+  if (typeof verificarRecompensasConstancia === 'function') verificarRecompensasConstancia();
+  if (typeof verificarApartadosVencidosPendientes === 'function') verificarApartadosVencidosPendientes();
+
   const todas = typeof obtenerNotificacionesCompartidas === 'function' ? obtenerNotificacionesCompartidas() : [];
   const noLeidas = todas.filter(n => !n.leida).length;
 
