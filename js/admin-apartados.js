@@ -105,14 +105,19 @@ function abrirModalNuevaVentana() {
       <option value="vip">Líder VIP (sin depósito, sin vencimiento)</option>
     </select>
 
-    <label for="nvProducto">Código de pieza</label>
-    <input id="nvProducto" type="text" placeholder="Ej. AN-0231">
+    <label for="nvProductoId">Producto *</label>
+    <select id="nvProductoId" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+      <option value="">Selecciona un producto...</option>
+      ${obtenerCatalogoStaffStorage().filter(productoDisponible).map(p => `<option value="${p.id}">${escapeHTML(p.nombre)} — $${Number(precioConDescuento(p)).toLocaleString('es-MX')} MXN</option>`).join('')}
+    </select>
 
-    <label for="nvVariante">Variante</label>
-    <input id="nvVariante" type="text" placeholder="Ej. Talla 6 · Rosa">
+    <label for="nvVarianteId">Variante (color / talla) *</label>
+    <select id="nvVarianteId" disabled style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+      <option value="">Primero selecciona un producto</option>
+    </select>
 
-    <label for="nvTotal">Precio</label>
-    <input id="nvTotal" type="number" min="0" step="1" placeholder="Ej. 690">
+    <label for="nvTotal">Precio (descuento de mayoreo ya aplicado)</label>
+    <input id="nvTotal" type="number" min="0" step="1" placeholder="Se llena al elegir el producto">
 
     <div id="formError" class="auth-error" style="display:none;"></div>
 
@@ -121,21 +126,55 @@ function abrirModalNuevaVentana() {
 
   overlay.classList.add("open");
 
+  document.getElementById("nvProductoId").addEventListener("change", (e) => {
+
+    const varianteSelect = document.getElementById("nvVarianteId");
+    const producto = obtenerCatalogoStaffStorage().find(p => p.id === e.target.value);
+
+    if (!producto) {
+      varianteSelect.innerHTML = `<option value="">Primero selecciona un producto</option>`;
+      varianteSelect.disabled = true;
+      document.getElementById("nvTotal").value = "";
+      return;
+    }
+
+    const disponibles = variantesDisponibles(producto);
+
+    if (!disponibles.length) {
+      varianteSelect.innerHTML = `<option value="">Sin existencia disponible</option>`;
+      varianteSelect.disabled = true;
+      document.getElementById("nvTotal").value = "";
+      return;
+    }
+
+    varianteSelect.innerHTML = `<option value="">Selecciona...</option>` +
+      disponibles.map(v => `<option value="${v.id}">${escapeHTML(etiquetaVariante(v))} — ${v.stock} disponibles</option>`).join('');
+    varianteSelect.disabled = false;
+    document.getElementById("nvTotal").value = precioConDescuento(producto);
+
+  });
+
   document.getElementById("continuarNuevaVentanaBtn").addEventListener("click", () => {
 
     const nombre = document.getElementById("nvNombre").value.trim();
     const telefono = document.getElementById("nvTelefono").value.trim();
     const categoria = document.getElementById("nvCategoria").value;
-    const producto = document.getElementById("nvProducto").value.trim();
-    const variante = document.getElementById("nvVariante").value.trim();
+    const productoId = document.getElementById("nvProductoId").value;
+    const varianteId = document.getElementById("nvVarianteId").value;
     const total = Number(document.getElementById("nvTotal").value);
     const error = document.getElementById("formError");
 
-    if (!nombre || !producto || !Number.isFinite(total) || total <= 0) {
+    const productoElegido = obtenerCatalogoStaffStorage().find(p => p.id === productoId);
+    const varianteElegida = productoElegido ? buscarVariante(productoElegido, varianteId) : null;
+
+    if (!nombre || !productoElegido || !varianteElegida || !Number.isFinite(total) || total <= 0) {
       error.style.display = "block";
-      error.textContent = "Escribe el nombre, el código de pieza y un precio válido.";
+      error.textContent = "Escribe el nombre y selecciona un producto, una variante y un precio válido.";
       return;
     }
+
+    const producto = productoElegido.nombre;
+    const variante = etiquetaVariante(varianteElegida);
 
     const usuarioId = slugUsuarioId(nombre);
     const tieneCredito = obtenerCreditoDisponible(usuarioId) > 0;
@@ -145,19 +184,26 @@ function abrirModalNuevaVentana() {
       mensaje: tieneCredito
         ? `Estás a punto de abrir una nueva ventana de apartado para "${nombre}", reutilizando su crédito guardado.`
         : `Estás a punto de abrir una nueva ventana de apartado para "${nombre}" con la pieza "${producto}".`,
-      onConfirmar: () => ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total })
+      onConfirmar: () => ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total, productoId, varianteId })
     });
 
   });
 
 }
 
-function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total }) {
+function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total, productoId, varianteId }) {
 
   const usuarioId = slugUsuarioId(nombre);
 
   const nuevaVentana = abrirVentanaApartado({ usuarioId, usuarioNombre: nombre, telefono, categoria }, ADMIN_EMPLEADO);
-  agregarPiezaAVentana(nuevaVentana, { producto, variante, total }, ADMIN_EMPLEADO);
+  const resultadoPieza = agregarPiezaAVentana(nuevaVentana, { producto, variante, total, productoId, varianteId }, ADMIN_EMPLEADO);
+
+  if (!resultadoPieza.ok) {
+    cerrarModal();
+    mostrarToast(resultadoPieza.error);
+    return;
+  }
+
   ventanas.push(nuevaVentana);
 
   guardarVentanas();

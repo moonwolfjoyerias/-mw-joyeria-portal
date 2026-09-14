@@ -174,7 +174,10 @@ function quitarPieza(id) {
 
   mutarVentanaPropia(ventana.id, v => {
     const p = v.apartados.find(x => x.id === id);
-    if (p) p.estado = 'cancelada';
+    if (p) {
+      p.estado = 'cancelada';
+      if (typeof restaurarStockVariante === 'function') restaurarStockVariante(p.productoId, p.varianteId);
+    }
   });
 
   renderApartados();
