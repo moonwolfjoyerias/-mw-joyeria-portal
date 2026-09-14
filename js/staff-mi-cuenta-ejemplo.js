@@ -3,9 +3,12 @@
 // ⚠️ TEMPORAL: se reemplazará por Firestore en Fase 3.
 //
 // Según el documento de requisitos (Sección 17), la nómina es solo para
-// Staff (8 personas), Administrativos y RH. Cada quien ve ÚNICAMENTE su
-// propio recibo, y para Staff (cuenta compartida del dispositivo) esto
-// exige capturar nombre + contraseña individual antes de mostrarlo.
+// Staff, Administrativos y RH. Cada quien ve ÚNICAMENTE su propio
+// recibo, y para Staff (cuenta compartida del dispositivo) esto exige
+// capturar nombre + contraseña individual antes de mostrarlo.
+//
+// Mismas 7 personas de js/nomina-modelo.js y js/cuentas-internas-modelo.js
+// (no se inventan personas nuevas).
 //
 // IMPORTANTE:
 // Las credenciales de abajo son únicamente para simulación.
@@ -18,6 +21,5 @@ const PERSONAL_STAFF_EJEMPLO = [
   { usuario: 'staff04', nombre: 'Fernanda Ibarra', password: '1234' },
   { usuario: 'staff05', nombre: 'Jorge Salinas', password: '1234' },
   { usuario: 'staff06', nombre: 'Paulina Gómez', password: '1234' },
-  { usuario: 'staff07', nombre: 'Luis Medina', password: '1234' },
-  { usuario: 'MW0005', nombre: 'María Camila Sánchez Calles', password: '2896' }
+  { usuario: 'staff07', nombre: 'Luis Medina', password: '1234' }
 ];

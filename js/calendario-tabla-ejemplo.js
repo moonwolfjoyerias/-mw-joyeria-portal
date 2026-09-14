@@ -16,11 +16,6 @@ const CALENDARIO_USUARIOS_EJEMPLO = [
     password: '1234'
   },
   {
-    usuario: 'MW0005',
-    nombre: 'María Camila Sánchez Calles',
-    password: '2896'
-  },
-  {
     usuario: 'rh01',
     nombre: 'Recursos Humanos',
     password: '1234'

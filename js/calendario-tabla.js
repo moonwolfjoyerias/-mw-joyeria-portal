@@ -535,8 +535,9 @@ function validarAutorizacionCalendario() {
 
   // También acepta cuentas creadas desde Admin → Configuración →
   // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js) y
-  // cuentas de Líderes/Emprendedoras (js/personas-ejemplo.js), además
-  // de MW0005 que ya venía incluida a mano en la lista de ejemplo.
+  // cuentas de Líderes/Emprendedoras (js/personas-ejemplo.js) — por
+  // ejemplo MW0005 (María Camila Sánchez Calles), con su propia
+  // contraseña de Líder, sin duplicarla aquí con una distinta.
   const empleado = CALENDARIO_USUARIOS_EJEMPLO.find(
     u => u.usuario === usuario && u.password === password
   )
