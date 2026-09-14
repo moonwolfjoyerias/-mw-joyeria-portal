@@ -51,6 +51,7 @@ if (typeof obtenerValorVigente === 'function') {
 // Estados de la VENTANA (no de cada pieza).
 const ESTADOS_VENTANA_MODELO = {
   pendiente_deposito: 'Pendiente de depósito',
+  pendiente_aprobacion: 'Pendiente de aprobación VIP',
   activa: 'Ventana activa',
   vencida: 'Vencida — depósito perdido',
   cerrada: 'Cerrada'
@@ -193,22 +194,37 @@ function abrirVentanaApartado(datosPersona, empleado) {
   const regla = obtenerReglaCategoria(datosPersona.categoria);
   const creditoPrevio = obtenerCreditoDisponible(datosPersona.usuarioId);
 
+  // VIP no pide depósito, pero sí exige que Staff/Administrativo
+  // confirme/apruebe manualmente cada apartado (Sección 5.5) — nace
+  // pendiente de esa aprobación en vez de activa de inmediato.
+  const estadoInicial = regla.requiereAprobacion
+    ? 'pendiente_aprobacion'
+    : ((!regla.requiereDeposito || creditoPrevio > 0) ? 'activa' : 'pendiente_deposito');
+
   const ventana = crearVentanaApartado({
     ...datosPersona,
     depositoApartadoDisponible: creditoPrevio,
-    estado: (!regla.requiereDeposito || creditoPrevio > 0) ? 'activa' : 'pendiente_deposito',
+    estado: estadoInicial,
     metodoDeposito: creditoPrevio > 0 ? 'credito_anterior' : null
   });
 
   if (creditoPrevio > 0) {
     establecerCredito(datosPersona.usuarioId, 0);
-    ventana.auditoria.push(registrarAuditoria('Ventana abierta con crédito previo reutilizado', empleado));
+    ventana.auditoria.push(registrarAuditoriaVentana('Ventana abierta con crédito previo reutilizado', empleado));
   } else {
-    ventana.auditoria.push(registrarAuditoria('Ventana creada', empleado));
+    ventana.auditoria.push(registrarAuditoriaVentana('Ventana creada', empleado));
   }
 
   return ventana;
 
+}
+
+// Aprobación manual del apartado VIP (Sección 5.5) — deja la ventana
+// activa, exactamente como si nunca hubiera requerido depósito.
+function aprobarVentanaVip(ventana, empleado) {
+  ventana.estado = 'activa';
+  ventana.auditoria.push(registrarAuditoriaVentana('Apartado VIP aprobado', empleado));
+  return ventana;
 }
 
 // El monto mínimo son $50, pero algunas personas transfieren más — el
@@ -229,7 +245,7 @@ function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, emplea
   ventana.fechaVencimiento = regla.dias
     ? new Date(ahora.getTime() + regla.dias * 24 * 60 * 60 * 1000).toISOString()
     : null;
-  ventana.auditoria.push(registrarAuditoria(`Depósito de $${montoFinal} confirmado`, empleado));
+  ventana.auditoria.push(registrarAuditoriaVentana(`Depósito de $${montoFinal} confirmado`, empleado));
 
   return ventana;
 
@@ -248,7 +264,7 @@ function agregarPiezaAVentana(ventana, datosPieza, empleado) {
 
   const pieza = crearApartadoPieza(datosPieza);
   ventana.apartados.push(pieza);
-  ventana.auditoria.push(registrarAuditoria(`Pieza agregada: ${pieza.producto}`, empleado));
+  ventana.auditoria.push(registrarAuditoriaVentana(`Pieza agregada: ${pieza.producto}`, empleado));
 
   return { ok: true, pieza };
 
@@ -281,7 +297,7 @@ function liquidarVentanaCompleta(ventana, { monto, metodo, referencia }, emplead
     pieza.estado = 'liquidada';
   });
 
-  ventana.auditoria.push(registrarAuditoria(
+  ventana.auditoria.push(registrarAuditoriaVentana(
     `Apartado liquidado por completo (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'}) — $${monto}`,
     empleado
   ));
@@ -308,11 +324,11 @@ function resolverDepositoVentana(ventana, decision, empleado) {
 
   if (decision === 'aplicar') {
     cerrarVentana(ventana, 'aplicado');
-    ventana.auditoria.push(registrarAuditoria(`Depósito de $${monto} aplicado a la compra`, empleado));
+    ventana.auditoria.push(registrarAuditoriaVentana(`Depósito de $${monto} aplicado a la compra`, empleado));
   } else {
     establecerCredito(ventana.usuarioId, monto);
     cerrarVentana(ventana, 'credito');
-    ventana.auditoria.push(registrarAuditoria(`Depósito de $${monto} guardado como crédito`, empleado));
+    ventana.auditoria.push(registrarAuditoriaVentana(`Depósito de $${monto} guardado como crédito`, empleado));
   }
 
   ventana.depositoApartadoDisponible = 0;
@@ -333,7 +349,7 @@ function cancelarVentanaCompleta(ventana, empleado) {
   piezasActivas.forEach(pieza => { pieza.estado = 'cancelada'; });
   restaurarStockPiezasCanceladas(piezasActivas);
 
-  ventana.auditoria.push(registrarAuditoria(
+  ventana.auditoria.push(registrarAuditoriaVentana(
     `Apartado cancelado por completo (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'})`,
     empleado
   ));
@@ -343,7 +359,7 @@ function cancelarVentanaCompleta(ventana, empleado) {
     establecerCredito(ventana.usuarioId, monto);
     cerrarVentana(ventana, 'credito');
     ventana.depositoApartadoDisponible = 0;
-    ventana.auditoria.push(registrarAuditoria(`Depósito de $${monto} guardado como crédito`, empleado));
+    ventana.auditoria.push(registrarAuditoriaVentana(`Depósito de $${monto} guardado como crédito`, empleado));
   } else {
     cerrarVentana(ventana, 'no_aplica');
   }
@@ -372,7 +388,7 @@ function desapartarVentanaVencida(ventana, empleado) {
   ventana.estado = 'vencida';
   ventana.resolucionDeposito = 'perdido';
 
-  ventana.auditoria.push(registrarAuditoria(
+  ventana.auditoria.push(registrarAuditoriaVentana(
     montoPerdido > 0
       ? `Apartado desapartado por vencimiento — depósito de $${montoPerdido} perdido`
       : 'Apartado desapartado por vencimiento',
@@ -406,7 +422,7 @@ function obtenerIniciales(nombre) {
     .toUpperCase();
 }
 
-function registrarAuditoria(texto, empleado) {
+function registrarAuditoriaVentana(texto, empleado) {
   return { texto, usuario: empleado?.nombre || 'Sistema', fecha: new Date().toISOString() };
 }
 

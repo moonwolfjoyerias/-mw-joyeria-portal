@@ -137,12 +137,20 @@ function abrirModalNuevaSolicitud() {
 
 async function enviarNuevaSolicitud(identidad) {
 
+  // Evita crear dos solicitudes si se hace doble clic mientras
+  // guardarBlobDocumento()/crearSolicitudInscripcion() (ambas async)
+  // todavía están en curso.
+  const boton = document.getElementById('enviarSolicitudBtn');
+  if (boton?.disabled) return;
+  if (boton) { boton.disabled = true; boton.textContent = 'Enviando...'; }
+
   const nombreCompleto = document.getElementById('solNombre')?.value || '';
   const telefono = document.getElementById('solTelefono')?.value || '';
   const correo = document.getElementById('solCorreo')?.value || '';
 
   if (!ineArchivoTemporal) {
     mostrarErrorSolicitud('Adjunta una foto de identificación oficial (INE).');
+    if (boton) { boton.disabled = false; boton.textContent = 'Enviar solicitud'; }
     return;
   }
 
@@ -162,6 +170,7 @@ async function enviarNuevaSolicitud(identidad) {
   if (!resultado.ok) {
     await eliminarBlobDocumento(ineStoragePath);
     mostrarErrorSolicitud(resultado.error);
+    if (boton) { boton.disabled = false; boton.textContent = 'Enviar solicitud'; }
     return;
   }
 

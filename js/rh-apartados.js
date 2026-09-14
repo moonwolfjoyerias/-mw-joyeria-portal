@@ -394,6 +394,10 @@ function agregarEventosFilas() {
     btn.addEventListener("click", () => abrirModalConfirmarDeposito(btn.dataset.confirmarDeposito));
   });
 
+  document.querySelectorAll("[data-aprobar-vip]").forEach(btn => {
+    btn.addEventListener("click", () => confirmarAprobarVip(btn.dataset.aprobarVip));
+  });
+
   document.querySelectorAll("[data-liquidar-ventana]").forEach(btn => {
     btn.addEventListener("click", () => iniciarLiquidacionVentana(btn.dataset.liquidarVentana));
   });
@@ -423,6 +427,10 @@ function obtenerAccionesVentana(v) {
 
   if (v.estado === "pendiente_deposito") {
     html += `<button class="action-btn primary-action" data-confirmar-deposito="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Confirmar depósito</button>`;
+  }
+
+  if (v.estado === "pendiente_aprobacion") {
+    html += `<button class="action-btn primary-action" data-aprobar-vip="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Aprobar apartado VIP</button>`;
   }
 
   if (v.estado === "activa") {
@@ -709,6 +717,36 @@ function ejecutarCancelar(ventanaId) {
 
 }
 
+function confirmarAprobarVip(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  abrirAutorizacionRH({
+    titulo: "Aprobar apartado VIP",
+    mensaje: `Estás a punto de aprobar el apartado VIP de "${v.usuarioNombre}".`,
+    onConfirmar: () => ejecutarAprobarVip(ventanaId)
+  });
+
+}
+
+function ejecutarAprobarVip(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  aprobarVentanaVip(v, RH_EMPLEADO);
+
+  guardarVentanas();
+  actualizarResumen();
+  renderTabla();
+  cerrarModal();
+
+  registrarAuditoriaRH({ modulo: "apartados", accion: "aprobar_vip_ventana", descripcion: `Apartado VIP de ${v.usuarioNombre} aprobado` });
+  mostrarToast(`Apartado VIP aprobado por ${RH_IDENTIDAD.usuarioNombre}.`);
+
+}
+
 
 // ============================================================
 // CONTACTO WHATSAPP (informativo, no requiere autorización) Y
@@ -786,6 +824,7 @@ function obtenerEstadoVentana(v) {
 
   const estados = {
     pendiente_deposito: { texto: "Pendiente de depósito", clase: "status-pending" },
+    pendiente_aprobacion: { texto: "Pendiente de aprobación VIP", clase: "status-pending" },
     activa: { texto: "Activa", clase: "status-active" },
     vencida: { texto: "Vencida", clase: "status-expired" },
     cerrada: { texto: "Cerrada", clase: "status-cancelled" }
@@ -811,7 +850,7 @@ function obtenerDescripcionDeposito(v) {
 
   const regla = obtenerReglaCategoria(v.categoria);
 
-  if (!regla.requiereDeposito) return "Categoría VIP";
+  if (!regla.requiereDeposito) return v.estado === "pendiente_aprobacion" ? "Esperando aprobación VIP" : "Categoría VIP";
   if (v.estado === "pendiente_deposito") return "Esperando depósito";
   if (v.estado === "vencida" || v.estado === "cerrada") return "Ventana finalizada";
   if (v.metodoDeposito === "credito_anterior") return "Crédito reutilizado";

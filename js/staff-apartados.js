@@ -356,6 +356,10 @@ function agregarEventosFilas() {
     btn.addEventListener("click", () => abrirModalConfirmarDeposito(btn.dataset.confirmarDeposito));
   });
 
+  document.querySelectorAll("[data-aprobar-vip]").forEach(btn => {
+    btn.addEventListener("click", () => abrirAutorizacion({ tipo: "aprobar-vip-ventana", ventanaId: btn.dataset.aprobarVip }));
+  });
+
   document.querySelectorAll("[data-liquidar-ventana]").forEach(btn => {
     btn.addEventListener("click", () => iniciarLiquidacionVentana(btn.dataset.liquidarVentana));
   });
@@ -385,6 +389,10 @@ function obtenerAccionesVentana(v) {
 
   if (v.estado === "pendiente_deposito") {
     html += `<button class="action-btn primary-action" data-confirmar-deposito="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Confirmar depósito</button>`;
+  }
+
+  if (v.estado === "pendiente_aprobacion") {
+    html += `<button class="action-btn primary-action" data-aprobar-vip="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Aprobar apartado VIP</button>`;
   }
 
   if (v.estado === "activa") {
@@ -633,6 +641,7 @@ function abrirAutorizacion(accion) {
   const titulos = {
     "nueva-ventana": "Autorizar nueva ventana",
     "confirmar-deposito-ventana": "Autorizar depósito",
+    "aprobar-vip-ventana": "Aprobar apartado VIP",
     "liquidar-ventana": "Autorizar liquidación",
     "cancelar-ventana": "Autorizar cancelación",
     "desapartar-ventana": "Autorizar desapartar"
@@ -788,6 +797,13 @@ function ejecutarAccion(personal) {
     auditoriaAccion = 'liquidar_ventana';
     auditoriaDescripcion = `Apartado de ${v.usuarioNombre} liquidado por $${accionPendiente.datos.monto}`;
 
+  } else if (accionPendiente.tipo === "aprobar-vip-ventana") {
+
+    aprobarVentanaVip(v, personal);
+    mensaje = `Apartado VIP aprobado por ${personal.nombre}.`;
+    auditoriaAccion = 'aprobar_vip_ventana';
+    auditoriaDescripcion = `Apartado VIP de ${v.usuarioNombre} aprobado`;
+
   } else if (accionPendiente.tipo === "cancelar-ventana") {
 
     cancelarVentanaCompleta(v, personal);
@@ -835,6 +851,7 @@ function obtenerEstadoVentana(v) {
 
   const estados = {
     pendiente_deposito: { texto: "Pendiente de depósito", clase: "status-pending" },
+    pendiente_aprobacion: { texto: "Pendiente de aprobación VIP", clase: "status-pending" },
     activa: { texto: "Activa", clase: "status-active" },
     vencida: { texto: "Vencida", clase: "status-expired" },
     cerrada: { texto: "Cerrada", clase: "status-cancelled" }
@@ -860,7 +877,7 @@ function obtenerDescripcionDeposito(v) {
 
   const regla = obtenerReglaCategoria(v.categoria);
 
-  if (!regla.requiereDeposito) return "Categoría VIP";
+  if (!regla.requiereDeposito) return v.estado === "pendiente_aprobacion" ? "Esperando aprobación VIP" : "Categoría VIP";
   if (v.estado === "pendiente_deposito") return "Esperando depósito";
   if (v.estado === "vencida" || v.estado === "cerrada") return "Ventana finalizada";
   if (v.metodoDeposito === "credito_anterior") return "Crédito reutilizado";

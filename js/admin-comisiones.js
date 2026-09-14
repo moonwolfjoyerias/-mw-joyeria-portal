@@ -628,7 +628,7 @@ function abrirModalPago(liderId) {
     return;
   }
 
-  const sugerido = (r.totalComision + (r.bono && !r.bono.pagado ? 0 : 0)).toFixed(2);
+  const sugerido = (r.totalComision + (r.bono && !r.bono.pagado ? r.bono.monto : 0)).toFixed(2);
 
   box.style.maxWidth = '420px';
   box.innerHTML = `
@@ -1111,8 +1111,14 @@ function construirHTMLComprobanteGeneral(modo) {
   if (modo === 'mes') {
     const datosP1 = calcularTodasLasComisiones(periodoActual, 'p1');
     const datosP2 = calcularTodasLasComisiones(periodoActual, 'p2');
-    secciones = construirSeccionResumenComisiones(datosP1, periodoActual, 'p1') + construirSeccionResumenComisiones(datosP2, periodoActual, 'p2');
-    totalGeneralDoc = [...datosP1, ...datosP2].reduce((s, r) => s + r.totalComision + (r.bono ? r.bono.monto : 0), 0);
+    // El bono por rango es un monto único del MES (no depende del
+    // subperiodo), pero calcularComisionesLider() lo adjunta igual en
+    // cada subperiodo — mostrarlo/sumarlo en los dos duplicaría el
+    // bono. Se muestra y se cuenta una sola vez, en la sección de
+    // Periodo 2 (cuando el mes ya cerró); Periodo 1 lo omite.
+    const datosP1SinBono = datosP1.map(r => ({ ...r, bono: null }));
+    secciones = construirSeccionResumenComisiones(datosP1SinBono, periodoActual, 'p1') + construirSeccionResumenComisiones(datosP2, periodoActual, 'p2');
+    totalGeneralDoc = [...datosP1SinBono, ...datosP2].reduce((s, r) => s + r.totalComision + (r.bono ? r.bono.monto : 0), 0);
     subtituloPeriodo = `${formatearPeriodoLabelComisiones(periodoActual)} · Mes completo (Periodo 1 y Periodo 2)`;
   } else {
     secciones = construirSeccionResumenComisiones(comisionesData, periodoActual, subPeriodoActual);
