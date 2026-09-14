@@ -14,12 +14,22 @@
 // - js/notificaciones-modelo.js — agregarNotificacion (extiende la
 //   campana de notificaciones existente).
 //
-// ⚠️ TEMPORAL: localStorage simula la colección "solicitudesInscripcion"
-// de Firestore. La forma de cada documento es exactamente la que se
-// necesitaría en Firestore, para que migrar sea un cambio de capa de
-// almacenamiento, no de lógica.
+// FASE 2 (Firebase): este es el primer módulo migrado al patrón de
+// repositorio dual que describe AUDITORIA-FIREBASE.md (sección G.1).
+// Todas las funciones públicas son ahora async: si js/firebase-init.js
+// dejó `dbFirestore` con valor (MODO_DEMO=false + config real), leen y
+// escriben en la colección "solicitudesInscripcion" de Firestore; si no,
+// siguen funcionando exactamente igual que antes sobre localStorage —
+// mismo comportamiento en modo demo, cero regresión.
+//
+// personas-ejemplo.js, auditoria-modelo.js y notificaciones-modelo.js
+// TODAVÍA no están migrados — por eso aprobarSolicitud() sigue creando
+// la persona nueva vía crearPersonaEjemplo() (localStorage) aunque esta
+// solicitud ya viva en Firestore. Eso es intencional: la migración es
+// incremental por módulo, no todo o nada (ver AUDITORIA-FIREBASE.md).
 
 const SOLICITUDES_STORAGE_KEY = 'mw-solicitudes-inscripcion-v1';
+const SOLICITUDES_COLECCION_FIRESTORE = 'solicitudesInscripcion';
 
 const ESTADOS_SOLICITUD = {
   pendiente: 'Pendiente',
@@ -28,10 +38,10 @@ const ESTADOS_SOLICITUD = {
 };
 
 // ============================================================
-// ALMACENAMIENTO
+// ALMACENAMIENTO — respaldo local (localStorage)
 // ============================================================
 
-function obtenerSolicitudes() {
+function obtenerSolicitudesLocal() {
   try {
     const guardadas = JSON.parse(localStorage.getItem(SOLICITUDES_STORAGE_KEY));
     if (Array.isArray(guardadas)) return guardadas;
@@ -41,18 +51,59 @@ function obtenerSolicitudes() {
   return [];
 }
 
-function guardarSolicitudes(lista) {
+function guardarSolicitudesLocal(lista) {
   localStorage.setItem(SOLICITUDES_STORAGE_KEY, JSON.stringify(lista));
 }
 
-function obtenerSolicitudPorId(id) {
-  return obtenerSolicitudes().find(s => s.id === id) || null;
+// ============================================================
+// ALMACENAMIENTO — repositorio (Firestore o localStorage)
+// ============================================================
+
+// Convierte un doc de Firestore al mismo shape que ya usa toda la
+// interfaz (con "id" incluido, y fechaSolicitud/fechaRevision como ISO
+// string igual que produce localStorage) — así ningún renderizador tiene
+// que distinguir de dónde vino el dato.
+function solicitudDesdeDocFirestore(doc) {
+  const datos = doc.data();
+  return {
+    ...datos,
+    id: doc.id,
+    fechaSolicitud: datos.fechaSolicitud?.toDate ? datos.fechaSolicitud.toDate().toISOString() : datos.fechaSolicitud,
+    fechaRevision: datos.fechaRevision?.toDate ? datos.fechaRevision.toDate().toISOString() : (datos.fechaRevision || null)
+  };
+}
+
+async function obtenerSolicitudes() {
+  if (dbFirestore) {
+    const snap = await dbFirestore.collection(SOLICITUDES_COLECCION_FIRESTORE).orderBy('fechaSolicitud', 'desc').get();
+    return snap.docs.map(solicitudDesdeDocFirestore);
+  }
+  return obtenerSolicitudesLocal();
+}
+
+async function obtenerSolicitudPorId(id) {
+  if (dbFirestore) {
+    const doc = await dbFirestore.collection(SOLICITUDES_COLECCION_FIRESTORE).doc(id).get();
+    return doc.exists ? solicitudDesdeDocFirestore(doc) : null;
+  }
+  return obtenerSolicitudesLocal().find(s => s.id === id) || null;
 }
 
 // Vista del solicitante: solo sus propias solicitudes (sección 5 y 15
 // del documento de requisitos — nunca las de otra persona).
-function obtenerSolicitudesDe(solicitanteId) {
-  return obtenerSolicitudes()
+//
+// ⚠️ La consulta de Firestore (where + orderBy en campos distintos)
+// necesita un índice compuesto — Firestore lo pide la primera vez que se
+// ejecute en un proyecto real, con un enlace para crearlo en un clic.
+async function obtenerSolicitudesDe(solicitanteId) {
+  if (dbFirestore) {
+    const snap = await dbFirestore.collection(SOLICITUDES_COLECCION_FIRESTORE)
+      .where('solicitanteId', '==', solicitanteId)
+      .orderBy('fechaSolicitud', 'desc')
+      .get();
+    return snap.docs.map(solicitudDesdeDocFirestore);
+  }
+  return obtenerSolicitudesLocal()
     .filter(s => s.solicitanteId === solicitanteId)
     .sort((a, b) => b.fechaSolicitud.localeCompare(a.fechaSolicitud));
 }
@@ -72,7 +123,7 @@ function puedeSolicitarInscripcion(rol) {
   return rol === 'emprendedora' || rol === 'lider';
 }
 
-function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, solicitanteRol, nombreCompleto, telefono, correo, ineUrl }) {
+async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, solicitanteRol, nombreCompleto, telefono, correo, ineUrl }) {
 
   if (!puedeSolicitarInscripcion(solicitanteRol)) {
     return { ok: false, error: 'Tu cuenta no tiene permiso para enviar solicitudes de inscripción.' };
@@ -90,7 +141,8 @@ function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, solicitan
   const telefonoNorm = telefono.replace(/\D/g, '');
   const correoNorm = correo.toLowerCase();
 
-  const yaPendiente = obtenerSolicitudes().some(s =>
+  const solicitudesExistentes = await obtenerSolicitudes();
+  const yaPendiente = solicitudesExistentes.some(s =>
     s.estado === 'pendiente' &&
     (s.correo.toLowerCase() === correoNorm || s.telefono.replace(/\D/g, '') === telefonoNorm)
   );
@@ -102,9 +154,7 @@ function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, solicitan
     return { ok: false, error: 'Ya existe una cuenta registrada con ese correo o teléfono.' };
   }
 
-  const solicitud = {
-    id: `SOL-${Date.now()}`,
-
+  const datosSolicitud = {
     solicitanteId,
     solicitanteNombre,
     solicitanteRol,
@@ -116,8 +166,6 @@ function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, solicitan
 
     estado: 'pendiente',
 
-    fechaSolicitud: new Date().toISOString(),
-
     revisadoPor: null,
     fechaRevision: null,
 
@@ -127,9 +175,22 @@ function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, solicitan
     credenciales: null
   };
 
-  const solicitudes = obtenerSolicitudes();
-  solicitudes.unshift(solicitud);
-  guardarSolicitudes(solicitudes);
+  let solicitud;
+
+  if (dbFirestore) {
+    const docRef = await dbFirestore.collection(SOLICITUDES_COLECCION_FIRESTORE).add({
+      ...datosSolicitud,
+      fechaSolicitud: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // Marca de tiempo optimista solo para pintar de inmediato en pantalla
+    // — la autoritativa es el serverTimestamp() que ya quedó guardado.
+    solicitud = { ...datosSolicitud, id: docRef.id, fechaSolicitud: new Date().toISOString() };
+  } else {
+    solicitud = { ...datosSolicitud, id: `SOL-${Date.now()}`, fechaSolicitud: new Date().toISOString() };
+    const solicitudes = obtenerSolicitudesLocal();
+    solicitudes.unshift(solicitud);
+    guardarSolicitudesLocal(solicitudes);
+  }
 
   if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_creada'))) {
     agregarNotificacion({
@@ -162,12 +223,13 @@ function generarIniciales(nombreCompleto) {
 // Usuario = "MW" + número de cuenta secuencial (4 dígitos, como los que
 // ya existen: MW0001, MW0005...). Nunca repite uno ya usado, ni entre
 // cuentas existentes ni entre solicitudes ya aprobadas.
-function generarNumeroCuentaDisponible() {
+async function generarNumeroCuentaDisponible() {
 
   const personas = (typeof obtenerPersonas === 'function') ? obtenerPersonas() : [];
+  const solicitudes = await obtenerSolicitudes();
   const usuariosExistentes = new Set(
     personas.map(p => p.usuario).concat(
-      obtenerSolicitudes()
+      solicitudes
         .filter(s => s.credenciales?.usuario)
         .map(s => s.credenciales.usuario)
     )
@@ -192,8 +254,8 @@ function generarNumeroCuentaDisponible() {
 // Contraseña temporal = usuario + iniciales de la nueva Emprendedora.
 // Ejemplo: usuario MW0023, nombre "María Concepción Sánchez Cruz" →
 // contraseña temporal MW0023MCSC.
-function generarCredenciales(nombreCompleto) {
-  const numeroCuenta = generarNumeroCuentaDisponible();
+async function generarCredenciales(nombreCompleto) {
+  const numeroCuenta = await generarNumeroCuentaDisponible();
   const usuario = `MW${numeroCuenta}`;
   const iniciales = generarIniciales(nombreCompleto);
   const passwordTemporal = `${usuario}${iniciales}`;
@@ -204,10 +266,9 @@ function generarCredenciales(nombreCompleto) {
 // APROBAR / RECHAZAR (Administración)
 // ============================================================
 
-function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
+async function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
 
-  const solicitudes = obtenerSolicitudes();
-  const solicitud = solicitudes.find(s => s.id === solicitudId);
+  const solicitud = await obtenerSolicitudPorId(solicitudId);
 
   if (!solicitud) return { ok: false, error: 'La solicitud no existe.' };
   if (solicitud.estado !== 'pendiente') {
@@ -221,12 +282,15 @@ function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
     return { ok: false, error: 'Ya existe una cuenta con ese correo o teléfono. No se puede aprobar esta solicitud.' };
   }
 
-  const credenciales = generarCredenciales(solicitud.nombreCompleto);
+  const credenciales = await generarCredenciales(solicitud.nombreCompleto);
 
   const partesNombre = solicitud.nombreCompleto.trim().split(/\s+/);
   const nombre = partesNombre[0] || solicitud.nombreCompleto;
   const apellidos = partesNombre.slice(1).join(' ');
 
+  // personas-ejemplo.js todavía no está migrado a Firestore (ver
+  // comentario de cabecera): la nueva Emprendedora se crea aquí en
+  // localStorage sin importar dónde vive la solicitud.
   const nuevaPersona = crearPersonaEjemplo({
     id: `persona-${Date.now()}`,
     nombre,
@@ -248,13 +312,24 @@ function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
   personas.push(nuevaPersona);
   if (typeof guardarPersonas === 'function') guardarPersonas(personas);
 
-  solicitud.estado = 'aprobada';
-  solicitud.revisadoPor = adminId;
-  solicitud.fechaRevision = new Date().toISOString();
-  solicitud.emprendedoraCreadaId = nuevaPersona.id;
-  solicitud.credenciales = credenciales;
+  const cambios = {
+    estado: 'aprobada',
+    revisadoPor: adminId,
+    fechaRevision: new Date().toISOString(),
+    emprendedoraCreadaId: nuevaPersona.id,
+    credenciales
+  };
 
-  guardarSolicitudes(solicitudes);
+  if (dbFirestore) {
+    await dbFirestore.collection(SOLICITUDES_COLECCION_FIRESTORE).doc(solicitudId).update(cambios);
+  } else {
+    const solicitudes = obtenerSolicitudesLocal();
+    const solicitudLocal = solicitudes.find(s => s.id === solicitudId);
+    if (solicitudLocal) Object.assign(solicitudLocal, cambios);
+    guardarSolicitudesLocal(solicitudes);
+  }
+
+  Object.assign(solicitud, cambios);
 
   if (typeof registrarAuditoria === 'function') {
     registrarAuditoria({
@@ -280,25 +355,35 @@ function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
 
 }
 
-function rechazarSolicitud(solicitudId, { adminId, adminNombre, motivo }) {
+async function rechazarSolicitud(solicitudId, { adminId, adminNombre, motivo }) {
 
   motivo = String(motivo || '').trim();
   if (!motivo) return { ok: false, error: 'Escribe el motivo del rechazo.' };
 
-  const solicitudes = obtenerSolicitudes();
-  const solicitud = solicitudes.find(s => s.id === solicitudId);
+  const solicitud = await obtenerSolicitudPorId(solicitudId);
 
   if (!solicitud) return { ok: false, error: 'La solicitud no existe.' };
   if (solicitud.estado !== 'pendiente') {
     return { ok: false, error: 'Esta solicitud ya fue resuelta y no puede rechazarse.' };
   }
 
-  solicitud.estado = 'rechazada';
-  solicitud.revisadoPor = adminId;
-  solicitud.fechaRevision = new Date().toISOString();
-  solicitud.motivoRechazo = motivo;
+  const cambios = {
+    estado: 'rechazada',
+    revisadoPor: adminId,
+    fechaRevision: new Date().toISOString(),
+    motivoRechazo: motivo
+  };
 
-  guardarSolicitudes(solicitudes);
+  if (dbFirestore) {
+    await dbFirestore.collection(SOLICITUDES_COLECCION_FIRESTORE).doc(solicitudId).update(cambios);
+  } else {
+    const solicitudes = obtenerSolicitudesLocal();
+    const solicitudLocal = solicitudes.find(s => s.id === solicitudId);
+    if (solicitudLocal) Object.assign(solicitudLocal, cambios);
+    guardarSolicitudesLocal(solicitudes);
+  }
+
+  Object.assign(solicitud, cambios);
 
   if (typeof registrarAuditoria === 'function') {
     registrarAuditoria({

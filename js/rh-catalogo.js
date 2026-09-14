@@ -35,12 +35,12 @@ function cargarCatalogo() {
 
   if (guardado) {
     try {
-      catalogoRH = JSON.parse(guardado);
+      catalogoRH = JSON.parse(guardado).map(migrarProductoAVariantes);
     } catch (error) {
-      catalogoRH = CATALOGO_EJEMPLO.map(p => ({ ...p }));
+      catalogoRH = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
     }
   } else {
-    catalogoRH = CATALOGO_EJEMPLO.map(p => ({ ...p }));
+    catalogoRH = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
     guardarCatalogo();
   }
 
@@ -119,8 +119,8 @@ function renderCatalogo() {
 
     if (material && p.material !== material) return false;
     if (categoria && p.categoria !== categoria) return false;
-    if (estado === 'disponible' && p.stock <= 0) return false;
-    if (estado === 'agotado' && p.stock > 0) return false;
+    if (estado === 'disponible' && stockTotalProducto(p) <= 0) return false;
+    if (estado === 'agotado' && stockTotalProducto(p) > 0) return false;
 
     return true;
 
@@ -160,7 +160,7 @@ function renderCatalogo() {
 function actualizarResumenCatalogo() {
 
   const total = catalogoRH.length;
-  const disponibles = catalogoRH.filter(p => p.stock > 0).length;
+  const disponibles = catalogoRH.filter(productoDisponible).length;
   const oro = catalogoRH.filter(p => p.material === 'oro-laminado').length;
   const promedio = total ? catalogoRH.reduce((suma, p) => suma + Number(p.precioEtiqueta || 0), 0) / total : 0;
 
@@ -187,19 +187,21 @@ function renderProducto(p) {
 
   const material = MATERIALES_STAFF.find(m => m.key === p.material)?.label || p.material || '';
 
-  let stockClass = 'stock-ok';
-  let stockText = `${p.stock} piezas`;
+  const stockTotal = stockTotalProducto(p);
 
-  if (p.stock <= 0) {
+  let stockClass = 'stock-ok';
+  let stockText = `${stockTotal} piezas`;
+
+  if (stockTotal <= 0) {
     stockClass = 'stock-empty';
     stockText = 'Agotado';
-  } else if (p.stock <= 5) {
+  } else if (stockTotal <= 5) {
     stockClass = 'stock-low';
   }
 
   const imagen = normalizarImagenProducto(p.imagen);
-  const disponibilidad = p.stock > 0 ? 'Disponible' : 'Agotado';
-  const colorTalla = [p.colorOro, p.talla].filter(Boolean).join(' · ') || 'No aplica';
+  const disponibilidad = stockTotal > 0 ? 'Disponible' : 'Agotado';
+  const colorTalla = p.variantes.map(v => `${etiquetaVariante(v)} (${v.stock})`).join(' · ') || 'Sin variantes';
 
   return `
     <tr>
@@ -241,6 +243,7 @@ function renderProducto(p) {
 // ============================================================
 
 let imagenTemporalRH = '';
+let variantesTemporalRH = [];
 
 function abrirModalProducto(producto = null) {
 
@@ -250,6 +253,9 @@ function abrirModalProducto(producto = null) {
 
   const editando = !!producto;
   imagenTemporalRH = normalizarImagenProducto(producto?.imagen);
+  variantesTemporalRH = producto?.variantes?.length
+    ? producto.variantes.map(v => ({ ...v }))
+    : [crearVarianteProducto()];
 
   const materialInicial = producto?.material || MATERIALES_STAFF[0].key;
   const descuentoInicial = producto?.descuento ?? descuentoSugerido(materialInicial);
@@ -308,23 +314,11 @@ function abrirModalProducto(producto = null) {
         </select>
       </div>
 
-      <div class="form-field">
-        <label>Color del oro</label>
-        <select id="productoColor">
-          <option value="">No aplica</option>
-          ${COLORES_ORO_STAFF.map(c => `<option value="${c}" ${producto?.colorOro === c ? 'selected' : ''}>${c}</option>`).join('')}
-        </select>
-      </div>
-
-      <div class="form-field">
-        <label>Talla / variante</label>
-        <input id="productoTalla" type="text" placeholder="Ej. 6" value="${escapeAttribute(producto?.talla || '')}">
-      </div>
-
-      <div class="form-field">
-        <label>Existencia *</label>
-        <input id="productoStock" type="number" min="0" step="1" value="${producto?.stock ?? 0}">
-        <small class="field-help">Esta cantidad solo es visible para Staff, RH y Admin.</small>
+      <div class="form-field full">
+        <label>Variantes (color / talla y existencia) *</label>
+        <div id="variantesLista"></div>
+        <button type="button" class="btn btn-outline" id="agregarVarianteBtn" style="width:100%;margin-top:8px;">+ Agregar variante</button>
+        <small class="field-help">Una fila por cada combinación real de color y talla en inventario. Si el artículo no tiene color o talla, deja esos campos vacíos — solo captura la existencia. Esta cantidad solo es visible para Staff, RH y Admin.</small>
       </div>
 
       <div class="form-field">
@@ -357,6 +351,13 @@ function abrirModalProducto(producto = null) {
   `;
 
   overlay.classList.add('open');
+
+  renderVariantesTemporalRH();
+
+  document.getElementById('agregarVarianteBtn')?.addEventListener('click', () => {
+    variantesTemporalRH.push(crearVarianteProducto());
+    renderVariantesTemporalRH();
+  });
 
   document.getElementById('productoImagen')?.addEventListener('change', manejarImagen);
 
@@ -393,6 +394,50 @@ function abrirModalProducto(producto = null) {
   });
 
   box.querySelector('[data-close]')?.addEventListener('click', cerrarModal);
+
+}
+
+
+// ============================================================
+// REPETIDOR DE VARIANTES (color / talla / existencia)
+// ============================================================
+
+function renderVariantesTemporalRH() {
+
+  const cont = document.getElementById('variantesLista');
+  if (!cont) return;
+
+  cont.innerHTML = variantesTemporalRH.map(v => `
+    <div class="variante-row" data-variante-row="${v.id}">
+      <select class="variante-color" data-campo="colorOro" data-id="${v.id}">
+        <option value="">Sin color</option>
+        ${COLORES_ORO_STAFF.map(c => `<option value="${c}" ${v.colorOro === c ? 'selected' : ''}>${c}</option>`).join('')}
+      </select>
+      <input class="variante-talla" type="text" placeholder="Talla (opcional)" data-campo="talla" data-id="${v.id}" value="${escapeAttribute(v.talla)}">
+      <input class="variante-stock" type="number" min="0" step="1" placeholder="Existencia" data-campo="stock" data-id="${v.id}" value="${v.stock}">
+      <button type="button" class="variante-quitar" data-quitar-variante="${v.id}" title="Quitar variante">×</button>
+    </div>
+  `).join('');
+
+  cont.querySelectorAll('[data-campo]').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const variante = variantesTemporalRH.find(v => v.id === e.target.dataset.id);
+      if (!variante) return;
+      const campo = e.target.dataset.campo;
+      variante[campo] = campo === 'stock' ? e.target.value : e.target.value.trim();
+    });
+  });
+
+  cont.querySelectorAll('[data-quitar-variante]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (variantesTemporalRH.length <= 1) {
+        mostrarToast('El producto debe tener al menos una variante.');
+        return;
+      }
+      variantesTemporalRH = variantesTemporalRH.filter(v => v.id !== btn.dataset.quitarVariante);
+      renderVariantesTemporalRH();
+    });
+  });
 
 }
 
@@ -435,9 +480,6 @@ function obtenerDatosProducto() {
   const material = document.getElementById('productoMaterial')?.value;
   const categoria = document.getElementById('productoCategoria')?.value;
   const calidad = document.getElementById('productoCalidad')?.value;
-  const colorOro = document.getElementById('productoColor')?.value;
-  const talla = document.getElementById('productoTalla')?.value.trim();
-  const stock = Number(document.getElementById('productoStock')?.value);
   const precioEtiqueta = Number(document.getElementById('productoPrecioEtiqueta')?.value);
   const descuentoSelect = document.getElementById('productoDescuentoSelect')?.value;
   const descuento = descuentoSelect === 'otro'
@@ -446,14 +488,19 @@ function obtenerDatosProducto() {
 
   if (!nombre) { mostrarToast('Escribe el nombre del producto.'); return null; }
   if (!descripcion) { mostrarToast('Agrega una descripción.'); return null; }
-  if (Number.isNaN(stock) || stock < 0) { mostrarToast('La existencia no es válida.'); return null; }
+  if (!variantesTemporalRH.length || variantesTemporalRH.some(v => Number.isNaN(Number(v.stock)) || Number(v.stock) < 0)) {
+    mostrarToast('La existencia de alguna variante no es válida.');
+    return null;
+  }
   if (Number.isNaN(precioEtiqueta) || precioEtiqueta < 0) { mostrarToast('El precio etiqueta no es válido.'); return null; }
   if (Number.isNaN(descuento) || descuento < 0 || descuento > 100) { mostrarToast('El descuento no es válido (0 a 100).'); return null; }
 
+  const variantes = variantesTemporalRH.map(v => crearVarianteProducto(v));
+
   return {
-    nombre, descripcion, material, categoria, calidad, colorOro, talla,
-    stock, precioEtiqueta, descuento,
-    disponible: stock > 0,
+    nombre, descripcion, material, categoria, calidad,
+    variantes, precioEtiqueta, descuento,
+    disponible: variantes.some(v => v.stock > 0),
     imagen: imagenTemporalRH
   };
 
@@ -546,14 +593,21 @@ function abrirModalStock(producto) {
     <p class="modal-sub">${escapeHTML(producto.nombre)}</p>
 
     <div class="modal-context">
-      <span>Existencia actual</span>
-      <strong>${producto.stock} piezas</strong>
+      <span>Existencia total actual</span>
+      <strong>${stockTotalProducto(producto)} piezas</strong>
       <span>Último cambio</span>
       <strong>${producto.ultimaAccion?.empleado || 'Sin registro'}</strong>
     </div>
 
-    <label for="nuevoStock">Nueva existencia</label>
-    <input type="number" id="nuevoStock" min="0" step="1" value="${producto.stock}">
+    <label>Existencia por variante</label>
+    <div id="stockVariantesLista">
+      ${producto.variantes.map(v => `
+        <div class="variante-stock-row">
+          <span class="variante-stock-label">${escapeHTML(etiquetaVariante(v))}</span>
+          <input type="number" min="0" step="1" class="variante-stock-input" data-variante-id="${v.id}" value="${v.stock}">
+        </div>
+      `).join('')}
+    </div>
 
     <p class="demo-note">Esta información es privada para Staff, RH y Admin.</p>
 
@@ -566,37 +620,49 @@ function abrirModalStock(producto) {
 
   document.getElementById('guardarStockBtn')?.addEventListener('click', () => {
 
-    const nuevoStock = Number(document.getElementById('nuevoStock')?.value);
+    const inputs = box.querySelectorAll('.variante-stock-input');
+    const nuevosValores = new Map();
+    let valido = true;
 
-    if (Number.isNaN(nuevoStock) || nuevoStock < 0) {
+    inputs.forEach(input => {
+      const valor = Number(input.value);
+      if (Number.isNaN(valor) || valor < 0) valido = false;
+      nuevosValores.set(input.dataset.varianteId, Math.floor(valor));
+    });
+
+    if (!valido) {
       mostrarToast('La existencia no es válida.');
       return;
     }
 
+    const totalNuevo = Array.from(nuevosValores.values()).reduce((suma, v) => suma + v, 0);
+
     abrirAutorizacionRH({
       titulo: 'Autorizar existencia',
-      mensaje: `Estás a punto de cambiar la existencia de "${producto.nombre}" a ${Math.floor(nuevoStock)} piezas.`,
-      onConfirmar: () => guardarStock(producto.id, Math.floor(nuevoStock))
+      mensaje: `Estás a punto de cambiar la existencia de "${producto.nombre}" a ${totalNuevo} piezas en total.`,
+      onConfirmar: () => guardarStock(producto.id, nuevosValores)
     });
 
   });
 
 }
 
-function guardarStock(id, nuevoStock) {
+function guardarStock(id, nuevosValores) {
 
   const producto = catalogoRH.find(p => p.id === id);
   if (!producto) return;
 
-  producto.stock = nuevoStock;
-  producto.disponible = producto.stock > 0;
+  producto.variantes.forEach(v => {
+    if (nuevosValores.has(v.id)) v.stock = nuevosValores.get(v.id);
+  });
+  producto.disponible = productoDisponible(producto);
   producto.ultimaAccion = { tipo: 'Existencia modificada', empleado: RH_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() };
 
   guardarCatalogo();
   cerrarModal();
   renderCatalogo();
 
-  registrarAuditoriaRH({ modulo: 'catalogo', accion: 'modificar_existencia', descripcion: `Existencia de "${producto.nombre}" cambiada a ${nuevoStock} piezas` });
+  registrarAuditoriaRH({ modulo: 'catalogo', accion: 'modificar_existencia', descripcion: `Existencia de "${producto.nombre}" cambiada a ${stockTotalProducto(producto)} piezas` });
   mostrarToast(`Existencia actualizada por ${RH_IDENTIDAD.usuarioNombre}.`);
 
 }

@@ -16,6 +16,7 @@
 let catalogoStaff = [];
 let accionPendiente = null;
 let imagenTemporal = '';
+let variantesTemporal = [];
 
 const STORAGE_KEY = 'mw_staff_catalogo_demo';
 const LOG_KEY = 'mw_staff_catalogo_logs';
@@ -43,12 +44,12 @@ function cargarCatalogo() {
 
   if (guardado) {
     try {
-      catalogoStaff = JSON.parse(guardado);
+      catalogoStaff = JSON.parse(guardado).map(migrarProductoAVariantes);
     } catch (error) {
-      catalogoStaff = CATALOGO_EJEMPLO.map(p => ({ ...p }));
+      catalogoStaff = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
     }
   } else {
-    catalogoStaff = CATALOGO_EJEMPLO.map(p => ({ ...p }));
+    catalogoStaff = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
     guardarCatalogo();
   }
 
@@ -213,12 +214,12 @@ function renderCatalogo() {
     }
 
 
-    if (estado === 'disponible' && p.stock <= 0) {
+    if (estado === 'disponible' && stockTotalProducto(p) <= 0) {
       return false;
     }
 
 
-    if (estado === 'agotado' && p.stock > 0) {
+    if (estado === 'agotado' && stockTotalProducto(p) > 0) {
       return false;
     }
 
@@ -304,7 +305,7 @@ function renderCatalogo() {
 
 function actualizarResumenCatalogo() {
   const total = catalogoStaff.length;
-  const disponibles = catalogoStaff.filter(producto => producto.stock > 0).length;
+  const disponibles = catalogoStaff.filter(productoDisponible).length;
   const oro = catalogoStaff.filter(producto => producto.material === 'oro-laminado').length;
   const promedio = total
     ? catalogoStaff.reduce((suma, producto) => suma + Number(producto.precioEtiqueta || 0), 0) / total
@@ -336,15 +337,17 @@ function renderProducto(p) {
     '';
 
 
-  let stockClass = 'stock-ok';
-  let stockText = `${p.stock} piezas`;
+  const stockTotal = stockTotalProducto(p);
 
-  if (p.stock <= 0) {
+  let stockClass = 'stock-ok';
+  let stockText = `${stockTotal} piezas`;
+
+  if (stockTotal <= 0) {
 
     stockClass = 'stock-empty';
     stockText = 'Agotado';
 
-  } else if (p.stock <= 5) {
+  } else if (stockTotal <= 5) {
 
     stockClass = 'stock-low';
 
@@ -352,8 +355,8 @@ function renderProducto(p) {
 
 
   const imagen = normalizarImagenProducto(p.imagen);
-  const disponibilidad = p.stock > 0 ? 'Disponible' : 'Agotado';
-  const colorTalla = [p.colorOro, p.talla].filter(Boolean).join(' · ') || 'No aplica';
+  const disponibilidad = stockTotal > 0 ? 'Disponible' : 'Agotado';
+  const colorTalla = p.variantes.map(v => `${etiquetaVariante(v)} (${v.stock})`).join(' · ') || 'Sin variantes';
 
   return `
     <tr>
@@ -404,6 +407,9 @@ function abrirModalProducto(producto = null) {
 
 
   imagenTemporal = normalizarImagenProducto(producto?.imagen);
+  variantesTemporal = producto?.variantes?.length
+    ? producto.variantes.map(v => ({ ...v }))
+    : [crearVarianteProducto()];
 
   const materialInicial = producto?.material || MATERIALES_STAFF[0].key;
   const descuentoInicial = producto?.descuento ?? descuentoSugerido(materialInicial);
@@ -573,56 +579,16 @@ function abrirModalProducto(producto = null) {
       </div>
 
 
-      <div class="form-field">
+      <div class="form-field full">
 
-        <label>Color del oro</label>
+        <label>Variantes (color / talla y existencia) *</label>
 
-        <select id="productoColor">
+        <div id="variantesLista"></div>
 
-          <option value="">No aplica</option>
-
-          ${COLORES_ORO_STAFF.map(c => `
-            <option
-              value="${c}"
-              ${producto?.colorOro === c ? 'selected' : ''}
-            >
-              ${c}
-            </option>
-          `).join('')}
-
-        </select>
-
-      </div>
-
-
-      <div class="form-field">
-
-        <label>Talla / variante</label>
-
-        <input
-          id="productoTalla"
-          type="text"
-          placeholder="Ej. 6"
-          value="${escapeAttribute(producto?.talla || '')}"
-        >
-
-      </div>
-
-
-      <div class="form-field">
-
-        <label>Existencia *</label>
-
-        <input
-          id="productoStock"
-          type="number"
-          min="0"
-          step="1"
-          value="${producto?.stock ?? 0}"
-        >
+        <button type="button" class="btn btn-outline" id="agregarVarianteBtn" style="width:100%;margin-top:8px;">+ Agregar variante</button>
 
         <small class="field-help">
-          Esta cantidad solo es visible para Staff, RH y Admin.
+          Una fila por cada combinación real de color y talla en inventario. Si el artículo no tiene color o talla, deja esos campos vacíos — solo captura la existencia. Esta cantidad solo es visible para Staff, RH y Admin.
         </small>
 
       </div>
@@ -703,6 +669,15 @@ function abrirModalProducto(producto = null) {
 
   overlay.classList.add('open');
 
+  renderVariantesTemporal();
+
+  document
+    .getElementById('agregarVarianteBtn')
+    ?.addEventListener('click', () => {
+      variantesTemporal.push(crearVarianteProducto());
+      renderVariantesTemporal();
+    });
+
 
   document
     .getElementById('productoImagen')
@@ -765,6 +740,50 @@ function abrirModalProducto(producto = null) {
 
   box.querySelector('[data-close]')
     ?.addEventListener('click', cerrarModal);
+
+}
+
+
+// ============================================================
+// REPETIDOR DE VARIANTES (color / talla / existencia)
+// ============================================================
+
+function renderVariantesTemporal() {
+
+  const cont = document.getElementById('variantesLista');
+  if (!cont) return;
+
+  cont.innerHTML = variantesTemporal.map(v => `
+    <div class="variante-row" data-variante-row="${v.id}">
+      <select class="variante-color" data-campo="colorOro" data-id="${v.id}">
+        <option value="">Sin color</option>
+        ${COLORES_ORO_STAFF.map(c => `<option value="${c}" ${v.colorOro === c ? 'selected' : ''}>${c}</option>`).join('')}
+      </select>
+      <input class="variante-talla" type="text" placeholder="Talla (opcional)" data-campo="talla" data-id="${v.id}" value="${escapeAttribute(v.talla)}">
+      <input class="variante-stock" type="number" min="0" step="1" placeholder="Existencia" data-campo="stock" data-id="${v.id}" value="${v.stock}">
+      <button type="button" class="variante-quitar" data-quitar-variante="${v.id}" title="Quitar variante">×</button>
+    </div>
+  `).join('');
+
+  cont.querySelectorAll('[data-campo]').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const variante = variantesTemporal.find(v => v.id === e.target.dataset.id);
+      if (!variante) return;
+      const campo = e.target.dataset.campo;
+      variante[campo] = campo === 'stock' ? e.target.value : e.target.value.trim();
+    });
+  });
+
+  cont.querySelectorAll('[data-quitar-variante]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (variantesTemporal.length <= 1) {
+        mostrarToast('El producto debe tener al menos una variante.');
+        return;
+      }
+      variantesTemporal = variantesTemporal.filter(v => v.id !== btn.dataset.quitarVariante);
+      renderVariantesTemporal();
+    });
+  });
 
 }
 
@@ -838,18 +857,6 @@ function obtenerDatosProducto() {
     document.getElementById('productoCalidad')?.value;
 
 
-  const colorOro =
-    document.getElementById('productoColor')?.value;
-
-
-  const talla =
-    document.getElementById('productoTalla')?.value.trim();
-
-
-  const stock =
-    Number(document.getElementById('productoStock')?.value);
-
-
   const precioEtiqueta =
     Number(document.getElementById('productoPrecioEtiqueta')?.value);
 
@@ -880,13 +887,15 @@ function obtenerDatosProducto() {
   }
 
 
-  if (Number.isNaN(stock) || stock < 0) {
+  if (!variantesTemporal.length || variantesTemporal.some(v => Number.isNaN(Number(v.stock)) || Number(v.stock) < 0)) {
 
-    mostrarToast('La existencia no es válida.');
+    mostrarToast('La existencia de alguna variante no es válida.');
 
     return null;
 
   }
+
+  const variantes = variantesTemporal.map(v => crearVarianteProducto(v));
 
 
   if (Number.isNaN(precioEtiqueta) || precioEtiqueta < 0) {
@@ -914,12 +923,10 @@ function obtenerDatosProducto() {
     material,
     categoria,
     calidad,
-    colorOro,
-    talla,
-    stock,
+    variantes,
     precioEtiqueta,
     descuento,
-    disponible: stock > 0,
+    disponible: variantes.some(v => v.stock > 0),
     imagen: imagenTemporal
 
   };
@@ -1466,10 +1473,10 @@ function abrirModalStock(producto, empleado) {
 
     <div class="modal-context">
 
-      <span>Existencia actual</span>
+      <span>Existencia total actual</span>
 
       <strong>
-        ${producto.stock} piezas
+        ${stockTotalProducto(producto)} piezas
       </strong>
 
 
@@ -1482,18 +1489,18 @@ function abrirModalStock(producto, empleado) {
     </div>
 
 
-    <label for="nuevoStock">
-      Nueva existencia
+    <label>
+      Existencia por variante
     </label>
 
-
-    <input
-      type="number"
-      id="nuevoStock"
-      min="0"
-      step="1"
-      value="${producto.stock}"
-    >
+    <div id="stockVariantesLista">
+      ${producto.variantes.map(v => `
+        <div class="variante-stock-row">
+          <span class="variante-stock-label">${escapeHTML(etiquetaVariante(v))}</span>
+          <input type="number" min="0" step="1" class="variante-stock-input" data-variante-id="${v.id}" value="${v.stock}">
+        </div>
+      `).join('')}
+    </div>
 
 
     <p class="demo-note">
@@ -1523,16 +1530,17 @@ function abrirModalStock(producto, empleado) {
     .getElementById('guardarStockBtn')
     ?.addEventListener('click', () => {
 
-      const nuevoStock =
-        Number(
-          document.getElementById('nuevoStock')?.value
-        );
+      const inputs = box.querySelectorAll('.variante-stock-input');
+      const nuevosValores = new Map();
+      let valido = true;
 
+      inputs.forEach(input => {
+        const valor = Number(input.value);
+        if (Number.isNaN(valor) || valor < 0) valido = false;
+        nuevosValores.set(input.dataset.varianteId, Math.floor(valor));
+      });
 
-      if (
-        Number.isNaN(nuevoStock) ||
-        nuevoStock < 0
-      ) {
+      if (!valido) {
 
         mostrarToast(
           'La existencia no es válida.'
@@ -1543,12 +1551,13 @@ function abrirModalStock(producto, empleado) {
       }
 
 
-      producto.stock =
-        Math.floor(nuevoStock);
+      producto.variantes.forEach(v => {
+        if (nuevosValores.has(v.id)) v.stock = nuevosValores.get(v.id);
+      });
 
 
       producto.disponible =
-        producto.stock > 0;
+        productoDisponible(producto);
 
 
       producto.ultimaAccion = {
@@ -1572,7 +1581,7 @@ function abrirModalStock(producto, empleado) {
         rol: 'staff',
         modulo: 'catalogo',
         accion: 'modificar_existencia',
-        descripcion: `Existencia de "${producto.nombre}" cambiada a ${producto.stock} piezas`
+        descripcion: `Existencia de "${producto.nombre}" cambiada a ${stockTotalProducto(producto)} piezas`
       });
 
       cerrarModal();

@@ -2684,6 +2684,70 @@ a:hover { color: var(--mw-gold); }
   box-shadow: 0 0 0 3px #8b55ad14;
 }
 
+/* Repetidor de variantes (color/talla/existencia) — Catálogo */
+.variante-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.variante-row select,
+.variante-row input {
+  border: 1px solid #ddd5e3;
+  border-radius: 7px;
+  padding: 9px 11px;
+  height: 40px;
+  background: #fff;
+  color: #312044;
+  outline: none;
+}
+
+.variante-row .variante-color { flex: 1.2; min-width: 0; }
+.variante-row .variante-talla { flex: 1; min-width: 0; }
+.variante-row .variante-stock { flex: 0.8; min-width: 0; }
+
+.variante-quitar {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 7px;
+  background: #fdeeee;
+  color: #b94a4a;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.variante-quitar:hover { background: #fbdada; }
+
+.variante-stock-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0ecf4;
+}
+.variante-stock-row:last-child { border-bottom: none; }
+
+.variante-stock-label {
+  color: #3b2a54;
+  font-size: 0.85rem;
+}
+
+.variante-stock-input {
+  width: 90px;
+  border: 1px solid #ddd5e3;
+  border-radius: 7px;
+  padding: 7px 9px;
+  color: #312044;
+  outline: none;
+}
+.variante-stock-input:focus {
+  border-color: #8b55ad;
+  box-shadow: 0 0 0 3px #8b55ad14;
+}
+
 .price-input {
   display: flex;
   align-items: center;

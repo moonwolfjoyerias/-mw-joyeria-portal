@@ -46,12 +46,12 @@ function obtenerIdentidadSolicitante() {
 // LISTA "MIS SOLICITUDES"
 // ============================================================
 
-function renderMisSolicitudes(identidad) {
+async function renderMisSolicitudes(identidad) {
 
   const wrap = document.getElementById('misSolicitudesLista');
   if (!wrap) return;
 
-  const solicitudes = obtenerSolicitudesDe(identidad.id);
+  const solicitudes = await obtenerSolicitudesDe(identidad.id);
 
   if (!solicitudes.length) {
     wrap.innerHTML = `<p class="bp-sub" style="margin:0;">Todavía no has enviado ninguna solicitud.</p>`;
@@ -149,7 +149,7 @@ async function enviarNuevaSolicitud(identidad) {
   const ineStoragePath = `solicitudes-ine/${Date.now()}-${Math.round(Math.random() * 1e6)}`;
   await guardarBlobDocumento(ineStoragePath, ineArchivoTemporal);
 
-  const resultado = crearSolicitudInscripcion({
+  const resultado = await crearSolicitudInscripcion({
     solicitanteId: identidad.id,
     solicitanteNombre: identidad.nombre,
     solicitanteRol: identidad.rol,
@@ -170,7 +170,7 @@ async function enviarNuevaSolicitud(identidad) {
     history.replaceState(null, '', window.location.pathname + window.location.search);
   }
 
-  renderMisSolicitudes(identidad);
+  await renderMisSolicitudes(identidad);
   mostrarToast(`Solicitud enviada. Te avisaremos cuando sea revisada.`);
 
 }

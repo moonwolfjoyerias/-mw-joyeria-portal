@@ -132,6 +132,7 @@ function crearApartadoPieza(datos = {}) {
   return {
     id: datos.id || `PIEZA-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     productoId: datos.productoId || '',
+    varianteId: datos.varianteId || '',
     producto: datos.producto || '',
     variante: datos.variante || '',
     precio: total,
@@ -234,14 +235,31 @@ function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, emplea
 
 }
 
+// Descuenta la existencia real de la variante seleccionada (Sección 4.3
+// — cantidad por combinación color+talla) antes de crear la pieza. Si ya
+// no hay existencia (otra persona se adelantó, o el catálogo cambió
+// mientras se llenaba el formulario), no crea nada y regresa el error.
 function agregarPiezaAVentana(ventana, datosPieza, empleado) {
+
+  if (typeof descontarStockVariante === 'function') {
+    const resultado = descontarStockVariante(datosPieza.productoId, datosPieza.varianteId);
+    if (!resultado.ok) return { ok: false, error: resultado.error };
+  }
 
   const pieza = crearApartadoPieza(datosPieza);
   ventana.apartados.push(pieza);
   ventana.auditoria.push(registrarAuditoria(`Pieza agregada: ${pieza.producto}`, empleado));
 
-  return pieza;
+  return { ok: true, pieza };
 
+}
+
+// Contraparte de agregarPiezaAVentana — restaura la existencia de la
+// variante de cada pieza que se cancela, para que el inventario no
+// quede perdido para siempre.
+function restaurarStockPiezasCanceladas(piezas) {
+  if (typeof restaurarStockVariante !== 'function') return;
+  piezas.forEach(pieza => restaurarStockVariante(pieza.productoId, pieza.varianteId));
 }
 
 // Liquida (paga) TODAS las piezas activas de la ventana juntas — el
@@ -313,6 +331,7 @@ function cancelarVentanaCompleta(ventana, empleado) {
   if (!piezasActivas.length) return null;
 
   piezasActivas.forEach(pieza => { pieza.estado = 'cancelada'; });
+  restaurarStockPiezasCanceladas(piezasActivas);
 
   ventana.auditoria.push(registrarAuditoria(
     `Apartado cancelado por completo (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'})`,
@@ -346,6 +365,7 @@ function desapartarVentanaVencida(ventana, empleado) {
 
   const piezasActivas = obtenerPiezasActivas(ventana);
   piezasActivas.forEach(pieza => { pieza.estado = 'cancelada'; });
+  restaurarStockPiezasCanceladas(piezasActivas);
 
   const montoPerdido = ventana.depositoApartadoDisponible;
   ventana.depositoApartadoDisponible = 0;

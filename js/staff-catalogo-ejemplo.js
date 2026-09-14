@@ -27,6 +27,11 @@ const STAFF_USUARIOS_EJEMPLO = [
   }
 ];
 
+// Cada producto es un MODELO con un arreglo `variantes`: una entrada por
+// cada combinación Color+Talla real que existe en inventario, con su
+// propio stock. Un producto sin color relevante o sin talla (la mayoría
+// fuera de Anillos/Cadenas en oro) simplemente trae esos campos vacíos
+// en su(s) variante(s) — ver js/catalogo-variantes-modelo.js.
 const CATALOGO_EJEMPLO = [
   {
     id: 'prod-001',
@@ -35,13 +40,16 @@ const CATALOGO_EJEMPLO = [
     material: 'oro-laminado',
     categoria: 'Anillos',
     calidad: 'premium',
-    colorOro: 'Amarillo',
-    talla: '6',
     precioEtiqueta: 690,
     descuento: 60,
-    stock: 18,
     disponible: true,
-    imagen: '../assets/images/isotipo-morado.png'
+    imagen: '../assets/images/isotipo-morado.png',
+    variantes: [
+      { id: 'prod-001-v1', colorOro: 'Amarillo', talla: '6', stock: 10 },
+      { id: 'prod-001-v2', colorOro: 'Amarillo', talla: '7', stock: 8 },
+      { id: 'prod-001-v3', colorOro: 'Blanco', talla: '6', stock: 5 },
+      { id: 'prod-001-v4', colorOro: 'Blanco', talla: '7', stock: 0 }
+    ]
   },
 
   {
@@ -51,13 +59,14 @@ const CATALOGO_EJEMPLO = [
     material: 'oro-laminado',
     categoria: 'Cadenas',
     calidad: 'estandar',
-    colorOro: 'Amarillo',
-    talla: '',
     precioEtiqueta: 650,
     descuento: 60,
-    stock: 27,
     disponible: true,
-    imagen: '../assets/images/isotipo-morado.png'
+    imagen: '../assets/images/isotipo-morado.png',
+    variantes: [
+      { id: 'prod-002-v1', colorOro: 'Amarillo', talla: '45cm', stock: 15 },
+      { id: 'prod-002-v2', colorOro: 'Rosa', talla: '45cm', stock: 12 }
+    ]
   },
 
   {
@@ -67,13 +76,13 @@ const CATALOGO_EJEMPLO = [
     material: 'oro-laminado',
     categoria: 'Aretes',
     calidad: 'premium',
-    colorOro: 'Blanco',
-    talla: '',
     precioEtiqueta: 430,
     descuento: 60,
-    stock: 12,
     disponible: true,
-    imagen: '../assets/images/isotipo-morado.png'
+    imagen: '../assets/images/isotipo-morado.png',
+    variantes: [
+      { id: 'prod-003-v1', colorOro: 'Blanco', talla: '', stock: 12 }
+    ]
   },
 
   {
@@ -83,13 +92,13 @@ const CATALOGO_EJEMPLO = [
     material: 'oro-laminado',
     categoria: 'Pulseras',
     calidad: 'premium',
-    colorOro: 'Amarillo',
-    talla: '18 cm',
     precioEtiqueta: 750,
     descuento: 60,
-    stock: 0,
     disponible: false,
-    imagen: '../assets/images/isotipo-morado.png'
+    imagen: '../assets/images/isotipo-morado.png',
+    variantes: [
+      { id: 'prod-004-v1', colorOro: 'Amarillo', talla: '18 cm', stock: 0 }
+    ]
   },
 
   {
@@ -99,13 +108,13 @@ const CATALOGO_EJEMPLO = [
     material: 'acero-inoxidable',
     categoria: 'Aretes',
     calidad: 'estandar',
-    colorOro: '',
-    talla: '',
     precioEtiqueta: 320,
     descuento: 40,
-    stock: 35,
     disponible: true,
-    imagen: '../assets/images/isotipo-morado.png'
+    imagen: '../assets/images/isotipo-morado.png',
+    variantes: [
+      { id: 'prod-005-v1', colorOro: '', talla: '', stock: 35 }
+    ]
   },
 
   {
@@ -115,13 +124,13 @@ const CATALOGO_EJEMPLO = [
     material: 'oro-laminado',
     categoria: 'Dijes',
     calidad: 'premium',
-    colorOro: 'Amarillo',
-    talla: '',
     precioEtiqueta: 350,
     descuento: 60,
-    stock: 21,
     disponible: true,
-    imagen: '../assets/images/isotipo-morado.png'
+    imagen: '../assets/images/isotipo-morado.png',
+    variantes: [
+      { id: 'prod-006-v1', colorOro: 'Amarillo', talla: '', stock: 21 }
+    ]
   },
 
   {
@@ -131,13 +140,13 @@ const CATALOGO_EJEMPLO = [
     material: 'exhibidores',
     categoria: 'Exhibidores',
     calidad: 'estandar',
-    colorOro: '',
-    talla: '',
     precioEtiqueta: 149,
     descuento: 30,
-    stock: 44,
     disponible: true,
-    imagen: '../assets/images/isotipo-morado.png'
+    imagen: '../assets/images/isotipo-morado.png',
+    variantes: [
+      { id: 'prod-007-v1', colorOro: '', talla: '', stock: 44 }
+    ]
   },
 
   {
@@ -147,13 +156,13 @@ const CATALOGO_EJEMPLO = [
     material: 'souvenirs',
     categoria: 'Souvenirs',
     calidad: 'estandar',
-    colorOro: '',
-    talla: '',
     precioEtiqueta: 120,
     descuento: 0,
-    stock: 8,
     disponible: true,
-    imagen: '../assets/images/isotipo-morado.png'
+    imagen: '../assets/images/isotipo-morado.png',
+    variantes: [
+      { id: 'prod-008-v1', colorOro: '', talla: '', stock: 8 }
+    ]
   }
 ];
 
