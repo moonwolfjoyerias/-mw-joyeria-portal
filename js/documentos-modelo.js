@@ -11,11 +11,14 @@
 // localStorage — cualquiera con acceso a ese almacenamiento podía leerla,
 // y un campo así de pesado no cabría en un documento de Firestore (límite
 // de 1MB). Ahora el registro de la solicitud solo guarda una RUTA
-// (`ineUrl`, ver js/solicitudes-modelo.js) — el archivo real vive aparte,
-// igual que viviría en Firebase Storage al conectar Firebase en Fase 3.
+// (`ineUrl`, ver js/solicitudes-modelo.js) — el archivo real vive aparte.
 //
-// ⚠️ TEMPORAL: IndexedDB simula Storage. Se reemplaza por Firebase
-// Storage en Fase 3 sin cambiar la forma de las rutas ("solicitudes-ine/...").
+// FASE 2 (Firebase): si js/firebase-init.js dejó `storageFirebase` con
+// valor (MODO_DEMO=false + config real), estas funciones suben/leen/
+// borran el archivo en Firebase Storage bajo esa misma ruta. Si no,
+// siguen usando IndexedDB para simularlo — mismo comportamiento en modo
+// demo, cero regresión. La forma de la ruta ("solicitudes-ine/...") no
+// cambia entre uno u otro, así que ineUrl nunca necesita migrarse.
 
 const DOCUMENTOS_DB_NOMBRE = 'mw-documentos-db';
 const DOCUMENTOS_DB_VERSION = 1;
@@ -44,6 +47,10 @@ function abrirDBDocumentos() {
 }
 
 async function guardarBlobDocumento(storagePath, blob) {
+  if (storageFirebase) {
+    await storageFirebase.ref(storagePath).put(blob);
+    return;
+  }
   const db = await abrirDBDocumentos();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(DOCUMENTOS_DB_STORE, 'readwrite');
@@ -53,6 +60,9 @@ async function guardarBlobDocumento(storagePath, blob) {
   });
 }
 
+// Solo aplica al respaldo de IndexedDB — Firebase Storage no expone el
+// blob directo del mismo modo (ver resolverSrcDocumento, que sí cubre
+// ambos casos con una URL para <img src>).
 async function obtenerBlobDocumento(storagePath) {
   const db = await abrirDBDocumentos();
   return new Promise((resolve, reject) => {
@@ -64,6 +74,10 @@ async function obtenerBlobDocumento(storagePath) {
 }
 
 async function eliminarBlobDocumento(storagePath) {
+  if (storageFirebase) {
+    await storageFirebase.ref(storagePath).delete();
+    return;
+  }
   const db = await abrirDBDocumentos();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(DOCUMENTOS_DB_STORE, 'readwrite');
@@ -73,14 +87,23 @@ async function eliminarBlobDocumento(storagePath) {
   });
 }
 
-// Cache de object URLs ya creados en esta sesión de página (mismo motivo
-// que fotos-sitio-modelo.js: no generar uno nuevo cada vez que se pinta
-// la misma vista previa).
+// Cache de object URLs / URLs de descarga ya resueltas en esta sesión de
+// página (mismo motivo que fotos-sitio-modelo.js: no volver a pedirla
+// cada vez que se pinta la misma vista previa).
 const _documentosUrlCache = new Map();
 
 async function resolverSrcDocumento(storagePath) {
   if (!storagePath) return null;
   if (_documentosUrlCache.has(storagePath)) return _documentosUrlCache.get(storagePath);
+  if (storageFirebase) {
+    try {
+      const url = await storageFirebase.ref(storagePath).getDownloadURL();
+      _documentosUrlCache.set(storagePath, url);
+      return url;
+    } catch (error) {
+      return null;
+    }
+  }
   const blob = await obtenerBlobDocumento(storagePath);
   if (!blob) return null;
   const url = URL.createObjectURL(blob);

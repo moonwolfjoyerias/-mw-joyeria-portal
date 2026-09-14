@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // LISTA
 // ============================================================
 
-function renderListaSolicitudesAdmin() {
+async function renderListaSolicitudesAdmin() {
 
   const body = document.getElementById('solicitudesBody');
   if (!body) return;
@@ -35,7 +35,9 @@ function renderListaSolicitudesAdmin() {
   const estadoFiltro = document.getElementById('solicitudFilterEstado')?.value || '';
   const orden = document.getElementById('solicitudOrden')?.value || 'reciente';
 
-  let solicitudes = obtenerSolicitudes().filter(s => {
+  const todasLasSolicitudes = await obtenerSolicitudes();
+
+  let solicitudes = todasLasSolicitudes.filter(s => {
     if (estadoFiltro && s.estado !== estadoFiltro) return false;
     if (texto) {
       const coincide =
@@ -50,7 +52,7 @@ function renderListaSolicitudesAdmin() {
     ? a.fechaSolicitud.localeCompare(b.fechaSolicitud)
     : b.fechaSolicitud.localeCompare(a.fechaSolicitud));
 
-  const pendientes = obtenerSolicitudes().filter(s => s.estado === 'pendiente').length;
+  const pendientes = todasLasSolicitudes.filter(s => s.estado === 'pendiente').length;
   const chip = document.getElementById('solicitudesPendingCount');
   if (chip) chip.textContent = `${pendientes} pendiente${pendientes === 1 ? '' : 's'}`;
 
@@ -88,7 +90,7 @@ function renderListaSolicitudesAdmin() {
 
 async function abrirDetalleSolicitudAdmin(id) {
 
-  const solicitud = obtenerSolicitudPorId(id);
+  const solicitud = await obtenerSolicitudPorId(id);
   if (!solicitud) return;
 
   const overlay = document.getElementById('modalOverlay');
@@ -200,9 +202,9 @@ function abrirConfirmarAprobarAdmin(solicitud) {
   abrirAutorizacionAdmin({
     titulo: 'Aprobar solicitud',
     mensaje: `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora y ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} quedará registrado(a) como su líder directa.`,
-    onConfirmar: () => {
+    onConfirmar: async () => {
 
-      const resultado = aprobarSolicitud(solicitud.id, {
+      const resultado = await aprobarSolicitud(solicitud.id, {
         adminId: ADMIN_IDENTIDAD.usuarioId,
         adminNombre: ADMIN_IDENTIDAD.usuarioNombre
       });
@@ -291,7 +293,7 @@ function abrirModalRechazarAdmin(solicitud) {
 
   overlay.classList.add('open');
 
-  document.getElementById('confirmarRechazoBtn')?.addEventListener('click', () => {
+  document.getElementById('confirmarRechazoBtn')?.addEventListener('click', async () => {
 
     const motivo = document.getElementById('motivoRechazoInput')?.value.trim();
 
@@ -301,7 +303,7 @@ function abrirModalRechazarAdmin(solicitud) {
       return;
     }
 
-    const resultado = rechazarSolicitud(solicitud.id, {
+    const resultado = await rechazarSolicitud(solicitud.id, {
       adminId: ADMIN_IDENTIDAD.usuarioId,
       adminNombre: ADMIN_IDENTIDAD.usuarioNombre,
       motivo

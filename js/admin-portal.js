@@ -25,7 +25,7 @@ function setTextDash(id, valor) {
 // TARJETAS DE RESUMEN
 // ============================================================
 
-function renderResumenGeneral() {
+async function renderResumenGeneral() {
 
   // Catálogo — misma clave de localStorage que usan Staff/RH/Admin.
   let catalogo = [];
@@ -63,7 +63,7 @@ function renderResumenGeneral() {
   setTextDash('dashComisionesLideresPendientes', lideresPendientes ? `${lideresPendientes} líder${lideresPendientes === 1 ? '' : 'es'} sin pagar` : 'Todo pagado');
 
   // Solicitudes de inscripción.
-  const solicitudes = typeof obtenerSolicitudes === 'function' ? obtenerSolicitudes() : [];
+  const solicitudes = typeof obtenerSolicitudes === 'function' ? await obtenerSolicitudes() : [];
   setTextDash('dashSolicitudesPendientes', solicitudes.filter(s => s.estado === 'pendiente').length);
 
   // Lista de deseos — misma fuente que Staff/RH/Admin.
