@@ -9,11 +9,6 @@ const PERSONAL_EJEMPLO = [
     password: "1234"
   },
   {
-    usuario: "MW0005",
-    nombre: "María Camila Sánchez Calles",
-    password: "2896"
-  },
-  {
     usuario: "admin01",
     nombre: "Claudia",
     password: "1234"
