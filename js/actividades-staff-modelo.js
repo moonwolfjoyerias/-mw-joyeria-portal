@@ -35,6 +35,28 @@ const PERIODICIDADES_ACTIVIDAD_STAFF = {
   semanal: 'Semanalmente'
 };
 
+// Toda actividad es "permanente" salvo que RH la marque "temporal" al
+// crearla: existe solo dentro de [fechaInicioTemporal, fechaFinTemporal]
+// y, después de realizarse, RH la elimina a mano (ver
+// eliminarAsignacionActividadStaff) — nunca se borra sola.
+const TIPOS_ACTIVIDAD_STAFF = {
+  permanente: 'Permanente',
+  temporal: 'Temporal'
+};
+
+function vigenciaTemporalActividadStaff(a) {
+  if (!a || a.tipo !== 'temporal') return { aplica: false, vigente: true, vencida: false };
+  const hoy = formatearFechaISOActividadStaff(new Date());
+  const vigente = (!a.fechaInicioTemporal || a.fechaInicioTemporal <= hoy) && (!a.fechaFinTemporal || hoy <= a.fechaFinTemporal);
+  const vencida = !!a.fechaFinTemporal && hoy > a.fechaFinTemporal;
+  return { aplica: true, vigente, vencida };
+}
+
+function formatearFechaCortaActividadStaff(fechaISO) {
+  if (!fechaISO) return '—';
+  return new Date(`${fechaISO}T00:00:00`).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+}
+
 const DIAS_SEMANA_ACTIVIDAD_STAFF = {
   lunes: 'Lunes',
   martes: 'Martes',
@@ -245,10 +267,49 @@ function empleadoNominaDeCuentaActividadStaff(cuenta) {
 // ASIGNACIONES (actividadesStaff)
 // ============================================================
 
+// Rellena en memoria (nunca reescribe localStorage por su cuenta) los
+// campos que no existían antes de esta corrección — así cualquier
+// asignación ya guardada (un solo encargadoId/encargadoNombre, sin
+// tipo/eliminada) se ve exactamente igual que una nueva, sin necesitar
+// una migración aparte. `encargadoId`/`encargadoNombre` (el primer
+// responsable) se conservan siempre sincronizados para que Admin —que
+// todavía no tiene el selector múltiple— siga funcionando sin cambios.
+function normalizarAsignacionActividadStaff(a) {
+  if (!a) return a;
+  const encargados = Array.isArray(a.encargados)
+    ? a.encargados
+    : (a.encargadoId ? [{ id: a.encargadoId, nombre: a.encargadoNombre || '' }] : []);
+  const estadosPorEncargado = (a.estadosPorEncargado && typeof a.estadosPorEncargado === 'object') ? a.estadosPorEncargado : {};
+  return {
+    ...a,
+    tipo: a.tipo === 'temporal' ? 'temporal' : 'permanente',
+    fechaInicioTemporal: a.fechaInicioTemporal || null,
+    fechaFinTemporal: a.fechaFinTemporal || null,
+    encargados,
+    encargadoId: encargados[0]?.id || null,
+    encargadoNombre: encargados[0]?.nombre || '',
+    estadosPorEncargado,
+    eliminada: !!a.eliminada,
+    eliminadaPorId: a.eliminadaPorId || null,
+    eliminadaPorNombre: a.eliminadaPorNombre || null,
+    fechaEliminacion: a.fechaEliminacion || null
+  };
+}
+
+// Arma la lista de {id, nombre} de Staff activo a partir de un arreglo
+// de ids, ignorando cualquier id que ya no corresponda a alguien activo.
+function empleadosDesdeIdsActividadStaff(ids) {
+  const activos = empleadosStaffActivosActividad();
+  return (ids || [])
+    .map(id => activos.find(e => e.id === id))
+    .filter(Boolean)
+    .map(e => ({ id: e.id, nombre: e.nombre }));
+}
+
 function obtenerAsignacionesActividadStaff() {
   try {
     const guardadas = JSON.parse(localStorage.getItem(ACTIVIDADES_STAFF_ASIGNACIONES_KEY));
-    if (Array.isArray(guardadas)) return guardadas;
+    if (Array.isArray(guardadas)) return guardadas.map(normalizarAsignacionActividadStaff);
   } catch (error) {
     // sigue abajo
   }
@@ -264,8 +325,14 @@ function obtenerAsignacionActividadStaffPorId(id) {
   return obtenerAsignacionesActividadStaff().find(a => a.id === id) || null;
 }
 
+// Solo las activas (no eliminadas) — es la lista que debe verse en la
+// tabla de organización de RH/Admin y en "Mis actividades" de Staff.
+// Las funciones que leen-modifican-guardan la lista COMPLETA (crear,
+// actualizar, sorteo, eliminar) usan obtenerAsignacionesActividadStaff()
+// directamente, nunca esta, para no perder al guardar las que sí están
+// eliminadas (eliminar es lógico, no debe desaparecer de Firestore).
 function obtenerAsignacionesPorSemanaActividadStaff(semanaKey) {
-  return obtenerAsignacionesActividadStaff().filter(a => a.semanaKey === semanaKey);
+  return obtenerAsignacionesActividadStaff().filter(a => a.semanaKey === semanaKey && !a.eliminada);
 }
 
 // Valida periodicidad + días (null/[] es válido SOLO cuando todavía no
@@ -288,7 +355,11 @@ function validarPeriodicidadYDiasActividadStaff(periodicidad, dias) {
 // true (solo lo usa asegurarAsignacionesBaseSemana, para que las
 // actividades base aparezcan desde el inicio sin que nadie tenga que
 // definir todavía cada cuánto se hacen).
-function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaNueva, periodicidad, dias, encargadoId, semanaKey, observaciones, creadoPorId, creadoPorNombre, creadoPorRol, permitirSinPeriodicidad }) {
+// encargadoIds (arreglo, RH) o encargadoId (singular, todavía usado por
+// Admin) — se acepta cualquiera de los dos; si mandan ambos gana el
+// arreglo. tipo/fechaInicioTemporal/fechaFinTemporal son opcionales
+// (por default toda actividad es "permanente").
+function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaNueva, periodicidad, dias, encargadoId, encargadoIds, semanaKey, observaciones, creadoPorId, creadoPorNombre, creadoPorRol, permitirSinPeriodicidad, tipo, fechaInicioTemporal, fechaFinTemporal }) {
 
   let catalogoEntry = actividadCatalogoId ? obtenerActividadCatalogoStaffPorId(actividadCatalogoId) : null;
 
@@ -304,23 +375,34 @@ function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaN
 
   if (!semanaKey) return { ok: false, error: 'Indica a qué semana corresponde.' };
 
-  if (encargadoId) {
-    const encargado = empleadosStaffActivosActividad().find(e => e.id === encargadoId);
-    if (!encargado) return { ok: false, error: 'El encargado debe ser un empleado de Staff activo.' };
+  const tipoFinal = tipo === 'temporal' ? 'temporal' : 'permanente';
+  if (tipoFinal === 'temporal') {
+    if (!fechaInicioTemporal || !fechaFinTemporal) return { ok: false, error: 'Indica la fecha de inicio y la fecha límite de la actividad temporal.' };
+    if (fechaFinTemporal < fechaInicioTemporal) return { ok: false, error: 'La fecha límite no puede ser anterior a la fecha de inicio.' };
+  }
+
+  const idsSolicitados = Array.isArray(encargadoIds) ? encargadoIds : (encargadoId ? [encargadoId] : []);
+  const encargados = empleadosDesdeIdsActividadStaff(idsSolicitados);
+  if (idsSolicitados.length && encargados.length !== idsSolicitados.length) {
+    return { ok: false, error: 'Alguno de los responsables seleccionados ya no es un empleado de Staff activo.' };
   }
 
   const asignaciones = obtenerAsignacionesActividadStaff();
-  const encargado = encargadoId ? empleadosStaffActivosActividad().find(e => e.id === encargadoId) : null;
 
   const nueva = {
     id: `act-staff-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     actividadCatalogoId: catalogoEntry.id,
     nombre: catalogoEntry.nombre,
     zona: catalogoEntry.zona,
+    tipo: tipoFinal,
+    fechaInicioTemporal: tipoFinal === 'temporal' ? fechaInicioTemporal : null,
+    fechaFinTemporal: tipoFinal === 'temporal' ? fechaFinTemporal : null,
     periodicidad: validacion.periodicidad,
     dias: validacion.dias,
-    encargadoId: encargadoId || null,
-    encargadoNombre: encargado ? encargado.nombre : '',
+    encargados,
+    encargadoId: encargados[0]?.id || null,
+    encargadoNombre: encargados[0]?.nombre || '',
+    estadosPorEncargado: {},
     semanaKey,
     observaciones: observaciones || '',
     estado: 'borrador',
@@ -335,7 +417,11 @@ function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaN
     firmadoPorNombre: null,
     creadoPorId: creadoPorId || null,
     creadoPorNombre: creadoPorNombre || '',
-    creadoPorRol: creadoPorRol || ''
+    creadoPorRol: creadoPorRol || '',
+    eliminada: false,
+    eliminadaPorId: null,
+    eliminadaPorNombre: null,
+    fechaEliminacion: null
   };
 
   asignaciones.unshift(nueva);
@@ -348,7 +434,7 @@ function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaN
     usuarioId: creadoPorId,
     usuarioNombre: creadoPorNombre,
     usuarioRol: creadoPorRol,
-    comentario: `Actividad creada para la semana del ${formatearRangoSemanaActividadStaff(semanaKey)}.`
+    comentario: `Actividad${tipoFinal === 'temporal' ? ' temporal' : ''} creada para la semana del ${formatearRangoSemanaActividadStaff(semanaKey)}${tipoFinal === 'temporal' ? ` (vigente del ${formatearFechaCortaActividadStaff(fechaInicioTemporal)} al ${formatearFechaCortaActividadStaff(fechaFinTemporal)})` : ''}.`
   });
 
   return { ok: true, asignacion: nueva };
@@ -384,10 +470,15 @@ function asegurarAsignacionesBaseSemana(semanaKey) {
       actividadCatalogoId: catalogoEntry.id,
       nombre: catalogoEntry.nombre,
       zona: catalogoEntry.zona,
+      tipo: 'permanente',
+      fechaInicioTemporal: null,
+      fechaFinTemporal: null,
       periodicidad: null,
       dias: [],
+      encargados: [],
       encargadoId: null,
       encargadoNombre: '',
+      estadosPorEncargado: {},
       semanaKey,
       observaciones: '',
       estado: 'borrador',
@@ -402,7 +493,11 @@ function asegurarAsignacionesBaseSemana(semanaKey) {
       firmadoPorNombre: null,
       creadoPorId: null,
       creadoPorNombre: 'Sistema',
-      creadoPorRol: 'sistema'
+      creadoPorRol: 'sistema',
+      eliminada: false,
+      eliminadaPorId: null,
+      eliminadaPorNombre: null,
+      fechaEliminacion: null
     };
     asignaciones.push(nueva);
   });
@@ -423,12 +518,48 @@ function actualizarAsignacionActividadStaff(id, cambios, { usuarioId, usuarioNom
   const yaAnunciada = asignacion.estado !== 'borrador';
   const cambiosTexto = [];
 
-  if (cambios.encargadoId !== undefined && cambios.encargadoId !== asignacion.encargadoId) {
-    const nuevoEncargado = cambios.encargadoId ? empleadosStaffActivosActividad().find(e => e.id === cambios.encargadoId) : null;
-    if (cambios.encargadoId && !nuevoEncargado) return { ok: false, error: 'El encargado debe ser un empleado de Staff activo.' };
-    cambiosTexto.push(`Encargado: ${asignacion.encargadoNombre || 'sin asignar'} → ${nuevoEncargado ? nuevoEncargado.nombre : 'sin asignar'}.`);
-    asignacion.encargadoId = cambios.encargadoId || null;
-    asignacion.encargadoNombre = nuevoEncargado ? nuevoEncargado.nombre : '';
+  // encargadoIds (arreglo, RH) reemplaza la lista completa de
+  // responsables. encargadoId (singular, todavía usado por Admin) se
+  // sigue aceptando — equivale a "deja un único responsable".
+  if (cambios.encargadoIds !== undefined || cambios.encargadoId !== undefined) {
+    const idsNuevos = Array.isArray(cambios.encargadoIds) ? cambios.encargadoIds : (cambios.encargadoId ? [cambios.encargadoId] : []);
+    const idsActuales = (asignacion.encargados || []).map(e => e.id);
+    if (JSON.stringify([...idsNuevos].sort()) !== JSON.stringify([...idsActuales].sort())) {
+      const nuevosEncargados = empleadosDesdeIdsActividadStaff(idsNuevos);
+      if (idsNuevos.length && nuevosEncargados.length !== idsNuevos.length) {
+        return { ok: false, error: 'Alguno de los responsables seleccionados ya no es un empleado de Staff activo.' };
+      }
+      const nombresAntes = (asignacion.encargados || []).map(e => e.nombre).join(', ') || 'sin asignar';
+      const nombresDespues = nuevosEncargados.map(e => e.nombre).join(', ') || 'sin asignar';
+      cambiosTexto.push(`Responsable(s): ${nombresAntes} → ${nombresDespues}.`);
+      asignacion.encargados = nuevosEncargados;
+      asignacion.encargadoId = nuevosEncargados[0]?.id || null;
+      asignacion.encargadoNombre = nuevosEncargados[0]?.nombre || '';
+      // Al cambiar la lista de responsables se reinicia la confirmación
+      // individual de quien ya no está — nunca se le atribuye a alguien
+      // un "Enterado" de una actividad que ya no le corresponde.
+      const estadosNuevos = {};
+      nuevosEncargados.forEach(e => { if (asignacion.estadosPorEncargado?.[e.id]) estadosNuevos[e.id] = asignacion.estadosPorEncargado[e.id]; });
+      asignacion.estadosPorEncargado = estadosNuevos;
+    }
+  }
+  if (cambios.tipo !== undefined && cambios.tipo !== asignacion.tipo) {
+    if (cambios.tipo === 'temporal' && (!cambios.fechaInicioTemporal || !cambios.fechaFinTemporal)) {
+      return { ok: false, error: 'Indica la fecha de inicio y la fecha límite de la actividad temporal.' };
+    }
+    cambiosTexto.push(`Tipo: ${TIPOS_ACTIVIDAD_STAFF[asignacion.tipo]} → ${TIPOS_ACTIVIDAD_STAFF[cambios.tipo] || cambios.tipo}.`);
+    asignacion.tipo = cambios.tipo === 'temporal' ? 'temporal' : 'permanente';
+    asignacion.fechaInicioTemporal = asignacion.tipo === 'temporal' ? cambios.fechaInicioTemporal : null;
+    asignacion.fechaFinTemporal = asignacion.tipo === 'temporal' ? cambios.fechaFinTemporal : null;
+  } else if (asignacion.tipo === 'temporal' && (cambios.fechaInicioTemporal !== undefined || cambios.fechaFinTemporal !== undefined)) {
+    const nuevoInicio = cambios.fechaInicioTemporal ?? asignacion.fechaInicioTemporal;
+    const nuevoFin = cambios.fechaFinTemporal ?? asignacion.fechaFinTemporal;
+    if (nuevoInicio !== asignacion.fechaInicioTemporal || nuevoFin !== asignacion.fechaFinTemporal) {
+      if (nuevoFin < nuevoInicio) return { ok: false, error: 'La fecha límite no puede ser anterior a la fecha de inicio.' };
+      cambiosTexto.push(`Vigencia: ${formatearFechaCortaActividadStaff(asignacion.fechaInicioTemporal)}–${formatearFechaCortaActividadStaff(asignacion.fechaFinTemporal)} → ${formatearFechaCortaActividadStaff(nuevoInicio)}–${formatearFechaCortaActividadStaff(nuevoFin)}.`);
+      asignacion.fechaInicioTemporal = nuevoInicio;
+      asignacion.fechaFinTemporal = nuevoFin;
+    }
   }
   if (cambios.periodicidad !== undefined && (cambios.periodicidad !== asignacion.periodicidad || JSON.stringify(cambios.dias || []) !== JSON.stringify(asignacion.dias || []))) {
     const validacion = validarPeriodicidadYDiasActividadStaff(cambios.periodicidad, cambios.dias);
@@ -523,8 +654,10 @@ function aplicarResultadoSorteoZonasActividadStaff(resultado, { usuarioId, usuar
       const asignacion = asignaciones.find(a => a.id === fila.asignacionId);
       if (!asignacion || asignacion.estado !== 'borrador') return;
       const anterior = asignacion.encargadoNombre || 'sin asignar';
+      asignacion.encargados = [{ id: grupo.encargadoId, nombre: grupo.encargadoNombre }];
       asignacion.encargadoId = grupo.encargadoId;
       asignacion.encargadoNombre = grupo.encargadoNombre;
+      asignacion.estadosPorEncargado = {};
       asignacion.sorteada = true;
       aplicadas++;
       registrarHistorialActividadStaff({
@@ -546,7 +679,9 @@ function aplicarResultadoSorteoZonasActividadStaff(resultado, { usuarioId, usuar
 // TRANSICIONES DE ESTADO (Anunciado → Enterado → Firmado por RH)
 // ============================================================
 
-// Solo actividades en borrador CON encargado asignado pueden anunciarse.
+// Solo actividades en borrador CON al menos un responsable asignado
+// pueden anunciarse. Cada responsable recibe SU PROPIA notificación,
+// con su nombre — nunca un aviso genérico compartido (sección 4).
 function anunciarAsignacionesActividadStaff(ids, { usuarioId, usuarioNombre, usuarioRol }) {
 
   const asignaciones = obtenerAsignacionesActividadStaff();
@@ -554,26 +689,36 @@ function anunciarAsignacionesActividadStaff(ids, { usuarioId, usuarioNombre, usu
 
   ids.forEach(id => {
     const a = asignaciones.find(x => x.id === id);
-    if (!a || a.estado !== 'borrador' || !a.encargadoId) return;
+    if (!a || a.estado !== 'borrador' || !a.encargados?.length) return;
     a.estado = 'anunciado';
     a.fechaAnuncio = new Date().toISOString();
+    a.estadosPorEncargado = {};
+    a.encargados.forEach(e => { a.estadosPorEncargado[e.id] = { estado: 'anunciado', fecha: a.fechaAnuncio }; });
+    const nombresResponsables = a.encargados.map(e => e.nombre).join(', ');
     registrarHistorialActividadStaff({
       actividadId: a.id, estadoAnterior: 'borrador', estadoNuevo: 'anunciado',
-      usuarioId, usuarioNombre, usuarioRol, comentario: `Actividad anunciada a ${a.encargadoNombre}.`
+      usuarioId, usuarioNombre, usuarioRol, comentario: `Actividad anunciada a ${nombresResponsables}.`
     });
     anunciadas.push(a);
   });
 
-  if (!anunciadas.length) return { ok: false, error: 'No hay actividades listas para anunciar (deben estar en organización y con encargado asignado).' };
+  if (!anunciadas.length) return { ok: false, error: 'No hay actividades listas para anunciar (deben estar en organización y con responsable(s) asignado(s)).' };
 
   guardarAsignacionesActividadStaff(asignaciones);
 
   if (typeof agregarNotificacion === 'function') {
-    const semanaKey = anunciadas[0].semanaKey;
-    agregarNotificacion({
-      texto: `Se anunciaron ${anunciadas.length} actividad${anunciadas.length === 1 ? '' : 'es'} de limpieza para la semana del ${formatearRangoSemanaActividadStaff(semanaKey)}. Revisa "Mis actividades".`,
-      link: 'misActividades',
-      rolDestino: 'staff'
+    anunciadas.forEach(a => {
+      const detalleFecha = a.tipo === 'temporal'
+        ? `Fecha límite: ${formatearFechaCortaActividadStaff(a.fechaFinTemporal)}.`
+        : `Semana del ${formatearRangoSemanaActividadStaff(a.semanaKey)}.`;
+      a.encargados.forEach(e => {
+        agregarNotificacion({
+          texto: `${e.nombre}, tienes una nueva actividad${a.tipo === 'temporal' ? ' temporal' : ''} asignada: "${a.nombre}" (${a.zona}). ${detalleFecha}`,
+          link: 'misActividades',
+          rolDestino: 'staff',
+          paraId: e.id
+        });
+      });
     });
   }
 
@@ -581,28 +726,41 @@ function anunciarAsignacionesActividadStaff(ids, { usuarioId, usuarioNombre, usu
 
 }
 
-// Solo el propio encargado puede confirmar que se enteró — y solo
-// mientras la actividad esté "anunciado" (no puede saltarse a
-// "firmado_rh" por su cuenta).
+// Cada responsable confirma POR SU CUENTA — nunca una sola confirmación
+// compartida entre varios (sección 4). Solo mientras la actividad esté
+// "anunciado" y solo si esa persona es una de las responsables.
 function marcarEnteradoAsignacionActividadStaff(id, { usuarioId, usuarioNombre, usuarioRol }) {
 
   const asignaciones = obtenerAsignacionesActividadStaff();
   const a = asignaciones.find(x => x.id === id);
   if (!a) return { ok: false, error: 'La actividad no existe.' };
   if (a.estado !== 'anunciado') return { ok: false, error: 'Esta actividad ya no está en espera de confirmación.' };
-  if (a.encargadoId !== usuarioId) return { ok: false, error: 'Solo la persona encargada puede confirmar esta actividad.' };
+  const esResponsable = (a.encargados || []).some(e => e.id === usuarioId);
+  if (!esResponsable) return { ok: false, error: 'Solo una persona responsable puede confirmar esta actividad.' };
 
-  a.estado = 'enterado';
-  a.fechaEnterado = new Date().toISOString();
+  const fecha = new Date().toISOString();
+  a.estadosPorEncargado = a.estadosPorEncargado || {};
+  a.estadosPorEncargado[usuarioId] = { estado: 'enterado', fecha, nombre: usuarioNombre };
+
+  // Campos legacy (un solo encargado) — se conservan con la ÚLTIMA
+  // persona en confirmar, para que las páginas que todavía no muestran
+  // varios responsables sigan enseñando algo razonable.
+  a.fechaEnterado = fecha;
   a.enteradoPorId = usuarioId;
   a.enteradoPorNombre = usuarioNombre;
+
+  // El estado general de la actividad solo pasa a "enterado" (y con
+  // eso queda lista para que RH firme) cuando TODOS los responsables ya
+  // confirmaron — nunca con que uno solo lo haga.
+  const todosConfirmaron = a.encargados.every(e => a.estadosPorEncargado[e.id]?.estado === 'enterado');
+  if (todosConfirmaron) a.estado = 'enterado';
 
   guardarAsignacionesActividadStaff(asignaciones);
 
   registrarHistorialActividadStaff({
-    actividadId: a.id, estadoAnterior: 'anunciado', estadoNuevo: 'enterado',
+    actividadId: a.id, estadoAnterior: 'anunciado', estadoNuevo: a.estado,
     usuarioId, usuarioNombre, usuarioRol: usuarioRol || 'staff',
-    comentario: `${usuarioNombre} confirmó que se enteró de la actividad.`
+    comentario: `${usuarioNombre} confirmó que se enteró de la actividad.${a.encargados.length > 1 ? (todosConfirmaron ? ' Todos los responsables ya confirmaron.' : ` Faltan: ${a.encargados.filter(e => a.estadosPorEncargado[e.id]?.estado !== 'enterado').map(e => e.nombre).join(', ')}.`) : ''}`
   });
 
   return { ok: true, asignacion: a };
@@ -629,6 +787,41 @@ function firmarRHAsignacionActividadStaff(id, { usuarioId, usuarioNombre, usuari
     actividadId: a.id, estadoAnterior: 'enterado', estadoNuevo: 'firmado_rh',
     usuarioId, usuarioNombre, usuarioRol,
     comentario: `${usuarioNombre} (${usuarioRol === 'admin' ? 'Administración' : 'RH'}) verificó y firmó que la actividad se realizó.`
+  });
+
+  return { ok: true, asignacion: a };
+
+}
+
+// ============================================================
+// ELIMINAR (lógico — nunca borra historial/auditoría)
+// ============================================================
+//
+// RH puede eliminar CUALQUIER actividad, permanente o temporal,
+// anunciada o no (sección 2). Nunca se borra físicamente: se marca
+// eliminada + quién + cuándo, y deja de aparecer en las vistas activas
+// (obtenerAsignacionesPorSemanaActividadStaff ya filtra eliminada:true),
+// pero el registro y todo su historial siguen existiendo para
+// auditoría — obtenerAsignacionActividadStaffPorId y
+// obtenerHistorialPorActividadStaff la siguen encontrando.
+function eliminarAsignacionActividadStaff(id, { usuarioId, usuarioNombre, usuarioRol }) {
+
+  const asignaciones = obtenerAsignacionesActividadStaff();
+  const a = asignaciones.find(x => x.id === id);
+  if (!a) return { ok: false, error: 'La actividad no existe.' };
+  if (a.eliminada) return { ok: false, error: 'Esta actividad ya fue eliminada.' };
+
+  a.eliminada = true;
+  a.eliminadaPorId = usuarioId;
+  a.eliminadaPorNombre = usuarioNombre;
+  a.fechaEliminacion = new Date().toISOString();
+
+  guardarAsignacionesActividadStaff(asignaciones);
+
+  registrarHistorialActividadStaff({
+    actividadId: a.id, estadoAnterior: a.estado, estadoNuevo: a.estado,
+    usuarioId, usuarioNombre, usuarioRol,
+    comentario: `Actividad eliminada por ${usuarioNombre} (${usuarioRol === 'admin' ? 'Administración' : 'RH'}). El historial se conserva para auditoría.`
   });
 
   return { ok: true, asignacion: a };
@@ -693,5 +886,23 @@ function obtenerFilasReporteSemanalActividadStaff(semanaKey) {
     .map(a => ({
       ...a,
       estadoReporteLabel: a.estado === 'firmado_rh' ? 'Firmado por RH' : 'No se realizó'
+    }));
+}
+
+// ============================================================
+// REPORTE DE ORGANIZACIÓN — vista previa ANTES de anunciar (sección 3)
+// ============================================================
+//
+// A diferencia del reporte semanal de arriba (que resume lo YA
+// anunciado, para auditoría), este es exclusivamente de las
+// actividades todavía en "borrador" — es decir, exactamente lo que
+// pasaría si RH presionara "Anunciar actividades" ahora mismo. Nunca
+// cambia ningún estado ni genera notificaciones: es solo lectura.
+function obtenerFilasReporteOrganizacionActividadStaff(semanaKey) {
+  return obtenerAsignacionesPorSemanaActividadStaff(semanaKey)
+    .filter(a => a.estado === 'borrador')
+    .map(a => ({
+      ...a,
+      listaParaAnunciar: !!a.encargados?.length
     }));
 }
