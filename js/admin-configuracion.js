@@ -1166,7 +1166,7 @@ function renderSeccionUsuarios() {
                 <td>${p.tipo === 'lider' ? 'Líder' : 'Emprendedora'}</td>
                 <td><span class="badge ${p.estado === 'activa' ? 'badge-pagada' : 'badge-pendiente'}">${escapeHTMLPersonas(ESTADOS_CUENTA_PERSONA[p.estado] || p.estado)}</span></td>
                 <td style="white-space:nowrap;">
-                  <span class="cfg-password-texto" data-password-real="${escapeAttributePersonas(p.password || '(sin contraseña)')}" style="font-family:monospace;">••••••••</span>
+                  <span class="cfg-password-texto" data-password-real="${escapeAttributePersonas(obtenerPasswordPersona(p.id) || '(sin contraseña)')}" style="font-family:monospace;">••••••••</span>
                   <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
                 </td>
                 <td style="white-space:nowrap;">
@@ -1202,7 +1202,7 @@ function renderSeccionUsuarios() {
                   <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
                 </td>
                 <td style="white-space:nowrap;">
-                  <button type="button" class="cfg-icon-btn" data-cfg-reset-interna="${c.id}" title="Restablecer contraseña"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7.5" cy="15.5" r="3.5"/><path d="M10 13L19 4"/><path d="M15 8l2 2"/></svg></button>
+                  <button type="button" class="cfg-icon-btn" data-cfg-reset-interna="${c.id}" ${c.id === ADMIN_IDENTIDAD.usuarioId ? 'disabled' : ''} title="${c.id === ADMIN_IDENTIDAD.usuarioId ? 'No puedes restablecer tu propia contraseña' : 'Restablecer contraseña'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7.5" cy="15.5" r="3.5"/><path d="M10 13L19 4"/><path d="M15 8l2 2"/></svg></button>
                   <button type="button" class="cfg-icon-btn" data-cfg-eliminar-interna="${c.id}" title="Eliminar cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
                 </td>
               </tr>
@@ -1380,7 +1380,17 @@ function wireCuentasInternas(cont) {
   document.getElementById('cfgCrearCuentaInternaBtn')?.addEventListener('click', abrirModalCrearCuentaInterna);
 
   cont.querySelectorAll('[data-cfg-reset-interna]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalResetPassword('interna', btn.getAttribute('data-cfg-reset-interna')));
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-cfg-reset-interna');
+      // Sección 19.1/19.2 del documento de requisitos: nadie puede
+      // restablecer su propia contraseña, ni siquiera Admin — debe
+      // pedírselo a otra cuenta con este mismo acceso.
+      if (id === ADMIN_IDENTIDAD.usuarioId) {
+        mostrarToast('No puedes restablecer tu propia contraseña. Pídeselo a otra cuenta de Admin.');
+        return;
+      }
+      abrirModalResetPassword('interna', id);
+    });
   });
 
   cont.querySelectorAll('[data-cfg-eliminar-interna]').forEach(btn => {

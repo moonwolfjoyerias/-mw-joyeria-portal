@@ -187,6 +187,14 @@ function validarAutorizacionNomina() {
 // RECIBO DE NÓMINA
 // ============================================================
 
+// Cruza el empleado de esta tarjeta (cuenta de login, sin datos
+// financieros) con su registro REAL de Nómina por nombre — mismo
+// patrón que empleadoNominaDeCuentaActividadStaff() en
+// actividades-staff-modelo.js. Antes esta función mostraba un objeto
+// de ejemplo (NOMINA_SEMANA_ACTUAL) genérico, igual para las 8 personas
+// de Staff — ahora sí es el periodo real que RH capturó (o el borrador
+// prellenado con su sueldo base si RH todavía no ha capturado nada
+// esta semana).
 function abrirReciboNomina(empleado) {
 
   const overlay = document.getElementById('modalOverlay');
@@ -194,7 +202,30 @@ function abrirReciboNomina(empleado) {
 
   if (!overlay || !box) return;
 
-  const n = NOMINA_SEMANA_ACTUAL;
+  const empleadoNominaReal = typeof obtenerEmpleadosNomina === 'function'
+    ? obtenerEmpleadosNomina().find(e => e.nombre === empleado.nombre)
+    : null;
+
+  if (!empleadoNominaReal) {
+    box.innerHTML = `
+      <button class="modal-close" data-close>×</button>
+      <span class="eyebrow">Recibo de nómina</span>
+      <h3 style="margin-top:5px;">${escapeHTML(empleado.nombre)}</h3>
+      <p class="modal-sub">No encontramos tu registro en Nómina todavía — pide a RH que verifique tu alta.</p>
+      <button class="btn btn-outline" style="width:100%;" data-close>Cerrar</button>
+    `;
+    overlay.classList.add('open');
+    box.querySelector('[data-close]')?.addEventListener('click', () => {
+      empleadoNominaPendiente = null;
+      cerrarModalMiCuenta();
+    });
+    return;
+  }
+
+  const periodoKey = obtenerPeriodoActualNomina();
+  const periodo = obtenerPeriodoNomina(empleadoNominaReal.id, periodoKey);
+  const percepciones = periodo.conceptos.filter(c => c.tipo === 'percepcion');
+  const deducciones = periodo.conceptos.filter(c => c.tipo === 'deduccion');
 
   box.innerHTML = `
 
@@ -204,17 +235,15 @@ function abrirReciboNomina(empleado) {
 
     <h3 style="margin-top:5px;">${escapeHTML(empleado.nombre)}</h3>
 
-    <p class="modal-sub">Semana actual · ${escapeHTML(n.periodo)}</p>
+    <p class="modal-sub">Semana del ${escapeHTML(formatearRangoSemanaNomina(periodoKey))}${!periodo.guardado ? ' — RH todavía no ha capturado esta semana' : ''}</p>
 
     <div class="detail-grid">
-      <div><span>Días trabajados</span><strong>${n.diasTrabajados}</strong></div>
-      <div><span>Sueldo base</span><strong>$${n.sueldoBase.toLocaleString('es-MX')} MXN</strong></div>
-      <div><span>Bonos</span><strong>$${n.bonos.toLocaleString('es-MX')} MXN</strong></div>
-      <div><span>Deducciones</span><strong>-$${n.deducciones.toLocaleString('es-MX')} MXN</strong></div>
+      ${percepciones.map(c => `<div><span>${escapeHTML(c.nombre)}</span><strong>$${c.total.toLocaleString('es-MX')} MXN</strong></div>`).join('')}
+      ${deducciones.map(c => `<div><span>${escapeHTML(c.nombre)}</span><strong>-$${c.total.toLocaleString('es-MX')} MXN</strong></div>`).join('')}
     </div>
 
     <div class="modal-note">
-      <strong>Total a pagar:</strong> $${n.totalPagar.toLocaleString('es-MX')} MXN
+      <strong>Total a pagar:</strong> $${periodo.totalAPagar.toLocaleString('es-MX')} MXN
     </div>
 
     <button class="btn btn-outline" style="width:100%;" data-close>Cerrar</button>

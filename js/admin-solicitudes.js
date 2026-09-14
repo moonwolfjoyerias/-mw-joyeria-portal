@@ -86,7 +86,7 @@ function renderListaSolicitudesAdmin() {
 // DETALLE
 // ============================================================
 
-function abrirDetalleSolicitudAdmin(id) {
+async function abrirDetalleSolicitudAdmin(id) {
 
   const solicitud = obtenerSolicitudPorId(id);
   if (!solicitud) return;
@@ -124,7 +124,8 @@ function abrirDetalleSolicitudAdmin(id) {
       <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span> Información confidencial. Uso exclusivo administrativo.
     </div>
     <div class="ine-preview">
-      <img src="${solicitud.ineUrl}" alt="INE de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}">
+      <img id="inePreviewImg" src="" alt="INE de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}" style="display:none;">
+      <p class="bp-sub" id="inePreviewCargando" style="margin:0;">Cargando identificación…</p>
     </div>
 
     ${!esPendiente ? construirResolucionHTML(solicitud) : ''}
@@ -142,6 +143,19 @@ function abrirDetalleSolicitudAdmin(id) {
   if (esPendiente) {
     document.getElementById('aprobarSolicitudBtn')?.addEventListener('click', () => abrirConfirmarAprobarAdmin(solicitud));
     document.getElementById('rechazarSolicitudBtn')?.addEventListener('click', () => abrirModalRechazarAdmin(solicitud));
+  }
+
+  const ineSrc = await resolverSrcDocumento(solicitud.ineUrl);
+  const ineImg = document.getElementById('inePreviewImg');
+  const ineCargando = document.getElementById('inePreviewCargando');
+  if (ineImg && ineCargando) {
+    if (ineSrc) {
+      ineImg.src = ineSrc;
+      ineImg.style.display = '';
+      ineCargando.style.display = 'none';
+    } else {
+      ineCargando.textContent = 'No pudimos cargar la identificación de esta solicitud.';
+    }
   }
 
 }

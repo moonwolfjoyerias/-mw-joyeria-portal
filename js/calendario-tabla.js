@@ -541,7 +541,7 @@ function validarAutorizacionCalendario() {
     u => u.usuario === usuario && u.password === password
   )
     || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null)
-    || (typeof obtenerPersonas === 'function' ? obtenerPersonas().find(p => p.usuario === usuario && p.password === password) : null);
+    || (typeof verificarCredencialPersona === 'function' ? verificarCredencialPersona(usuario, password) : null);
 
   if (!empleado) {
 

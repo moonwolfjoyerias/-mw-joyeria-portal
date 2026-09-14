@@ -9,7 +9,10 @@
 // cargado su propio archivo de identidad (cuenta-ejemplo.js o
 // lider-cuenta-ejemplo.js) para saber quién es el solicitante.
 
-let ineTemporalDataUrl = '';
+// Guarda el ARCHIVO real (no su contenido en base64) — se sube a
+// IndexedDB vía js/documentos-modelo.js recién al enviar la solicitud,
+// nunca se guarda su contenido dentro del registro de la solicitud.
+let ineArchivoTemporal = null;
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -82,7 +85,7 @@ function abrirModalNuevaSolicitud() {
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
 
-  ineTemporalDataUrl = '';
+  ineArchivoTemporal = null;
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
@@ -111,15 +114,15 @@ function abrirModalNuevaSolicitud() {
 
   document.getElementById('solIne')?.addEventListener('change', (e) => {
     const archivo = e.target.files?.[0];
-    if (!archivo) { ineTemporalDataUrl = ''; return; }
-    if (!archivo.type.startsWith('image/')) {
-      mostrarErrorSolicitud('Selecciona una imagen válida para la INE.');
+    if (!archivo) { ineArchivoTemporal = null; return; }
+    const validacion = validarArchivoDocumento(archivo);
+    if (!validacion.ok) {
+      mostrarErrorSolicitud(validacion.error);
       e.target.value = '';
+      ineArchivoTemporal = null;
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (ev) => { ineTemporalDataUrl = ev.target.result; };
-    reader.readAsDataURL(archivo);
+    ineArchivoTemporal = archivo;
   });
 
   document.getElementById('enviarSolicitudBtn')?.addEventListener('click', () => enviarNuevaSolicitud(identidad));
@@ -132,11 +135,19 @@ function abrirModalNuevaSolicitud() {
 
 }
 
-function enviarNuevaSolicitud(identidad) {
+async function enviarNuevaSolicitud(identidad) {
 
   const nombreCompleto = document.getElementById('solNombre')?.value || '';
   const telefono = document.getElementById('solTelefono')?.value || '';
   const correo = document.getElementById('solCorreo')?.value || '';
+
+  if (!ineArchivoTemporal) {
+    mostrarErrorSolicitud('Adjunta una foto de identificación oficial (INE).');
+    return;
+  }
+
+  const ineStoragePath = `solicitudes-ine/${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+  await guardarBlobDocumento(ineStoragePath, ineArchivoTemporal);
 
   const resultado = crearSolicitudInscripcion({
     solicitanteId: identidad.id,
@@ -145,10 +156,11 @@ function enviarNuevaSolicitud(identidad) {
     nombreCompleto,
     telefono,
     correo,
-    ineUrl: ineTemporalDataUrl
+    ineUrl: ineStoragePath
   });
 
   if (!resultado.ok) {
+    await eliminarBlobDocumento(ineStoragePath);
     mostrarErrorSolicitud(resultado.error);
     return;
   }

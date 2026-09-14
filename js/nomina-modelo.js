@@ -95,6 +95,19 @@ function obtenerEmpleadoNominaPorId(id) {
   return obtenerEmpleadosNomina().find(e => e.id === id) || null;
 }
 
+// Versión sin campos financieros (salarioBase/pagoHoraExtra/metodoPago) —
+// para páginas que solo necesitan cruzar un nombre/cargo con el roster
+// de empleados (ej. Actividades del Staff, para saber a qué empleado
+// real corresponde un encargado), no ver ni administrar nómina. Ningún
+// Staff debería recibir el sueldo de sus compañeros solo por abrir una
+// página que no tiene nada que ver con Nómina.
+function obtenerEmpleadosNominaBasico() {
+  return obtenerEmpleadosNomina().map(e => ({
+    id: e.id, numeroEmpleado: e.numeroEmpleado, nombre: e.nombre,
+    cargo: e.cargo, estado: e.estado, fotoUrl: e.fotoUrl
+  }));
+}
+
 function existeNumeroEmpleado(numeroEmpleado, excluirId) {
   return obtenerEmpleadosNomina().some(e => e.numeroEmpleado.toLowerCase() === String(numeroEmpleado || '').toLowerCase() && e.id !== excluirId);
 }
