@@ -21,14 +21,3 @@ const PERSONAL_STAFF_EJEMPLO = [
   { usuario: 'staff07', nombre: 'Luis Medina', password: '1234' },
   { usuario: 'MW0005', nombre: 'María Camila Sánchez Calles', password: '2896' }
 ];
-
-const NOMINA_SEMANA_ACTUAL = {
-  periodo: '24 - 30 de agosto de 2026',
-  diasTrabajados: 6,
-  sueldoBase: 1800,
-  bonos: 150,
-  deducciones: 50,
-  get totalPagar() {
-    return this.sueldoBase + this.bonos - this.deducciones;
-  }
-};

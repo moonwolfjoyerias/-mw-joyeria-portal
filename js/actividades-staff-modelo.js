@@ -219,8 +219,11 @@ function formatearRangoSemanaActividadStaff(semanaKey) {
 // EMPLEADOS DE STAFF (mismo roster que Nómina)
 // ============================================================
 
+// Usa la versión SIN campos financieros del roster — esta página solo
+// necesita cruzar nombre/cargo, nunca sueldo/pago por hora de nadie
+// (ver nota de seguridad en obtenerEmpleadosNominaBasico, nomina-modelo.js).
 function empleadosStaffActivosActividad() {
-  return (typeof obtenerEmpleadosNomina === 'function' ? obtenerEmpleadosNomina() : [])
+  return (typeof obtenerEmpleadosNominaBasico === 'function' ? obtenerEmpleadosNominaBasico() : [])
     .filter(e => e.cargo === 'staff' && e.estado === 'activo');
 }
 
@@ -230,7 +233,7 @@ function empleadosStaffActivosActividad() {
 // personas de ejemplo en ambos registros, ver nota en nomina-modelo.js).
 function empleadoNominaDeCuentaActividadStaff(cuenta) {
   if (!cuenta) return null;
-  const empleados = typeof obtenerEmpleadosNomina === 'function' ? obtenerEmpleadosNomina() : [];
+  const empleados = typeof obtenerEmpleadosNominaBasico === 'function' ? obtenerEmpleadosNominaBasico() : [];
   if (cuenta.empleadoNominaId) {
     const directo = empleados.find(e => e.id === cuenta.empleadoNominaId);
     if (directo) return directo;

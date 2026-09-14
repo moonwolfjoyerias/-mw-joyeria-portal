@@ -19,7 +19,47 @@ const ESTADOS_CUENTA_PERSONA = { activa: 'Activa', inactiva: 'Inactiva', baja: '
 
 const PERSONAS_STORAGE_KEY = 'mw_admin_personas_demo';
 
+// Contraseñas guardadas APARTE del registro de personas (mapa id →
+// password), no dentro de cada persona. Antes vivían como campo
+// `password` en el mismo objeto que se lee para resolver un nombre en
+// una búsqueda o para cruzar apartados — así, cualquier página que solo
+// necesitaba "el nombre de María" (ej. Staff buscando a quién pertenece
+// una lista de deseos) también recibía la contraseña en texto plano de
+// TODAS las personas. Separarlas no oculta el dato de alguien que ya
+// tiene la página abierta en devtools (localStorage sigue siendo del
+// mismo origen — la barrera real llega con Firebase Auth), pero sí evita
+// que la contraseña viaje junto con cada búsqueda/listado de nombres.
+const PERSONAS_CREDENCIALES_STORAGE_KEY = 'mw_admin_personas_credenciales_demo';
+
+function obtenerCredencialesPersonas() {
+  try {
+    const cred = JSON.parse(localStorage.getItem(PERSONAS_CREDENCIALES_STORAGE_KEY));
+    return (cred && typeof cred === 'object' && !Array.isArray(cred)) ? cred : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function guardarCredencialesPersonas(cred) {
+  localStorage.setItem(PERSONAS_CREDENCIALES_STORAGE_KEY, JSON.stringify(cred));
+}
+
+// Único lugar que debe leer la contraseña real de una persona (Admin →
+// Configuración → Usuarios y permisos → "Mostrar/ocultar").
+function obtenerPasswordPersona(id) {
+  return obtenerCredencialesPersonas()[id] || '';
+}
+
+function establecerPasswordPersona(id, nuevoPassword) {
+  const cred = obtenerCredencialesPersonas();
+  cred[id] = nuevoPassword;
+  guardarCredencialesPersonas(cred);
+}
+
 function crearPersonaEjemplo(datos) {
+  // La contraseña (si viene) se guarda aparte, nunca en el objeto que
+  // regresa esta función — ver PERSONAS_CREDENCIALES_STORAGE_KEY arriba.
+  if (datos.id && datos.password) establecerPasswordPersona(datos.id, datos.password);
   return {
     id: datos.id,
     nombre: datos.nombre || '',
@@ -30,12 +70,6 @@ function crearPersonaEjemplo(datos) {
     telefono: datos.telefono || '',
     correo: datos.correo || '',
     usuario: datos.usuario || '',
-    // ⚠️ TEMPORAL: se guarda en texto plano porque Admin necesita poder
-    // recuperarla (verla) si la persona la olvida — ver aviso de
-    // seguridad completo en Admin → Configuración → Usuarios y
-    // permisos. En producción, con Firebase Auth, esto se reemplaza
-    // por un flujo de "restablecer contraseña", no por "ver la actual".
-    password: datos.password || '',
     numeroCuenta: datos.numeroCuenta || '',
     fechaAlta: datos.fechaAlta || new Date().toISOString(),
     liderId: datos.liderId || null,
@@ -220,16 +254,19 @@ function eliminarPersona(id) {
   const persona = personas.find(p => p.id === id);
   if (!persona) return { ok: false, error: 'La cuenta no existe.' };
   guardarPersonas(personas.filter(p => p.id !== id));
+  const cred = obtenerCredencialesPersonas();
+  if (id in cred) {
+    delete cred[id];
+    guardarCredencialesPersonas(cred);
+  }
   return { ok: true, persona };
 }
 
 function restablecerPasswordPersona(id, nuevoPassword) {
-  const personas = obtenerPersonas();
-  const persona = personas.find(p => p.id === id);
+  const persona = obtenerPersonaPorId(id);
   if (!persona) return { ok: false, error: 'La cuenta no existe.' };
   if (!nuevoPassword) return { ok: false, error: 'La nueva contraseña no puede estar vacía.' };
-  persona.password = nuevoPassword;
-  guardarPersonas(personas);
+  establecerPasswordPersona(id, nuevoPassword);
   return { ok: true, persona };
 }
 
@@ -241,7 +278,9 @@ function obtenerPersonaPorId(id) {
 // Una persona 'inactiva' o 'baja' no puede iniciar sesión aunque conozca
 // la contraseña, igual que una cuenta interna desactivada.
 function verificarCredencialPersona(usuario, password) {
-  return obtenerPersonas().find(p => p.usuario === usuario && p.password === password && p.estado === 'activa') || null;
+  const persona = obtenerPersonas().find(p => p.usuario === usuario && p.estado === 'activa');
+  if (!persona) return null;
+  return obtenerPasswordPersona(persona.id) === password ? persona : null;
 }
 
 function nombreCompletoPersona(p) {
