@@ -53,6 +53,7 @@ function inicializarEventosActividadStaffRH() {
   document.getElementById('actCrearBtn')?.addEventListener('click', abrirModalCrearActividad);
   document.getElementById('actSortearBtn')?.addEventListener('click', abrirModalSorteo);
   document.getElementById('actReporteBtn')?.addEventListener('click', generarReporteSemanalAct);
+  document.getElementById('actReporteOrgBtn')?.addEventListener('click', generarReporteOrganizacionAct);
 
   document.getElementById('modalOverlay')?.addEventListener('click', (e) => {
     if (e.target.id === 'modalOverlay') cerrarModalAct();
@@ -205,6 +206,7 @@ function renderTablaActividadesRH() {
     tbody.querySelectorAll('[data-act-editar]').forEach(btn => btn.addEventListener('click', () => abrirModalEditarActividad(btn.getAttribute('data-act-editar'))));
     tbody.querySelectorAll('[data-act-detalle]').forEach(btn => btn.addEventListener('click', () => abrirDetalleActividad(btn.getAttribute('data-act-detalle'))));
     tbody.querySelectorAll('[data-act-firmar]').forEach(btn => btn.addEventListener('click', () => confirmarFirmarRH(btn.getAttribute('data-act-firmar'))));
+    tbody.querySelectorAll('[data-act-eliminar]').forEach(btn => btn.addEventListener('click', () => confirmarEliminarActividad(btn.getAttribute('data-act-eliminar'))));
 
   }
 
@@ -212,22 +214,79 @@ function renderTablaActividadesRH() {
 
 }
 
+function nombresResponsablesAct(a) {
+  return (a.encargados || []).map(e => escapeHTMLAct(e.nombre)).join(', ') || 'Sin asignar';
+}
+
 function filaActividadRH(a) {
+  const vigencia = vigenciaTemporalActividadStaff(a);
+  const etiquetaTemporal = a.tipo === 'temporal'
+    ? `<br><span class="badge ${vigencia.vencida ? 'badge-pendiente' : 'badge-revision'}" style="margin-top:4px;">Temporal · ${escapeHTMLAct(formatearFechaCortaActividadStaff(a.fechaInicioTemporal))} – ${escapeHTMLAct(formatearFechaCortaActividadStaff(a.fechaFinTemporal))}${vigencia.vencida ? ' · Vencida' : ''}</span>`
+    : '';
   return `
     <tr>
-      <td><strong>${escapeHTMLAct(a.nombre)}</strong></td>
+      <td><strong>${escapeHTMLAct(a.nombre)}</strong>${etiquetaTemporal}</td>
       <td><span class="catalog-description">${escapeHTMLAct(a.zona)}</span></td>
       <td>${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : '<span class="catalog-description">Sin definir</span>'}</td>
       <td>${escapeHTMLAct(formatearDiasAsignacionActividadStaff(a))}</td>
-      <td>${escapeHTMLAct(a.encargadoNombre || 'Sin asignar')}</td>
+      <td>${nombresResponsablesAct(a)}</td>
       <td><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span></td>
       <td style="white-space:nowrap;">
         <button type="button" class="comm-icon-btn" data-act-editar="${a.id}" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></button>
         <button type="button" class="comm-icon-btn" data-act-detalle="${a.id}" title="Ver detalle e historial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="6"/><path d="M20 20l-5.5-5.5"/></svg></button>
         ${a.estado === 'enterado' ? `<button type="button" class="comm-icon-btn" data-act-firmar="${a.id}" title="Firmar por RH"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></button>` : ''}
+        <button type="button" class="comm-icon-btn" data-act-eliminar="${a.id}" title="Eliminar actividad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 6h14"/><path d="M9 6V4h6v2"/><path d="M7 6l1 14h8l1-14"/></svg></button>
       </td>
     </tr>
   `;
+}
+
+// ============================================================
+// ELIMINAR ACTIVIDAD (sección 2 — RH puede borrar cualquier actividad,
+// permanente o temporal, anunciada o no. Eliminación lógica: nunca se
+// pierde el historial ni la auditoría, ver eliminarAsignacionActividadStaff).
+// ============================================================
+
+function confirmarEliminarActividad(id) {
+
+  const a = obtenerAsignacionActividadStaffPorId(id);
+  if (!a) return;
+
+  const mensaje = a.tipo === 'temporal'
+    ? '¿Deseas eliminar esta actividad temporal? La actividad dejará de aparecer en las actividades activas. Su historial puede conservarse para auditoría.'
+    : '¿Eliminar actividad? Esta acción eliminará la actividad de la organización actual. El historial permanecerá disponible para auditoría.';
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModalAct()">×</button>
+    <div class="auth-icon danger">!</div>
+    <h3>${a.tipo === 'temporal' ? '¿Eliminar actividad temporal?' : '¿Eliminar actividad?'}</h3>
+    <p class="modal-sub">${escapeHTMLAct(mensaje)}</p>
+    <div class="modal-context">
+      <span>Actividad</span><strong>${escapeHTMLAct(a.nombre)}</strong>
+      <span>Zona</span><strong>${escapeHTMLAct(a.zona)}</strong>
+      <span>Responsable(s)</span><strong>${nombresResponsablesAct(a)}</strong>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="cerrarModalAct()" type="button">Cancelar</button>
+      <button class="btn btn-danger" style="flex:1;" id="actConfirmarEliminarBtn" type="button">Eliminar actividad</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+
+  document.getElementById('actConfirmarEliminarBtn').addEventListener('click', () => {
+    const resultado = eliminarAsignacionActividadStaff(id, { usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre, usuarioRol: 'rh' });
+    cerrarModalAct();
+    if (!resultado.ok) { mostrarToast(resultado.error); return; }
+    registrarAuditoriaRH({ modulo: 'actividades_staff', accion: 'eliminar_actividad', descripcion: `Actividad eliminada: ${a.nombre} (${a.zona}) — actividadId ${a.id}.` });
+    renderTablaActividadesRH();
+    mostrarToast('Actividad eliminada.');
+  });
+
 }
 
 function actualizarBotonAnunciarAct() {
@@ -301,17 +360,36 @@ function abrirModalCrearActividad() {
       <input type="text" id="actZonaNueva" placeholder="Ej. Vitrina de relojes">
     </div>
 
+    <label for="actTipoSelect" style="margin-top:10px;">Tipo de actividad</label>
+    <select id="actTipoSelect">
+      ${Object.entries(TIPOS_ACTIVIDAD_STAFF).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}
+    </select>
+    <div id="actTemporalWrap" style="display:none;margin-top:8px;">
+      <label for="actFechaInicioTemporal">Fecha de inicio</label>
+      <input type="date" id="actFechaInicioTemporal">
+      <label for="actFechaFinTemporal">Fecha límite / fecha de finalización</label>
+      <input type="date" id="actFechaFinTemporal">
+      <div class="modal-note">La actividad temporal solo se mostrará mientras esté dentro de este periodo. Una vez realizada, podrás eliminarla desde la tabla — su historial se conserva para auditoría.</div>
+    </div>
+
     <div style="margin-top:10px;">
       ${construirCamposPeriodicidadAct('actCrear', '', [])}
     </div>
 
-    <label for="actEncargadoSelect" style="margin-top:10px;">Encargado</label>
-    <select id="actEncargadoSelect">
-      <option value="">Sin asignar (se definirá después)</option>
-      ${staff.map(e => `<option value="${e.id}">${escapeHTMLAct(e.nombre)}</option>`).join('')}
-    </select>
+    <label style="margin-top:10px;">Seleccionar responsables</label>
+    <div class="act-checklist-item act-checklist-todo">
+      <label style="display:flex;align-items:center;gap:8px;margin:0;"><input type="checkbox" id="actResponsableTodos"> <strong>Todos</strong></label>
+    </div>
+    <div style="max-height:180px;overflow-y:auto;margin-top:4px;">
+      ${staff.map(e => `
+        <label class="act-checklist-item" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" data-act-responsable="${e.id}"> ${escapeHTMLAct(e.nombre)}
+        </label>
+      `).join('')}
+    </div>
+    <div class="modal-note">Puedes dejarla sin responsable por ahora y definirlo después, o elegir una, varias, o "Todos".</div>
 
-    <label for="actSemanaSelect">Semana</label>
+    <label for="actSemanaSelect" style="margin-top:10px;">Semana</label>
     <input type="date" id="actSemanaSelect" value="${document.getElementById('actSemanaInput')?.value || ''}">
 
     <label for="actObservaciones">Observaciones (opcional)</label>
@@ -329,13 +407,30 @@ function abrirModalCrearActividad() {
     document.getElementById('actZonaNuevaWrap').style.display = e.target.value === '__nueva__' ? 'block' : 'none';
   });
 
+  document.getElementById('actTipoSelect').addEventListener('change', (e) => {
+    document.getElementById('actTemporalWrap').style.display = e.target.value === 'temporal' ? 'block' : 'none';
+  });
+
+  document.getElementById('actResponsableTodos').addEventListener('change', (e) => {
+    box.querySelectorAll('[data-act-responsable]').forEach(chk => { chk.checked = e.target.checked; });
+  });
+  box.querySelectorAll('[data-act-responsable]').forEach(chk => {
+    chk.addEventListener('change', () => {
+      const todosMarcados = Array.from(box.querySelectorAll('[data-act-responsable]')).every(c => c.checked);
+      document.getElementById('actResponsableTodos').checked = todosMarcados;
+    });
+  });
+
   document.getElementById('actGuardarBtn').addEventListener('click', () => {
 
     const nombre = document.getElementById('actNombre').value.trim();
     const zonaValue = document.getElementById('actZonaSelect').value;
     const zonaNueva = zonaValue === '__nueva__' ? document.getElementById('actZonaNueva').value.trim() : zonaValue;
     const { periodicidad, dias } = leerCamposPeriodicidadAct('actCrear');
-    const encargadoId = document.getElementById('actEncargadoSelect').value || null;
+    const tipo = document.getElementById('actTipoSelect').value;
+    const fechaInicioTemporal = document.getElementById('actFechaInicioTemporal').value || null;
+    const fechaFinTemporal = document.getElementById('actFechaFinTemporal').value || null;
+    const encargadoIds = Array.from(box.querySelectorAll('[data-act-responsable]:checked')).map(chk => chk.getAttribute('data-act-responsable'));
     const semanaFecha = document.getElementById('actSemanaSelect').value;
     const observaciones = document.getElementById('actObservaciones').value.trim();
     const error = document.getElementById('actFormError');
@@ -343,6 +438,8 @@ function abrirModalCrearActividad() {
     if (!nombre) { mostrarErrorAct(error, 'Escribe el nombre de la actividad.'); return; }
     if (!zonaNueva) { mostrarErrorAct(error, 'Indica la zona/vitrina.'); return; }
     if (!semanaFecha) { mostrarErrorAct(error, 'Indica a qué semana corresponde.'); return; }
+    if (tipo === 'temporal' && (!fechaInicioTemporal || !fechaFinTemporal)) { mostrarErrorAct(error, 'Indica la fecha de inicio y la fecha límite de la actividad temporal.'); return; }
+    if (tipo === 'temporal' && fechaFinTemporal < fechaInicioTemporal) { mostrarErrorAct(error, 'La fecha límite no puede ser anterior a la fecha de inicio.'); return; }
     if (periodicidad) {
       const validacion = validarPeriodicidadYDiasActividadStaff(periodicidad, dias);
       if (!validacion.ok) { mostrarErrorAct(error, validacion.error); return; }
@@ -353,7 +450,10 @@ function abrirModalCrearActividad() {
       zonaNueva,
       periodicidad,
       dias,
-      encargadoId,
+      encargadoIds,
+      tipo,
+      fechaInicioTemporal,
+      fechaFinTemporal,
       semanaKey: semanaKeyDesdeFechaActividadStaff(semanaFecha),
       observaciones
     };
@@ -400,15 +500,32 @@ function abrirModalEditarActividad(id) {
     <h3>Editar actividad</h3>
     <p class="modal-sub">${escapeHTMLAct(a.nombre)} — ${escapeHTMLAct(a.zona)}</p>
 
+    <label for="actEditTipoSelect">Tipo de actividad</label>
+    <select id="actEditTipoSelect">
+      ${Object.entries(TIPOS_ACTIVIDAD_STAFF).map(([k, v]) => `<option value="${k}" ${k === a.tipo ? 'selected' : ''}>${v}</option>`).join('')}
+    </select>
+    <div id="actEditTemporalWrap" style="display:${a.tipo === 'temporal' ? 'block' : 'none'};margin-top:8px;">
+      <label for="actEditFechaInicioTemporal">Fecha de inicio</label>
+      <input type="date" id="actEditFechaInicioTemporal" value="${a.fechaInicioTemporal || ''}">
+      <label for="actEditFechaFinTemporal">Fecha límite / fecha de finalización</label>
+      <input type="date" id="actEditFechaFinTemporal" value="${a.fechaFinTemporal || ''}">
+    </div>
+
     ${construirCamposPeriodicidadAct('actEdit', a.periodicidad || '', a.dias || [])}
 
-    <label for="actEditEncargado" style="margin-top:10px;">Encargado</label>
-    <select id="actEditEncargado">
-      <option value="">Sin asignar</option>
-      ${staff.map(e => `<option value="${e.id}" ${e.id === a.encargadoId ? 'selected' : ''}>${escapeHTMLAct(e.nombre)}</option>`).join('')}
-    </select>
+    <label style="margin-top:10px;">Responsables</label>
+    <div class="act-checklist-item act-checklist-todo">
+      <label style="display:flex;align-items:center;gap:8px;margin:0;"><input type="checkbox" id="actEditResponsableTodos"> <strong>Todos</strong></label>
+    </div>
+    <div style="max-height:180px;overflow-y:auto;margin-top:4px;">
+      ${staff.map(e => `
+        <label class="act-checklist-item" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" data-act-edit-responsable="${e.id}" ${(a.encargados || []).some(r => r.id === e.id) ? 'checked' : ''}> ${escapeHTMLAct(e.nombre)}
+        </label>
+      `).join('')}
+    </div>
 
-    <label for="actEditSemana">Semana</label>
+    <label for="actEditSemana" style="margin-top:10px;">Semana</label>
     <input type="date" id="actEditSemana" value="${a.semanaKey}">
 
     <label for="actEditObservaciones">Observaciones</label>
@@ -424,6 +541,20 @@ function abrirModalEditarActividad(id) {
   overlay.classList.add('open');
   wireCamposPeriodicidadAct('actEdit');
 
+  document.getElementById('actEditTipoSelect').addEventListener('change', (e) => {
+    document.getElementById('actEditTemporalWrap').style.display = e.target.value === 'temporal' ? 'block' : 'none';
+  });
+
+  const actualizarTodosEdit = () => {
+    const todosMarcados = Array.from(box.querySelectorAll('[data-act-edit-responsable]')).every(c => c.checked);
+    document.getElementById('actEditResponsableTodos').checked = todosMarcados;
+  };
+  actualizarTodosEdit();
+  document.getElementById('actEditResponsableTodos').addEventListener('change', (e) => {
+    box.querySelectorAll('[data-act-edit-responsable]').forEach(chk => { chk.checked = e.target.checked; });
+  });
+  box.querySelectorAll('[data-act-edit-responsable]').forEach(chk => chk.addEventListener('change', actualizarTodosEdit));
+
   document.getElementById('actGuardarEdicionBtn').addEventListener('click', () => {
 
     const { periodicidad, dias } = leerCamposPeriodicidadAct('actEdit');
@@ -432,10 +563,19 @@ function abrirModalEditarActividad(id) {
     const validacion = validarPeriodicidadYDiasActividadStaff(periodicidad, dias);
     if (!validacion.ok) { mostrarErrorAct(error, validacion.error); return; }
 
+    const tipo = document.getElementById('actEditTipoSelect').value;
+    const fechaInicioTemporal = document.getElementById('actEditFechaInicioTemporal').value || null;
+    const fechaFinTemporal = document.getElementById('actEditFechaFinTemporal').value || null;
+    if (tipo === 'temporal' && (!fechaInicioTemporal || !fechaFinTemporal)) { mostrarErrorAct(error, 'Indica la fecha de inicio y la fecha límite de la actividad temporal.'); return; }
+    if (tipo === 'temporal' && fechaFinTemporal < fechaInicioTemporal) { mostrarErrorAct(error, 'La fecha límite no puede ser anterior a la fecha de inicio.'); return; }
+
     const cambios = {
       periodicidad,
       dias,
-      encargadoId: document.getElementById('actEditEncargado').value || null,
+      tipo,
+      fechaInicioTemporal,
+      fechaFinTemporal,
+      encargadoIds: Array.from(box.querySelectorAll('[data-act-edit-responsable]:checked')).map(chk => chk.getAttribute('data-act-edit-responsable')),
       semanaKey: semanaKeyDesdeFechaActividadStaff(document.getElementById('actEditSemana').value),
       observaciones: document.getElementById('actEditObservaciones').value.trim()
     };
@@ -469,21 +609,32 @@ function abrirDetalleActividad(id) {
 
   const historial = obtenerHistorialPorActividadStaff(id);
 
+  const filasResponsables = (a.encargados || []).map(e => {
+    const estadoInd = a.estadosPorEncargado?.[e.id];
+    const texto = estadoInd?.estado === 'enterado' ? `Enterado (${formatearFechaHoraAct(estadoInd.fecha)})` : (a.estado === 'borrador' ? 'Sin anunciar' : 'Anunciado');
+    return `<span>${escapeHTMLAct(e.nombre)}</span><strong>${texto}</strong>`;
+  }).join('');
+
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModalAct()">×</button>
     <span class="eyebrow">${escapeHTMLAct(a.id)}</span>
     <h3 style="margin-top:5px;">${escapeHTMLAct(a.nombre)}</h3>
+    ${a.eliminada ? `<div class="modal-note">Esta actividad fue eliminada por ${escapeHTMLAct(a.eliminadaPorNombre)} el ${formatearFechaHoraAct(a.fechaEliminacion)}. Se conserva solo para auditoría.</div>` : ''}
 
     <div class="modal-context">
       <span>Zona</span><strong>${escapeHTMLAct(a.zona)}</strong>
+      <span>Tipo</span><strong>${TIPOS_ACTIVIDAD_STAFF[a.tipo]}${a.tipo === 'temporal' ? ` (${escapeHTMLAct(formatearFechaCortaActividadStaff(a.fechaInicioTemporal))} – ${escapeHTMLAct(formatearFechaCortaActividadStaff(a.fechaFinTemporal))})` : ''}</strong>
       <span>Periodicidad</span><strong>${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : 'Sin definir'}</strong>
       <span>Día</span><strong>${escapeHTMLAct(formatearDiasAsignacionActividadStaff(a))}</strong>
-      <span>Encargado</span><strong>${escapeHTMLAct(a.encargadoNombre || 'Sin asignar')}</strong>
       <span>Semana</span><strong>${formatearRangoSemanaActividadStaff(a.semanaKey)}</strong>
       <span>Estado</span><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span>
       ${a.observaciones ? `<span>Observaciones</span><strong>${escapeHTMLAct(a.observaciones)}</strong>` : ''}
-      ${a.fechaEnterado ? `<span>Se enteró</span><strong>${escapeHTMLAct(a.enteradoPorNombre)} · ${formatearFechaHoraAct(a.fechaEnterado)}</strong>` : ''}
       ${a.fechaFirmaRH ? `<span>Firmado por RH</span><strong>${escapeHTMLAct(a.firmadoPorNombre)} · ${formatearFechaHoraAct(a.fechaFirmaRH)}</strong>` : ''}
+    </div>
+
+    <div class="eyebrow" style="margin-top:14px;">Responsables</div>
+    <div class="modal-context" style="margin-top:6px;">
+      ${filasResponsables || '<span>Sin asignar</span><strong>—</strong>'}
     </div>
 
     <div class="eyebrow" style="margin-top:14px;">Historial</div>
@@ -667,6 +818,103 @@ async function generarReporteSemanalAct() {
   } finally {
     contenedor.innerHTML = '';
   }
+
+}
+
+// ============================================================
+// REPORTE DE ORGANIZACIÓN (sección 3) — vista previa de cómo quedarán
+// organizadas las actividades ANTES de anunciar. Reutiliza EXACTAMENTE
+// el mismo motor de PDF que el reporte semanal (html2canvas + jsPDF +
+// agregarCanvasPaginadoAct) — nunca inventa un segundo formato. Nunca
+// cambia ningún estado ni notifica a nadie: es solo lectura, RH puede
+// generarlo las veces que quiera y seguir modificando responsables
+// después.
+// ============================================================
+
+async function generarReporteOrganizacionAct() {
+
+  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+    mostrarToast('No se pudo generar el reporte — intenta de nuevo en un momento.');
+    return;
+  }
+
+  const filas = obtenerFilasReporteOrganizacionActividadStaff(actSemanaKey);
+  const contenedor = document.getElementById('actPdfTemplate');
+  contenedor.innerHTML = construirHTMLReporteOrganizacionAct(filas, actSemanaKey);
+
+  try {
+
+    if (document.fonts?.ready) await document.fonts.ready;
+
+    const canvas = await html2canvas(contenedor, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'letter' });
+    agregarCanvasPaginadoAct(pdf, canvas);
+    pdf.save(`MW_Organizacion_Actividades_${sanitizarNombreArchivoAct(actSemanaKey)}.pdf`);
+
+    if (typeof registrarAuditoriaRH === 'function') {
+      registrarAuditoriaRH({ modulo: 'actividades_staff', accion: 'generar_reporte_organizacion', descripcion: `Vista previa de organización generada — semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}. Este reporte NO anuncia las actividades.` });
+    }
+
+    mostrarToast('Reporte de organización generado. Las actividades todavía NO se han anunciado.');
+
+  } catch (error) {
+    mostrarToast('No se pudo generar el reporte — intenta de nuevo en un momento.');
+  } finally {
+    contenedor.innerHTML = '';
+  }
+
+}
+
+function construirHTMLReporteOrganizacionAct(filas, semanaKey) {
+
+  const fechaGeneracion = new Date().toLocaleString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const grupos = agruparPorZonaAct(filas);
+
+  const filaActividad = (f) => `
+    <tr>
+      <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(f.nombre)}${f.tipo === 'temporal' ? ' (Temporal)' : ''}</td>
+      <td style="border:1px solid #000;padding:5px;">${nombresResponsablesAct(f)}</td>
+      <td style="border:1px solid #000;padding:5px;">${f.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[f.periodicidad] : 'Sin definir'}</td>
+      <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(formatearDiasAsignacionActividadStaff(f))}</td>
+      <td style="border:1px solid #000;padding:5px;font-weight:700;${f.listaParaAnunciar ? 'color:#1f7a34;' : 'color:#a3272f;'}">${f.listaParaAnunciar ? 'Lista para anunciar' : 'Falta responsable'}</td>
+    </tr>
+  `;
+
+  return `
+    <div style="font-family:Calibri,Arial,sans-serif;color:#000;padding:20px;background:#fff;width:720px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #DAC2EC;padding-bottom:10px;">
+        <div>
+          <h1 style="margin:0;font-size:18px;color:#5b3a73;">Reporte de organización — vista previa</h1>
+          <p style="margin:4px 0 0;font-size:11px;">Semana del ${formatearRangoSemanaActividadStaff(semanaKey)}</p>
+          <p style="margin:2px 0 0;font-size:9.5px;color:#666;">Generado el ${fechaGeneracion} — este reporte todavía NO anuncia las actividades.</p>
+        </div>
+        <img src="../../assets/images/imagotipo-completo-negro.png" alt="MW JOYERÍA" style="width:90px;height:auto;object-fit:contain;">
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:10px;">
+        <thead>
+          <tr style="background:#DAC2EC;">
+            <th style="border:1px solid #000;padding:5px;text-align:left;">Actividad</th>
+            <th style="border:1px solid #000;padding:5px;text-align:left;">Responsable(s)</th>
+            <th style="border:1px solid #000;padding:5px;text-align:left;">Periodicidad</th>
+            <th style="border:1px solid #000;padding:5px;text-align:left;">Día</th>
+            <th style="border:1px solid #000;padding:5px;text-align:left;">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${grupos.length ? grupos.map(g => `
+            <tr><td colspan="5" style="border:1px solid #000;padding:5px;background:#f3ecf7;font-weight:700;">${escapeHTMLAct(g.zona)}</td></tr>
+            ${g.items.map(filaActividad).join('')}
+          `).join('') : `<tr><td colspan="5" style="border:1px solid #000;padding:10px;text-align:center;">No hay actividades en organización para esta semana.</td></tr>`}
+        </tbody>
+      </table>
+
+      <div style="margin-top:14px;font-size:9px;color:#555;line-height:1.5;">
+        Esta es una VISTA PREVIA de cómo quedará la organización — ninguna actividad se anuncia ni se notifica a Staff al generar este reporte. Usa "Anunciar actividades" para publicarlas.
+      </div>
+    </div>
+  `;
 
 }
 

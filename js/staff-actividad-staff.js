@@ -123,6 +123,17 @@ function agruparPorZonaMisAct(asignaciones) {
   return zonasFinal.map(z => ({ zona: z, items: grupos.get(z) }));
 }
 
+// Estado de ESTA persona en la actividad — con varios responsables,
+// cada quien confirma por su cuenta (sección 4), así que el badge y el
+// botón "Enterado" de Mis actividades reflejan su propia confirmación,
+// no el estado general (que solo llega a "Enterado" cuando TODOS ya
+// confirmaron — ver marcarEnteradoAsignacionActividadStaff).
+function estadoIndividualMisAct(a) {
+  if (a.estado === 'firmado_rh') return 'firmado_rh';
+  const propio = a.estadosPorEncargado?.[identidadStaffActual.usuarioId]?.estado;
+  return propio === 'enterado' ? 'enterado' : 'anunciado';
+}
+
 function renderMisActividades() {
 
   const cont = document.getElementById('actMisContenido');
@@ -130,11 +141,12 @@ function renderMisActividades() {
 
   const semanaActual = semanaKeyActualActividadStaff();
   const lista = obtenerAsignacionesActividadStaff()
-    .filter(a => a.encargadoId === identidadStaffActual.usuarioId && a.semanaKey === semanaActual && a.estado !== 'borrador');
+    .filter(a => !a.eliminada && a.estado !== 'borrador' && (a.encargados || []).some(e => e.id === identidadStaffActual.usuarioId))
+    .filter(a => a.tipo === 'temporal' ? vigenciaTemporalActividadStaff(a).vigente : a.semanaKey === semanaActual);
 
   document.getElementById('actStatTotal').textContent = lista.length;
-  document.getElementById('actStatPendientes').textContent = lista.filter(a => a.estado === 'anunciado').length;
-  document.getElementById('actStatEnterado').textContent = lista.filter(a => a.estado === 'enterado').length;
+  document.getElementById('actStatPendientes').textContent = lista.filter(a => estadoIndividualMisAct(a) === 'anunciado').length;
+  document.getElementById('actStatEnterado').textContent = lista.filter(a => estadoIndividualMisAct(a) === 'enterado').length;
   document.getElementById('actStatCompletadas').textContent = lista.filter(a => a.estado === 'firmado_rh').length;
 
   if (!lista.length) {
@@ -158,6 +170,7 @@ function renderMisActividades() {
         <thead>
           <tr>
             <th>Actividad</th>
+            <th>Responsable(s)</th>
             <th>Periodicidad</th>
             <th>Día</th>
             <th>Estado</th>
@@ -165,15 +178,22 @@ function renderMisActividades() {
           </tr>
         </thead>
         <tbody>
-          ${g.items.map(a => `
+          ${g.items.map(a => {
+            const estadoInd = estadoIndividualMisAct(a);
+            const otrosResponsables = (a.encargados || []).filter(e => e.id !== identidadStaffActual.usuarioId).map(e => e.nombre);
+            const nombresCol = otrosResponsables.length ? `Tú, ${otrosResponsables.map(escapeHTMLMisAct).join(', ')}` : 'Tú';
+            const etiquetaTemporal = a.tipo === 'temporal' ? `<br><small style="color:#766d83;">Temporal · hasta ${escapeHTMLMisAct(formatearFechaCortaActividadStaff(a.fechaFinTemporal))}</small>` : '';
+            return `
             <tr>
-              <td><strong>${escapeHTMLMisAct(a.nombre)}</strong></td>
+              <td><strong>${escapeHTMLMisAct(a.nombre)}</strong>${etiquetaTemporal}</td>
+              <td>${nombresCol}</td>
               <td>${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : 'Sin definir'}</td>
               <td>${escapeHTMLMisAct(formatearDiasAsignacionActividadStaff(a))}</td>
-              <td><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span></td>
-              <td>${a.estado === 'anunciado' ? `<button type="button" class="btn btn-primary" style="width:auto;padding:0.5em 1em;" data-mis-act-enterado="${a.id}">Enterado</button>` : ''}</td>
+              <td><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[estadoInd]}">${ESTADOS_ACTIVIDAD_STAFF[estadoInd]}</span></td>
+              <td>${estadoInd === 'anunciado' ? `<button type="button" class="btn btn-primary" style="width:auto;padding:0.5em 1em;" data-mis-act-enterado="${a.id}">Enterado</button>` : ''}</td>
             </tr>
-          `).join('')}
+          `;
+          }).join('')}
         </tbody>
       </table>
     </div>

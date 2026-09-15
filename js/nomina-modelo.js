@@ -281,6 +281,42 @@ function activarConceptoNomina(id) {
   return { ok: true, concepto };
 }
 
+// Recorre TODOS los periodos ya guardados (de cualquier empleado o
+// semana) buscando una fila que use este concepto — es la única forma
+// confiable de saber si "eliminar" puede borrar físicamente o debe
+// desactivar nada más (sección 5: nunca romper un recibo histórico).
+function conceptoNominaEstaEnUso(id) {
+  const periodos = obtenerPeriodosNomina();
+  return Object.values(periodos).some(p => (p.conceptos || []).some(fila => fila.conceptoId === id));
+}
+
+// Acción única "Eliminar concepto" del prompt: decide sola si borra
+// físicamente o solo desactiva, según si ya se usó alguna vez. Los
+// conceptos "fijos" (sueldo base, horas extra, falta) nunca se
+// eliminan — son parte del cálculo base de cualquier nómina.
+function eliminarConceptoNomina(id) {
+  const conceptos = obtenerConceptosNomina();
+  const concepto = conceptos.find(c => c.id === id);
+  if (!concepto) return { ok: false, error: 'El concepto no existe.' };
+  if (concepto.fijo) return { ok: false, error: 'Este concepto es parte del cálculo base de la nómina y no puede eliminarse.' };
+
+  if (conceptoNominaEstaEnUso(id)) {
+    const resultado = desactivarConceptoNomina(id);
+    if (!resultado.ok) return resultado;
+    if (typeof registrarAuditoriaAdmin === 'function') {
+      registrarAuditoriaAdmin({ modulo: 'nomina', accion: 'desactivar_concepto', descripcion: `Concepto "${concepto.nombre}" desactivado (ya se había usado en nóminas anteriores) — los recibos históricos no cambian.` });
+    }
+    return { ok: true, accion: 'desactivado', concepto: resultado.concepto };
+  }
+
+  const restantes = conceptos.filter(c => c.id !== id);
+  guardarConceptosNomina(restantes);
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({ modulo: 'nomina', accion: 'eliminar_concepto', descripcion: `Concepto "${concepto.nombre}" eliminado — nunca se había usado en ninguna nómina.` });
+  }
+  return { ok: true, accion: 'eliminado', concepto };
+}
+
 // ============================================================
 // SEMANAS (periodicidad confirmada: SEMANAL, lunes a domingo)
 // ============================================================
@@ -296,6 +332,16 @@ function obtenerLunesDeSemana(fechaBase) {
 
 function periodoKeyDeLunes(lunes) {
   return `${lunes.getFullYear()}-${String(lunes.getMonth() + 1).padStart(2, '0')}-${String(lunes.getDate()).padStart(2, '0')}`;
+}
+
+// Viernes de esa misma semana (lunes + 4 días) — el día normal de pago
+// (sección 6.1). Es solo la PROPUESTA inicial: RH puede cambiarla con
+// actualizarFechaPagoNomina, y ese cambio nunca afecta otros periodos.
+function fechaPagoSugeridaNomina(periodoKey) {
+  const lunes = new Date(`${periodoKey}T00:00:00`);
+  const viernes = new Date(lunes);
+  viernes.setDate(lunes.getDate() + 4);
+  return periodoKeyDeLunes(viernes);
 }
 
 function obtenerPeriodoActualNomina() {
@@ -390,6 +436,12 @@ function obtenerPeriodoNomina(empleadoId, periodoKey) {
     validacionAdmin: null,
     comentarioCorreccion: null,
     estadoPago: { estado: 'pendiente' },
+    // Fecha de pago propuesta (viernes) y método de pago de ESTE
+    // periodo — nace copiado del empleado, pero vive aparte para que
+    // cambiarlo aquí nunca toque su dato permanente ni otras semanas
+    // (sección 6.1 y 6.5).
+    fechaPagoProgramada: fechaPagoSugeridaNomina(periodoKey),
+    metodoPago: empleado.metodoPago || 'Efectivo',
     guardado: false
   };
 
@@ -399,9 +451,65 @@ function guardarPeriodoNomina(periodo) {
   const clave = construirClavePeriodo(periodo.empleadoId, periodo.periodoKey);
   const periodos = obtenerPeriodosNomina();
   const totales = calcularTotalesPeriodo(periodo.conceptos);
-  periodos[clave] = { ...periodo, ...totales, guardado: true };
+  periodos[clave] = {
+    fechaPagoProgramada: fechaPagoSugeridaNomina(periodo.periodoKey),
+    metodoPago: 'Efectivo',
+    ...periodo,
+    ...totales,
+    guardado: true
+  };
   guardarPeriodosNomina(periodos);
   return periodos[clave];
+}
+
+// RH puede modificar la fecha de pago propuesta (sección 6.1) — nunca
+// modifica otros periodos ni el dato permanente del empleado.
+function actualizarFechaPagoNomina(empleadoId, periodoKey, nuevaFecha, { usuarioId, usuarioNombre, usuarioRol }) {
+  if (!nuevaFecha) return { ok: false, error: 'Indica la fecha de pago.' };
+
+  const periodo = guardarPeriodoNomina({ ...obtenerPeriodoNomina(empleadoId, periodoKey) });
+  const clave = construirClavePeriodo(empleadoId, periodoKey);
+  const periodos = obtenerPeriodosNomina();
+  const anterior = periodo.fechaPagoProgramada;
+  if (anterior === nuevaFecha) return { ok: true, periodo };
+
+  periodos[clave].fechaPagoProgramada = nuevaFecha;
+  guardarPeriodosNomina(periodos);
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({ modulo: 'nomina', accion: 'modificar_fecha_pago', descripcion: `Nómina de ${empleadoId} (${periodoKey}): fecha de pago ${formatearFechaDMYNominaModelo(anterior)} → ${formatearFechaDMYNominaModelo(nuevaFecha)}${usuarioRol ? ` — por ${usuarioNombre} (${usuarioRol})` : ''}` });
+  }
+
+  return { ok: true, periodo: periodos[clave] };
+}
+
+// RH puede cambiar el método de pago DIRECTAMENTE desde la nómina de
+// ese periodo (sección 6.5) — no toca el dato permanente del empleado,
+// así que la misma persona puede recibir efectivo una semana y
+// transferencia la siguiente.
+function actualizarMetodoPagoNomina(empleadoId, periodoKey, metodoPago, { usuarioId, usuarioNombre, usuarioRol }) {
+  if (!metodoPago) return { ok: false, error: 'Selecciona un método de pago.' };
+
+  const periodo = guardarPeriodoNomina({ ...obtenerPeriodoNomina(empleadoId, periodoKey) });
+  const clave = construirClavePeriodo(empleadoId, periodoKey);
+  const periodos = obtenerPeriodosNomina();
+  const anterior = periodo.metodoPago;
+  if (anterior === metodoPago) return { ok: true, periodo };
+
+  periodos[clave].metodoPago = metodoPago;
+  guardarPeriodosNomina(periodos);
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({ modulo: 'nomina', accion: 'modificar_metodo_pago', descripcion: `Nómina de ${empleadoId} (${periodoKey}): método de pago ${anterior} → ${metodoPago}${usuarioRol ? ` — por ${usuarioNombre} (${usuarioRol})` : ''}` });
+  }
+
+  return { ok: true, periodo: periodos[clave] };
+}
+
+function formatearFechaDMYNominaModelo(fechaISO) {
+  if (!fechaISO) return '—';
+  const fecha = new Date(`${fechaISO}T00:00:00`);
+  return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 // ============================================================

@@ -371,6 +371,21 @@ function renderVistaDetalleNomina() {
         <h3 class="cfg-card-title">Nómina — ${formatearRangoSemanaNomina(nomPeriodoActual)}</h3>
         <p class="cfg-card-sub" id="nomEstadoPagoTexto"></p>
 
+        <div class="cfg-form-grid" style="margin:10px 0;">
+          <label>Fecha de pago
+            <input type="date" id="nomFechaPagoInput" value="${nomPeriodoEnEdicion.fechaPagoProgramada || ''}">
+          </label>
+          <label>Método de pago
+            <select id="nomMetodoPagoInput">
+              <option value="Efectivo" ${nomPeriodoEnEdicion.metodoPago === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
+              <option value="Transferencia" ${nomPeriodoEnEdicion.metodoPago === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
+              <option value="Depósito" ${nomPeriodoEnEdicion.metodoPago === 'Depósito' ? 'selected' : ''}>Depósito</option>
+              <option value="Cheque" ${nomPeriodoEnEdicion.metodoPago === 'Cheque' ? 'selected' : ''}>Cheque</option>
+              <option value="Otro" ${nomPeriodoEnEdicion.metodoPago === 'Otro' ? 'selected' : ''}>Otro</option>
+            </select>
+          </label>
+        </div>
+
         <div class="catalog-table-wrap comm-tabla-wrap">
           <table class="catalog-table" id="nomTablaConceptos">
             <thead><tr><th>Concepto</th><th>Cantidad</th><th>Importe</th><th>Tipo</th><th>Total</th></tr></thead>
@@ -420,6 +435,24 @@ function renderVistaDetalleNomina() {
   document.getElementById('nomVerHistorialBtn').addEventListener('click', abrirModalHistorialAjustesNomina);
   document.getElementById('nomGenerarPdfBtn').addEventListener('click', generarComprobanteNomina);
   document.getElementById('nomEnviarValidacionBtn')?.addEventListener('click', () => confirmarEnviarNominaAValidacion(empleado));
+
+  document.getElementById('nomFechaPagoInput')?.addEventListener('change', (e) => {
+    const resultado = actualizarFechaPagoNomina(empleado.id, nomPeriodoActual, e.target.value, { usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre, usuarioRol: 'rh' });
+    if (!resultado.ok) { mostrarToast(resultado.error); return; }
+    nomPeriodoEnEdicion.fechaPagoProgramada = resultado.periodo.fechaPagoProgramada;
+    registrarAuditoriaRH({ modulo: 'nomina', accion: 'modificar_fecha_pago', descripcion: `Fecha de pago de ${empleado.nombre} (${formatearRangoSemanaNomina(nomPeriodoActual)}) cambiada a ${formatearFechaNomina(resultado.periodo.fechaPagoProgramada)}.` });
+    renderResumenTotalesNomina();
+    mostrarToast('Fecha de pago actualizada.');
+  });
+
+  document.getElementById('nomMetodoPagoInput')?.addEventListener('change', (e) => {
+    const resultado = actualizarMetodoPagoNomina(empleado.id, nomPeriodoActual, e.target.value, { usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre, usuarioRol: 'rh' });
+    if (!resultado.ok) { mostrarToast(resultado.error); return; }
+    nomPeriodoEnEdicion.metodoPago = resultado.periodo.metodoPago;
+    registrarAuditoriaRH({ modulo: 'nomina', accion: 'modificar_metodo_pago', descripcion: `Método de pago de ${empleado.nombre} (${formatearRangoSemanaNomina(nomPeriodoActual)}) cambiado a ${resultado.periodo.metodoPago}.` });
+    renderResumenTotalesNomina();
+    mostrarToast('Método de pago actualizado.');
+  });
 
   renderTablaConceptosNomina();
   renderResumenTotalesNomina();
@@ -487,7 +520,7 @@ function renderResumenTotalesNomina() {
   if (textoEstado) {
     textoEstado.textContent = estadoPago.estado === 'pagada'
       ? `Pagada el ${formatearFechaNomina(estadoPago.fechaPago)} por ${estadoPago.registradoPor} — ${fmtMoneyNomina(estadoPago.montoPagado)}`
-      : 'Periodo pendiente de pago.';
+      : `Periodo pendiente de pago. Fecha de pago programada: ${formatearFechaNomina(nomPeriodoEnEdicion.fechaPagoProgramada)}.`;
   }
 }
 
@@ -886,7 +919,13 @@ function construirBloqueReciboNomina(empleado, periodo) {
   const percepciones = periodo.conceptos.filter(c => c.tipo === 'percepcion');
   const deducciones = periodo.conceptos.filter(c => c.tipo === 'deduccion');
   const estadoPago = periodo.estadoPago || { estado: 'pendiente' };
-  const fechaPagoTexto = estadoPago.estado === 'pagada' ? formatearFechaDMYNomina(estadoPago.fechaPago) : 'Pendiente';
+  // El comprobante puede imprimirse ANTES de que se registre el pago
+  // (sección 6.2) — mientras tanto muestra la fecha PROGRAMADA, no
+  // "Pendiente" a secas, para que el empleado sepa cuándo esperar su pago.
+  const fechaPagoTexto = estadoPago.estado === 'pagada'
+    ? formatearFechaDMYNomina(estadoPago.fechaPago)
+    : `${formatearFechaDMYNomina(periodo.fechaPagoProgramada)} (programada)`;
+  const metodoPagoPeriodo = periodo.metodoPago || empleado.metodoPago || 'Efectivo';
 
   const filasPercepciones = agruparConceptosEnFilasDe3Nomina(percepciones);
   const filasDeducciones = agruparConceptosEnFilasDe3Nomina(deducciones);
@@ -938,7 +977,7 @@ function construirBloqueReciboNomina(empleado, periodo) {
             <td style="${sinBorde}font-size:9.5px;"><strong>Fecha de pago</strong></td>
             <td style="${sinBorde}font-size:9.5px;">${fechaPagoTexto}</td>
             <td style="${sinBorde}font-size:9.5px;"><strong>Metodo de pago</strong></td>
-            <td style="${sinBorde}font-size:9.5px;">${escapeHTMLNomina(empleado.metodoPago || 'Efectivo')}</td>
+            <td style="${sinBorde}font-size:9.5px;">${escapeHTMLNomina(metodoPagoPeriodo)}</td>
             <td colspan="2" style="${sinBorde}"></td>
           </tr>
 
@@ -1214,6 +1253,7 @@ function renderDatosConceptosRH() {
                   ${!c.fijo ? (c.activo
                     ? `<button type="button" class="comm-icon-btn" data-nom-desactivar-concepto="${c.id}" title="Desactivar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 108 0"/></svg></button>`
                     : `<button type="button" class="comm-icon-btn" data-nom-activar-concepto="${c.id}" title="Activar">↺</button>`) : ''}
+                  ${!c.fijo ? `<button type="button" class="comm-icon-btn" data-nom-eliminar-concepto="${c.id}" title="Eliminar concepto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 6h14"/><path d="M9 6V4h6v2"/><path d="M7 6l1 14h8l1-14"/></svg></button>` : ''}
                 </td>
               </tr>
             `).join('')}
@@ -1235,6 +1275,46 @@ function renderDatosConceptosRH() {
     mostrarToast('Concepto activado.');
     renderDatosConceptosRH();
   }));
+  cont.querySelectorAll('[data-nom-eliminar-concepto]').forEach(btn => btn.addEventListener('click', () => confirmarEliminarConceptoNomina(btn.getAttribute('data-nom-eliminar-concepto'), renderDatosConceptosRH)));
+
+}
+
+// Un solo botón "Eliminar concepto" — el modelo decide solo si borra
+// físicamente (nunca se usó) o solo desactiva (ya se usó en un recibo
+// histórico, que nunca debe cambiar). Ver eliminarConceptoNomina.
+function confirmarEliminarConceptoNomina(id, alTerminar) {
+
+  const concepto = obtenerConceptoNominaPorId(id);
+  if (!concepto) return;
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.style.maxWidth = '400px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="auth-icon danger">!</div>
+    <h3>¿Eliminar concepto?</h3>
+    <p class="modal-sub">Vas a eliminar "${escapeHTMLNomina(concepto.nombre)}". Si ya se usó en alguna nómina anterior, en vez de borrarse se marcará como inactivo — los recibos históricos que lo usaron no cambian.</p>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" id="nomEliminarConceptoCancelarBtn" type="button">Cancelar</button>
+      <button class="btn btn-danger" style="flex:1;" id="nomEliminarConceptoConfirmarBtn" type="button">Eliminar</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  document.getElementById('nomEliminarConceptoCancelarBtn').addEventListener('click', cerrar);
+
+  document.getElementById('nomEliminarConceptoConfirmarBtn').addEventListener('click', () => {
+    const resultado = eliminarConceptoNomina(id);
+    cerrar();
+    if (!resultado.ok) { mostrarToast(resultado.error); return; }
+    mostrarToast(resultado.accion === 'eliminado' ? 'Concepto eliminado.' : 'Este concepto ya se había usado antes — se desactivó en vez de eliminarse.');
+    if (typeof alTerminar === 'function') alTerminar();
+  });
 
 }
 
