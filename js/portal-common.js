@@ -41,6 +41,21 @@ function obtenerNombrePersonaActualPortal() {
   return typeof nombreCompletoPersona === 'function' ? nombreCompletoPersona(persona) : persona.nombre;
 }
 
+// ---------- Id real (personas-ejemplo.js) de la persona con sesión abierta ----------
+// El id real de la sesión (sesion.personaId), NO un slug derivado del
+// nombre — 'me-lider'/'me-emprendedora' no son slugs de sus nombres de
+// display ("Líder"/"Claudia Ramírez"), así que usar slugUsuarioId(nombre)
+// aquí generaría un id distinto al persona.id real, rompiendo el cruce
+// con el perfil de Admin y entre páginas (Catálogo/Apartar vs. Mis
+// apartados). Úsalo en vez de slugUsuarioId() para todo lo que necesite
+// identificar a la persona real (ventanas de apartado, crédito, etc.).
+function obtenerIdPersonaActualPortal() {
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  if (sesion && sesion.tipo === 'persona' && sesion.personaId) return sesion.personaId;
+  const esLider = window.location.pathname.includes('/portal/lider/');
+  return esLider ? 'me-lider' : 'me-emprendedora';
+}
+
 // ---------- Fecha del día (pill "Resumen operativo" en Apartados) ----------
 function initResumenDatePill() {
   const el = document.getElementById('summaryDate');

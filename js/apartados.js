@@ -3,8 +3,11 @@
 // Las piezas y el estado del depósito que se muestran aquí vienen de
 // apartados-modelo.js — la MISMA fuente de datos que usan Staff/RH/Admin
 // para crear, liquidar y cancelar ventanas de apartado — filtrados a las
-// ventanas de la persona con sesión abierta (usuarioId = slugUsuarioId(nombre),
-// igual que como Staff las crea). Antes esta vista usaba un arreglo estático
+// ventanas de la persona con sesión abierta (usuarioId = el id REAL de
+// personas-ejemplo.js, vía obtenerIdPersonaActualPortal(); antes usaba
+// slugUsuarioId(nombre), que para 'me-lider'/'me-emprendedora' generaba
+// un id distinto al real y nunca cruzaba con lo que Catálogo → Apartar
+// crea con el mismo id real). Antes esta vista usaba un arreglo estático
 // (APARTADOS_EJEMPLO) totalmente desconectado del sistema real: una pieza
 // apartada por Staff nunca aparecía aquí. DATOS_BANCARIOS_EJEMPLO
 // (apartados-ejemplo.js) sigue usándose solo para los datos bancarios a
@@ -17,8 +20,7 @@
 let usuarioIdActual = '';
 
 document.addEventListener('DOMContentLoaded', () => {
-  const nombreActual = (typeof obtenerNombrePersonaActualPortal === 'function' && obtenerNombrePersonaActualPortal()) || '';
-  usuarioIdActual = typeof slugUsuarioId === 'function' ? slugUsuarioId(nombreActual) : '';
+  usuarioIdActual = (typeof obtenerIdPersonaActualPortal === 'function' && obtenerIdPersonaActualPortal()) || '';
 
   renderApartados();
   iniciarReloj();
