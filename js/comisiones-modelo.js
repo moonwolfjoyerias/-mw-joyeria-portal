@@ -12,16 +12,12 @@
 //   usan para saber qué rango tenía vigente cada líder al cierre del
 //   mes anterior, y para detectar el bono por primera vez en un rango.
 //
-// ⚠️ NOTA DE ARQUITECTURA — dato que NO existía y tuve que introducir:
-// el sistema no tenía un registro de compras por persona con fecha y
-// con separación normal/souvenirs (solo existía un total agregado del
-// mes en curso: persona.constancia.montoMesActual). Sin ese desglose no
-// se puede aplicar la regla "los souvenirs no comisionan". Mientras no
-// exista Firestore con compras reales, este archivo DERIVA un desglose
-// determinístico (no aleatorio) a partir de montoMesActual — ver
-// obtenerComprasPersonaPeriodo(). Es una aproximación clara y declarada,
-// no una fuente de verdad distinta: en cuanto exista una colección real
-// de compras, solo esta función necesita cambiar.
+// - js/compras-modelo.js (obtenerComprasLiquidadasPersonaSubPeriodo) —
+//   compras REALES por sub-periodo, separadas normal/souvenir según el
+//   material real de cada pieza de apartado ya liquidada (pagada). El
+//   desglose ya no se fabrica: si una persona no tiene compras
+//   liquidadas en ese sub-periodo, simplemente no hay comisión que
+//   calcular sobre eso, igual que en la vida real.
 //
 // ⚠️ TEMPORAL: localStorage simula Firestore. Se reemplaza en Fase 3.
 
@@ -165,33 +161,18 @@ function calcularRangoAplicadoPeriodo(persona, periodoKey) {
 // arquitectura al inicio del archivo.
 // ============================================================
 
-function hashSimplePersona(id) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return h;
-}
-
+// Compras reales del sub-periodo, tomadas de las piezas de apartado ya
+// LIQUIDADAS de esa persona (js/compras-modelo.js) — separadas en
+// normal/souvenir según el material real de cada pieza. Ya no se
+// fabrica ningún dato: funciona igual para el periodo actual que para
+// cualquier periodo histórico.
 function obtenerComprasPersonaPeriodo(persona, periodoKey, subPeriodo) {
 
-  // Todavía no existe un histórico real de compras por periodo — solo
-  // se puede derivar el periodo/sub-periodo ACTUAL a partir del total
-  // del mes en curso ya usado en el resto del portal.
-  if (periodoKey !== obtenerPeriodoActualKey()) {
+  if (typeof obtenerComprasLiquidadasPersonaSubPeriodo !== 'function') {
     return { normal: 0, souvenir: 0 };
   }
 
-  const total = Number(persona.constancia?.montoMesActual || 0);
-  const fraccion = subPeriodo === 'p1' ? 0.55 : 0.45;
-  const montoSubPeriodo = Math.round(total * fraccion);
-
-  // Marca souvenirs de forma determinística (no aleatoria) para poder
-  // demostrar la regla "los souvenirs no comisionan" con datos reales
-  // y estables entre recargas, en vez de inventar una compra ficticia.
-  const tieneSouvenir = hashSimplePersona(persona.id) % 3 === 0;
-  const souvenir = tieneSouvenir ? Math.round(montoSubPeriodo * 0.12) : 0;
-  const normal = montoSubPeriodo - souvenir;
-
-  return { normal, souvenir };
+  return obtenerComprasLiquidadasPersonaSubPeriodo(persona.id, periodoKey, subPeriodo);
 
 }
 

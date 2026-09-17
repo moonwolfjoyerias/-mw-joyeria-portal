@@ -174,6 +174,7 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
   // apartados-modelo.js y plan-mw-admin.js ya se cargan en todas), así
   // el conteo es siempre el mismo sin importar desde dónde se abra la
   // campana.
+  if (typeof procesarCierresMensualesPlanMWTodas === 'function') procesarCierresMensualesPlanMWTodas();
   if (typeof verificarAscensosPendientes === 'function') verificarAscensosPendientes();
   if (typeof verificarRecompensasConstancia === 'function') verificarRecompensasConstancia();
   if (typeof verificarApartadosVencidosPendientes === 'function') verificarApartadosVencidosPendientes();
