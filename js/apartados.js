@@ -289,6 +289,15 @@ function mostrarModalPagoConMonto(ventana, piezas, totalFinal, notaExtra, decisi
       : decisionDeposito === 'credito'
         ? ' — decidió guardar su depósito como crédito'
         : '';
+    // Se guarda la hora en que la persona declaró haber pagado — es una
+    // señal informativa para Staff/RH/Admin (por ejemplo, si dos
+    // personas reclaman la misma pieza, quién avisó primero), pero
+    // nunca sustituye la confirmación manual de Staff con la hora real
+    // en que se recibió el depósito (eso se registra aparte al liquidar).
+    mutarVentanaPropia(ventana.id, v => {
+      v.fechaDeclaracionPago = new Date().toISOString();
+      v.montoDeclaradoPago = totalFinal;
+    });
     notificarEquipoOperativo(`${nombrePersona} avisó que ya transfirió el pago de su apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${totalFinal} MXN)${notaDeposito} — confirma el depósito y liquida el apartado en el sistema.`, nombrePersona);
     box.innerHTML = `
       <button class="modal-close" data-close>&times;</button>
