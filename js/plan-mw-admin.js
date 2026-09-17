@@ -235,6 +235,8 @@ function procesarCierresMensualesPlanMW(persona) {
 
   if (typeof obtenerComprasLiquidadasPersonaMes !== 'function' || typeof mesKeyActualComprasModelo !== 'function') return false;
 
+  let huboCambios = false;
+
   persona.constancia = persona.constancia || { mesesCumplidos: 0, montoMesActual: 0, metaMes: META_CONSTANCIA_MENSUAL, hitosOtorgados: [] };
   persona.constancia.mesesProcesados = persona.constancia.mesesProcesados || [];
   persona.constancia.excedenteDisponible = persona.constancia.excedenteDisponible || 0;
@@ -244,10 +246,27 @@ function procesarCierresMensualesPlanMW(persona) {
   persona.rifa.mesesProcesados = persona.rifa.mesesProcesados || [];
   persona.rifa.boletosPorMes = persona.rifa.boletosPorMes || {};
 
+  // Reparación de datos: una versión anterior de este cierre sí procesó
+  // meses previos a MES_INICIO_CIERRE_AUTOMATICO (ver nota arriba), y
+  // esos meses quedaron grabados en localStorage con "compra $0" que no
+  // significa nada real. Se limpian aquí para que cuentas que ya habían
+  // sido inactivadas por error puedan reactivarse y esa reactivación no
+  // se revierta sola en la siguiente carga (evaluarActividadMensualPersona
+  // toma los últimos meses de este mismo arreglo).
+  const mesesConstanciaLimpios = persona.constancia.mesesProcesados.filter(m => m >= MES_INICIO_CIERRE_AUTOMATICO);
+  if (mesesConstanciaLimpios.length !== persona.constancia.mesesProcesados.length) {
+    persona.constancia.mesesProcesados = mesesConstanciaLimpios;
+    huboCambios = true;
+  }
+  const mesesRifaLimpios = persona.rifa.mesesProcesados.filter(m => m >= MES_INICIO_CIERRE_AUTOMATICO);
+  if (mesesRifaLimpios.length !== persona.rifa.mesesProcesados.length) {
+    persona.rifa.mesesProcesados = mesesRifaLimpios;
+    huboCambios = true;
+  }
+
   const mesKeyHoy = mesKeyActualComprasModelo();
   let cursor = (persona.fechaAlta || mesKeyHoy).slice(0, 7);
   if (cursor < MES_INICIO_CIERRE_AUTOMATICO) cursor = MES_INICIO_CIERRE_AUTOMATICO;
-  let huboCambios = false;
   let vueltas = 0;
 
   while (cursor < mesKeyHoy && vueltas < 240) { // tope defensivo: 20 años, nunca debería alcanzarse
