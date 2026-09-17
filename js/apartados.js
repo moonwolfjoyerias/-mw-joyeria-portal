@@ -81,6 +81,25 @@ function actualizarReloj() {
   }
   if (box) box.style.display = '';
 
+  // Vencida = solo la etiqueta (Sección 5.3b, decisión de negocio
+  // confirmada): nada se pierde todavía, pero la persona debe ver con
+  // claridad que su ventana venció y que necesita pasar a pagar/recoger
+  // antes de que Staff decida "Desapartar" (lo que sí perdería la
+  // pieza y el depósito).
+  if (typeof ventanaEstaVencida === 'function' && ventanaEstaVencida(ventana)) {
+    setText('cdDias', '00');
+    setText('cdHoras', '00');
+    setText('cdMin', '00');
+    setText('cdSeg', '00');
+    box.classList.add('countdown-box--vencida');
+    const label = box.querySelector('.countdown-label');
+    const nota = box.querySelector('.countdown-note');
+    if (label) label.textContent = 'Tu ventana de depósito venció';
+    if (nota) nota.textContent = 'Pasa a pagar o recoger tus piezas lo antes posible — Staff puede liberarlas en cualquier momento.';
+    return;
+  }
+  box.classList.remove('countdown-box--vencida');
+
   const restante = Math.max(0, new Date(ventana.fechaVencimiento).getTime() - Date.now());
   const dias = Math.floor(restante / (1000 * 60 * 60 * 24));
   const horas = Math.floor((restante / (1000 * 60 * 60)) % 24);
