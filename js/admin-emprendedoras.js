@@ -338,6 +338,18 @@ function renderSeccionInfoPersona(persona, editando) {
         <div><span>Tipo de cuenta</span><strong>${persona.tipo === 'lider' ? 'Líder' : 'Emprendedora'}</strong></div>
       </div>
 
+      ${persona.estado === 'inactiva' ? `
+        <div class="ascenso-banner" style="margin-top:16px;">
+          <div>
+            <strong>Cuenta inactiva</strong>
+            <p>No tuvo compra mínima de $500 en 6 meses seguidos (o Admin la marcó así). Puedes reactivarla si ya volvió a comprar o si la marca no aplica.</p>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary" id="reactivarCuentaBtn" type="button">Reactivar cuenta</button>
+          </div>
+        </div>
+      ` : ''}
+
       ${persona.solicitudBajaPendiente ? `
         <div class="ascenso-banner" style="margin-top:16px;">
           <div>
@@ -351,6 +363,18 @@ function renderSeccionInfoPersona(persona, editando) {
         </div>
       ` : ''}
     `;
+
+    document.getElementById('reactivarCuentaBtn')?.addEventListener('click', () => {
+      const personas = obtenerPersonas();
+      const actual = personas.find(p => p.id === persona.id);
+      if (!actual) return;
+      actual.estado = 'activa';
+      guardarPersonas(personas);
+      registrarAuditoriaAdmin({ modulo: 'personas', accion: 'reactivar_cuenta', descripcion: `${nombreCompletoPersona(actual)} reactivada manualmente por Admin` });
+      aplicarBusquedaPersonas();
+      renderDetallePersona();
+      mostrarToastPersonas(`${nombreCompletoPersona(actual)} quedó activa de nuevo.`);
+    });
 
     document.getElementById('confirmarBajaBtn')?.addEventListener('click', () => abrirConfirmarBajaPersona(persona));
     document.getElementById('rechazarBajaBtn')?.addEventListener('click', () => {
