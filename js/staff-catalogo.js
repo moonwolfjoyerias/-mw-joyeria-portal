@@ -1656,38 +1656,7 @@ function cerrarModal() {
 }
 
 
-function mostrarToast(mensaje) {
-
-  let toast =
-    document.getElementById('mwToast');
-
-
-  if (!toast) {
-
-    toast =
-      document.createElement('div');
-
-    toast.id = 'mwToast';
-
-    toast.className = 'mw-toast';
-
-    document.body.appendChild(toast);
-
-  }
-
-
-  toast.textContent = mensaje;
-
-  toast.classList.add('show');
-
-
-  setTimeout(() => {
-
-    toast.classList.remove('show');
-
-  }, 2800);
-
-}
+// mostrarToast(mensaje) se reutiliza de portal-common.js
 
 
 function formatearPrecio(numero) {
