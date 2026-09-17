@@ -224,6 +224,7 @@ function renderDetallePersona() {
           ${esLider ? `<span class="badge">${rangoLabel(persona.rangoActualKey)}</span>` : ''}
           ${persona.ascensoPendiente ? `<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></span> Sube de rango</span>` : ''}
           ${persona.recompensaPendiente ? `<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M4 9h16M12 9v11"/><path d="M8 9c0-2 1-4 4-4s4 2 4 4"/></svg></span> Recompensa lista</span>` : ''}
+          ${persona.solicitudBajaPendiente ? `<span class="badge badge-ascenso" style="background:#fbe7e9;color:#a3272f;">Solicitud de baja</span>` : ''}
         </div>
       </div>
       <button class="modal-close" type="button" id="cerrarPerfilBtn" style="position:static;">×</button>
@@ -336,7 +337,30 @@ function renderSeccionInfoPersona(persona, editando) {
         <div><span>Líder actual</span><strong>${lider ? escapeHTMLPersonas(nombreCompletoPersona(lider)) : 'Sin líder asignada'}</strong></div>
         <div><span>Tipo de cuenta</span><strong>${persona.tipo === 'lider' ? 'Líder' : 'Emprendedora'}</strong></div>
       </div>
+
+      ${persona.solicitudBajaPendiente ? `
+        <div class="ascenso-banner" style="margin-top:16px;">
+          <div>
+            <strong><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Solicitud de baja pendiente</strong>
+            <p>${escapeHTMLPersonas(persona.solicitudBajaPendiente.solicitadoPorNombre)} solicitó dar de baja a esta persona${persona.solicitudBajaPendiente.motivo ? `: "${escapeHTMLPersonas(persona.solicitudBajaPendiente.motivo)}"` : ''}.</p>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline" id="rechazarBajaBtn" type="button">Rechazar</button>
+            <button class="btn btn-danger" id="confirmarBajaBtn" type="button">Confirmar baja</button>
+          </div>
+        </div>
+      ` : ''}
     `;
+
+    document.getElementById('confirmarBajaBtn')?.addEventListener('click', () => abrirConfirmarBajaPersona(persona));
+    document.getElementById('rechazarBajaBtn')?.addEventListener('click', () => {
+      cancelarSolicitudBajaPersona(persona.id);
+      registrarAuditoriaAdmin({ modulo: 'personas', accion: 'rechazar_solicitud_baja', descripcion: `Solicitud de baja de ${nombreCompletoPersona(persona)} rechazada` });
+      aplicarBusquedaPersonas();
+      renderDetallePersona();
+      mostrarToastPersonas('Solicitud de baja rechazada.');
+    });
+
     return;
   }
 
@@ -963,6 +987,90 @@ function construirRangoChecklistHTML(persona) {
       </div>
     ` : ''}
   `;
+
+}
+
+// Confirma la baja de una persona (Sección 15.3/15.4). Si no tiene
+// líder superior Y tiene equipo directo, ese equipo se quedaría sin
+// líder — se pide a Admin reasignarlo a mano ANTES de poder confirmar,
+// en vez de dejarlo huérfano en silencio.
+function abrirConfirmarBajaPersona(persona) {
+
+  const hijos = obtenerHijosDirectosPersona(persona.id);
+  const superior = persona.liderId ? obtenerPersonaPorId(persona.liderId) : null;
+
+  if (!hijos.length || superior) {
+    abrirAutorizacionAdmin({
+      titulo: 'Confirmar baja',
+      peligrosa: true,
+      mensaje: hijos.length
+        ? `Vas a dar de baja a ${escapeHTMLPersonas(nombreCompletoPersona(persona))}. Su equipo directo (${hijos.length} persona${hijos.length === 1 ? '' : 's'}) se reasignará automáticamente a su líder superior, ${escapeHTMLPersonas(nombreCompletoPersona(superior))}.`
+        : `Vas a dar de baja a ${escapeHTMLPersonas(nombreCompletoPersona(persona))}. Esta persona no tiene equipo directo que reasignar.`,
+      onConfirmar: () => ejecutarYRefrescarBajaPersona(persona, {})
+    });
+    return;
+  }
+
+  // Sin superior y con equipo directo — reasignación manual obligatoria.
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const posiblesLideres = obtenerPersonas().filter(p => p.tipo === 'lider' && p.id !== persona.id && p.estado !== 'baja');
+
+  box.innerHTML = `
+    <button class="modal-close" data-close>×</button>
+    <div class="auth-icon danger">!</div>
+    <h3>Reasignar equipo antes de dar de baja</h3>
+    <p class="modal-sub">${escapeHTMLPersonas(nombreCompletoPersona(persona))} no tiene líder superior. Elige a qué líder pasa cada integrante de su equipo directo antes de confirmar la baja.</p>
+    <div class="form-grid" id="reasignarEquipoLista">
+      ${hijos.map(hijo => `
+        <div class="form-field full">
+          <label>${escapeHTMLPersonas(nombreCompletoPersona(hijo))}</label>
+          <select data-reasignar-hijo="${hijo.id}">
+            <option value="">Sin líder asignada</option>
+            ${posiblesLideres.map(l => `<option value="${l.id}">${escapeHTMLPersonas(nombreCompletoPersona(l))}</option>`).join('')}
+          </select>
+        </div>
+      `).join('')}
+    </div>
+    <div id="formErrorBaja" class="auth-error" style="display:none;"></div>
+    <button class="btn btn-danger" style="width:100%;margin-top:10px;" id="confirmarBajaConReasignacionBtn">Confirmar baja</button>
+  `;
+  overlay.classList.add('open');
+
+  document.getElementById('confirmarBajaConReasignacionBtn').addEventListener('click', () => {
+    const reasignaciones = {};
+    box.querySelectorAll('[data-reasignar-hijo]').forEach(sel => {
+      const hijoId = sel.getAttribute('data-reasignar-hijo');
+      if (sel.value) reasignaciones[hijoId] = sel.value;
+    });
+    overlay.classList.remove('open');
+    ejecutarYRefrescarBajaPersona(persona, reasignaciones);
+  });
+
+}
+
+function ejecutarYRefrescarBajaPersona(persona, reasignacionesManualesPorHijo) {
+
+  const resultado = ejecutarBajaPersonaConCompresion(
+    persona.id,
+    { ejecutadoPorId: ADMIN_IDENTIDAD?.usuarioId, ejecutadoPorNombre: ADMIN_IDENTIDAD?.usuarioNombre },
+    reasignacionesManualesPorHijo
+  );
+
+  if (!resultado.ok) { mostrarToastPersonas(resultado.error); return; }
+
+  registrarAuditoriaAdmin({
+    modulo: 'personas',
+    accion: 'baja_persona',
+    descripcion: `${nombreCompletoPersona(persona)} dada de baja${resultado.hijosReasignados ? ` — ${resultado.hijosReasignados} persona(s) de su equipo reasignadas` : ''}`
+  });
+
+  aplicarBusquedaPersonas();
+  renderFiltroLideres();
+  renderDetallePersona();
+  mostrarToastPersonas(`${nombreCompletoPersona(persona)} fue dada de baja.`);
 
 }
 
