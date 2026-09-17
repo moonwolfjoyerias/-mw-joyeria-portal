@@ -128,10 +128,6 @@ function abrirAutorizacionNomina(usuario) {
 
     <button class="btn btn-primary" id="autorizarNominaBtn" style="width:100%;">Autorizar y ver recibo</button>
 
-    <p class="demo-note">
-      Demo: usuario <strong>${escapeHTML(empleadoNominaPendiente.usuario)}</strong> · contraseña <strong>${escapeHTML(empleadoNominaPendiente.password)}</strong>
-    </p>
-
   `;
 
   overlay.classList.add('open');
