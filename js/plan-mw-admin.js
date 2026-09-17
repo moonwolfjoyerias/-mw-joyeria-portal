@@ -210,6 +210,16 @@ const META_CONSTANCIA_MENSUAL = 8000;
 const META_RIFA_MENSUAL = 3000;
 const MONTO_POR_BOLETO_EXTRA_RIFA = 1000;
 
+// Mes en que este cierre automático (contra compras REALES liquidadas)
+// empezó a regir. Los meses ANTERIORES a este no se evalúan — antes de
+// esta fecha no existe ledger real de compras (ver nota TEMPORAL de
+// apartados-modelo.js), así que "no hubo compra" en, por ejemplo, 2023
+// no significa nada y no debe restar meses de Constancia ni disparar
+// una inactivación automática de gente que en realidad sí compra hoy.
+// Solo aplica a personas cuya fechaAlta es anterior a este mes — quien
+// se dé de alta después arranca su conteo real desde su propia fechaAlta.
+const MES_INICIO_CIERRE_AUTOMATICO = mesKeyActualComprasModelo();
+
 function _siguienteMesKey(mesKey) {
   const [anio, mes] = mesKey.split('-').map(Number);
   const siguienteMes = mes === 12 ? 1 : mes + 1;
@@ -236,6 +246,7 @@ function procesarCierresMensualesPlanMW(persona) {
 
   const mesKeyHoy = mesKeyActualComprasModelo();
   let cursor = (persona.fechaAlta || mesKeyHoy).slice(0, 7);
+  if (cursor < MES_INICIO_CIERRE_AUTOMATICO) cursor = MES_INICIO_CIERRE_AUTOMATICO;
   let huboCambios = false;
   let vueltas = 0;
 
@@ -290,11 +301,74 @@ function procesarCierresMensualesPlanMWTodas() {
 
   personas.forEach(persona => {
     if (procesarCierresMensualesPlanMW(persona)) huboCambios = true;
+    if (evaluarActividadMensualPersona(persona)) huboCambios = true;
   });
 
   if (huboCambios) guardarPersonas(personas);
 
   return huboCambios;
+
+}
+
+// ============================================================
+// CICLO DE VIDA — ACTIVA/INACTIVA AUTOMÁTICA (Sección 15)
+// ============================================================
+//
+// Se apoya en persona.constancia.mesesProcesados (ya cerrado arriba)
+// como el registro de "meses que ya terminaron" — el mismo concepto
+// que usa Constancia/Rifas, así que no hace falta llevarlo por
+// separado. Nunca toca a alguien con estado 'baja' (es manual y
+// definitivo, no se reactiva solo). El mes EN CURSO nunca decide nada
+// — solo meses ya cerrados cuentan, igual que Constancia/Rifas.
+
+const MESES_INACTIVIDAD_PARA_AUTO_INACTIVAR = 6;
+
+function evaluarActividadMensualPersona(persona) {
+
+  if (typeof obtenerComprasLiquidadasPersonaMes !== 'function' || typeof UMBRAL_ACTIVA_MENSUAL === 'undefined') return false;
+  if (persona.estado === 'baja') return false;
+
+  const mesesCerrados = (persona.constancia?.mesesProcesados || []);
+  if (!mesesCerrados.length) return false;
+
+  const cumpleMinimoMes = (mesKey) => obtenerComprasLiquidadasPersonaMes(persona.id, mesKey).total >= UMBRAL_ACTIVA_MENSUAL;
+
+  if (persona.estado === 'activa') {
+
+    const ultimosSeis = mesesCerrados.slice(-MESES_INACTIVIDAD_PARA_AUTO_INACTIVAR);
+    if (ultimosSeis.length < MESES_INACTIVIDAD_PARA_AUTO_INACTIVAR) return false;
+    if (ultimosSeis.some(cumpleMinimoMes)) return false; // le bastó UN mes con compra mínima en la ventana
+
+    persona.estado = 'inactiva';
+    if (typeof agregarNotificacion === 'function') {
+      agregarNotificacion({
+        texto: `${nombreCompletoPersona(persona)} fue marcada como INACTIVA automáticamente — sin compra mínima de $500 en los últimos 6 meses.`,
+        link: `admin-emprendedoras-lideres.html?persona=${persona.id}`,
+        paraId: 'admin01', rolDestino: 'admin', origen: 'emprendedora_lider'
+      });
+    }
+    return true;
+
+  }
+
+  if (persona.estado === 'inactiva') {
+
+    const ultimoMesCerrado = mesesCerrados[mesesCerrados.length - 1];
+    if (!cumpleMinimoMes(ultimoMesCerrado)) return false;
+
+    persona.estado = 'activa';
+    if (typeof agregarNotificacion === 'function') {
+      agregarNotificacion({
+        texto: `${nombreCompletoPersona(persona)} volvió a estar ACTIVA automáticamente — ya cumplió la compra mínima mensual.`,
+        link: `admin-emprendedoras-lideres.html?persona=${persona.id}`,
+        paraId: 'admin01', rolDestino: 'admin', origen: 'emprendedora_lider'
+      });
+    }
+    return true;
+
+  }
+
+  return false;
 
 }
 

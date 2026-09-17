@@ -1,16 +1,100 @@
 // MW JOYERÍA — Mi equipo (Líder)
-// Depende de EQUIPO_ARBOL_EJEMPLO (equipo-ejemplo.js).
-// La lógica de niveles y el árbol visual están adaptados de la herramienta
-// "Árbol del Equipo" de la señora, pero alimentados por nuestros propios
-// datos de ejemplo (sin su sistema de registro/almacenamiento).
+// Depende de EQUIPO_ARBOL_EJEMPLO (equipo-ejemplo.js) para las tarjetas
+// de nivel y el árbol visual — dataset de ejemplo, sin vínculo por
+// sesión a una persona real todavía (limitación conocida y ya
+// reportada). "Gestionar equipo" (solicitar baja) SÍ usa el registro
+// real de personas (js/personas-ejemplo.js), porque una solicitud de
+// baja necesita ejecutarse sobre una persona real que Admin pueda
+// encontrar y confirmar — no tendría sentido pedir la baja de alguien
+// que no existe en el sistema real.
+// ⚠️ TEMPORAL: 'ana-torres' se usa como identidad fija de "la Líder con
+// sesión abierta" (misma convención que RH_EMPLEADO/ADMIN_EMPLEADO en
+// otros portales) hasta que exista sesión real vinculada a una persona.
+const LIDER_ACTUAL_ID_REAL = 'ana-torres';
 
 document.addEventListener('DOMContentLoaded', () => {
   renderNivelCards();
   renderArbolVisual();
+  renderGestionEquipo();
 
   const btnPdf = document.getElementById('descargarArbolBtn');
   if (btnPdf) btnPdf.addEventListener('click', descargarArbolPDF);
 });
+
+// ---------- Gestionar equipo (solicitar baja — Sección 15.3) ----------
+function renderGestionEquipo() {
+
+  const wrap = document.getElementById('gestionEquipoLista');
+  if (!wrap || typeof calcularDescendenciaPersona !== 'function') return;
+
+  const liderReal = obtenerPersonaPorId(LIDER_ACTUAL_ID_REAL);
+  if (!liderReal) { wrap.innerHTML = '<p class="equipo-modal-empty">No se pudo cargar tu equipo.</p>'; return; }
+
+  const { conNivel } = calcularDescendenciaPersona(LIDER_ACTUAL_ID_REAL);
+  const equipo = conNivel.map(n => n.persona).filter(p => p.estado !== 'baja');
+
+  if (!equipo.length) {
+    wrap.innerHTML = '<p class="equipo-modal-empty">Todavía no tienes integrantes en tu equipo.</p>';
+    return;
+  }
+
+  wrap.innerHTML = equipo.map(p => `
+    <div class="equipo-modal-row">
+      <span>${escapeHTMLMiEquipo(nombreCompletoPersona(p))} <small style="color:var(--mw-text-muted);">(${p.tipo === 'lider' ? 'Líder' : 'Emprendedora'})</small></span>
+      ${p.solicitudBajaPendiente
+        ? '<span class="badge badge-ascenso" style="background:#fbe7e9;color:#a3272f;">Baja pendiente de revisión</span>'
+        : `<button class="btn btn-outline" type="button" data-solicitar-baja="${p.id}">Solicitar baja</button>`}
+    </div>
+  `).join('');
+
+  wrap.querySelectorAll('[data-solicitar-baja]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalSolicitarBaja(btn.getAttribute('data-solicitar-baja'), liderReal));
+  });
+
+}
+
+function abrirModalSolicitarBaja(personaId, liderReal) {
+
+  const persona = obtenerPersonaPorId(personaId);
+  if (!persona) return;
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Solicitar baja de ${escapeHTMLMiEquipo(nombreCompletoPersona(persona))}</h3>
+    <p class="modal-sub">Administración revisará tu solicitud y decidirá si la confirma.</p>
+    <label for="motivoBajaInput">Motivo (opcional)</label>
+    <textarea id="motivoBajaInput" rows="3" placeholder="Ej. ya no está participando en el negocio"></textarea>
+    <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="confirmarSolicitarBajaBtn">Enviar solicitud</button>
+  `;
+  overlay.classList.add('open');
+
+  document.getElementById('confirmarSolicitarBajaBtn').addEventListener('click', () => {
+    const motivo = document.getElementById('motivoBajaInput').value.trim();
+    const resultado = crearSolicitudBajaPersona(personaId, {
+      motivo,
+      solicitadoPorId: liderReal.id,
+      solicitadoPorNombre: nombreCompletoPersona(liderReal)
+    });
+    overlay.classList.remove('open');
+    if (!resultado.ok) { mostrarToast(resultado.error); return; }
+    renderGestionEquipo();
+    mostrarToast(`Se envió la solicitud de baja de ${nombreCompletoPersona(persona)} a Administración.`);
+  });
+
+}
+
+function escapeHTMLMiEquipo(texto) {
+  return String(texto ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 function calcularProfundidades() {
   const depthById = { yo: 0 };

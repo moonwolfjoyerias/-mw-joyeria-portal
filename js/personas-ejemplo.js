@@ -262,6 +262,105 @@ function eliminarPersona(id) {
   return { ok: true, persona };
 }
 
+// ============================================================
+// BAJA FORMAL DE LÍDER + COMPRESIÓN DE EQUIPO (Sección 15.3/15.4)
+// ============================================================
+//
+// "estado: 'baja'" es reversible y no borra nada (a diferencia de
+// eliminarPersona arriba) — solo se llega ahí por este flujo de dos
+// pasos: la líder SUPERIOR de la persona solicita la baja, y solo
+// Admin la ejecuta. Al ejecutarse, el equipo directo de la persona
+// dada de baja se reasigna a SU PROPIA líder superior (comprime un
+// nivel del árbol); si esa persona no tenía superior (era líder de
+// primer nivel), sus hijos quedan disponibles para que Admin los
+// reasigne manualmente (ver reasignacionesManualesPorHijo abajo).
+
+function crearSolicitudBajaPersona(personaId, { motivo, solicitadoPorId, solicitadoPorNombre }) {
+
+  const personas = obtenerPersonas();
+  const persona = personas.find(p => p.id === personaId);
+  if (!persona) return { ok: false, error: 'La persona no existe.' };
+  if (persona.estado === 'baja') return { ok: false, error: 'Esta persona ya está dada de baja.' };
+  if (persona.solicitudBajaPendiente) return { ok: false, error: 'Ya existe una solicitud de baja pendiente para esta persona.' };
+
+  persona.solicitudBajaPendiente = {
+    motivo: motivo || '',
+    solicitadoPorId: solicitadoPorId || null,
+    solicitadoPorNombre: solicitadoPorNombre || '',
+    fecha: new Date().toISOString()
+  };
+  guardarPersonas(personas);
+
+  if (typeof agregarNotificacion === 'function') {
+    agregarNotificacion({
+      texto: `${solicitadoPorNombre} solicitó dar de baja a ${nombreCompletoPersona(persona)}${motivo ? `: "${motivo}"` : ''}. Revisa y confirma.`,
+      link: `admin-emprendedoras-lideres.html?persona=${persona.id}`,
+      paraId: 'admin01',
+      rolDestino: 'admin',
+      origen: 'emprendedora_lider'
+    });
+  }
+
+  return { ok: true, persona };
+
+}
+
+function cancelarSolicitudBajaPersona(personaId) {
+  const personas = obtenerPersonas();
+  const persona = personas.find(p => p.id === personaId);
+  if (!persona || !persona.solicitudBajaPendiente) return { ok: false, error: 'No hay una solicitud de baja pendiente.' };
+  delete persona.solicitudBajaPendiente;
+  guardarPersonas(personas);
+  return { ok: true, persona };
+}
+
+// Hijos DIRECTOS de una persona que quedarían sin líder si se le da de
+// baja y ella no tiene superior — lo que Admin necesita ver para
+// decidir si hace falta reasignación manual antes de confirmar.
+function obtenerHijosDirectosPersona(personaId) {
+  return obtenerPersonas().filter(p => p.liderId === personaId);
+}
+
+// Ejecuta la baja. reasignacionesManualesPorHijo es opcional:
+// { [hijoId]: nuevoLiderId } — solo se usa para los hijos cuyo nuevo
+// líder Admin decidió a mano (por ejemplo, porque la persona dada de
+// baja no tenía superior). Los demás hijos heredan automáticamente el
+// liderId de la persona dada de baja (su superior).
+function ejecutarBajaPersonaConCompresion(personaId, { ejecutadoPorId, ejecutadoPorNombre }, reasignacionesManualesPorHijo = {}) {
+
+  const personas = obtenerPersonas();
+  const persona = personas.find(p => p.id === personaId);
+  if (!persona) return { ok: false, error: 'La persona no existe.' };
+
+  const superiorId = persona.liderId || null;
+  const hijos = personas.filter(p => p.liderId === personaId);
+
+  hijos.forEach(hijo => {
+    const manual = reasignacionesManualesPorHijo[hijo.id];
+    hijo.liderId = manual || superiorId || null;
+  });
+
+  persona.estado = 'baja';
+  delete persona.solicitudBajaPendiente;
+  persona.historialLogros = persona.historialLogros || [];
+  persona.historialLogros.push({ tipo: 'baja', fecha: new Date().toISOString(), ejecutadoPorId: ejecutadoPorId || null, ejecutadoPorNombre: ejecutadoPorNombre || '' });
+
+  guardarPersonas(personas);
+
+  if (typeof agregarNotificacion === 'function' && hijos.length) {
+    agregarNotificacion({
+      texto: `El equipo de ${nombreCompletoPersona(persona)} (${hijos.length} persona${hijos.length === 1 ? '' : 's'}) fue reasignado tras su baja.`,
+      link: `admin-emprendedoras-lideres.html?persona=${persona.id}`,
+      paraId: 'admin01',
+      rolDestino: 'admin',
+      origen: 'emprendedora_lider'
+    });
+  }
+
+  return { ok: true, hijosReasignados: hijos.length, superiorId };
+
+}
+
 function restablecerPasswordPersona(id, nuevoPassword) {
   const persona = obtenerPersonaPorId(id);
   if (!persona) return { ok: false, error: 'La cuenta no existe.' };
