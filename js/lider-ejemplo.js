@@ -14,6 +14,7 @@ const RANGOS_MW = [
 const LIDER_EJEMPLO = {
   nombre: 'Líder',
   rangoActualKey: 'plata', // el rango vigente este mes (se fija con el cierre del mes anterior)
+  historialLogros: [], // ascensos de rango registrados — ver calcularRangoAplicadoPeriodo() en comisiones-modelo.js
   stats: {
     personasActivas: 8,
     produccionGrupalMes: 38000,

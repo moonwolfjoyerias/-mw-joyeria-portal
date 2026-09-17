@@ -132,15 +132,28 @@ function calcularRangoAplicadoPeriodo(persona, periodoKey) {
 
   const inicioPeriodo = `${periodoKey}-01T00:00:00.000Z`;
 
-  const ascensosAnteriores = (persona.historialLogros || [])
-    .filter(l => l.tipo === 'ascenso_rango' && l.fecha < inicioPeriodo)
+  const historialAscensos = (persona.historialLogros || [])
+    .filter(l => l.tipo === 'ascenso_rango')
     .sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+  const ascensosAnteriores = historialAscensos.filter(l => l.fecha < inicioPeriodo);
 
   if (ascensosAnteriores.length) {
     const ultimo = ascensosAnteriores[0];
     const fecha = new Date(ultimo.fecha);
     const mesCierre = `${MESES_COMISIONES[fecha.getMonth()]} ${fecha.getFullYear()}`;
     return { rangoKey: ultimo.rangoNuevo, origen: `cierre de ${mesCierre}` };
+  }
+
+  // No hay ascensos ANTES de este periodo. Si aun así existe un ascenso
+  // registrado (dentro de este periodo o después) — el caso del primer
+  // ascenso de vida de una líder — el rango vigente este mes es el que
+  // tenía ANTES de ese ascenso, nunca persona.rangoActualKey: ese campo
+  // ya fue mutado en vivo al confirmarse el ascenso y no representa lo
+  // que estaba vigente al cierre del periodo anterior.
+  if (historialAscensos.length) {
+    const primerAscenso = historialAscensos[historialAscensos.length - 1];
+    return { rangoKey: primerAscenso.rangoAnterior, origen: 'antes de su primer ascenso de rango' };
   }
 
   return { rangoKey: persona.rangoActualKey, origen: 'sin cambios de rango registrados todavía' };

@@ -167,6 +167,37 @@ function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante,
 
   const usuarioId = slugUsuarioId(nombre);
 
+  // Si la persona ya tiene una ventana activa, la pieza se suma ahí en
+  // vez de abrir una segunda ventana con su propio vencimiento aparte
+  // (Sección 5.1: "apartar VARIAS piezas sin volver a pagar").
+  const ventanaExistente = ventanas.find(v => v.usuarioId === usuarioId && v.estado !== "vencida" && v.estado !== "cerrada");
+
+  if (ventanaExistente) {
+
+    const resultadoPiezaExistente = agregarPiezaAVentana(ventanaExistente, { producto, variante, total, productoId, varianteId }, RH_EMPLEADO);
+
+    if (!resultadoPiezaExistente.ok) {
+      cerrarModal();
+      mostrarToast(resultadoPiezaExistente.error);
+      return;
+    }
+
+    guardarVentanas();
+    actualizarResumen();
+    renderTabla();
+    cerrarModal();
+
+    registrarAuditoriaRH({
+      modulo: "apartados",
+      accion: "agregar_pieza_ventana_existente",
+      descripcion: `Pieza ${producto} agregada a la ventana ya activa de ${nombre}`
+    });
+
+    mostrarToast(`Pieza agregada a la ventana activa de ${nombre}.`);
+    return;
+
+  }
+
   const nuevaVentana = abrirVentanaApartado({ usuarioId, usuarioNombre: nombre, telefono, categoria }, RH_EMPLEADO);
   const resultadoPieza = agregarPiezaAVentana(nuevaVentana, { producto, variante, total, productoId, varianteId }, RH_EMPLEADO);
 
@@ -355,7 +386,9 @@ function abrirModalLiquidar(v, decisionDeposito) {
     <h3>Liquidar apartado</h3>
     <p class="modal-sub">${escapeHTML(v.usuarioNombre)} · ${piezasActivas.length} pieza${piezasActivas.length === 1 ? "" : "s"}</p>
 
-    ${decisionDeposito === "aplicar" ? `<div class="auth-warning"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span><div><strong>Depósito aplicado</strong><small>Se descontaron $${v.depositoApartadoDisponible} MXN del total.</small></div></div>` : ""}
+    ${v.fechaDeclaracionPago ? `<div class="modal-note">${escapeHTML(v.usuarioNombre)} avisó que ya pagó el ${formatearFechaHora(v.fechaDeclaracionPago)} (informativo — confirma con la hora real del depósito recibido).</div>` : ""}
+
+    ${decisionDeposito === "aplicar" ?`<div class="auth-warning"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span><div><strong>Depósito aplicado</strong><small>Se descontaron $${v.depositoApartadoDisponible} MXN del total.</small></div></div>` : ""}
 
     <label for="liquidarMonto">Monto a cobrar</label>
     <input id="liquidarMonto" type="number" min="0" step="0.01" value="${montoEsperado}">

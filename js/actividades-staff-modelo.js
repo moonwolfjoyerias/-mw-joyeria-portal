@@ -456,13 +456,15 @@ function asegurarAsignacionesBaseSemana(semanaKey) {
   if (!semanaKey) return;
 
   const catalogo = obtenerCatalogoActividadesStaff();
-  const existentes = obtenerAsignacionesPorSemanaActividadStaff(semanaKey);
+  const asignaciones = obtenerAsignacionesActividadStaff();
+  // Se consideran TODAS las asignaciones de esa semana, incluidas las
+  // eliminadas: una actividad que RH eliminó para esta semana ya está
+  // "resuelta" y no debe volver a sembrarse como borrador nuevo.
+  const existentes = asignaciones.filter(a => a.semanaKey === semanaKey);
   const catalogoIdsExistentes = new Set(existentes.map(a => a.actividadCatalogoId));
 
   const faltantes = catalogo.filter(c => !catalogoIdsExistentes.has(c.id));
   if (!faltantes.length) return;
-
-  const asignaciones = obtenerAsignacionesActividadStaff();
 
   faltantes.forEach(catalogoEntry => {
     const nueva = {
@@ -532,15 +534,50 @@ function actualizarAsignacionActividadStaff(id, cambios, { usuarioId, usuarioNom
       const nombresAntes = (asignacion.encargados || []).map(e => e.nombre).join(', ') || 'sin asignar';
       const nombresDespues = nuevosEncargados.map(e => e.nombre).join(', ') || 'sin asignar';
       cambiosTexto.push(`Responsable(s): ${nombresAntes} → ${nombresDespues}.`);
+      const idsAntesSet = new Set(idsActuales);
+      const estabaAnunciada = asignacion.estado === 'anunciado' || asignacion.estado === 'enterado';
       asignacion.encargados = nuevosEncargados;
       asignacion.encargadoId = nuevosEncargados[0]?.id || null;
       asignacion.encargadoNombre = nuevosEncargados[0]?.nombre || '';
       // Al cambiar la lista de responsables se reinicia la confirmación
       // individual de quien ya no está — nunca se le atribuye a alguien
-      // un "Enterado" de una actividad que ya no le corresponde.
+      // un "Enterado" de una actividad que ya no le corresponde. A quien
+      // se agrega a una actividad YA anunciada se le da entrada "anunciado"
+      // (sin confirmar) y se le notifica, igual que en el anuncio original
+      // — nunca hereda un "enterado" que nunca confirmó.
       const estadosNuevos = {};
-      nuevosEncargados.forEach(e => { if (asignacion.estadosPorEncargado?.[e.id]) estadosNuevos[e.id] = asignacion.estadosPorEncargado[e.id]; });
+      const nuevosSinNotificar = [];
+      nuevosEncargados.forEach(e => {
+        if (asignacion.estadosPorEncargado?.[e.id]) {
+          estadosNuevos[e.id] = asignacion.estadosPorEncargado[e.id];
+        } else if (estabaAnunciada && !idsAntesSet.has(e.id)) {
+          estadosNuevos[e.id] = { estado: 'anunciado', fecha: new Date().toISOString() };
+          nuevosSinNotificar.push(e);
+        }
+      });
       asignacion.estadosPorEncargado = estadosNuevos;
+      // El estado agregado se recalcula: si alguien queda sin confirmar
+      // (porque se agregó o porque el único que faltaba se quitó),
+      // vuelve a "anunciado" en espera de esa confirmación; si con la
+      // lista nueva ya todos confirmaron, pasa a "enterado".
+      if (estabaAnunciada) {
+        const todosConfirmanAhora = nuevosEncargados.length > 0 &&
+          nuevosEncargados.every(e => estadosNuevos[e.id]?.estado === 'enterado');
+        asignacion.estado = todosConfirmanAhora ? 'enterado' : 'anunciado';
+      }
+      if (nuevosSinNotificar.length && typeof agregarNotificacion === 'function') {
+        const detalleFecha = asignacion.tipo === 'temporal'
+          ? `Fecha límite: ${formatearFechaCortaActividadStaff(asignacion.fechaFinTemporal)}.`
+          : `Semana del ${formatearRangoSemanaActividadStaff(asignacion.semanaKey)}.`;
+        nuevosSinNotificar.forEach(e => {
+          agregarNotificacion({
+            texto: `${e.nombre}, tienes una nueva actividad${asignacion.tipo === 'temporal' ? ' temporal' : ''} asignada: "${asignacion.nombre}" (${asignacion.zona}). ${detalleFecha}`,
+            link: 'misActividades',
+            rolDestino: 'staff',
+            paraId: e.id
+          });
+        });
+      }
     }
   }
   if (cambios.tipo !== undefined && cambios.tipo !== asignacion.tipo) {

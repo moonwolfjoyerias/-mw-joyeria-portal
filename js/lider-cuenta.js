@@ -183,7 +183,14 @@ function renderTicketComisiones() {
     if (d >= 1 && d <= 5) miembrosPorNivel[d - 1].push(m);
   });
 
-  const pcts = COMISIONES_PCT[LIDER_EJEMPLO.rangoActualKey];
+  // El % de comisión debe usar el rango CONGELADO del cierre del mes
+  // anterior (Sección 7.4), nunca el rango en vivo — misma función que
+  // usa el motor de Admin, para que la Líder nunca vea un % distinto
+  // del que realmente se le va a pagar.
+  const rangoAplicado = typeof calcularRangoAplicadoPeriodo === 'function'
+    ? calcularRangoAplicadoPeriodo(LIDER_EJEMPLO, obtenerPeriodoActualKey()).rangoKey
+    : LIDER_EJEMPLO.rangoActualKey;
+  const pcts = COMISIONES_PCT[rangoAplicado];
   const wrap = document.getElementById('ticketNiveles');
   let total = 0;
 
@@ -212,7 +219,7 @@ function renderTicketComisiones() {
   }).join('');
 
   setText('ticketTotal', fmtMoney(total));
-  setText('ticketRango', RANGOS_MW[idxRango(LIDER_EJEMPLO.rangoActualKey)].label);
+  setText('ticketRango', RANGOS_MW[idxRango(rangoAplicado)].label);
 
   wrap.querySelectorAll('[data-toggle-nivel]').forEach((btn) => {
     btn.addEventListener('click', () => {

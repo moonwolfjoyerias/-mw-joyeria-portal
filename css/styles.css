@@ -1229,6 +1229,7 @@ a:hover { color: var(--mw-gold); }
 .countdown-timer .num { font-family: var(--font-heading); font-size: 2.4rem; font-weight: 700; line-height: 1; background: rgba(255,255,255,0.12); border-radius: var(--radius-sm); padding: 0.3em 0.5em; min-width: 56px; }
 .countdown-timer .lbl { font-size: 0.68rem; color: var(--mw-lilac-soft); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.06em; }
 .countdown-box .countdown-note { font-size: 0.82rem; color: var(--mw-lilac-soft); margin-top: 0.9rem; }
+.countdown-box--vencida { background: linear-gradient(155deg, #bd4c4c 0%, #8f3535 100%); }
 @media (max-width: 620px) {
   .countdown-box { padding: 1.2rem 0.8rem; }
   .countdown-timer { gap: 0.4rem; }
