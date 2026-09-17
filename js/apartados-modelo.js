@@ -123,6 +123,20 @@ function establecerCredito(usuarioId, monto) {
   guardarCreditosApartado(creditos);
 }
 
+// Dato de ejemplo: de las dos cuentas de sesión de prueba (Emprendedora
+// y Líder — ver personas-ejemplo.js), 'me-emprendedora' ya tiene
+// crédito guardado de un depósito anterior y 'me-lider' no — para poder
+// probar con las cuentas de ejemplo los dos caminos de "Apartar" desde
+// el catálogo: quien ya tiene depósito (se apartar directo) y quien
+// tiene que pedirlo (pasa por "pendiente_deposito"). Se siembra UNA
+// sola vez, igual que obtenerPersonas() siembra su propio registro —
+// después de esto el crédito lo controla el uso real (se gasta, se
+// vuelve a guardar al liquidar/cancelar), como el de cualquier persona.
+(function sembrarCreditoDemoInicial() {
+  if (typeof localStorage === 'undefined' || localStorage.getItem(CREDITOS_MODELO_STORAGE_KEY) !== null) return;
+  guardarCreditosApartado({ 'me-emprendedora': DEPOSITO_BASE });
+})();
+
 
 // ============================================================
 // CREAR ENTIDADES
