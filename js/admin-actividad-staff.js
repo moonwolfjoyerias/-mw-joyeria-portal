@@ -147,7 +147,7 @@ function renderTablaTodasAct() {
   if (actTodasFiltroTexto) {
     lista = lista.filter(a => a.nombre.toLowerCase().includes(actTodasFiltroTexto) || a.zona.toLowerCase().includes(actTodasFiltroTexto));
   }
-  if (actTodasFiltroEmpleado) lista = lista.filter(a => a.encargadoId === actTodasFiltroEmpleado);
+  if (actTodasFiltroEmpleado) lista = lista.filter(a => (a.encargados || []).some(e => e.id === actTodasFiltroEmpleado));
   if (actTodasFiltroZona) lista = lista.filter(a => a.zona === actTodasFiltroZona);
   if (actTodasFiltroEstado) lista = lista.filter(a => a.estado === actTodasFiltroEstado);
   if (actTodasDesde) lista = lista.filter(a => a.semanaKey >= actTodasDesde);
@@ -169,7 +169,7 @@ function renderTablaTodasAct() {
       <td><span class="catalog-description">${escapeHTMLAct(a.zona)}</span></td>
       <td><span class="catalog-description">${formatearRangoSemanaActividadStaff(a.semanaKey)}</span></td>
       <td>${escapeHTMLAct(formatearDiasAsignacionActividadStaff(a))}</td>
-      <td>${escapeHTMLAct(a.encargadoNombre || 'Sin asignar')}</td>
+      <td>${nombresResponsablesAct(a)}</td>
       <td><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span></td>
       <td><button class="action-btn detail-action" data-act-detalle="${a.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="6"/><path d="M20 20l-5.5-5.5"/></svg></span> Ver detalle</button></td>
     </tr>
@@ -193,6 +193,10 @@ function actualizarEtiquetaSemanaAct() {
 // ============================================================
 // FORMATO / UTILIDADES
 // ============================================================
+
+function nombresResponsablesAct(a) {
+  return (a.encargados || []).map(e => escapeHTMLAct(e.nombre)).join(', ') || 'Sin asignar';
+}
 
 function escapeHTMLAct(texto) {
   return String(texto ?? '')
@@ -304,7 +308,7 @@ function renderTablaActividadesAdmin() {
     lista = lista.filter(a =>
       a.nombre.toLowerCase().includes(actFiltroTexto) ||
       a.zona.toLowerCase().includes(actFiltroTexto) ||
-      (a.encargadoNombre || '').toLowerCase().includes(actFiltroTexto)
+      (a.encargados || []).some(e => (e.nombre || '').toLowerCase().includes(actFiltroTexto))
     );
   }
   if (actFiltroEstado) lista = lista.filter(a => a.estado === actFiltroEstado);
@@ -340,7 +344,7 @@ function filaActividadAdmin(a) {
       <td><span class="catalog-description">${escapeHTMLAct(a.zona)}</span></td>
       <td>${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : '<span class="catalog-description">Sin definir</span>'}</td>
       <td>${escapeHTMLAct(formatearDiasAsignacionActividadStaff(a))}</td>
-      <td>${escapeHTMLAct(a.encargadoNombre || 'Sin asignar')}</td>
+      <td>${nombresResponsablesAct(a)}</td>
       <td><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span></td>
       <td style="white-space:nowrap;">
         <button type="button" class="comm-icon-btn" data-act-editar="${a.id}" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></button>
@@ -379,11 +383,11 @@ function confirmarFirmarAdmin(id) {
   if (!a) return;
   abrirAutorizacionAdmin({
     titulo: 'Firmar por RH',
-    mensaje: `Confirmas que revisaste físicamente que "${escapeHTMLAct(a.nombre)}" (${escapeHTMLAct(a.zona)}) fue realizada por ${escapeHTMLAct(a.encargadoNombre)}.`,
+    mensaje: `Confirmas que revisaste físicamente que "${escapeHTMLAct(a.nombre)}" (${escapeHTMLAct(a.zona)}) fue realizada por ${nombresResponsablesAct(a)}.`,
     onConfirmar: () => {
       const resultado = firmarRHAsignacionActividadStaff(id, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre, usuarioRol: 'admin' });
       if (!resultado.ok) { mostrarToast(resultado.error); return; }
-      registrarAuditoriaAdmin({ modulo: 'actividades_staff', accion: 'firmar_actividad', descripcion: `Actividad verificada y firmada: ${a.nombre} (${a.zona}) — encargado ${a.encargadoNombre}.` });
+      registrarAuditoriaAdmin({ modulo: 'actividades_staff', accion: 'firmar_actividad', descripcion: `Actividad verificada y firmada: ${a.nombre} (${a.zona}) — responsable(s) ${nombresResponsablesAct(a)}.` });
       renderTablaActividadesAdmin();
       mostrarToast('Actividad firmada por RH.');
     }
@@ -523,11 +527,16 @@ function abrirModalEditarActividad(id) {
 
     ${construirCamposPeriodicidadAct('actEdit', a.periodicidad || '', a.dias || [])}
 
-    <label for="actEditEncargado" style="margin-top:10px;">Encargado</label>
-    <select id="actEditEncargado">
-      <option value="">Sin asignar</option>
-      ${staff.map(e => `<option value="${e.id}" ${e.id === a.encargadoId ? 'selected' : ''}>${escapeHTMLAct(e.nombre)}</option>`).join('')}
-    </select>
+    ${(a.encargados || []).length > 1 ? `
+      <label style="margin-top:10px;">Responsables</label>
+      <p class="modal-sub" style="margin:0 0 10px;">${a.encargados.map(e => escapeHTMLAct(e.nombre)).join(', ')} — esta actividad tiene varios responsables; edítalos desde el portal de RH.</p>
+    ` : `
+      <label for="actEditEncargado" style="margin-top:10px;">Encargado</label>
+      <select id="actEditEncargado">
+        <option value="">Sin asignar</option>
+        ${staff.map(e => `<option value="${e.id}" ${e.id === a.encargadoId ? 'selected' : ''}>${escapeHTMLAct(e.nombre)}</option>`).join('')}
+      </select>
+    `}
 
     <label for="actEditSemana">Semana</label>
     <input type="date" id="actEditSemana" value="${a.semanaKey}">
@@ -553,13 +562,23 @@ function abrirModalEditarActividad(id) {
     const validacion = validarPeriodicidadYDiasActividadStaff(periodicidad, dias);
     if (!validacion.ok) { mostrarErrorAct(error, validacion.error); return; }
 
+    const selectorEncargado = document.getElementById('actEditEncargado');
+
     const cambios = {
       periodicidad,
       dias,
-      encargadoId: document.getElementById('actEditEncargado').value || null,
       semanaKey: semanaKeyDesdeFechaActividadStaff(document.getElementById('actEditSemana').value),
       observaciones: document.getElementById('actEditObservaciones').value.trim()
     };
+
+    // Solo se manda encargadoId cuando el selector de un solo responsable
+    // está presente (actividad con 0 o 1 responsable). Si la actividad
+    // tiene varios, el selector no se renderiza (ver arriba) y no se debe
+    // enviar encargadoId — mandarlo colapsaría silenciosamente la lista
+    // completa de responsables a uno solo.
+    if (selectorEncargado) {
+      cambios.encargadoId = selectorEncargado.value || null;
+    }
 
     abrirAutorizacionAdmin({
       titulo: 'Guardar cambios',
@@ -599,7 +618,7 @@ function abrirDetalleActividad(id) {
       <span>Zona</span><strong>${escapeHTMLAct(a.zona)}</strong>
       <span>Periodicidad</span><strong>${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : 'Sin definir'}</strong>
       <span>Día</span><strong>${escapeHTMLAct(formatearDiasAsignacionActividadStaff(a))}</strong>
-      <span>Encargado</span><strong>${escapeHTMLAct(a.encargadoNombre || 'Sin asignar')}</strong>
+      <span>Responsable(s)</span><strong>${nombresResponsablesAct(a)}</strong>
       <span>Semana</span><strong>${formatearRangoSemanaActividadStaff(a.semanaKey)}</strong>
       <span>Estado</span><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span>
       ${a.observaciones ? `<span>Observaciones</span><strong>${escapeHTMLAct(a.observaciones)}</strong>` : ''}
@@ -842,7 +861,7 @@ function construirHTMLReporteSemanalAct(filas, semanaKey) {
       <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(f.nombre)}</td>
       <td style="border:1px solid #000;padding:5px;">${f.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[f.periodicidad] : 'Sin definir'}</td>
       <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(formatearDiasAsignacionActividadStaff(f))}</td>
-      <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(f.encargadoNombre || '—')}</td>
+      <td style="border:1px solid #000;padding:5px;">${nombresResponsablesAct(f)}</td>
       <td style="border:1px solid #000;padding:5px;font-weight:700;${f.estadoReporteLabel === 'No se realizó' ? 'color:#a3272f;' : 'color:#1f7a34;'}">${f.estadoReporteLabel}</td>
       <td style="border:1px solid #000;padding:5px;">${f.fechaEnterado ? formatearFechaHoraAct(f.fechaEnterado) : '—'}</td>
       <td style="border:1px solid #000;padding:5px;">${escapeHTMLAct(f.firmadoPorNombre || '—')}</td>

@@ -199,10 +199,23 @@ function formatearFechaCorta(fechaISO) {
 // ---------- Próximos eventos ----------
 function renderEventos() {
   const row = document.getElementById('eventsRow');
-  if (!row || typeof EVENTOS_EJEMPLO === 'undefined') return;
+  if (!row) return;
+
+  // Igual que las notificaciones más arriba: se intenta primero el
+  // calendario real (refleja altas/ediciones/bajas hechas desde el
+  // módulo de Calendario) y solo se cae al arreglo de ejemplo si esta
+  // página no cargó eventos-modelo.js.
+  let eventos;
+  if (typeof cargarEventosCompartidos === 'function') {
+    eventos = cargarEventosCompartidos();
+  } else if (typeof EVENTOS_EJEMPLO !== 'undefined') {
+    eventos = EVENTOS_EJEMPLO;
+  } else {
+    return;
+  }
 
   const hoyStr = new Date().toISOString().slice(0, 10);
-  const proximos = EVENTOS_EJEMPLO
+  const proximos = eventos
     .filter(ev => ev.fecha >= hoyStr)
     .sort((a, b) => a.fecha.localeCompare(b.fecha));
 
