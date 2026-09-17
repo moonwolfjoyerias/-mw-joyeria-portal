@@ -21,6 +21,7 @@ let equipoAutocompleteSeleccionado = null;
 
 document.addEventListener('DOMContentLoaded', () => {
 
+  if (typeof procesarCierresMensualesPlanMWTodas === 'function') procesarCierresMensualesPlanMWTodas();
   verificarAscensosPendientes();
   verificarRecompensasConstancia();
   renderFiltroLideres();
@@ -858,9 +859,11 @@ function renderArbolEquipoAdmin(persona) {
   const { porLider } = calcularDescendenciaPersona(persona.id);
 
   function metricaNodo(p) {
-    return p.tipo === 'lider'
-      ? `$${formatearDineroPersonas(p.stats.produccionGrupalMes)} MXN`
-      : `$${formatearDineroPersonas(p.constancia.montoMesActual)} MXN este mes`;
+    if (p.tipo !== 'lider') return `$${formatearDineroPersonas(p.constancia.montoMesActual)} MXN este mes`;
+    const produccion = typeof calcularStatsRangoLider === 'function'
+      ? calcularStatsRangoLider(p, mesKeyActualComprasModelo(), subPeriodoActualComprasModelo()).produccionGrupalMes
+      : p.stats.produccionGrupalMes;
+    return `$${formatearDineroPersonas(produccion)} MXN`;
   }
 
   function renderNodo(p, esRaiz, nivel) {
@@ -894,8 +897,12 @@ function construirRangoChecklistHTML(persona) {
 
   const { siguiente, items } = calcularAscensoRango(persona);
 
+  const produccionGrupalMes = typeof calcularStatsRangoLider === 'function'
+    ? calcularStatsRangoLider(persona, mesKeyActualComprasModelo(), subPeriodoActualComprasModelo()).produccionGrupalMes
+    : persona.stats.produccionGrupalMes;
+
   const nodos = RANGOS_MW.map(r => {
-    const alcanzado = persona.stats.produccionGrupalMes >= r.produccion;
+    const alcanzado = produccionGrupalMes >= r.produccion;
     return `
       <div class="timeline-node ${alcanzado ? 'reached' : ''}">
         <div class="node-circle">
@@ -909,7 +916,7 @@ function construirRangoChecklistHTML(persona) {
   }).join('');
 
   const maxProduccion = RANGOS_MW[RANGOS_MW.length - 1].produccion;
-  const pctFill = Math.min(100, (persona.stats.produccionGrupalMes / maxProduccion) * 100);
+  const pctFill = Math.min(100, (produccionGrupalMes / maxProduccion) * 100);
 
   if (!siguiente) {
     return `

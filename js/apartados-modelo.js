@@ -136,6 +136,10 @@ function crearApartadoPieza(datos = {}) {
     varianteId: datos.varianteId || '',
     producto: datos.producto || '',
     variante: datos.variante || '',
+    // Material del producto al momento de apartar (Sección 4) — es la
+    // base real para saber si esta pieza es Souvenir o normal; nunca
+    // se recalcula después, aunque el producto cambie de categoría.
+    material: datos.material || null,
     precio: total,
     total,
     pagos: Array.isArray(datos.pagos) ? datos.pagos : [],
@@ -262,7 +266,14 @@ function agregarPiezaAVentana(ventana, datosPieza, empleado) {
     if (!resultado.ok) return { ok: false, error: resultado.error };
   }
 
-  const pieza = crearApartadoPieza(datosPieza);
+  // El material se toma del catálogo real en este momento (no del
+  // formulario, que no lo pide) — es la fuente de verdad para separar
+  // Souvenir de compra normal en comisiones/constancia/rifas/activa.
+  const material = typeof obtenerCatalogoStaffStorage === 'function'
+    ? (obtenerCatalogoStaffStorage().find(p => p.id === datosPieza.productoId)?.material || null)
+    : null;
+
+  const pieza = crearApartadoPieza({ ...datosPieza, material });
   ventana.apartados.push(pieza);
   ventana.auditoria.push(registrarAuditoriaVentana(`Pieza agregada: ${pieza.producto}`, empleado));
 

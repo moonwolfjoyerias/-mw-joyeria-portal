@@ -12,6 +12,7 @@ let filtroPlanMW = 'todos';
 
 document.addEventListener('DOMContentLoaded', () => {
 
+  if (typeof procesarCierresMensualesPlanMWTodas === 'function') procesarCierresMensualesPlanMWTodas();
   verificarAscensosPendientes();
   verificarRecompensasConstancia();
 

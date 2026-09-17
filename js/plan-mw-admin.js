@@ -58,8 +58,13 @@ function obtenerHitosConstanciaConfigurados() {
 // RANGOS
 // ============================================================
 
-// Requisitos del SIGUIENTE rango comparados contra los datos actuales
-// de la líder — misma comparación que ya usaba el checklist visual.
+// Requisitos del SIGUIENTE rango comparados contra los datos REALES de
+// la líder — antes se leían de persona.stats (campos capturados a
+// mano); ahora se calculan a partir de las piezas de apartado
+// liquidadas de todo su equipo (js/compras-modelo.js). Si esta página
+// no cargó compras-modelo.js, cae a persona.stats como red de
+// seguridad (no debería ocurrir — se agregó a todas las páginas que
+// cargan este archivo).
 function calcularAscensoRango(persona) {
 
   const idxActual = RANGOS_MW.findIndex(r => r.key === persona.rangoActualKey);
@@ -68,7 +73,11 @@ function calcularAscensoRango(persona) {
 
   if (!siguiente) return { siguiente: null, items: [], elegible: false };
 
-  const { personasActivas, produccionGrupalMes, equipoCalificadoPct, compraPersonalPeriodo1, compraPersonalPeriodo2 } = persona.stats;
+  const statsReales = typeof calcularStatsRangoLider === 'function'
+    ? calcularStatsRangoLider(persona, mesKeyActualComprasModelo(), subPeriodoActualComprasModelo())
+    : persona.stats;
+
+  const { personasActivas, produccionGrupalMes, equipoCalificadoPct, compraPersonalPeriodo1, compraPersonalPeriodo2 } = statsReales;
   const compraMinima = Math.min(compraPersonalPeriodo1, compraPersonalPeriodo2);
 
   const items = [
@@ -182,6 +191,110 @@ function abrirConfirmarAscensoRango(persona, onExito) {
 
     }
   });
+
+}
+
+// ============================================================
+// CIERRE MENSUAL REAL (Constancia y Rifas — Secciones 8.1/8.2)
+// ============================================================
+//
+// mesesCumplidos (Constancia) y boletosPorMes (Rifas) son contadores
+// HISTÓRICOS que solo deben avanzar una vez por mes, y solo para meses
+// que ya terminaron — el mes en curso nunca se cierra (todavía se
+// puede seguir comprando). Se procesan aquí, contra las compras NORMALES
+// ya liquidadas de cada persona (nunca souvenirs — Sección 4), en vez
+// de dejar mesesCumplidos/montoMesActual como campos estáticos que
+// alguien tenía que actualizar a mano.
+
+const META_CONSTANCIA_MENSUAL = 8000;
+const META_RIFA_MENSUAL = 3000;
+const MONTO_POR_BOLETO_EXTRA_RIFA = 1000;
+
+function _siguienteMesKey(mesKey) {
+  const [anio, mes] = mesKey.split('-').map(Number);
+  const siguienteMes = mes === 12 ? 1 : mes + 1;
+  const siguienteAnio = mes === 12 ? anio + 1 : anio;
+  return `${siguienteAnio}-${String(siguienteMes).padStart(2, '0')}`;
+}
+
+// Cierra, de forma idempotente, todos los meses pasados que a esta
+// persona le falten procesar. Regresa true si cambió algo (para saber
+// si hace falta guardarPersonas). No guarda por sí sola — la llama
+// quien ya está iterando/guardando el arreglo completo de personas.
+function procesarCierresMensualesPlanMW(persona) {
+
+  if (typeof obtenerComprasLiquidadasPersonaMes !== 'function' || typeof mesKeyActualComprasModelo !== 'function') return false;
+
+  persona.constancia = persona.constancia || { mesesCumplidos: 0, montoMesActual: 0, metaMes: META_CONSTANCIA_MENSUAL, hitosOtorgados: [] };
+  persona.constancia.mesesProcesados = persona.constancia.mesesProcesados || [];
+  persona.constancia.excedenteDisponible = persona.constancia.excedenteDisponible || 0;
+  persona.constancia.mesesCumplidos = persona.constancia.mesesCumplidos || 0;
+
+  persona.rifa = persona.rifa || { montoAcumuladoMes: 0, meta: META_RIFA_MENSUAL };
+  persona.rifa.mesesProcesados = persona.rifa.mesesProcesados || [];
+  persona.rifa.boletosPorMes = persona.rifa.boletosPorMes || {};
+
+  const mesKeyHoy = mesKeyActualComprasModelo();
+  let cursor = (persona.fechaAlta || mesKeyHoy).slice(0, 7);
+  let huboCambios = false;
+  let vueltas = 0;
+
+  while (cursor < mesKeyHoy && vueltas < 240) { // tope defensivo: 20 años, nunca debería alcanzarse
+
+    if (!persona.constancia.mesesProcesados.includes(cursor)) {
+      const comprasNormalesMes = obtenerComprasLiquidadasPersonaMes(persona.id, cursor).normal;
+      const totalConExcedente = comprasNormalesMes + persona.constancia.excedenteDisponible;
+      if (totalConExcedente >= META_CONSTANCIA_MENSUAL) {
+        persona.constancia.mesesCumplidos += 1;
+        persona.constancia.excedenteDisponible = totalConExcedente - META_CONSTANCIA_MENSUAL;
+      } else {
+        persona.constancia.excedenteDisponible = 0;
+      }
+      persona.constancia.mesesProcesados.push(cursor);
+      huboCambios = true;
+    }
+
+    if (!persona.rifa.mesesProcesados.includes(cursor)) {
+      const comprasNormalesMes = obtenerComprasLiquidadasPersonaMes(persona.id, cursor).normal;
+      if (comprasNormalesMes >= META_RIFA_MENSUAL) {
+        const extra = Math.floor((comprasNormalesMes - META_RIFA_MENSUAL) / MONTO_POR_BOLETO_EXTRA_RIFA);
+        persona.rifa.boletosPorMes[cursor] = 1 + extra;
+      }
+      persona.rifa.mesesProcesados.push(cursor);
+      huboCambios = true;
+    }
+
+    cursor = _siguienteMesKey(cursor);
+    vueltas++;
+
+  }
+
+  // Progreso del mes EN CURSO — informativo, se recalcula siempre (no
+  // se marca como "procesado" hasta que el mes efectivamente termine).
+  const comprasMesActual = obtenerComprasLiquidadasPersonaMes(persona.id, mesKeyHoy).normal;
+  if (persona.constancia.montoMesActual !== comprasMesActual) { persona.constancia.montoMesActual = comprasMesActual; huboCambios = true; }
+  if (persona.rifa.montoAcumuladoMes !== comprasMesActual) { persona.rifa.montoAcumuladoMes = comprasMesActual; huboCambios = true; }
+
+  return huboCambios;
+
+}
+
+// Recorre TODAS las personas y cierra sus meses pendientes de una vez
+// — pensado para llamarse junto con verificarAscensosPendientes()/
+// verificarRecompensasConstancia() cada vez que se abre la campana de
+// notificaciones de Admin (ver admin-comun.js).
+function procesarCierresMensualesPlanMWTodas() {
+
+  const personas = obtenerPersonas();
+  let huboCambios = false;
+
+  personas.forEach(persona => {
+    if (procesarCierresMensualesPlanMW(persona)) huboCambios = true;
+  });
+
+  if (huboCambios) guardarPersonas(personas);
+
+  return huboCambios;
 
 }
 
