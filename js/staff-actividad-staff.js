@@ -182,13 +182,13 @@ function renderMisActividades() {
             const estadoInd = estadoIndividualMisAct(a);
             const otrosResponsables = (a.encargados || []).filter(e => e.id !== identidadStaffActual.usuarioId).map(e => e.nombre);
             const nombresCol = otrosResponsables.length ? `Tú, ${otrosResponsables.map(escapeHTMLMisAct).join(', ')}` : 'Tú';
-            const etiquetaTemporal = a.tipo === 'temporal' ? `<br><small style="color:#766d83;">Temporal · hasta ${escapeHTMLMisAct(formatearFechaCortaActividadStaff(a.fechaFinTemporal))}</small>` : '';
+            const etiquetaTemporal = a.tipo === 'temporal' ? `Temporal · hasta ${escapeHTMLMisAct(formatearFechaCortaActividadStaff(a.fechaFinTemporal))}` : '';
             return `
             <tr>
-              <td><strong>${escapeHTMLMisAct(a.nombre)}</strong>${etiquetaTemporal}</td>
+              <td><span class="act-mis-nombre">${escapeHTMLMisAct(a.nombre)}</span>${etiquetaTemporal ? `<span class="act-mis-meta">${etiquetaTemporal}</span>` : ''}</td>
               <td>${nombresCol}</td>
-              <td>${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : 'Sin definir'}</td>
-              <td>${escapeHTMLMisAct(formatearDiasAsignacionActividadStaff(a))}</td>
+              <td class="act-mis-col-periodicidad">${a.periodicidad ? PERIODICIDADES_ACTIVIDAD_STAFF[a.periodicidad] : 'Sin definir'}</td>
+              <td class="act-mis-col-dia">${escapeHTMLMisAct(formatearDiasAsignacionActividadStaff(a))}</td>
               <td><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[estadoInd]}">${ESTADOS_ACTIVIDAD_STAFF[estadoInd]}</span></td>
               <td>${estadoInd === 'anunciado' ? `<button type="button" class="btn btn-primary" style="width:auto;padding:0.5em 1em;" data-mis-act-enterado="${a.id}">Enterado</button>` : ''}</td>
             </tr>
