@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderConstanciaLider();
   renderProgresoRangoCuenta();
   renderTicketComisiones();
+  renderProximoPago();
 });
 
 function setText(id, val) {
@@ -274,21 +275,25 @@ function formatearFechaComision(fechaISO) {
   return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 // ---------- Próxima fecha de pago ----------
-const MESES_PAGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+// El calendario real es día 5 y día 20 de cada mes, alternados (5, 20,
+// 5, 20...) — los mismos dos días que ya usa obtenerInfoSubPeriodo()
+// en comisiones-modelo.js para la fecha de pago de cada sub-periodo.
+// Se busca la fecha más próxima de esa lista que todavía no llega.
+function calcularProximoPagoLider(ahora = new Date()) {
+  const candidatos = [];
+  for (let offsetMes = 0; offsetMes <= 1; offsetMes++) {
+    const base = new Date(ahora.getFullYear(), ahora.getMonth() + offsetMes, 1);
+    candidatos.push(new Date(base.getFullYear(), base.getMonth(), 5));
+    candidatos.push(new Date(base.getFullYear(), base.getMonth(), 20));
+  }
+  const hoyMedianoche = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  return candidatos.filter(d => d > hoyMedianoche).sort((a, b) => a - b)[0];
+}
 
 function renderProximoPago() {
-  const hoy = new Date();
-  const dia = hoy.getDate();
-  let mes = hoy.getMonth();
-  let anio = hoy.getFullYear();
-  let fechaPago;
-
-  if (dia <= 20) {
-    fechaPago = new Date(anio, mes, 20);
-  } else {
-    mes += 1;
-    if (mes > 11) { mes = 0; anio += 1; }
-    fechaPago = new Date(anio, mes, 5);
-  }
-  setText('proximoPago', `${fechaPago.getDate()} de ${MESES_PAGO[fechaPago.getMonth()]}`);
+  const fechaPago = calcularProximoPagoLider();
+  const diaSemana = fechaPago.toLocaleDateString('es-MX', { weekday: 'long' });
+  const mes = fechaPago.toLocaleDateString('es-MX', { month: 'long' });
+  const texto = `${diaSemana} ${fechaPago.getDate()} de ${mes}`;
+  setText('proximoPago', texto.charAt(0).toUpperCase() + texto.slice(1));
 }

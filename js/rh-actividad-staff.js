@@ -52,8 +52,7 @@ function inicializarEventosActividadStaffRH() {
 
   document.getElementById('actCrearBtn')?.addEventListener('click', abrirModalCrearActividad);
   document.getElementById('actSortearBtn')?.addEventListener('click', abrirModalSorteo);
-  document.getElementById('actReporteBtn')?.addEventListener('click', generarReporteSemanalAct);
-  document.getElementById('actReporteOrgBtn')?.addEventListener('click', generarReporteOrganizacionAct);
+  document.getElementById('actReporteBtn')?.addEventListener('click', abrirModalElegirReporte);
 
   document.getElementById('modalOverlay')?.addEventListener('click', (e) => {
     if (e.target.id === 'modalOverlay') cerrarModalAct();
@@ -779,6 +778,41 @@ function renderPasoPreviewSorteo() {
     mostrarToast('Reparto guardado. Actividades listas para anunciar.');
   });
 
+}
+
+// ============================================================
+// ELEGIR TIPO DE REPORTE — un solo botón "Generar reporte" que
+// pregunta cuál de los dos generar, en vez de dos botones permanentes
+// en la barra de herramientas. No cambia la lógica de ninguno de los
+// dos reportes (generarReporteSemanalAct / generarReporteOrganizacionAct
+// siguen exactamente igual, solo cambia cómo se llega a ellos).
+// ============================================================
+
+function abrirModalElegirReporte() {
+  const box = document.getElementById('modalBox');
+  if (!box) return;
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModalAct()">×</button>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 3h7l4 4v14H7V3z"/><path d="M14 3v4h4"/><path d="M9.5 12h5M9.5 16h5"/></svg></div>
+    <h3>¿Qué tipo de reporte deseas generar?</h3>
+    <div class="report-choice-grid">
+      <button type="button" class="report-choice-card" id="reporteChoiceSemanal">
+        <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+        <strong>Reporte semanal</strong>
+        <span>Genera el reporte semanal de actividades.</span>
+      </button>
+      <button type="button" class="report-choice-card" id="reporteChoiceOrganizacion">
+        <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>
+        <strong>Reporte de organización</strong>
+        <span>Genera el reporte de cómo están organizadas las actividades actualmente.</span>
+      </button>
+    </div>
+  `;
+
+  document.getElementById('modalOverlay')?.classList.add('open');
+  document.getElementById('reporteChoiceSemanal')?.addEventListener('click', () => { cerrarModalAct(); generarReporteSemanalAct(); });
+  document.getElementById('reporteChoiceOrganizacion')?.addEventListener('click', () => { cerrarModalAct(); generarReporteOrganizacionAct(); });
 }
 
 // ============================================================

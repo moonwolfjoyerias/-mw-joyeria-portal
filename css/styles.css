@@ -3786,6 +3786,21 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 .act-historial-item small { display: block; color: var(--mw-text-muted); margin-top: 2px; }
 .act-identificar-box { max-width: 380px; margin: 40px auto; text-align: center; }
 
+/* Modal "¿Qué tipo de reporte deseas generar?" — RH → Actividades Staff */
+.report-choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 6px; }
+.report-choice-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  text-align: left; background: #faf7fb; border: 1px solid var(--mw-border); border-radius: 12px;
+  padding: 18px 16px; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.report-choice-card:hover { border-color: var(--mw-purple); box-shadow: 0 8px 20px rgba(94,26,138,.12); transform: translateY(-1px); }
+.report-choice-card .icon-inline { width: 26px; height: 26px; color: var(--mw-purple); }
+.report-choice-card strong { font-family: var(--font-heading); color: var(--mw-purple); font-size: 0.98rem; }
+.report-choice-card span:last-child { font-size: 0.82rem; color: var(--mw-text-muted); line-height: 1.35; }
+@media (max-width: 520px) {
+  .report-choice-grid { grid-template-columns: 1fr; }
+}
+
 .act-checklist-item.act-checklist-todo { border-bottom: 1px solid var(--mw-border); margin-bottom: 4px; padding-bottom: 0.6em; }
 .act-dias-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 10px; margin-top: 4px; }
 .act-dia-check { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; padding: 0.15em 0; }
