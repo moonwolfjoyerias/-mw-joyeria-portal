@@ -397,6 +397,20 @@ a:hover { color: var(--mw-gold); }
   margin: 0 auto;
   padding: 1.5rem 2rem 3rem;
 }
+.nosotros-historia-block {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  align-items: center;
+  max-width: 1280px;
+  margin: 0 auto 3rem;
+  padding: 0 2rem;
+}
+.nosotros-fundadoras-foto { min-height: 320px; }
+@media (max-width: 760px) {
+  .nosotros-historia-block { grid-template-columns: 1fr; }
+  .nosotros-fundadoras-foto { min-height: 0; }
+}
 .collection-header {
   display: flex;
   align-items: baseline;
