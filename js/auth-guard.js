@@ -76,9 +76,22 @@ function exigirSesionPortal() {
 // comparten la misma estructura de clases (.profile-btn .profile-avatar
 // / .profile-info strong), así que no hace falta tocar el HTML de cada
 // una para esto.
+//
+// EXCEPCIÓN — Staff: la cuenta de Staff es compartida entre varias
+// colaboradoras (todas entran con el mismo usuario/contraseña), así
+// que la burbuja de perfil se queda en "Staff" genérico en vez del
+// nombre de la cuenta interna. Esto es solo visual: la sesión SÍ sigue
+// guardando esa identidad (sesion.nombre/cuentaId) para auditoría,
+// nómina y todo lo que ya depende de "quién inició sesión" — nada de
+// eso cambia. Cuando alguien se identifica individualmente dentro de
+// una página (p. ej. Mis actividades → "¿Quién eres?"), esa identidad
+// es aparte y se sigue mostrando donde ya se mostraba (el saludo
+// dentro del contenido, nunca la burbuja).
 function aplicarIdentidadSesionEnHeader() {
   const sesion = obtenerSesionActiva();
   if (!sesion) return;
+
+  if (sesion.tipo === 'interna' && sesion.rol === 'staff') return;
 
   const avatar = document.querySelector('.profile-btn .profile-avatar');
   const nombreEl = document.querySelector('.profile-btn .profile-info strong');

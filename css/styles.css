@@ -1145,6 +1145,10 @@ a:hover { color: var(--mw-gold); }
 }
 .modal-overlay.open { display: flex; }
 .modal-box { background: #fff; border-radius: var(--radius); padding: 2rem; max-width: 400px; width: 100%; box-shadow: var(--shadow-hover); position: relative; max-height: 90vh; overflow-y: auto; }
+/* Modales que necesitan más ancho que el genérico de 400px (p. ej. el
+   formulario de producto con variantes en fila) — se agrega/quita con
+   JS solo mientras ese modal específico está abierto. */
+.modal-box.modal-box-wide { max-width: min(720px, 100%); }
 .modal-box h3 { font-size: 1.25rem; margin-bottom: 0.3rem; }
 .modal-box .modal-sub { color: var(--mw-text-muted); font-size: 0.85rem; margin-bottom: 1.2rem; }
 .modal-box label { display: block; font-size: 0.82rem; color: var(--mw-purple); font-family: var(--font-heading); margin-bottom: 0.4rem; }
@@ -2634,6 +2638,7 @@ a:hover { color: var(--mw-gold); }
 }
 
 .form-field.full {
+  grid-column: 1 / -1;
   margin-top: 13px;
 }
 
@@ -2673,12 +2678,49 @@ a:hover { color: var(--mw-gold); }
   box-shadow: 0 0 0 3px #8b55ad14;
 }
 
-/* Repetidor de variantes (color/talla/existencia) — Catálogo */
-.variante-row {
+/* Repetidor de variantes (color/talla/existencia) — modal "Agregar
+   producto", compartido por Staff/RH/Admin (misma plantilla en los 3
+   controladores). Cada variante es su propia tarjeta separada, con
+   labels visibles por campo — antes todo iba en una sola fila
+   amontonada sin etiquetas. */
+#variantesLista {
   display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.variante-row {
+  background: #faf7fb;
+  border: 1px solid #ddd5e3;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.variante-numero {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  color: #8b55ad;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.variante-campos {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 0.9fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.variante-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+
+.variante-field label {
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  color: #776c82;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .variante-row select,
@@ -2687,27 +2729,32 @@ a:hover { color: var(--mw-gold); }
   border-radius: 7px;
   padding: 9px 11px;
   height: 40px;
+  width: 100%;
   background: #fff;
   color: #312044;
   outline: none;
 }
 
-.variante-row .variante-color { flex: 1.2; min-width: 0; }
-.variante-row .variante-talla { flex: 1; min-width: 0; }
-.variante-row .variante-stock { flex: 0.8; min-width: 0; }
-
 .variante-quitar {
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  border: none;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid #f0c3cc;
   border-radius: 7px;
   background: #fdeeee;
   color: #b94a4a;
-  font-size: 1.1rem;
+  font-size: 0.85rem;
+  font-family: inherit;
   cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
 }
 .variante-quitar:hover { background: #fbdada; }
+
+@media (max-width: 640px) {
+  .variante-campos { grid-template-columns: 1fr; align-items: stretch; }
+  .variante-quitar { width: 100%; }
+}
 
 .variante-stock-row {
   display: flex;
@@ -3784,7 +3831,89 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 .act-historial-item { border-left: 2px solid var(--mw-lilac-soft); padding: 2px 0 10px 14px; margin-left: 4px; position: relative; font-size: 0.85rem; }
 .act-historial-item::before { content: ''; position: absolute; left: -5px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--mw-purple); }
 .act-historial-item small { display: block; color: var(--mw-text-muted); margin-top: 2px; }
-.act-identificar-box { max-width: 380px; margin: 40px auto; text-align: center; }
+/* Mini-login de identificación individual — Staff → Mis actividades.
+   Cuenta compartida, así que cada colaboradora se identifica aquí
+   para ver solo sus propias actividades (ver js/staff-actividad-staff.js:
+   identidadStaffActual, nunca se guarda en localStorage/sessionStorage). */
+.staff-id-card {
+  max-width: 400px;
+  margin: 48px auto;
+  text-align: center;
+  background: #fff;
+  border: 1px solid var(--mw-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-hover);
+  padding: 2.2rem 2rem;
+}
+.staff-id-icon {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: var(--mw-lilac-soft);
+  color: var(--mw-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.staff-id-icon svg { width: 26px; height: 26px; }
+.staff-id-card h2 {
+  font-family: var(--font-heading);
+  color: var(--mw-purple);
+  font-size: 1.3rem;
+  margin: 0 0 6px;
+}
+.staff-id-sub {
+  color: var(--mw-text-muted);
+  font-size: 0.88rem;
+  margin: 0 0 22px;
+  line-height: 1.4;
+}
+.staff-id-field { text-align: left; margin-bottom: 14px; }
+.staff-id-field label {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  color: var(--mw-purple);
+  margin-bottom: 5px;
+}
+.staff-id-field input {
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--mw-border);
+  border-radius: 9px;
+  padding: 0 13px;
+  font-size: 0.92rem;
+  color: var(--mw-text);
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.staff-id-field input:focus {
+  border-color: var(--mw-purple);
+  box-shadow: 0 0 0 3px rgba(94, 26, 138, 0.12);
+}
+.staff-id-field .password-wrap { display: flex; gap: 8px; }
+.staff-id-field .password-wrap input { flex: 1; min-width: 0; }
+.staff-id-btn { width: 100%; margin-top: 4px; }
+.staff-id-card .demo-note { margin-top: 16px; margin-bottom: 0; }
+@media (max-width: 480px) {
+  .staff-id-card { margin: 28px auto; padding: 1.8rem 1.4rem; }
+}
+
+/* Modal "¿Qué tipo de reporte deseas generar?" — RH → Actividades Staff */
+.report-choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 6px; }
+.report-choice-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  text-align: left; background: #faf7fb; border: 1px solid var(--mw-border); border-radius: 12px;
+  padding: 18px 16px; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.report-choice-card:hover { border-color: var(--mw-purple); box-shadow: 0 8px 20px rgba(94,26,138,.12); transform: translateY(-1px); }
+.report-choice-card .icon-inline { width: 26px; height: 26px; color: var(--mw-purple); }
+.report-choice-card strong { font-family: var(--font-heading); color: var(--mw-purple); font-size: 0.98rem; }
+.report-choice-card span:last-child { font-size: 0.82rem; color: var(--mw-text-muted); line-height: 1.35; }
+@media (max-width: 520px) {
+  .report-choice-grid { grid-template-columns: 1fr; }
+}
 
 .act-checklist-item.act-checklist-todo { border-bottom: 1px solid var(--mw-border); margin-bottom: 4px; padding-bottom: 0.6em; }
 .act-dias-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 10px; margin-top: 4px; }
@@ -3801,8 +3930,8 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 /* Página "Mis actividades" de Staff — encabezado + indicadores + tabla
    agrupada por zona con separadores visuales claros. */
 .act-mis-header { margin-bottom: 4px; }
-.act-mis-header h2 { font-family: var(--font-heading); color: var(--mw-purple); font-size: 1.3rem; margin: 0; }
-.act-mis-header p { color: var(--mw-text-muted); font-size: 0.88rem; margin: 4px 0 0; }
+.act-mis-saludo { display: block; font-family: var(--font-heading); color: var(--mw-purple); font-size: 1.15rem; }
+.act-mis-header p { color: var(--mw-text-muted); font-size: 0.85rem; margin: 3px 0 0; }
 .act-mis-semana { font-size: 0.82rem; color: var(--mw-text-muted); margin-top: 2px; }
 
 .act-stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0 20px; }
@@ -3818,6 +3947,15 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 .act-mis-tabla th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--mw-text-muted); background: #faf7fb; padding: 10px 14px; border-bottom: 1px solid var(--mw-border); }
 .act-mis-tabla td { padding: 12px 14px; border-bottom: 1px solid #f0ecf0; font-size: 0.88rem; color: var(--mw-text); vertical-align: middle; }
 .act-mis-tabla tr:last-child td { border-bottom: none; }
+.act-mis-tabla tr:hover td { background: #fbf9fc; }
+
+/* Jerarquía por columna: el nombre de la actividad es lo más
+   importante de la fila, periodicidad/día son datos secundarios de
+   apoyo, y el estado siempre va en su propio badge de color. */
+.act-mis-nombre { font-family: var(--font-heading); color: var(--mw-purple); font-size: 0.98rem; font-weight: 600; }
+.act-mis-meta { display: block; color: var(--mw-text-muted); font-size: 0.76rem; margin-top: 2px; }
+.act-mis-tabla td.act-mis-col-periodicidad,
+.act-mis-tabla td.act-mis-col-dia { color: var(--mw-text-muted); font-size: 0.82rem; }
 
 @media (max-width: 900px) {
   .comm-lider-header { flex-direction: column; align-items: stretch; }

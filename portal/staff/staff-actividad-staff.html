@@ -60,7 +60,7 @@
       <header class="portal-header">
         <div>
           <h1>Mis actividades <span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z"/></svg></span></h1>
-          <p class="portal-sub">Actividades asignadas para esta semana</p>
+          <p class="portal-sub">Consulta las actividades que tienes asignadas esta semana.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -71,7 +71,7 @@
           <div class="notif-panel" id="notifPanel"></div>
 
           <button class="profile-btn" id="profileBtn">
-            <span class="profile-avatar">E</span>
+            <span class="profile-avatar">S</span>
             <span class="profile-info">
               <strong>Staff</strong>
               <span class="profile-role">Staff MW</span>
@@ -86,23 +86,27 @@
       </header>
 
       <!-- PASO 1: IDENTIFICACIÓN (sin sesión persistente, igual que el resto de Staff) -->
-      <div id="actIdentificarWrap" class="act-identificar-box">
-        <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
-        <h3>¿Quién eres?</h3>
-        <p class="modal-sub">Ingresa tu usuario y contraseña de personal para ver únicamente tus actividades.</p>
+      <div id="actIdentificarWrap" class="staff-id-card">
+        <div class="staff-id-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <h2>Bienvenido a Mis actividades</h2>
+        <p class="staff-id-sub">Identifícate para consultar las actividades asignadas a ti.</p>
 
-        <label for="actIdUsuario">Usuario del personal</label>
-        <input id="actIdUsuario" type="text" autocomplete="off" placeholder="Ej. staff01">
+        <div class="staff-id-field">
+          <label for="actIdUsuario">Nombre / colaboradora</label>
+          <input id="actIdUsuario" type="text" autocomplete="off" placeholder="Ej. staff01">
+        </div>
 
-        <label for="actIdPassword">Contraseña</label>
-        <div class="password-wrap">
-          <input id="actIdPassword" type="password" placeholder="Contraseña">
-          <button type="button" id="actIdTogglePassword">Mostrar</button>
+        <div class="staff-id-field">
+          <label for="actIdPassword">Contraseña personal</label>
+          <div class="password-wrap">
+            <input id="actIdPassword" type="password" placeholder="Contraseña">
+            <button type="button" id="actIdTogglePassword">Mostrar</button>
+          </div>
         </div>
 
         <div id="actIdError" class="auth-error" style="display:none;"></div>
 
-        <button class="btn btn-primary" style="width:100%;" id="actIdEntrarBtn">Ver mis actividades</button>
+        <button class="btn btn-primary staff-id-btn" id="actIdEntrarBtn">Ingresar</button>
 
         <p class="demo-note">DEMO · Usuario: staff01 · Contraseña: 1234</p>
       </div>
@@ -112,7 +116,7 @@
 
         <div class="catalog-toolbar">
           <div class="act-mis-header">
-            <span id="actYoLabel"></span>
+            <span id="actYoLabel" class="act-mis-saludo"></span>
             <p class="act-mis-semana" id="actMisSemanaLabel"></p>
           </div>
           <button type="button" class="btn btn-outline" style="width:auto;margin-left:auto;" id="actCambiarUsuarioBtn">Cambiar de usuario</button>
