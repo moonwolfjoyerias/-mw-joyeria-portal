@@ -402,6 +402,11 @@ function abrirModalProducto(producto = null) {
 
   if (!overlay || !box) return;
 
+  // El formulario de producto necesita más ancho que el resto de
+  // modales de esta página (variantes en fila) — el modificador se
+  // quita en cerrarModal() para no afectar a los demás.
+  box.classList.add('modal-box-wide');
+
 
   const editando = !!producto;
 
@@ -753,15 +758,27 @@ function renderVariantesTemporal() {
   const cont = document.getElementById('variantesLista');
   if (!cont) return;
 
-  cont.innerHTML = variantesTemporal.map(v => `
+  cont.innerHTML = variantesTemporal.map((v, i) => `
     <div class="variante-row" data-variante-row="${v.id}">
-      <select class="variante-color" data-campo="colorOro" data-id="${v.id}">
-        <option value="">Sin color</option>
-        ${COLORES_ORO_STAFF.map(c => `<option value="${c}" ${v.colorOro === c ? 'selected' : ''}>${c}</option>`).join('')}
-      </select>
-      <input class="variante-talla" type="text" placeholder="Talla (opcional)" data-campo="talla" data-id="${v.id}" value="${escapeAttribute(v.talla)}">
-      <input class="variante-stock" type="number" min="0" step="1" placeholder="Existencia" data-campo="stock" data-id="${v.id}" value="${v.stock}">
-      <button type="button" class="variante-quitar" data-quitar-variante="${v.id}" title="Quitar variante">×</button>
+      <span class="variante-numero">Variante ${i + 1}</span>
+      <div class="variante-campos">
+        <div class="variante-field">
+          <label>Color</label>
+          <select class="variante-color" data-campo="colorOro" data-id="${v.id}">
+            <option value="">Sin color</option>
+            ${COLORES_ORO_STAFF.map(c => `<option value="${c}" ${v.colorOro === c ? 'selected' : ''}>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="variante-field">
+          <label>Talla</label>
+          <input class="variante-talla" type="text" placeholder="Opcional" data-campo="talla" data-id="${v.id}" value="${escapeAttribute(v.talla)}">
+        </div>
+        <div class="variante-field variante-field-stock">
+          <label>Existencia</label>
+          <input class="variante-stock" type="number" min="0" step="1" placeholder="0" data-campo="stock" data-id="${v.id}" value="${v.stock}">
+        </div>
+        <button type="button" class="variante-quitar" data-quitar-variante="${v.id}" title="Quitar variante">× Eliminar</button>
+      </div>
     </div>
   `).join('');
 
@@ -1652,6 +1669,8 @@ function cerrarModal() {
   if (overlay) {
     overlay.classList.remove('open');
   }
+
+  document.getElementById('modalBox')?.classList.remove('modal-box-wide');
 
 }
 

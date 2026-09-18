@@ -1145,6 +1145,10 @@ a:hover { color: var(--mw-gold); }
 }
 .modal-overlay.open { display: flex; }
 .modal-box { background: #fff; border-radius: var(--radius); padding: 2rem; max-width: 400px; width: 100%; box-shadow: var(--shadow-hover); position: relative; max-height: 90vh; overflow-y: auto; }
+/* Modales que necesitan más ancho que el genérico de 400px (p. ej. el
+   formulario de producto con variantes en fila) — se agrega/quita con
+   JS solo mientras ese modal específico está abierto. */
+.modal-box.modal-box-wide { max-width: min(720px, 100%); }
 .modal-box h3 { font-size: 1.25rem; margin-bottom: 0.3rem; }
 .modal-box .modal-sub { color: var(--mw-text-muted); font-size: 0.85rem; margin-bottom: 1.2rem; }
 .modal-box label { display: block; font-size: 0.82rem; color: var(--mw-purple); font-family: var(--font-heading); margin-bottom: 0.4rem; }
@@ -2634,6 +2638,7 @@ a:hover { color: var(--mw-gold); }
 }
 
 .form-field.full {
+  grid-column: 1 / -1;
   margin-top: 13px;
 }
 
@@ -2673,12 +2678,49 @@ a:hover { color: var(--mw-gold); }
   box-shadow: 0 0 0 3px #8b55ad14;
 }
 
-/* Repetidor de variantes (color/talla/existencia) — Catálogo */
-.variante-row {
+/* Repetidor de variantes (color/talla/existencia) — modal "Agregar
+   producto", compartido por Staff/RH/Admin (misma plantilla en los 3
+   controladores). Cada variante es su propia tarjeta separada, con
+   labels visibles por campo — antes todo iba en una sola fila
+   amontonada sin etiquetas. */
+#variantesLista {
   display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.variante-row {
+  background: #faf7fb;
+  border: 1px solid #ddd5e3;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.variante-numero {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  color: #8b55ad;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.variante-campos {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 0.9fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.variante-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+
+.variante-field label {
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  color: #776c82;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .variante-row select,
@@ -2687,27 +2729,32 @@ a:hover { color: var(--mw-gold); }
   border-radius: 7px;
   padding: 9px 11px;
   height: 40px;
+  width: 100%;
   background: #fff;
   color: #312044;
   outline: none;
 }
 
-.variante-row .variante-color { flex: 1.2; min-width: 0; }
-.variante-row .variante-talla { flex: 1; min-width: 0; }
-.variante-row .variante-stock { flex: 0.8; min-width: 0; }
-
 .variante-quitar {
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  border: none;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid #f0c3cc;
   border-radius: 7px;
   background: #fdeeee;
   color: #b94a4a;
-  font-size: 1.1rem;
+  font-size: 0.85rem;
+  font-family: inherit;
   cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
 }
 .variante-quitar:hover { background: #fbdada; }
+
+@media (max-width: 640px) {
+  .variante-campos { grid-template-columns: 1fr; align-items: stretch; }
+  .variante-quitar { width: 100%; }
+}
 
 .variante-stock-row {
   display: flex;
