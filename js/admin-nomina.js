@@ -180,6 +180,12 @@ function fmtMoneyNomina(n) {
   return `$${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function etiquetaDesfaseInicioNomina(modo) {
+  if (modo === 'pagar_parcial') return 'Pagar semana incompleta';
+  if (modo === 'acumular_siguiente') return 'Acumular con siguiente semana';
+  return 'Sin ajuste';
+}
+
 function formatearFechaNomina(fechaISO) {
   if (!fechaISO) return '—';
   const fecha = new Date(fechaISO.length <= 10 ? `${fechaISO}T00:00:00` : fechaISO);
@@ -365,6 +371,8 @@ function renderVistaDetalleNomina() {
           <div><span>Fecha de inicio</span><strong>${formatearFechaNomina(empleado.fechaInicio)}</strong></div>
           <div><span>Salario base semanal</span><strong>${fmtMoneyNomina(empleado.salarioBase)}</strong></div>
           <div><span>Pago por hora extra</span><strong>${fmtMoneyNomina(empleado.pagoHoraExtra)}</strong></div>
+          <div><span>Horario</span><strong>${empleado.diasPorSemana || 6} días/semana · ${empleado.horasPorDia || 8} hrs/turno</strong></div>
+          <div><span>Desfase de inicio</span><strong>${etiquetaDesfaseInicioNomina(empleado.modoDesfaseInicio)}</strong></div>
           ${empleado.fechaBaja ? `<div><span>Fecha de baja</span><strong>${formatearFechaNomina(empleado.fechaBaja)}</strong></div>` : ''}
         </div>
       </div>
@@ -528,7 +536,7 @@ function renderTablaConceptosNomina() {
 
   body.innerHTML = nomPeriodoEnEdicion.conceptos.map(fila => `
     <tr data-fila-id="${fila.filaId}">
-      <td>${escapeHTMLNomina(fila.nombre)}${fila.conceptoId === 'sueldo_base' || fila.conceptoId === 'horas_extra' ? '' : ` <button type="button" class="comm-icon-btn" data-nom-eliminar-fila="${fila.filaId}" title="Eliminar concepto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>`}</td>
+      <td>${escapeHTMLNomina(fila.nombre)}${fila.conceptoId === 'sueldo_base' || fila.conceptoId === 'horas_extra' || fila.conceptoId === 'ajuste_horario' ? '' : ` <button type="button" class="comm-icon-btn" data-nom-eliminar-fila="${fila.filaId}" title="Eliminar concepto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>`}</td>
       <td class="nom-celda-editable" data-fila-id="${fila.filaId}" data-campo="cantidad" tabindex="0">${fila.cantidad}</td>
       <td class="nom-celda-editable" data-fila-id="${fila.filaId}" data-campo="importe" tabindex="0">${fmtMoneyNomina(fila.importe)}</td>
       <td><span class="badge ${fila.tipo === 'percepcion' ? 'badge-pagada' : 'badge-pendiente'}">${fila.tipo === 'percepcion' ? 'Percepción' : 'Deducción'}</span></td>
@@ -1272,7 +1280,19 @@ function abrirModalEmpleadoNomina(id) {
       </label>
       <label>Fecha de inicio<input type="date" id="nomEmpFechaInicio" value="${empleado?.fechaInicio || new Date().toISOString().slice(0, 10)}"></label>
       <label>Salario base semanal<input type="number" step="0.01" id="nomEmpSalario" value="${empleado?.salarioBase ?? 0}"></label>
-      <label>Pago por hora extra<input type="number" step="0.01" id="nomEmpHoraExtra" value="${empleado?.pagoHoraExtra ?? 0}"></label>
+      <label>Días laborados por semana<input type="number" step="1" min="1" max="7" id="nomEmpDiasSemana" value="${empleado?.diasPorSemana ?? 6}"></label>
+      <label>Horas por turno<input type="number" step="0.5" min="1" id="nomEmpHorasDia" value="${empleado?.horasPorDia ?? 8}"></label>
+      <div class="cfg-span-2" style="font-size:0.82rem;color:var(--mw-text-muted);margin-top:-6px;">
+        Salario diario: <strong id="nomEmpSalarioDiarioPreview">$0.00</strong> · Tarifa hora extra (doble): <strong id="nomEmpHoraExtraPreview">$0.00</strong>
+      </div>
+      <label class="cfg-span-2">Desfase de inicio (solo aplica a la primera semana)
+        <select id="nomEmpDesfase">
+          <option value="" ${!empleado?.modoDesfaseInicio ? 'selected' : ''}>Sin ajuste (entró justo al inicio de semana)</option>
+          <option value="pagar_parcial" ${empleado?.modoDesfaseInicio === 'pagar_parcial' ? 'selected' : ''}>Pagar la semana incompleta</option>
+          <option value="acumular_siguiente" ${empleado?.modoDesfaseInicio === 'acumular_siguiente' ? 'selected' : ''}>Acumular con la semana siguiente (+ días extra)</option>
+        </select>
+      </label>
+      <div class="cfg-span-2" id="nomEmpDesfaseNota" style="font-size:0.82rem;color:var(--mw-text-muted);margin-top:-6px;"></div>
       <label>Método de pago
         <select id="nomEmpMetodoPago">
           <option value="Efectivo" ${(empleado?.metodoPago || 'Efectivo') === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
@@ -1297,6 +1317,32 @@ function abrirModalEmpleadoNomina(id) {
   const cerrar = () => overlay.classList.remove('open');
   box.querySelector('[data-close]')?.addEventListener('click', cerrar);
   document.getElementById('nomEmpCancelarBtn')?.addEventListener('click', cerrar);
+
+  const actualizarPreviewHorarioNomina = () => {
+    const datosPreview = {
+      salarioBase: parseFloat(document.getElementById('nomEmpSalario').value) || 0,
+      diasPorSemana: parseFloat(document.getElementById('nomEmpDiasSemana').value) || 6,
+      horasPorDia: parseFloat(document.getElementById('nomEmpHorasDia').value) || 8
+    };
+    const salarioDiario = calcularSalarioDiarioEmpleado(datosPreview);
+    document.getElementById('nomEmpSalarioDiarioPreview').textContent = fmtMoneyNomina(salarioDiario);
+    document.getElementById('nomEmpHoraExtraPreview').textContent = fmtMoneyNomina(calcularTarifaHoraExtraEmpleado(datosPreview));
+
+    const fechaInicio = document.getElementById('nomEmpFechaInicio').value;
+    const modo = document.getElementById('nomEmpDesfase').value;
+    const nota = document.getElementById('nomEmpDesfaseNota');
+    if (!modo || !fechaInicio) { nota.textContent = ''; return; }
+    const dias = calcularDiasDesfaseInicio(fechaInicio);
+    if (dias >= 7) { nota.textContent = 'Entró justo al inicio de la semana — no hay días de desfase que ajustar.'; return; }
+    nota.textContent = modo === 'pagar_parcial'
+      ? `Se le pagarán ${dias} día${dias === 1 ? '' : 's'} (${fmtMoneyNomina(salarioDiario * dias)}) en su primera semana, en vez del sueldo completo.`
+      : `Su primera semana no se paga sola — la siguiente semana de pago recibirá el sueldo completo más ${dias} día${dias === 1 ? '' : 's'} extra (${fmtMoneyNomina(salarioDiario * dias)}), a tarifa normal (no como hora extra).`;
+  };
+  ['nomEmpSalario', 'nomEmpDiasSemana', 'nomEmpHorasDia', 'nomEmpFechaInicio', 'nomEmpDesfase'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', actualizarPreviewHorarioNomina);
+    document.getElementById(id)?.addEventListener('change', actualizarPreviewHorarioNomina);
+  });
+  actualizarPreviewHorarioNomina();
 
   document.getElementById('nomEmpFoto')?.addEventListener('change', (e) => {
     const archivo = e.target.files?.[0];
@@ -1333,7 +1379,9 @@ function abrirModalEmpleadoNomina(id) {
       cargo: document.getElementById('nomEmpCargo').value,
       fechaInicio: document.getElementById('nomEmpFechaInicio').value,
       salarioBase: parseFloat(document.getElementById('nomEmpSalario').value) || 0,
-      pagoHoraExtra: parseFloat(document.getElementById('nomEmpHoraExtra').value) || 0,
+      diasPorSemana: parseFloat(document.getElementById('nomEmpDiasSemana').value) || 6,
+      horasPorDia: parseFloat(document.getElementById('nomEmpHorasDia').value) || 8,
+      modoDesfaseInicio: document.getElementById('nomEmpDesfase').value || null,
       metodoPago: document.getElementById('nomEmpMetodoPago').value,
       fotoUrl: fotoEmpleadoData
     };
