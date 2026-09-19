@@ -1,15 +1,55 @@
 // MW JOYERÍA — Mi cuenta
 // Depende de CUENTA_EJEMPLO, RIFA_EJEMPLO, CONSTANCIA_EJEMPLO (cuenta-ejemplo.js).
+// La foto de perfil es la excepción: se guarda y se lee del registro
+// REAL de la persona con sesión abierta (personas-ejemplo.js, vía
+// obtenerIdPersonaActualPortal()) — no de CUENTA_EJEMPLO, que es un
+// perfil de ejemplo fijo y no tiene dónde persistir una foto subida.
 
 document.addEventListener('DOMContentLoaded', () => {
   renderPerfil();
   renderRifa();
   renderConstancia();
+
+  document.getElementById('perfilFotoInput')?.addEventListener('change', (e) => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+
+    if (!archivo.type.startsWith('image/')) {
+      e.target.value = '';
+      mostrarToast('Selecciona un archivo de imagen válido.');
+      return;
+    }
+    if (archivo.size > 2 * 1024 * 1024) {
+      e.target.value = '';
+      mostrarToast('La imagen no puede superar 2 MB.');
+      return;
+    }
+
+    const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
+    if (!idActual) { mostrarToast('No se pudo identificar tu cuenta — vuelve a iniciar sesión.'); return; }
+
+    const lector = new FileReader();
+    lector.onload = () => {
+      actualizarFotoPersona(idActual, lector.result);
+      mostrarToast('Foto de perfil actualizada.');
+      renderPerfil();
+    };
+    lector.readAsDataURL(archivo);
+  });
 });
 
 function renderPerfil() {
   const iniciales = typeof obtenerInicialesPerfil === 'function' ? obtenerInicialesPerfil(CUENTA_EJEMPLO.nombre) : CUENTA_EJEMPLO.nombre.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
-  setText('perfilIniciales', iniciales);
+
+  const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
+  const persona = idActual && typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(idActual) : null;
+  const fotoBox = document.getElementById('perfilIniciales');
+  if (fotoBox) {
+    fotoBox.innerHTML = persona?.fotoUrl
+      ? `<img src="${persona.fotoUrl}" alt="Foto de ${CUENTA_EJEMPLO.nombre}" style="width:100%;height:100%;object-fit:cover;">`
+      : iniciales;
+  }
+
   setText('perfilNombre', CUENTA_EJEMPLO.nombre);
   setText('perfilLider', `Equipo de ${CUENTA_EJEMPLO.lider}`);
   setText('perfilTelefono', CUENTA_EJEMPLO.telefono);

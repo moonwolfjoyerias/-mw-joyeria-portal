@@ -565,6 +565,19 @@ function ejecutarAccion(personal) {
     auditoriaAccion = 'aprobar_vip_ventana';
     auditoriaDescripcion = `Apartado VIP de ${v.usuarioNombre} aprobado`;
 
+    // Las cuentas VIP no ven el aviso de "confirmando depósito" (no
+    // aplica — no depositan) ni un cronómetro hasta este momento, así
+    // que esta notificación es la única señal de que sus piezas ya
+    // quedaron apartadas.
+    if (typeof agregarNotificacion === 'function') {
+      agregarNotificacion({
+        texto: `¡Tus piezas ya quedaron apartadas! Confirmamos tu apartado VIP.`,
+        link: 'apartados',
+        paraId: v.usuarioId,
+        rolDestino: 'emprendedora_lider'
+      });
+    }
+
   } else if (accionPendiente.tipo === "cancelar-ventana") {
 
     cancelarVentanaCompleta(v, personal);

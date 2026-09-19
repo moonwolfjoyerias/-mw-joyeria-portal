@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setText('perfilNombre', RH_IDENTIDAD.usuarioNombre);
   setText('perfilUsuario', RH_IDENTIDAD.usuarioId);
+  renderFotoPerfilRH();
 
   document.getElementById('olvideAccesoBtn')?.addEventListener('click', () => {
     mostrarToast('Se notificó a Administración. Ellos se pondrán en contacto contigo para restablecer tu acceso.');
@@ -19,7 +20,41 @@ document.addEventListener('DOMContentLoaded', () => {
     mostrarToast('El comprobante de agosto 2026 está disponible para consulta.');
   });
 
+  document.getElementById('perfilFotoInput')?.addEventListener('change', (e) => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+
+    if (!archivo.type.startsWith('image/')) {
+      e.target.value = '';
+      mostrarToast('Selecciona un archivo de imagen válido.');
+      return;
+    }
+    if (archivo.size > 2 * 1024 * 1024) {
+      e.target.value = '';
+      mostrarToast('La imagen no puede superar 2 MB.');
+      return;
+    }
+
+    const lector = new FileReader();
+    lector.onload = () => {
+      editarCuentaInterna(RH_IDENTIDAD.usuarioId, { fotoUrl: lector.result });
+      mostrarToast('Foto de perfil actualizada.');
+      renderFotoPerfilRH();
+    };
+    lector.readAsDataURL(archivo);
+  });
+
 });
+
+function renderFotoPerfilRH() {
+  const fotoBox = document.getElementById('perfilIniciales');
+  if (!fotoBox) return;
+  const cuenta = typeof obtenerCuentasInternas === 'function' ? obtenerCuentasInternas().find(c => c.id === RH_IDENTIDAD.usuarioId) : null;
+  const inicial = RH_IDENTIDAD.usuarioNombre.trim().charAt(0).toUpperCase() || 'R';
+  fotoBox.innerHTML = cuenta?.fotoUrl
+    ? `<img src="${cuenta.fotoUrl}" alt="Foto de ${RH_IDENTIDAD.usuarioNombre}" style="width:100%;height:100%;object-fit:cover;">`
+    : inicial;
+}
 
 function setText(id, valor) {
   const el = document.getElementById(id);

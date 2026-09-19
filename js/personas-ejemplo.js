@@ -69,6 +69,7 @@ function crearPersonaEjemplo(datos) {
     estado: datos.estado || 'activa', // activa | inactiva | baja
     telefono: datos.telefono || '',
     correo: datos.correo || '',
+    fotoUrl: datos.fotoUrl || '',
     usuario: datos.usuario || '',
     numeroCuenta: datos.numeroCuenta || '',
     fechaAlta: datos.fechaAlta || new Date().toISOString(),
@@ -371,6 +372,19 @@ function restablecerPasswordPersona(id, nuevoPassword) {
 
 function obtenerPersonaPorId(id) {
   return obtenerPersonas().find(p => p.id === id) || null;
+}
+
+// Usado por "Mi cuenta" de Emprendedora/Líder para guardar su propia
+// foto de perfil (misma idea que editarCuentaInterna() para Staff/RH/
+// Admin en cuentas-internas-modelo.js, pero sobre el registro de
+// personas).
+function actualizarFotoPersona(id, fotoUrl) {
+  const personas = obtenerPersonas();
+  const persona = personas.find(p => p.id === id);
+  if (!persona) return { ok: false, error: 'La cuenta no existe.' };
+  persona.fotoUrl = fotoUrl || '';
+  guardarPersonas(personas);
+  return { ok: true, persona };
 }
 
 // Usado por js/auth-login.js para iniciar sesión como Emprendedora/Líder.

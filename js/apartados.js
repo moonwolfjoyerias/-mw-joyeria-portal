@@ -76,12 +76,35 @@ function iniciarReloj() {
 function actualizarReloj() {
   const ventana = obtenerVentanaActivaPrincipal();
   const box = document.querySelector('.countdown-box');
+  if (!box) return;
 
   if (!ventana) {
-    if (box) box.style.display = 'none';
+    // Sin ventana activa: si lo que tiene es una ventana pendiente de
+    // confirmar el depósito, hay que avisarle que ya se registró y que
+    // el tiempo empieza a correr hasta que Staff confirme — antes esto
+    // simplemente ocultaba la caja sin decir nada. Las VIP no pasan por
+    // depósito (quedan 'pendiente_aprobacion'), así que no aplica este
+    // aviso — a ellas solo les llega una notificación cuando Staff
+    // aprueba su apartado (ver aprobarVentanaVip en apartados-modelo.js).
+    const pendiente = obtenerVentanasPropias().find(v => v.estado === 'pendiente_deposito' || v.estado === 'pendiente_aprobacion');
+    if (pendiente && pendiente.categoria !== 'vip') {
+      box.style.display = '';
+      box.classList.remove('countdown-box--vencida');
+      const timer = box.querySelector('.countdown-timer');
+      if (timer) timer.style.display = 'none';
+      const label = box.querySelector('.countdown-label');
+      const nota = box.querySelector('.countdown-note');
+      if (label) label.textContent = 'Confirmando tu depósito';
+      if (nota) nota.textContent = 'Tu apartado ya se registró. En cuanto confirmemos tu depósito tus piezas quedarán aseguradas y empezará a correr el tiempo.';
+    } else {
+      box.style.display = 'none';
+    }
     return;
   }
-  if (box) box.style.display = '';
+
+  box.style.display = '';
+  const timer = box.querySelector('.countdown-timer');
+  if (timer) timer.style.display = '';
 
   // Vencida = solo la etiqueta (Sección 5.3b, decisión de negocio
   // confirmada): nada se pierde todavía, pero la persona debe ver con
@@ -101,6 +124,10 @@ function actualizarReloj() {
     return;
   }
   box.classList.remove('countdown-box--vencida');
+  const label = box.querySelector('.countdown-label');
+  const nota = box.querySelector('.countdown-note');
+  if (label) label.textContent = 'Tu ventana de depósito vence en';
+  if (nota) nota.textContent = 'Paga en este plazo o pasa a tienda por tus piezas — de lo contrario se liberan.';
 
   const restante = Math.max(0, new Date(ventana.fechaVencimiento).getTime() - Date.now());
   const dias = Math.floor(restante / (1000 * 60 * 60 * 24));
@@ -206,35 +233,80 @@ function quitarPieza(id) {
   mostrarToast('Se le notificó al equipo de tus cambios');
 }
 
+// La edición ofrece solo variantes REALES del producto (igual que
+// "Apartar" desde el catálogo) para que la persona elija entre lo que
+// de verdad hay disponible — nunca un campo de texto libre. La variante
+// que ya tiene la pieza siempre se incluye (aunque su existencia esté en
+// 0, porque esa unidad ya está reservada para ella).
 function abrirModalEditar(id) {
   const encontrado = obtenerPiezasPropiasConVentana().find(({ pieza }) => pieza.id === id);
   if (!encontrado) return;
   const { pieza, ventana } = encontrado;
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
+
+  const catalogo = typeof obtenerCatalogoStaffStorage === 'function' ? obtenerCatalogoStaffStorage() : [];
+  const producto = catalogo.find(p => p.id === pieza.productoId);
+  const opciones = producto ? producto.variantes.filter(v => v.id === pieza.varianteId || v.stock > 0) : [];
+
+  if (!producto || !opciones.length) {
+    box.innerHTML = `
+      <button class="modal-close" data-close>&times;</button>
+      <h3>Editar: ${pieza.producto}</h3>
+      <p class="modal-sub">Ya no hay variantes disponibles de esta pieza en el catálogo. Escríbenos por WhatsApp si necesitas cambiarla.</p>
+    `;
+    overlay.classList.add('open');
+    return;
+  }
+
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     <h3>Editar: ${pieza.producto}</h3>
-    <p class="modal-sub">Cambia la variante de esta pieza.</p>
-    <label for="editVariante">Talla / Color</label>
-    <input type="text" id="editVariante" value="${pieza.variante}">
-    <button class="btn btn-primary" style="width:100%;" id="guardarEdicionBtn">Guardar cambios</button>
+    <p class="modal-sub">Elige la nueva variante de esta pieza.</p>
+    <label for="editVarianteSelect">Color / talla</label>
+    <select id="editVarianteSelect" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+      ${opciones.map(v => `<option value="${v.id}" ${v.id === pieza.varianteId ? 'selected' : ''}>${etiquetaVariante(v)} — ${v.stock} disponibles</option>`).join('')}
+    </select>
+    <button class="btn btn-primary" style="width:100%;margin-top:12px;" id="guardarEdicionBtn">Guardar cambios</button>
   `;
   overlay.classList.add('open');
 
   document.getElementById('guardarEdicionBtn').addEventListener('click', () => {
-    const nuevaVariante = document.getElementById('editVariante').value.trim();
-    if (nuevaVariante) {
-      mutarVentanaPropia(ventana.id, v => {
-        const p = v.apartados.find(x => x.id === id);
-        if (p) p.variante = nuevaVariante;
-      });
+    const nuevaVarianteId = document.getElementById('editVarianteSelect').value;
+    if (!nuevaVarianteId || nuevaVarianteId === pieza.varianteId) {
+      overlay.classList.remove('open');
+      return;
     }
+    const resultado = cambiarVariantePiezaApartada(ventana.id, id, nuevaVarianteId);
+    if (!resultado.ok) { mostrarToast(resultado.error); return; }
     overlay.classList.remove('open');
     renderApartados();
-    if (nuevaVariante) notificarEquipoOperativo(`Se cambió la variante de "${pieza.producto}" a "${nuevaVariante}" en el apartado de ${ventana.usuarioNombre} — confirma que la pieza esté disponible.`, ventana.usuarioNombre);
+    notificarEquipoOperativo(`Se cambió la variante de "${pieza.producto}" a "${resultado.etiqueta}" en el apartado de ${ventana.usuarioNombre} — confirma que la pieza esté disponible.`, ventana.usuarioNombre);
     mostrarToast('Se le notificó al equipo de tus cambios');
   });
+}
+
+function cambiarVariantePiezaApartada(ventanaId, piezaId, nuevaVarianteId) {
+  const encontrado = obtenerPiezasPropiasConVentana().find(({ pieza }) => pieza.id === piezaId);
+  if (!encontrado) return { ok: false, error: 'No se encontró la pieza.' };
+  const { pieza } = encontrado;
+
+  const catalogo = typeof obtenerCatalogoStaffStorage === 'function' ? obtenerCatalogoStaffStorage() : [];
+  const producto = catalogo.find(p => p.id === pieza.productoId);
+  const nuevaVariante = producto ? producto.variantes.find(v => v.id === nuevaVarianteId) : null;
+  if (!producto || !nuevaVariante) return { ok: false, error: 'Esa variante ya no existe en el catálogo.' };
+  if (nuevaVariante.stock <= 0) return { ok: false, error: `Ya no hay existencia de ${producto.nombre} (${etiquetaVariante(nuevaVariante)}).` };
+
+  if (typeof restaurarStockVariante === 'function') restaurarStockVariante(pieza.productoId, pieza.varianteId);
+  if (typeof descontarStockVariante === 'function') descontarStockVariante(pieza.productoId, nuevaVarianteId);
+
+  const etiqueta = etiquetaVariante(nuevaVariante);
+  mutarVentanaPropia(ventanaId, v => {
+    const p = v.apartados.find(x => x.id === piezaId);
+    if (p) { p.varianteId = nuevaVarianteId; p.variante = etiqueta; }
+  });
+
+  return { ok: true, etiqueta };
 }
 
 // ---------- Pago ----------
