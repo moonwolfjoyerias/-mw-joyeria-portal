@@ -169,15 +169,6 @@ function initModal() {
       <input type="tel" id="inputTelefono" placeholder="444 000 0000">
       <button class="btn btn-primary" style="width:100%;" data-close>Guardar</button>
     `,
-    foto: `
-      <button class="modal-close" data-close>&times;</button>
-      <h3>Cambiar foto de perfil</h3>
-      <p class="modal-sub">Sube una foto para tu perfil.</p>
-      <div class="modal-note"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Vista de prueba: este cambio todavía no se guarda (pendiente de conectar con el sistema real).</div>
-      <label for="inputFoto">Elegir imagen</label>
-      <input type="file" id="inputFoto" accept="image/*">
-      <button class="btn btn-primary" style="width:100%;" data-close>Guardar</button>
-    `,
   };
 
   document.querySelectorAll('[data-modal]').forEach((trigger) => {

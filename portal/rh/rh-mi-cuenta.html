@@ -83,7 +83,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="profile-menu" id="profileMenu">
-            <a href="#" data-modal="foto">Cambiar foto de perfil</a>
+            <a href="rh-mi-cuenta.html">Cambiar foto de perfil</a>
             <a href="../../login.html" class="danger">Cerrar sesión</a>
           </div>
         </div>
@@ -92,10 +92,11 @@
       <div class="account-layout">
         <section class="profile-card" aria-labelledby="miPerfilTitulo">
           <div class="profile-photo-wrap">
-            <div class="profile-photo-lg" id="perfilIniciales">R</div>
-            <button class="change-photo-btn" data-modal="foto" aria-label="Cambiar foto de perfil">
+            <div class="profile-photo-lg" id="perfilIniciales" style="overflow:hidden;">R</div>
+            <label class="change-photo-btn" for="perfilFotoInput" aria-label="Cambiar foto de perfil">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5.5-5.5L4 21"/></svg>
-            </button>
+            </label>
+            <input type="file" id="perfilFotoInput" accept="image/*" hidden>
           </div>
           <h2 id="miPerfilTitulo">Mi perfil</h2>
           <p class="profile-name" id="perfilNombre">Recursos Humanos</p>
@@ -114,7 +115,7 @@
               <button class="change-link" type="button" data-modal="telefono">Gestionar</button>
             </div>
           </div>
-          <button class="btn btn-outline" type="button" data-modal="foto" style="width:100%;margin-top:1.2rem;">Gestionar foto</button>
+          <label class="btn btn-outline" for="perfilFotoInput" style="width:100%;margin-top:1.2rem;text-align:center;display:block;box-sizing:border-box;">Gestionar foto</label>
         </section>
 
         <div class="benefits-col">
@@ -188,6 +189,7 @@
   </script>
   <script src="../../js/portal-common.js"></script>
   <script src="../../js/notificaciones-modelo.js"></script>
+  <script src="../../js/cuentas-internas-modelo.js"></script>
   <script src="../../js/rh-comun.js"></script>
   <script src="../../js/rh-mi-cuenta.js"></script>
 </body>

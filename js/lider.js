@@ -6,7 +6,66 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStatCards();
   renderProgresoRango();
   renderEquipoNiveles();
+
+  document.getElementById('verBeneficiosBtn')?.addEventListener('click', abrirModalBeneficios);
 });
+
+// Tabla de referencia: qué gana cada rango (comisión por nivel de
+// equipo + bono al alcanzarlo) — a diferencia de renderProgresoRango(),
+// que solo muestra el avance de ESTA líder, aquí se listan TODOS los
+// rangos para que sepa qué hay más adelante en el Plan MW.
+function abrirModalBeneficios() {
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const rangosConBeneficio = RANGOS_MW.filter(r => r.key !== 'sin_rango');
+
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Beneficios por rango</h3>
+    <p class="modal-sub">Lo que gana cada rango del Plan MW — comisión por nivel de tu equipo y el bono al alcanzarlo.</p>
+    <div style="overflow-x:auto;margin-top:0.8rem;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
+        <thead>
+          <tr style="text-align:left;border-bottom:1px solid var(--mw-border);">
+            <th style="padding:0.5rem 0.6rem;">Rango</th>
+            <th style="padding:0.5rem 0.6rem;">Nivel 1</th>
+            <th style="padding:0.5rem 0.6rem;">Nivel 2</th>
+            <th style="padding:0.5rem 0.6rem;">Nivel 3</th>
+            <th style="padding:0.5rem 0.6rem;">Nivel 4</th>
+            <th style="padding:0.5rem 0.6rem;">Nivel 5</th>
+            <th style="padding:0.5rem 0.6rem;">Bono al subir</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rangosConBeneficio.map(r => {
+            const pct = (typeof COMISIONES_PCT !== 'undefined' && COMISIONES_PCT[r.key]) || [0, 0, 0, 0, 0];
+            const bono = (typeof BONOS_RANGO !== 'undefined' && BONOS_RANGO[r.key]) || 0;
+            const esActual = r.key === LIDER_EJEMPLO.rangoActualKey;
+            return `
+              <tr style="border-bottom:1px solid var(--mw-border);${esActual ? 'background:var(--mw-lilac-soft);' : ''}">
+                <td style="padding:0.5rem 0.6rem;font-weight:600;">${r.label}${esActual ? ' <span style="font-weight:400;color:var(--mw-purple);">(tú)</span>' : ''}</td>
+                ${pct.map(p => `<td style="padding:0.5rem 0.6rem;">${p > 0 ? p + '%' : '—'}</td>`).join('')}
+                <td style="padding:0.5rem 0.6rem;">${fmtMoney(bono)}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    <p class="modal-sub" style="margin-top:0.8rem;">Los niveles son las generaciones de tu red (hasta 5 niveles hacia abajo).</p>
+  `;
+  box.classList.add('modal-box-wide');
+  overlay.classList.add('open');
+
+  const cerrar = () => {
+    overlay.classList.remove('open');
+    box.classList.remove('modal-box-wide');
+  };
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); }, { once: true });
+}
 
 function idxRango(key) {
   return RANGOS_MW.findIndex(r => r.key === key);

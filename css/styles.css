@@ -397,6 +397,20 @@ a:hover { color: var(--mw-gold); }
   margin: 0 auto;
   padding: 1.5rem 2rem 3rem;
 }
+.nosotros-historia-block {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  align-items: center;
+  max-width: 1280px;
+  margin: 0 auto 3rem;
+  padding: 0 2rem;
+}
+.nosotros-fundadoras-foto { min-height: 320px; }
+@media (max-width: 760px) {
+  .nosotros-historia-block { grid-template-columns: 1fr; }
+  .nosotros-fundadoras-foto { min-height: 0; }
+}
 .collection-header {
   display: flex;
   align-items: baseline;
@@ -1068,6 +1082,7 @@ a:hover { color: var(--mw-gold); }
 .stat-card .icon-circle svg { width: 22px; height: 22px; color: var(--mw-purple); }
 .stat-card h4 { font-size: 0.85rem; font-family: var(--font-body); font-weight: 500; color: var(--mw-text-muted); margin: 0 0 0.3rem; }
 .stat-card .stat-num { font-family: var(--font-heading); font-size: 1.9rem; color: var(--mw-purple); font-weight: 700; display: block; margin-bottom: 0.3rem; }
+.stat-card .stat-num.stat-num-text { font-size: 1.15rem; }
 .stat-card a.stat-link { font-size: 0.8rem; color: var(--mw-purple); display: inline-flex; align-items: center; gap: 0.3rem; }
 .stat-card a.stat-link:hover { color: var(--mw-gold); }
 .stat-card .stat-sub { display: block; font-size: 0.72rem; color: var(--mw-text-muted); margin-bottom: 4px; }

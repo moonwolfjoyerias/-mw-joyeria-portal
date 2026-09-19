@@ -33,6 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function obtenerIdentidadSolicitante() {
+  // Prioriza la sesión real (misma fuente que usa el resto del portal ya
+  // migrado, ver obtenerIdPersonaActualPortal() en portal-common.js) —
+  // antes usaba siempre CUENTA_EJEMPLO/PERFIL_LIDER_EJEMPLO (el mismo id
+  // fijo 'me-emprendedora'/'me-lider' sin importar quién inició sesión),
+  // así que las solicitudes de cuentas reales distintas se mezclaban
+  // todas bajo esa única identidad de ejemplo.
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  if (sesion && sesion.tipo === 'persona' && sesion.personaId && (sesion.rol === 'emprendedora' || sesion.rol === 'lider')) {
+    return { id: sesion.personaId, nombre: sesion.nombre, rol: sesion.rol };
+  }
   if (typeof CUENTA_EJEMPLO !== 'undefined') {
     return { id: CUENTA_EJEMPLO.id, nombre: CUENTA_EJEMPLO.nombre, rol: 'emprendedora' };
   }
@@ -189,6 +199,7 @@ function mostrarErrorSolicitud(mensaje) {
   if (!error) return;
   error.textContent = mensaje;
   error.style.display = 'block';
+  error.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ============================================================

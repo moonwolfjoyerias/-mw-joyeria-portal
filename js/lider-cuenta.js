@@ -10,6 +10,33 @@ document.addEventListener('DOMContentLoaded', () => {
   renderProgresoRangoCuenta();
   renderTicketComisiones();
   renderProximoPago();
+
+  document.getElementById('perfilFotoInput')?.addEventListener('change', (e) => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+
+    if (!archivo.type.startsWith('image/')) {
+      e.target.value = '';
+      mostrarToast('Selecciona un archivo de imagen válido.');
+      return;
+    }
+    if (archivo.size > 2 * 1024 * 1024) {
+      e.target.value = '';
+      mostrarToast('La imagen no puede superar 2 MB.');
+      return;
+    }
+
+    const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
+    if (!idActual) { mostrarToast('No se pudo identificar tu cuenta — vuelve a iniciar sesión.'); return; }
+
+    const lector = new FileReader();
+    lector.onload = () => {
+      actualizarFotoPersona(idActual, lector.result);
+      mostrarToast('Foto de perfil actualizada.');
+      renderPerfilLider();
+    };
+    lector.readAsDataURL(archivo);
+  });
 });
 
 function setText(id, val) {
@@ -33,7 +60,16 @@ function obtenerIvaDivisorLider() {
 // ---------- Perfil ----------
 function renderPerfilLider() {
   const iniciales = typeof obtenerInicialesPerfil === 'function' ? obtenerInicialesPerfil(PERFIL_LIDER_EJEMPLO.nombre) : 'L';
-  setText('perfilIniciales', iniciales);
+
+  const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
+  const persona = idActual && typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(idActual) : null;
+  const fotoBox = document.getElementById('perfilIniciales');
+  if (fotoBox) {
+    fotoBox.innerHTML = persona?.fotoUrl
+      ? `<img src="${persona.fotoUrl}" alt="Foto de ${PERFIL_LIDER_EJEMPLO.nombre}" style="width:100%;height:100%;object-fit:cover;">`
+      : iniciales;
+  }
+
   setText('perfilNombre', PERFIL_LIDER_EJEMPLO.nombre);
   setText('perfilLider', `Líder ${RANGOS_MW[idxRango(LIDER_EJEMPLO.rangoActualKey)].label}`);
   setText('perfilTelefono', PERFIL_LIDER_EJEMPLO.telefono);
