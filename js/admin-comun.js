@@ -211,7 +211,7 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
         </summary>
         <div class="notif-group-items">
           ${g.items.map(n => `
-            <a class="notif-item" href="${resolverLinkNotifAdmin(n.link)}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
+            <a class="notif-item" data-notif-id="${n.id}" href="${resolverLinkNotifAdmin(n.link)}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
           `).join('')}
         </div>
       </details>

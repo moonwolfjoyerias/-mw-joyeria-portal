@@ -11,7 +11,7 @@ const DESCUENTOS_POR_MATERIAL = {
   'acero-inoxidable': 40,
   'exhibidores': 30,
   'souvenirs': 0,
-  'fantasia': 0,
+  'fantasia': 40,
   'otros': 0
 };
 

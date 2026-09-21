@@ -435,7 +435,7 @@ function verificarRecompensasConstancia() {
 
         if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('constancia_hito_detectado'))) {
           agregarNotificacion({
-            texto: `${nombreCompletoPersona(persona)} cumplió ${proximidad.siguienteHito.meses} meses del Reto de Constancia. Confirma y prepara su premio: ${proximidad.siguienteHito.premio}.`,
+            texto: `${nombreCompletoPersona(persona)} cumplió ${proximidad.siguienteHito.meses} compras del Reto de Constancia. Confirma y prepara su premio: ${proximidad.siguienteHito.premio}.`,
             link: `admin-emprendedoras-lideres.html?persona=${persona.id}&tab=planmw`,
             paraId: 'admin01',
             rolDestino: 'admin',
@@ -462,7 +462,7 @@ function abrirConfirmarRecompensaConstancia(persona, onExito) {
 
   abrirAutorizacionAdmin({
     titulo: 'Confirmar recompensa',
-    mensaje: `${escapeHTMLPersonas(nombreCompletoPersona(persona))} cumplió ${meses} meses del Reto de Constancia. ¿Confirmas la entrega de su premio: ${escapeHTMLPersonas(premio)}?`,
+    mensaje: `${escapeHTMLPersonas(nombreCompletoPersona(persona))} cumplió ${meses} compras del Reto de Constancia. ¿Confirmas la entrega de su premio: ${escapeHTMLPersonas(premio)}?`,
     onConfirmar: () => {
 
       const personas = obtenerPersonas();
@@ -480,12 +480,12 @@ function abrirConfirmarRecompensaConstancia(persona, onExito) {
       registrarAuditoriaAdmin({
         modulo: 'personas',
         accion: 'recompensa_constancia',
-        descripcion: `${nombreCompletoPersona(actual)} recibió "${premio}" por ${meses} meses del Reto de Constancia`
+        descripcion: `${nombreCompletoPersona(actual)} recibió "${premio}" por ${meses} compras del Reto de Constancia`
       });
 
       if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('recompensa_constancia_entregada'))) {
         agregarNotificacion({
-          texto: `¡Felicidades! Ganaste "${premio}" por cumplir ${meses} meses del Reto de Constancia <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20l5-13"/><path d="M9 7l2 2M13 4l1 2M6 15l2 1"/><circle cx="17" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="11" r="1" fill="currentColor" stroke="none"/></svg></span>`,
+          texto: `¡Felicidades! Ganaste "${premio}" por cumplir ${meses} compras del Reto de Constancia <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20l5-13"/><path d="M9 7l2 2M13 4l1 2M6 15l2 1"/><circle cx="17" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="11" r="1" fill="currentColor" stroke="none"/></svg></span>`,
           link: 'cuenta',
           paraId: actual.id,
           rolDestino: 'emprendedora_lider'

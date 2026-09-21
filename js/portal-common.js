@@ -109,7 +109,7 @@ function initNotifPanel() {
   if (notificaciones.length > 0) {
     panel.innerHTML = '<div class="notif-header">Notificaciones</div>' +
       notificaciones.map(n => `
-        <a class="notif-item" href="${(typeof PORTAL_LINKS !== 'undefined' && PORTAL_LINKS[n.link]) || n.link}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
+        <a class="notif-item" data-notif-id="${n.id}" href="${(typeof PORTAL_LINKS !== 'undefined' && PORTAL_LINKS[n.link]) || n.link}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
       `).join('');
   } else {
     panel.innerHTML = '<div class="notif-empty">No tienes notificaciones nuevas.</div>';

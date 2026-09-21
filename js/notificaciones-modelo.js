@@ -39,7 +39,35 @@ function normalizarNotificacion(notificacion) {
     normalizada.rolDestino = 'staff';
   }
 
+  // Fecha de creación — necesaria para poder borrar automáticamente las
+  // notificaciones del día anterior (ver purgarNotificacionesDeDiasAnteriores).
+  // Las que ya existían sin este campo (datos de ejemplo, o guardadas
+  // antes de este cambio) se sellan con "ahora" la primera vez que se
+  // leen, así no se borran de inmediato por no tener fecha.
+  if (!normalizada.creadaEn) normalizada.creadaEn = new Date().toISOString();
+
   return normalizada;
+}
+
+// Compara solo año/mes/día (hora local) — una notificación creada hoy
+// sigue viva aunque hayan pasado varias horas; una de ayer o antes no.
+function esNotificacionDeHoy(fechaISO) {
+  const fecha = new Date(fechaISO);
+  if (Number.isNaN(fecha.getTime())) return true;
+  const hoy = new Date();
+  return fecha.getFullYear() === hoy.getFullYear()
+    && fecha.getMonth() === hoy.getMonth()
+    && fecha.getDate() === hoy.getDate();
+}
+
+// "Borrarlas al final del día": no hay un proceso en segundo plano que
+// corra a medianoche (esto es localStorage, no un servidor), así que el
+// borrado ocurre en el primer momento en que alguien vuelve a abrir la
+// campana de notificaciones en un día distinto al que se crearon —
+// desaparecen igual, solo que el "final del día" se detecta la próxima
+// vez que se leen en vez de con un temporizador.
+function purgarNotificacionesDeDiasAnteriores(lista) {
+  return lista.filter(n => esNotificacionDeHoy(n.creadaEn));
 }
 
 function claveUnicaNotificacion(notificacion) {
@@ -61,7 +89,7 @@ function obtenerNotificacionesCompartidas() {
   try {
     const guardadas = JSON.parse(localStorage.getItem(NOTIFICACIONES_STORAGE_KEY));
     if (Array.isArray(guardadas)) {
-      const normalizadas = normalizarYDeduplicarNotificaciones(guardadas);
+      const normalizadas = purgarNotificacionesDeDiasAnteriores(normalizarYDeduplicarNotificaciones(guardadas));
       if (normalizadas.length !== guardadas.length || JSON.stringify(normalizadas) !== JSON.stringify(guardadas)) {
         guardarNotificacionesCompartidas(normalizadas);
       }
@@ -114,6 +142,27 @@ function agregarNotificacion({ texto, link, paraId, rolDestino, tipo, origen }) 
   lista.unshift(nueva);
   guardarNotificacionesCompartidas(lista);
 }
+
+// Marca una notificación como leída (clic en la campana) — persiste de
+// inmediato para que, al reabrir el panel, ya aparezca atenuada y no
+// cuente en el badge de "sin leer".
+function marcarNotificacionLeida(id) {
+  const lista = obtenerNotificacionesCompartidas();
+  const notif = lista.find(n => n.id === id);
+  if (!notif || notif.leida) return;
+  notif.leida = true;
+  guardarNotificacionesCompartidas(lista);
+}
+
+// Delegado en document (no en cada panel, que se vuelve a pintar
+// seguido): cualquier .notif-item con data-notif-id, en cualquier
+// portal, se marca como leída al hacer clic — justo antes de que el
+// propio <a> navegue a su link.
+document.addEventListener('click', (e) => {
+  const item = e.target.closest?.('.notif-item[data-notif-id]');
+  if (!item || typeof marcarNotificacionLeida !== 'function') return;
+  marcarNotificacionLeida(item.getAttribute('data-notif-id'));
+});
 
 // Detecta el rol del portal actual a partir de la URL — no depende de
 // que la página defina nada extra. Devuelve null fuera de /portal/.

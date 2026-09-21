@@ -19,6 +19,12 @@ const ROLES_ACTIVIDAD = {
   admin: 'Admin'
 };
 
+// Staff solo debe ver actividad de estas áreas operativas (catálogo,
+// apartados, calendario, lista de deseos) — nunca nómina, comisiones,
+// personas, solicitudes o configuración, que son asuntos de RH/Admin
+// sin relación con el trabajo diario de Staff.
+const MODULOS_ACTIVIDAD_VISIBLES_STAFF = ['catalogo', 'apartados', 'calendario', 'lista_deseos'];
+
 document.addEventListener('DOMContentLoaded', () => {
 
   // ACTIVIDAD_ROL_VISOR lo declara cada portal en su propio <script>
@@ -44,8 +50,11 @@ function renderActividad() {
   const rolFiltro = document.getElementById('filtroRolActividad')?.value || '';
   const puedeVerAdmin = typeof ACTIVIDAD_ROL_VISOR === 'undefined' || ACTIVIDAD_ROL_VISOR === 'admin';
 
+  const esVisorStaff = typeof ACTIVIDAD_ROL_VISOR !== 'undefined' && ACTIVIDAD_ROL_VISOR === 'staff';
+
   const registros = obtenerAuditoriaCompartida()
     .filter(r => puedeVerAdmin || r.rol !== 'admin')
+    .filter(r => !esVisorStaff || MODULOS_ACTIVIDAD_VISIBLES_STAFF.includes(r.modulo))
     .filter(r => !rolFiltro || r.rol === rolFiltro);
 
   const count = document.getElementById('actividadCount');

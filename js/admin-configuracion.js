@@ -727,15 +727,15 @@ function renderSeccionPlanMW() {
 
     <div class="cfg-card">
       <h3 class="cfg-card-title">Reto de Constancia</h3>
-      <p class="cfg-card-sub">Los meses de cada hito no son editables aquí (son la identidad del hito); el premio sí. No existe un "monto mínimo" en la lógica actual — el hito depende de meses cumplidos, no de un monto.</p>
+      <p class="cfg-card-sub">Las compras de cada hito no son editables aquí (son la identidad del hito); el premio sí. No existe un "monto mínimo" en la lógica actual — el hito depende de compras cumplidas, no de un monto.</p>
       <div class="catalog-table-wrap cfg-tabla-wrap">
         <table class="catalog-table">
-          <thead><tr><th>Meses</th><th>Premio</th></tr></thead>
+          <thead><tr><th>Compras</th><th>Premio</th></tr></thead>
           <tbody>
             ${HITOS_CONSTANCIA_PERSONA.map(h => `
               <tr>
-                <td>${h.meses} meses</td>
-                ${construirCeldaVersionada({ tipo: 'constancia', parametro: `hito_${h.meses}_meses`, seccion: 'Plan MW', etiqueta: `Reto de Constancia — ${h.meses} meses`, tipoValor: 'texto' })}
+                <td>${h.meses} compras</td>
+                ${construirCeldaVersionada({ tipo: 'constancia', parametro: `hito_${h.meses}_meses`, seccion: 'Plan MW', etiqueta: `Reto de Constancia — ${h.meses} compras`, tipoValor: 'texto' })}
               </tr>
             `).join('')}
           </tbody>

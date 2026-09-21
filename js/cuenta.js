@@ -114,18 +114,18 @@ function renderConstancia() {
             ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>'
             : `<span style="font-family:var(--font-heading); font-weight:700; font-size:0.85rem;">${h.meses}</span>`}
         </div>
-        <span class="node-label">${h.meses}° mes<br>${h.premio}</span>
+        <span class="node-label">${h.meses}° compra<br>${h.premio}</span>
       </div>
     `;
   }).join('');
 
-  setText('constanciaResumen', `Llevas ${mesesCumplidos} meses cumplidos de por vida.`);
+  setText('constanciaResumen', `Llevas ${mesesCumplidos} compras cumplidas de por vida.`);
 
   const siguienteHito = hitos.find(h => h.meses > mesesCumplidos);
   const nota = document.getElementById('constanciaNota');
   if (siguienteHito) {
     const faltan = siguienteHito.meses - mesesCumplidos;
-    nota.textContent = `Te falta${faltan === 1 ? '' : 'n'} ${faltan} mes${faltan === 1 ? '' : 'es'} cumplido${faltan === 1 ? '' : 's'} para tu siguiente recompensa: ${siguienteHito.premio}.`;
+    nota.textContent = `Te falta${faltan === 1 ? '' : 'n'} ${faltan} compra${faltan === 1 ? '' : 's'} cumplida${faltan === 1 ? '' : 's'} para tu siguiente recompensa: ${siguienteHito.premio}.`;
   } else {
     nota.textContent = '¡Has alcanzado todas las recompensas! Pronto habrá una nueva categoría.';
   }

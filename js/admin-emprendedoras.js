@@ -369,11 +369,15 @@ function renderSeccionInfoPersona(persona, editando) {
       const actual = personas.find(p => p.id === persona.id);
       if (!actual) return;
       actual.estado = 'activa';
+      // Vuelve a la raíz del árbol (sin líder asignada) en vez de
+      // quedar bajo la líder que tenía antes de inactivarse — Admin
+      // decide manualmente si hay que asignarle una líder de nuevo.
+      actual.liderId = null;
       guardarPersonas(personas);
-      registrarAuditoriaAdmin({ modulo: 'personas', accion: 'reactivar_cuenta', descripcion: `${nombreCompletoPersona(actual)} reactivada manualmente por Admin` });
+      registrarAuditoriaAdmin({ modulo: 'personas', accion: 'reactivar_cuenta', descripcion: `${nombreCompletoPersona(actual)} reactivada manualmente por Admin — vuelve a la raíz del árbol, sin líder asignada` });
       aplicarBusquedaPersonas();
       renderDetallePersona();
-      mostrarToastPersonas(`${nombreCompletoPersona(actual)} quedó activa de nuevo.`);
+      mostrarToastPersonas(`${nombreCompletoPersona(actual)} quedó activa de nuevo, sin líder asignada.`);
     });
 
     document.getElementById('confirmarBajaBtn')?.addEventListener('click', () => abrirConfirmarBajaPersona(persona));
@@ -702,7 +706,7 @@ function renderSeccionPlanMWPersona(persona) {
     <h4 class="profile-section-title">Plan MW</h4>
 
     <div class="detail-grid" style="grid-template-columns:1fr 1fr;margin-bottom:16px;">
-      <div><span>Reto de Constancia — meses cumplidos</span><strong>${mesesCumplidos}</strong></div>
+      <div><span>Reto de Constancia — compras cumplidas</span><strong>${mesesCumplidos}</strong></div>
       <div><span>Compra del mes en curso</span><strong>$${formatearDineroPersonas(montoMesActual)} / $${formatearDineroPersonas(metaMes)} MXN</strong></div>
     </div>
     <div class="timeline-wrap" style="margin-bottom:18px;">
@@ -715,7 +719,7 @@ function renderSeccionPlanMWPersona(persona) {
         const marca = otorgado ? '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> ' : (mesesCumplidos >= h.meses ? '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span> ' : '');
         return `
           <div>
-            <span>${h.meses} meses</span>
+            <span>${h.meses} compras</span>
             <strong>${marca}${h.premio}</strong>
           </div>
         `;
@@ -726,7 +730,7 @@ function renderSeccionPlanMWPersona(persona) {
       <div class="ascenso-banner">
         <div>
           <strong><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M4 9h16M12 9v11"/><path d="M8 9c0-2 1-4 4-4s4 2 4 4"/></svg></span> ¡Cumplió un hito del Reto de Constancia!</strong>
-          <p>${persona.recompensaPendiente.meses} meses acumulados. Confirma la entrega de: ${escapeHTMLPersonas(persona.recompensaPendiente.premio)}.</p>
+          <p>${persona.recompensaPendiente.meses} compras acumuladas. Confirma la entrega de: ${escapeHTMLPersonas(persona.recompensaPendiente.premio)}.</p>
         </div>
         <button class="btn btn-primary" id="confirmarRecompensaBtn" type="button">Confirmar recompensa</button>
       </div>
