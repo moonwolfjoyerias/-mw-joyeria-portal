@@ -36,6 +36,6 @@ const CATALOGO_EJEMPLO = [
   { id: 'c14', nombre: 'Pulsera Acero Minimal', material: 'acero-inoxidable', categoria: 'Pulseras', precioEtiqueta: 220, descuento: 40, disponible: true },
   { id: 'c15', nombre: 'Caja Regalo Dorada', material: 'exhibidores', precioEtiqueta: 99, descuento: 30, disponible: true },
   { id: 'c16', nombre: 'Playera MW Bordada', material: 'souvenirs', precioEtiqueta: 249, descuento: 0, disponible: true },
-  { id: 'c17', nombre: 'Set de fantasía floral', material: 'fantasia', categoria: 'Fantasía', precioEtiqueta: 280, descuento: 0, disponible: true },
+  { id: 'c17', nombre: 'Set de fantasía floral', material: 'fantasia', categoria: 'Fantasía', precioEtiqueta: 280, descuento: 40, disponible: true },
   { id: 'c18', nombre: 'Pulsera de regalo especial', material: 'otros', categoria: 'Otros', precioEtiqueta: 310, descuento: 0, disponible: true },
 ];

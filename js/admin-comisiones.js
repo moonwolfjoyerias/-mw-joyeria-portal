@@ -611,6 +611,16 @@ function abrirModalPago(liderId) {
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
 
+  const datosBancarios = r.lider.datosBancarios;
+  const tieneDatosBancarios = datosBancarios && (datosBancarios.titular || datosBancarios.banco || datosBancarios.clabe);
+  const bloqueDatosBancarios = tieneDatosBancarios
+    ? `<div class="detail-grid" style="margin-top:10px;">
+        <div><span>Titular</span><strong>${escapeHTMLPersonas(datosBancarios.titular) || '—'}</strong></div>
+        <div><span>Banco</span><strong>${escapeHTMLPersonas(datosBancarios.banco) || '—'}</strong></div>
+        <div><span>CLABE</span><strong>${escapeHTMLPersonas(datosBancarios.clabe) || '—'}</strong></div>
+      </div>`
+    : `<div class="modal-note" style="margin-top:10px;">Esta líder todavía no registró sus datos bancarios en su Mi cuenta.</div>`;
+
   if (r.estadoPago.estado === 'pagada') {
     box.style.maxWidth = '420px';
     box.innerHTML = `
@@ -623,6 +633,8 @@ function abrirModalPago(liderId) {
         <div><span>Monto pagado</span><strong>${fmtMoneyComm(r.estadoPago.montoPagado)}</strong></div>
         <div><span>Periodo</span><strong>${r.estadoPago.periodo}</strong></div>
       </div>
+      <h4 class="profile-section-title" style="margin-top:14px;">Datos bancarios</h4>
+      ${bloqueDatosBancarios}
     `;
     overlay.classList.add('open');
     return;
@@ -636,6 +648,8 @@ function abrirModalPago(liderId) {
     <div class="auth-icon">$</div>
     <h3>Registrar pago de comisión</h3>
     <p class="modal-sub">${escapeHTMLPersonas(nombreCompletoPersona(r.lider))} · ${formatearPeriodoLabelComisiones(periodoActual)} · ${subPeriodoActual === 'p1' ? 'Periodo 1' : 'Periodo 2'}</p>
+    <h4 class="profile-section-title" style="margin-top:10px;">Datos bancarios</h4>
+    ${bloqueDatosBancarios}
     <label class="form-label" style="display:block;margin-top:10px;font-size:0.78rem;color:var(--mw-text-muted);">Monto pagado</label>
     <input type="number" step="0.01" id="montoPagoInput" value="${sugerido}" style="width:100%;padding:0.6em 0.8em;border:1px solid var(--mw-border);border-radius:8px;font-size:0.85rem;">
     <div class="modal-note" style="margin-top:10px;"><strong>Recordatorio.</strong> El pago se realiza por un proceso externo; aquí solo se registra que ya ocurrió.</div>

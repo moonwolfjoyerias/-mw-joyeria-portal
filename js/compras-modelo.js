@@ -95,9 +95,14 @@ const UMBRAL_EQUIPO_CALIFICADO = 1500;   // compra total (normal+souvenir) del s
 
 // Estadísticas reales de rango de un líder para un mes dado — sustituye
 // a los campos estáticos persona.stats.* que antes se capturaban a
-// mano. equipoCalificadoPct usa el sub-periodo VIGENTE (p1 o p2, según
-// el día de hoy) porque "calificado" es una condición quincenal, no
-// mensual (a diferencia de "activa", que sí es mensual).
+// mano. equipoCalificadoPct exige que cada persona del equipo llegue al
+// umbral en LOS DOS sub-periodos del mes (p1 y p2) — igual que ya se le
+// exige a la propia líder en "Compra personal (ambos periodos)". Si a
+// alguien del equipo le falta calificar en cualquiera de los dos
+// periodos, no cuenta como calificada ese mes. subPeriodoVigente ya no
+// se usa aquí (se deja en la firma por compatibilidad con quien la
+// llama) — antes solo miraba el sub-periodo de hoy, lo cual dejaba
+// pasar a personas que solo habían calificado en uno de los dos.
 function calcularStatsRangoLider(lider, mesKey, subPeriodoVigente) {
   if (typeof calcularDescendenciaPersona !== 'function') {
     return { personasActivas: 0, produccionGrupalMes: 0, equipoCalificadoPct: 0, compraPersonalPeriodo1: 0, compraPersonalPeriodo2: 0 };
@@ -115,8 +120,9 @@ function calcularStatsRangoLider(lider, mesKey, subPeriodoVigente) {
     produccionGrupalMes += comprasMes.normal;
     if (comprasMes.total >= UMBRAL_ACTIVA_MENSUAL) personasActivas++;
 
-    const comprasSubPeriodo = obtenerComprasLiquidadasPersonaSubPeriodo(p.id, mesKey, subPeriodoVigente);
-    if (comprasSubPeriodo.total >= UMBRAL_EQUIPO_CALIFICADO) personasCalificadas++;
+    const comprasP1 = obtenerComprasLiquidadasPersonaSubPeriodo(p.id, mesKey, 'p1');
+    const comprasP2 = obtenerComprasLiquidadasPersonaSubPeriodo(p.id, mesKey, 'p2');
+    if (comprasP1.total >= UMBRAL_EQUIPO_CALIFICADO && comprasP2.total >= UMBRAL_EQUIPO_CALIFICADO) personasCalificadas++;
   });
 
   const equipoCalificadoPct = equipo.length ? Math.round((personasCalificadas / equipo.length) * 100) : 0;

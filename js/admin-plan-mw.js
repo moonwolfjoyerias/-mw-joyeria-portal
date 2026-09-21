@@ -199,8 +199,8 @@ function construirTarjetaProximo(item) {
     tituloTipo = listo ? 'Lista para su recompensa' : 'Próxima recompensa';
     sub = `${tipoCuenta} · Reto de Constancia`;
     textoFalta = listo
-      ? `Ya cumplió ${item.siguienteHito.meses} meses. Premio: <strong>${escapeHTMLPersonas(item.siguienteHito.premio)}</strong>.`
-      : `${item.mesesCumplidos} meses acumulados. Le${item.mesesFaltantes === 1 ? ' falta' : 'n faltan'} ${item.mesesFaltantes} mes${item.mesesFaltantes === 1 ? '' : 'es'} para obtener: <strong>${escapeHTMLPersonas(item.siguienteHito.premio)}</strong>.`;
+      ? `Ya cumplió ${item.siguienteHito.meses} compras. Premio: <strong>${escapeHTMLPersonas(item.siguienteHito.premio)}</strong>.`
+      : `${item.mesesCumplidos} compras acumuladas. Le${item.mesesFaltantes === 1 ? ' falta' : 'n faltan'} ${item.mesesFaltantes} compra${item.mesesFaltantes === 1 ? '' : 's'} para obtener: <strong>${escapeHTMLPersonas(item.siguienteHito.premio)}</strong>.`;
   }
 
   return `
@@ -266,7 +266,7 @@ function construirTarjetaLogro(persona, logro) {
   } else if (logro.tipo === 'recompensa_constancia') {
     icono = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M4 9h16M12 9v11"/><path d="M8 9c0-2 1-4 4-4s4 2 4 4"/></svg>';
     titulo = `${nombreCompletoPersona(persona)} ganó ${logro.premio}`;
-    sub = `${tipoCuenta} · Reto de Constancia · ${logro.hito} meses`;
+    sub = `${tipoCuenta} · Reto de Constancia · ${logro.hito} compras`;
   }
 
   return `
@@ -321,8 +321,8 @@ function abrirDetallePlanMW(personaId) {
         <div><span>Progreso a ${ascenso.siguiente.label}</span><strong>${ascenso.progresoPct}%</strong></div>
         <div><span>Le falta</span><strong>${ascenso.elegible ? 'Ya cumple todo' : construirTextoFaltanteCorto(ascenso.limitante)}</strong></div>
       ` : ''}
-      <div><span>Meses de Constancia</span><strong>${persona.constancia.mesesCumplidos}</strong></div>
-      <div><span>Próxima recompensa</span><strong>${constancia ? `${escapeHTMLPersonas(constancia.siguienteHito.premio)} (${constancia.mesesFaltantes === 0 ? 'lista' : `faltan ${constancia.mesesFaltantes} mes${constancia.mesesFaltantes === 1 ? '' : 'es'}`})` : 'Todos los hitos otorgados'}</strong></div>
+      <div><span>Compras de Constancia</span><strong>${persona.constancia.mesesCumplidos}</strong></div>
+      <div><span>Próxima recompensa</span><strong>${constancia ? `${escapeHTMLPersonas(constancia.siguienteHito.premio)} (${constancia.mesesFaltantes === 0 ? 'lista' : `faltan ${constancia.mesesFaltantes} compra${constancia.mesesFaltantes === 1 ? '' : 's'}`})` : 'Todos los hitos otorgados'}</strong></div>
       <div><span>Compra del mes en curso</span><strong>$${formatearDineroPersonas(persona.constancia.montoMesActual)} MXN</strong></div>
     </div>
 

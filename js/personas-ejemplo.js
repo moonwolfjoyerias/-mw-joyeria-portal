@@ -387,6 +387,22 @@ function actualizarFotoPersona(id, fotoUrl) {
   return { ok: true, persona };
 }
 
+// Datos para que Administración le deposite sus comisiones — solo
+// tiene sentido para Líderes (Emprendedoras no cobran comisión), pero
+// se deja disponible para cualquier persona por si algún día cambia.
+function actualizarDatosBancariosPersona(id, { titular, banco, clabe }) {
+  const personas = obtenerPersonas();
+  const persona = personas.find(p => p.id === id);
+  if (!persona) return { ok: false, error: 'La cuenta no existe.' };
+  persona.datosBancarios = {
+    titular: (titular || '').trim(),
+    banco: (banco || '').trim(),
+    clabe: (clabe || '').trim()
+  };
+  guardarPersonas(personas);
+  return { ok: true, persona };
+}
+
 // Usado por js/auth-login.js para iniciar sesión como Emprendedora/Líder.
 // Una persona 'inactiva' o 'baja' no puede iniciar sesión aunque conozca
 // la contraseña, igual que una cuenta interna desactivada.

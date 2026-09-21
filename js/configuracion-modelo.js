@@ -233,7 +233,7 @@ function _asegurarSemillaRangosYComisiones() {
 function _asegurarSemillaConstancia() {
   if (typeof HITOS_CONSTANCIA_PERSONA === 'undefined') return;
   HITOS_CONSTANCIA_PERSONA.forEach(h => {
-    _sembrarValor('constancia', `hito_${h.meses}_meses`, h.premio, 'Plan MW', `Reto de Constancia — ${h.meses} meses`);
+    _sembrarValor('constancia', `hito_${h.meses}_meses`, h.premio, 'Plan MW', `Reto de Constancia — ${h.meses} compras`);
   });
 }
 

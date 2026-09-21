@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTicketComisiones();
   renderProximoPago();
 
+  document.getElementById('editarDatosBancariosBtn')?.addEventListener('click', abrirModalDatosBancarios);
+
   document.getElementById('perfilFotoInput')?.addEventListener('change', (e) => {
     const archivo = e.target.files?.[0];
     if (!archivo) return;
@@ -74,6 +76,49 @@ function renderPerfilLider() {
   setText('perfilLider', `Líder ${RANGOS_MW[idxRango(LIDER_EJEMPLO.rangoActualKey)].label}`);
   setText('perfilTelefono', PERFIL_LIDER_EJEMPLO.telefono);
   setText('perfilCorreo', PERFIL_LIDER_EJEMPLO.correo);
+
+  const datosBancarios = persona?.datosBancarios;
+  setText('perfilDatosBancarios', (datosBancarios && (datosBancarios.titular || datosBancarios.banco || datosBancarios.clabe))
+    ? `${datosBancarios.titular || '(sin titular)'}\n${datosBancarios.banco || '(sin banco)'} · CLABE ${datosBancarios.clabe || '(sin CLABE)'}`
+    : 'Todavía no los registras');
+}
+
+// ---------- Datos bancarios (para el pago de comisiones) ----------
+function abrirModalDatosBancarios() {
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
+  const persona = idActual && typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(idActual) : null;
+  const actuales = persona?.datosBancarios || {};
+
+  box.style.maxWidth = '420px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Datos bancarios</h3>
+    <p class="modal-sub">Administración usa estos datos para depositarte tus comisiones.</p>
+    <label for="inputBancoTitular">Nombre del titular</label>
+    <input type="text" id="inputBancoTitular" value="${(actuales.titular || '').replace(/"/g, '&quot;')}">
+    <label for="inputBancoNombre" style="margin-top:10px;">Banco</label>
+    <input type="text" id="inputBancoNombre" value="${(actuales.banco || '').replace(/"/g, '&quot;')}">
+    <label for="inputBancoClabe" style="margin-top:10px;">CLABE interbancaria</label>
+    <input type="text" id="inputBancoClabe" inputmode="numeric" maxlength="18" value="${(actuales.clabe || '').replace(/"/g, '&quot;')}">
+    <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="guardarDatosBancariosBtn">Guardar</button>
+  `;
+  overlay.classList.add('open');
+
+  document.getElementById('guardarDatosBancariosBtn')?.addEventListener('click', () => {
+    if (!idActual) { mostrarToast('No se pudo identificar tu cuenta — vuelve a iniciar sesión.'); return; }
+    const titular = document.getElementById('inputBancoTitular').value.trim();
+    const banco = document.getElementById('inputBancoNombre').value.trim();
+    const clabe = document.getElementById('inputBancoClabe').value.trim();
+    if (clabe && !/^\d{18}$/.test(clabe)) { mostrarToast('La CLABE interbancaria debe tener 18 dígitos.'); return; }
+    actualizarDatosBancariosPersona(idActual, { titular, banco, clabe });
+    overlay.classList.remove('open');
+    mostrarToast('Datos bancarios actualizados.');
+    renderPerfilLider();
+  });
 }
 
 // ---------- Rifa mensual ----------

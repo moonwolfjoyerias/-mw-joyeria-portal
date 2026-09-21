@@ -252,7 +252,7 @@ function abrirModalApartar(productoId) {
     <label for="apartarVarianteSelect">Color / talla</label>
     <select id="apartarVarianteSelect" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
       <option value="">Selecciona...</option>
-      ${disponibles.map(v => `<option value="${v.id}">${escapeHTMLCatalogoVariantes(etiquetaVariante(v))} — ${v.stock} disponibles</option>`).join('')}
+      ${disponibles.map(v => `<option value="${v.id}">${escapeHTMLCatalogoVariantes(etiquetaVariante(v))}</option>`).join('')}
     </select>
     <button class="btn btn-primary" style="width:100%;margin-top:12px;" id="continuarApartarBtn" disabled>Continuar</button>
   `;
@@ -289,9 +289,12 @@ function mostrarPasoConfirmarApartar(producto, variante) {
     guardarVentanasApartado(obtenerVentanasApartado().map(v => v.id === ventanaExistente.id ? ventanaExistente : v));
     aplicarFiltros(); // refresca el grid: la existencia de la variante ya bajó
 
-    mostrarPasoExito(ventanaExistente.estado === 'activa'
-      ? 'Esta pieza se agregó a tu ventana activa — no necesitas volver a depositar.'
-      : 'Esta pieza se agregó a tu apartado. Sigue pendiente tu depósito — en cuanto Staff lo confirme, tu ventana se activa.');
+    if (ventanaExistente.estado === 'activa') {
+      mostrarPasoExito('Esta pieza se agregó a tu ventana activa — no necesitas volver a depositar.');
+    } else {
+      notificarDisponibilidadCondicionadaADeposito(ventanaExistente);
+      mostrarPasoExito('Esta pieza se agregó a tu apartado. Sigue pendiente tu depósito — deposita pronto: mientras no se confirme, tu pieza no está garantizada.');
+    }
     return;
   }
 
@@ -310,8 +313,23 @@ function mostrarPasoConfirmarApartar(producto, variante) {
   if (nuevaVentana.estado === 'activa') {
     mostrarPasoExito('Ya tenías depósito guardado de una ventana anterior — esta pieza quedó apartada de una vez, sin volver a depositar.');
   } else {
+    notificarDisponibilidadCondicionadaADeposito(nuevaVentana);
     mostrarPasoPedirDeposito();
   }
+}
+
+// Aviso persistente (no solo el modal, que se puede cerrar y olvidar):
+// mientras no se confirme el depósito, la disponibilidad de la pieza
+// no está garantizada — si tarda en depositar, Staff puede liberarla.
+function notificarDisponibilidadCondicionadaADeposito(ventana) {
+  if (typeof agregarNotificacion !== 'function' || !usuarioIdActual) return;
+  agregarNotificacion({
+    texto: 'Tu pieza quedó registrada, pero su disponibilidad depende de tu depósito — mientras no se confirme, no está garantizada y podría dejar de estar disponible. Deposita pronto para asegurarla.',
+    link: 'apartados',
+    paraId: usuarioIdActual,
+    rolDestino: 'emprendedora_lider',
+    origen: 'emprendedora_lider'
+  });
 }
 
 function mostrarPasoExito(mensaje) {
