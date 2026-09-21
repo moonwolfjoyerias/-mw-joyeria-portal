@@ -189,10 +189,19 @@ function fmtMoneyNomina(n) {
   return `$${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function etiquetaDesfaseInicioNomina(modo) {
-  if (modo === 'pagar_parcial') return 'Pagar semana incompleta';
-  if (modo === 'acumular_siguiente') return 'Acumular con siguiente semana';
-  return 'Sin ajuste';
+// Ya no es una preferencia fija — refleja el estado de la acción de
+// una sola vez (ver aplicarDesfaseInicioNomina en nomina-modelo.js).
+function etiquetaEstadoDesfaseInicioNomina(empleado) {
+  if (!empleado.desfaseInicioEstado) {
+    return typeof puedeAplicarDesfaseInicioNomina === 'function' && puedeAplicarDesfaseInicioNomina(empleado)
+      ? 'Disponible, sin usar todavía'
+      : 'No aplica (entró justo al inicio de la semana de referencia)';
+  }
+  const { modo, pagado, periodoAplicado } = empleado.desfaseInicioEstado;
+  const modoLabel = modo === 'pagar_parcial' ? 'semana incompleta' : 'acumulado a la semana siguiente';
+  return pagado
+    ? `Ya pagado (${modoLabel})`
+    : `Aplicado en ${formatearRangoSemanaNomina(periodoAplicado)}, pendiente de pago (${modoLabel})`;
 }
 
 function formatearFechaNomina(fechaISO) {
@@ -370,7 +379,7 @@ function renderVistaDetalleNomina() {
           <div><span>Salario base semanal</span><strong>${fmtMoneyNomina(empleado.salarioBase)}</strong></div>
           <div><span>Pago por hora extra</span><strong>${fmtMoneyNomina(empleado.pagoHoraExtra)}</strong></div>
           <div><span>Horario</span><strong>${empleado.diasPorSemana || 6} días/semana · ${empleado.horasPorDia || 8} hrs/turno</strong></div>
-          <div><span>Desfase de inicio</span><strong>${etiquetaDesfaseInicioNomina(empleado.modoDesfaseInicio)}</strong></div>
+          <div><span>Desfase de inicio</span><strong>${etiquetaEstadoDesfaseInicioNomina(empleado)}</strong></div>
           ${empleado.fechaBaja ? `<div><span>Fecha de baja</span><strong>${formatearFechaNomina(empleado.fechaBaja)}</strong></div>` : ''}
         </div>
       </div>
@@ -400,7 +409,10 @@ function renderVistaDetalleNomina() {
             <tbody id="nomTablaConceptosBody"></tbody>
           </table>
         </div>
-        <button class="btn btn-outline" id="nomAgregarConceptoBtn" type="button" style="width:auto;margin-top:10px;">+ Agregar concepto</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+          <button class="btn btn-outline" id="nomAgregarConceptoBtn" type="button" style="width:auto;">+ Agregar concepto</button>
+          <button class="btn btn-outline" id="nomDesfaseHorasBtn" type="button" style="width:auto;">+ Desfase de horas</button>
+        </div>
 
         <div id="nomResumenTotales" class="nom-resumen-totales"></div>
 
@@ -440,6 +452,7 @@ function renderVistaDetalleNomina() {
   });
 
   document.getElementById('nomAgregarConceptoBtn').addEventListener('click', abrirModalAgregarConceptoFila);
+  document.getElementById('nomDesfaseHorasBtn').addEventListener('click', () => abrirModalDesfaseHoras(empleado));
   document.getElementById('nomVerHistorialBtn').addEventListener('click', abrirModalHistorialAjustesNomina);
   document.getElementById('nomGenerarPdfBtn').addEventListener('click', generarComprobanteNomina);
   document.getElementById('nomEnviarValidacionBtn')?.addEventListener('click', () => confirmarEnviarNominaAValidacion(empleado));
@@ -491,7 +504,7 @@ function renderTablaConceptosNomina() {
 
   body.innerHTML = nomPeriodoEnEdicion.conceptos.map(fila => `
     <tr data-fila-id="${fila.filaId}">
-      <td>${escapeHTMLNomina(fila.nombre)}${fila.conceptoId === 'sueldo_base' || fila.conceptoId === 'horas_extra' || fila.conceptoId === 'ajuste_horario' ? '' : ` <button type="button" class="comm-icon-btn" data-nom-eliminar-fila="${fila.filaId}" title="Eliminar concepto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>`}</td>
+      <td>${escapeHTMLNomina(fila.nombre)}${fila.conceptoId === 'sueldo_base' ? '' : ` <button type="button" class="comm-icon-btn" data-nom-eliminar-fila="${fila.filaId}" title="Eliminar concepto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>`}</td>
       <td class="nom-celda-editable" data-fila-id="${fila.filaId}" data-campo="cantidad" tabindex="0">${fila.cantidad}</td>
       <td class="nom-celda-editable" data-fila-id="${fila.filaId}" data-campo="importe" tabindex="0">${fmtMoneyNomina(fila.importe)}</td>
       <td><span class="badge ${fila.tipo === 'percepcion' ? 'badge-pagada' : 'badge-pendiente'}">${fila.tipo === 'percepcion' ? 'Percepción' : 'Deducción'}</span></td>
@@ -730,6 +743,177 @@ function abrirModalAgregarConceptoFila() {
 
     nomPeriodoEnEdicion.conceptos.push(nuevaFila);
     nomPendienteCambios.push({ filaId: nuevaFila.filaId, concepto: nuevaFila.nombre, campo: 'agregado', valorAnterior: 0, valorNuevo: total });
+    programarAutoguardadoNomina();
+
+    cerrar();
+    renderTablaConceptosNomina();
+    renderResumenTotalesNomina();
+    mostrarToast('Concepto agregado.');
+
+  });
+
+}
+
+// ============================================================
+// DESFASE DE HORAS — "De inicio" (una sola vez, calculado desde la
+// fecha de inicio) o "Normal" (cambio de turno, horas de más/menos
+// que RH captura a mano y decide si se pagan como horas normales o
+// como horas extra). Se elige al capturar la nómina, no en Datos.
+// ============================================================
+
+function abrirModalDesfaseHoras(empleado) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const puedeInicio = puedeAplicarDesfaseInicioNomina(empleado);
+  const diasDesfase = calcularDiasDesfaseInicio(empleado.fechaInicio);
+  const salarioDiario = calcularSalarioDiarioEmpleado(empleado);
+
+  box.style.maxWidth = '440px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
+    <h3>Desfase de horas</h3>
+    <p class="modal-sub">${escapeHTMLNomina(empleado.nombre)}</p>
+    <div class="cfg-form-grid" style="margin-top:10px;">
+      <label class="cfg-span-2">Tipo
+        <select id="nomDesfaseTipo">
+          <option value="inicio">De inicio (primera semana incompleta)</option>
+          <option value="normal">Normal (cambio de turno / horas de más o de menos)</option>
+        </select>
+      </label>
+    </div>
+    <div id="nomDesfaseCuerpo"></div>
+    <div id="nomDesfaseError" class="auth-error" style="display:none;"></div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" id="nomDesfaseCancelarBtn" type="button">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1;" id="nomDesfaseConfirmarBtn" type="button">Agregar</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  document.getElementById('nomDesfaseCancelarBtn')?.addEventListener('click', cerrar);
+
+  const confirmarBtn = document.getElementById('nomDesfaseConfirmarBtn');
+
+  function renderCuerpo(tipo) {
+    const cuerpo = document.getElementById('nomDesfaseCuerpo');
+    if (!cuerpo) return;
+
+    if (tipo === 'inicio') {
+
+      if (!puedeInicio) {
+        const razon = empleado.desfaseInicioEstado
+          ? (empleado.desfaseInicioEstado.pagado
+              ? 'Ya se pagó su desfase de inicio — no se puede volver a aplicar.'
+              : `Ya está aplicado (semana ${formatearRangoSemanaNomina(empleado.desfaseInicioEstado.periodoAplicado)}), pendiente de pago.`)
+          : 'Este empleado no tiene desfase de inicio — su fecha de inicio ya coincide con el arranque de la semana de referencia (miércoles).';
+        cuerpo.innerHTML = `<div class="modal-note" style="margin-top:10px;">${razon}</div>`;
+        confirmarBtn.disabled = true;
+        return;
+      }
+
+      confirmarBtn.disabled = false;
+      cuerpo.innerHTML = `
+        <div class="modal-note" style="margin-top:10px;">
+          Entró el ${formatearFechaNomina(empleado.fechaInicio)} — le tocan <strong>${diasDesfase} día${diasDesfase === 1 ? '' : 's'}</strong> sueltos (${fmtMoneyNomina(salarioDiario * diasDesfase)}).
+        </div>
+        <div class="cfg-form-grid" style="margin-top:10px;">
+          <label class="cfg-span-2">¿Cómo se paga?
+            <select id="nomDesfaseModoInicio">
+              <option value="pagar_parcial">Pagar esa semana incompleta (${fmtMoneyNomina(salarioDiario * diasDesfase)} en vez del sueldo completo)</option>
+              <option value="acumular_siguiente">Acumular con la semana siguiente (sueldo completo + ${diasDesfase} día${diasDesfase === 1 ? '' : 's'} extra)</option>
+            </select>
+          </label>
+        </div>
+      `;
+
+    } else {
+
+      confirmarBtn.disabled = false;
+      cuerpo.innerHTML = `
+        <div class="cfg-form-grid" style="margin-top:10px;">
+          <label>¿Cuántas horas?<input type="number" step="0.5" min="0.5" id="nomDesfaseHoras" value="1"></label>
+          <label>¿Se pagan como...?
+            <select id="nomDesfaseTipoPago">
+              <option value="normal">Horas normales</option>
+              <option value="extra">Horas extra (doble)</option>
+            </select>
+          </label>
+        </div>
+        <div class="modal-note" style="margin-top:10px;" id="nomDesfaseNormalPreview"></div>
+      `;
+
+      const actualizarPreview = () => {
+        const horas = parseFloat(document.getElementById('nomDesfaseHoras').value) || 0;
+        const tipoPago = document.getElementById('nomDesfaseTipoPago').value;
+        const tarifa = tipoPago === 'extra' ? calcularTarifaHoraExtraEmpleado(empleado) : calcularTarifaHoraNormalEmpleado(empleado);
+        document.getElementById('nomDesfaseNormalPreview').textContent = `${horas} hora${horas === 1 ? '' : 's'} × ${fmtMoneyNomina(tarifa)} = ${fmtMoneyNomina(horas * tarifa)}`;
+      };
+      document.getElementById('nomDesfaseHoras').addEventListener('input', actualizarPreview);
+      document.getElementById('nomDesfaseTipoPago').addEventListener('change', actualizarPreview);
+      actualizarPreview();
+
+    }
+  }
+
+  document.getElementById('nomDesfaseTipo').addEventListener('change', (e) => renderCuerpo(e.target.value));
+  renderCuerpo('inicio');
+
+  confirmarBtn.addEventListener('click', () => {
+
+    const tipo = document.getElementById('nomDesfaseTipo').value;
+    const error = document.getElementById('nomDesfaseError');
+    error.style.display = 'none';
+
+    if (tipo === 'inicio') {
+
+      const modo = document.getElementById('nomDesfaseModoInicio').value;
+      const resultado = aplicarDesfaseInicioNomina(empleado.id, modo);
+      if (!resultado.ok) { error.style.display = 'block'; error.textContent = resultado.error; return; }
+
+      if (typeof registrarAuditoriaRH === 'function') {
+        registrarAuditoriaRH({
+          modulo: 'nomina',
+          accion: 'aplicar_desfase_inicio',
+          descripcion: `Desfase de inicio aplicado a ${empleado.nombre} (${formatearRangoSemanaNomina(resultado.periodoQuePaga)}).`
+        });
+      }
+
+      cerrar();
+      mostrarToast('Desfase de inicio aplicado.');
+      // Salta a la semana donde realmente quedó el ajuste (la de
+      // fechaInicio, o la siguiente si se acumuló) — si se queda en
+      // la semana que estaba viendo, no vería el cambio.
+      nomPeriodoActual = resultado.periodoQuePaga;
+      const selectPeriodo = document.getElementById('nomPeriodoSelect');
+      if (selectPeriodo) selectPeriodo.value = nomPeriodoActual;
+      renderVistaDetalleNomina();
+      return;
+
+    }
+
+    const horas = parseFloat(document.getElementById('nomDesfaseHoras').value) || 0;
+    if (horas <= 0) { error.style.display = 'block'; error.textContent = 'Captura cuántas horas fueron.'; return; }
+
+    const tipoPago = document.getElementById('nomDesfaseTipoPago').value;
+    const tarifa = tipoPago === 'extra' ? calcularTarifaHoraExtraEmpleado(empleado) : calcularTarifaHoraNormalEmpleado(empleado);
+    const nuevaFila = {
+      filaId: `fila-${Date.now()}`,
+      conceptoId: tipoPago === 'extra' ? 'horas_extra' : 'desfase_horas',
+      nombre: tipoPago === 'extra' ? 'Horas extra' : 'Desfase de horas',
+      tipo: 'percepcion',
+      cantidad: horas,
+      importe: tarifa,
+      total: horas * tarifa
+    };
+
+    nomPeriodoEnEdicion.conceptos.push(nuevaFila);
+    nomPendienteCambios.push({ filaId: nuevaFila.filaId, concepto: nuevaFila.nombre, campo: 'agregado', valorAnterior: 0, valorNuevo: nuevaFila.total });
     programarAutoguardadoNomina();
 
     cerrar();
@@ -1143,14 +1327,9 @@ function abrirModalEmpleadoNomina(id) {
       <div class="cfg-span-2" style="font-size:0.82rem;color:var(--mw-text-muted);margin-top:-6px;">
         Salario diario: <strong id="nomEmpSalarioDiarioPreview">$0.00</strong> · Tarifa hora extra (doble): <strong id="nomEmpHoraExtraPreview">$0.00</strong>
       </div>
-      <label class="cfg-span-2">Desfase de inicio (solo aplica a la primera semana)
-        <select id="nomEmpDesfase">
-          <option value="" ${!empleado?.modoDesfaseInicio ? 'selected' : ''}>Sin ajuste (entró justo al inicio de semana)</option>
-          <option value="pagar_parcial" ${empleado?.modoDesfaseInicio === 'pagar_parcial' ? 'selected' : ''}>Pagar la semana incompleta</option>
-          <option value="acumular_siguiente" ${empleado?.modoDesfaseInicio === 'acumular_siguiente' ? 'selected' : ''}>Acumular con la semana siguiente (+ días extra)</option>
-        </select>
-      </label>
-      <div class="cfg-span-2" id="nomEmpDesfaseNota" style="font-size:0.82rem;color:var(--mw-text-muted);margin-top:-6px;"></div>
+      <div class="cfg-span-2" style="font-size:0.82rem;color:var(--mw-text-muted);margin-top:-6px;">
+        El desfase de horas de la primera semana ya no se configura aquí — se aplica desde el botón "+ Desfase de horas" al capturar la nómina.
+      </div>
       <label>Método de pago
         <select id="nomEmpMetodoPago">
           <option value="Efectivo" ${(empleado?.metodoPago || 'Efectivo') === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
@@ -1185,18 +1364,8 @@ function abrirModalEmpleadoNomina(id) {
     const salarioDiario = calcularSalarioDiarioEmpleado(datosPreview);
     document.getElementById('nomEmpSalarioDiarioPreview').textContent = fmtMoneyNomina(salarioDiario);
     document.getElementById('nomEmpHoraExtraPreview').textContent = fmtMoneyNomina(calcularTarifaHoraExtraEmpleado(datosPreview));
-
-    const fechaInicio = document.getElementById('nomEmpFechaInicio').value;
-    const modo = document.getElementById('nomEmpDesfase').value;
-    const nota = document.getElementById('nomEmpDesfaseNota');
-    if (!modo || !fechaInicio) { nota.textContent = ''; return; }
-    const dias = calcularDiasDesfaseInicio(fechaInicio);
-    if (dias >= 7) { nota.textContent = 'Entró justo al inicio de la semana — no hay días de desfase que ajustar.'; return; }
-    nota.textContent = modo === 'pagar_parcial'
-      ? `Se le pagarán ${dias} día${dias === 1 ? '' : 's'} (${fmtMoneyNomina(salarioDiario * dias)}) en su primera semana, en vez del sueldo completo.`
-      : `Su primera semana no se paga sola — la siguiente semana de pago recibirá el sueldo completo más ${dias} día${dias === 1 ? '' : 's'} extra (${fmtMoneyNomina(salarioDiario * dias)}), a tarifa normal (no como hora extra).`;
   };
-  ['nomEmpSalario', 'nomEmpDiasSemana', 'nomEmpHorasDia', 'nomEmpFechaInicio', 'nomEmpDesfase'].forEach(id => {
+  ['nomEmpSalario', 'nomEmpDiasSemana', 'nomEmpHorasDia', 'nomEmpFechaInicio'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', actualizarPreviewHorarioNomina);
     document.getElementById(id)?.addEventListener('change', actualizarPreviewHorarioNomina);
   });
@@ -1241,7 +1410,6 @@ function abrirModalEmpleadoNomina(id) {
       salarioBase: parseFloat(document.getElementById('nomEmpSalario').value) || 0,
       diasPorSemana: parseFloat(document.getElementById('nomEmpDiasSemana').value) || 6,
       horasPorDia: parseFloat(document.getElementById('nomEmpHorasDia').value) || 8,
-      modoDesfaseInicio: document.getElementById('nomEmpDesfase').value || null,
       metodoPago: document.getElementById('nomEmpMetodoPago').value,
       fotoUrl: fotoEmpleadoData
     };

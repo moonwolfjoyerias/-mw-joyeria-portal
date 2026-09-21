@@ -63,15 +63,15 @@ const NOMINA_HISTORIAL_ESTADOS_KEY = 'mw-nomina-historial-estados-v1';
 // salarial real en el sistema antes de esta página).
 function construirEmpleadosNominaEjemplo() {
   return [
-    { id: 'emp-staff01', numeroEmpleado: 'EMP001', nombre: 'Ana López', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, modoDesfaseInicio: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff02', numeroEmpleado: 'EMP002', nombre: 'Mariana Torres', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, modoDesfaseInicio: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff03', numeroEmpleado: 'EMP003', nombre: 'Carlos Reyes', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, modoDesfaseInicio: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff04', numeroEmpleado: 'EMP004', nombre: 'Fernanda Ibarra', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, modoDesfaseInicio: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff05', numeroEmpleado: 'EMP005', nombre: 'Jorge Salinas', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, modoDesfaseInicio: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff06', numeroEmpleado: 'EMP006', nombre: 'Paulina Gómez', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, modoDesfaseInicio: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff07', numeroEmpleado: 'EMP007', nombre: 'Luis Medina', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, modoDesfaseInicio: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-rh01', numeroEmpleado: 'EMP008', nombre: 'Recursos Humanos', cargo: 'rh', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 2600, pagoHoraExtra: 140, diasPorSemana: 6, horasPorDia: 8, modoDesfaseInicio: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-admin01', numeroEmpleado: 'EMP009', nombre: 'Claudia', cargo: 'admin', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 3200, pagoHoraExtra: 170, diasPorSemana: 6, horasPorDia: 8, modoDesfaseInicio: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' }
+    { id: 'emp-staff01', numeroEmpleado: 'EMP001', nombre: 'Ana López', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff02', numeroEmpleado: 'EMP002', nombre: 'Mariana Torres', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff03', numeroEmpleado: 'EMP003', nombre: 'Carlos Reyes', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff04', numeroEmpleado: 'EMP004', nombre: 'Fernanda Ibarra', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff05', numeroEmpleado: 'EMP005', nombre: 'Jorge Salinas', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff06', numeroEmpleado: 'EMP006', nombre: 'Paulina Gómez', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-staff07', numeroEmpleado: 'EMP007', nombre: 'Luis Medina', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-rh01', numeroEmpleado: 'EMP008', nombre: 'Recursos Humanos', cargo: 'rh', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 2600, pagoHoraExtra: 140, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-admin01', numeroEmpleado: 'EMP009', nombre: 'Claudia', cargo: 'admin', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 3200, pagoHoraExtra: 170, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' }
   ];
 }
 
@@ -119,38 +119,132 @@ function calcularDiasDesfaseInicio(fechaInicioISO) {
   return 7 - offsetDesdeMiercoles;
 }
 
-// A qué semana de pago (lunes→domingo) le toca el ajuste de desfase:
-// "pagar_parcial" → la semana que contiene la fecha de inicio (se le
-// paga solo lo que trabajó esos días). "acumular_siguiente" → esa
-// primera semana no se le paga nada, y la SIGUIENTE semana de pago
-// recibe el sueldo completo MÁS esos días sueltos — nunca como
-// concepto aparte, siempre sumado/restado directo del sueldo base.
-function calcularAjusteDesfaseSueldoBase(empleado, periodoKey) {
+// El desfase de inicio ya NO es una preferencia fija del empleado —
+// es una acción de una sola vez que RH/Admin dispara directamente al
+// capturar la nómina (ver abrirModalDesfaseHoras en rh-nomina.js /
+// admin-nomina.js). Se aplica una única vez por empleado
+// (empleado.desfaseInicioEstado queda en null hasta que se usa) y, en
+// cuanto se paga la semana que le corresponde, queda bloqueada para
+// siempre — así nunca se puede volver a aplicar ni se recalcula sola
+// en cada carga (lo que antes producía un doble pago cuando el
+// desfase caía en la semana siguiente: esos días se contaban una vez
+// en el ajuste y otra vez dentro del sueldo completo de esa semana).
 
-  const salarioNormal = Number(empleado.salarioBase) || 0;
-  if (!empleado.modoDesfaseInicio || !empleado.fechaInicio) return salarioNormal;
+// true si este empleado todavía puede usar "Desfase de horas → De
+// inicio": nunca se ha aplicado, y su fecha de inicio sí generó días
+// sueltos (no entró justo un miércoles).
+function puedeAplicarDesfaseInicioNomina(empleado) {
+  if (!empleado || empleado.desfaseInicioEstado) return false;
+  return calcularDiasDesfaseInicio(empleado.fechaInicio) < 7;
+}
+
+// Aplica el ajuste UNA sola vez, directo sobre la fila de sueldo base
+// del periodo que corresponda (nunca como concepto aparte). modo:
+// 'pagar_parcial' (se paga solo lo que trabajó esa primera semana) |
+// 'acumular_siguiente' (esa primera semana no se paga sola; la
+// siguiente semana de pago recibe el sueldo completo + esos días).
+function aplicarDesfaseInicioNomina(empleadoId, modo) {
+
+  if (modo !== 'pagar_parcial' && modo !== 'acumular_siguiente') {
+    return { ok: false, error: 'Elige cómo se paga el desfase de inicio.' };
+  }
+
+  const empleado = obtenerEmpleadoNominaPorId(empleadoId);
+  if (!empleado) return { ok: false, error: 'El empleado no existe.' };
+  if (!puedeAplicarDesfaseInicioNomina(empleado)) {
+    return { ok: false, error: 'Este empleado ya no tiene un desfase de inicio disponible.' };
+  }
 
   const diasDesfase = calcularDiasDesfaseInicio(empleado.fechaInicio);
-  if (diasDesfase >= 7) return salarioNormal; // entró justo un miércoles, no hay nada que ajustar
-
+  const salarioNormal = Number(empleado.salarioBase) || 0;
+  const salarioDiario = calcularSalarioDiarioEmpleado(empleado);
   const lunesInicio = obtenerLunesDeSemana(new Date(`${empleado.fechaInicio}T00:00:00`));
   const periodoInicio = periodoKeyDeLunes(lunesInicio);
-  const salarioDiario = calcularSalarioDiarioEmpleado(empleado);
 
-  if (empleado.modoDesfaseInicio === 'pagar_parcial') {
-    return periodoKey === periodoInicio ? salarioDiario * diasDesfase : salarioNormal;
+  const periodos = obtenerPeriodosNomina();
+
+  function periodoEnMemoria(periodoKey) {
+    const clave = construirClavePeriodo(empleadoId, periodoKey);
+    if (!periodos[clave]) periodos[clave] = obtenerPeriodoNomina(empleadoId, periodoKey);
+    return periodos[clave];
   }
 
-  if (empleado.modoDesfaseInicio === 'acumular_siguiente') {
-    if (periodoKey === periodoInicio) return 0;
+  function fijarSueldoBase(periodo, nuevoTotal) {
+    const fila = periodo.conceptos.find(c => c.conceptoId === 'sueldo_base');
+    if (fila) { fila.importe = nuevoTotal; fila.total = nuevoTotal; }
+    Object.assign(periodo, calcularTotalesPeriodo(periodo.conceptos));
+  }
+
+  let periodoQuePaga;
+
+  if (modo === 'pagar_parcial') {
+    fijarSueldoBase(periodoEnMemoria(periodoInicio), salarioDiario * diasDesfase);
+    periodoQuePaga = periodoInicio;
+  } else {
+    fijarSueldoBase(periodoEnMemoria(periodoInicio), 0);
     const lunesSiguiente = new Date(lunesInicio);
     lunesSiguiente.setDate(lunesInicio.getDate() + 7);
-    const periodoSiguiente = periodoKeyDeLunes(lunesSiguiente);
-    if (periodoKey === periodoSiguiente) return salarioNormal + salarioDiario * diasDesfase;
-    return salarioNormal;
+    const periodoSiguienteKey = periodoKeyDeLunes(lunesSiguiente);
+    fijarSueldoBase(periodoEnMemoria(periodoSiguienteKey), salarioNormal + salarioDiario * diasDesfase);
+    periodoQuePaga = periodoSiguienteKey;
   }
 
-  return salarioNormal;
+  guardarPeriodosNomina(periodos);
+
+  const empleados = obtenerEmpleadosNomina();
+  const empleadoActual = empleados.find(e => e.id === empleadoId);
+  empleadoActual.desfaseInicioEstado = { modo, dias: diasDesfase, periodoAplicado: periodoInicio, periodoQuePaga, pagado: false };
+  guardarEmpleadosNomina(empleados);
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({
+      modulo: 'nomina',
+      accion: 'aplicar_desfase_inicio',
+      descripcion: `Desfase de inicio aplicado a ${empleado.nombre}: ${diasDesfase} día(s), ${modo === 'pagar_parcial' ? 'pagado en su primera semana' : 'acumulado con la semana siguiente'}.`
+    });
+  }
+
+  return { ok: true, empleado: empleadoActual, periodoQuePaga };
+
+}
+
+// Deshace un desfase de inicio ya aplicado pero TODAVÍA no pagado —
+// regresa los periodos afectados a su sueldo base normal. Una vez
+// pagado, ya no se puede deshacer (el pago es lo que lo bloquea).
+function quitarDesfaseInicioNomina(empleadoId) {
+
+  const empleados = obtenerEmpleadosNomina();
+  const empleado = empleados.find(e => e.id === empleadoId);
+  if (!empleado || !empleado.desfaseInicioEstado) return { ok: false, error: 'No hay un desfase de inicio aplicado.' };
+  if (empleado.desfaseInicioEstado.pagado) return { ok: false, error: 'Ya se pagó — no se puede deshacer.' };
+
+  const { modo, periodoAplicado, periodoQuePaga } = empleado.desfaseInicioEstado;
+  const salarioNormal = Number(empleado.salarioBase) || 0;
+  const periodos = obtenerPeriodosNomina();
+
+  function restaurar(periodoKey) {
+    const clave = construirClavePeriodo(empleadoId, periodoKey);
+    const periodo = periodos[clave];
+    if (!periodo) return;
+    const fila = periodo.conceptos.find(c => c.conceptoId === 'sueldo_base');
+    if (fila) { fila.importe = salarioNormal; fila.total = salarioNormal; }
+    Object.assign(periodo, calcularTotalesPeriodo(periodo.conceptos));
+  }
+
+  restaurar(periodoAplicado);
+  if (modo === 'acumular_siguiente') restaurar(periodoQuePaga);
+
+  guardarPeriodosNomina(periodos);
+
+  delete empleado.desfaseInicioEstado;
+  guardarEmpleadosNomina(empleados);
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({ modulo: 'nomina', accion: 'quitar_desfase_inicio', descripcion: `Desfase de inicio de ${empleado.nombre} deshecho (todavía no se había pagado).` });
+  }
+
+  return { ok: true };
+
 }
 
 function obtenerEmpleadosNomina() {
@@ -190,7 +284,7 @@ function existeNumeroEmpleado(numeroEmpleado, excluirId) {
   return obtenerEmpleadosNomina().some(e => e.numeroEmpleado.toLowerCase() === String(numeroEmpleado || '').toLowerCase() && e.id !== excluirId);
 }
 
-function crearEmpleadoNomina({ numeroEmpleado, nombre, cargo, fechaInicio, salarioBase, fotoUrl, metodoPago, diasPorSemana, horasPorDia, modoDesfaseInicio }) {
+function crearEmpleadoNomina({ numeroEmpleado, nombre, cargo, fechaInicio, salarioBase, fotoUrl, metodoPago, diasPorSemana, horasPorDia }) {
 
   numeroEmpleado = String(numeroEmpleado || '').trim();
   nombre = String(nombre || '').trim();
@@ -216,7 +310,7 @@ function crearEmpleadoNomina({ numeroEmpleado, nombre, cargo, fechaInicio, salar
     salarioBase: Number(salarioBase) || 0,
     diasPorSemana: Number(diasPorSemana) || 6,
     horasPorDia: Number(horasPorDia) || 8,
-    modoDesfaseInicio: modoDesfaseInicio === 'pagar_parcial' || modoDesfaseInicio === 'acumular_siguiente' ? modoDesfaseInicio : null,
+    desfaseInicioEstado: null,
     estado: 'activo',
     fotoUrl: fotoUrl || '',
     metodoPago: metodoPago || 'Efectivo'
@@ -248,9 +342,6 @@ function editarEmpleadoNomina(id, cambios) {
     salarioBase: cambios.salarioBase !== undefined ? Number(cambios.salarioBase) || 0 : empleado.salarioBase,
     diasPorSemana: cambios.diasPorSemana !== undefined ? Number(cambios.diasPorSemana) || 6 : (empleado.diasPorSemana || 6),
     horasPorDia: cambios.horasPorDia !== undefined ? Number(cambios.horasPorDia) || 8 : (empleado.horasPorDia || 8),
-    modoDesfaseInicio: cambios.modoDesfaseInicio !== undefined
-      ? (cambios.modoDesfaseInicio === 'pagar_parcial' || cambios.modoDesfaseInicio === 'acumular_siguiente' ? cambios.modoDesfaseInicio : null)
-      : (empleado.modoDesfaseInicio ?? null),
     fotoUrl: cambios.fotoUrl ?? empleado.fotoUrl,
     metodoPago: cambios.metodoPago ?? empleado.metodoPago ?? 'Efectivo'
   });
@@ -493,9 +584,13 @@ function calcularTotalesPeriodo(conceptos) {
 
 // Si el periodo ya fue guardado, lo devuelve tal cual. Si es la
 // primera vez que se abre, arma uno nuevo (sin guardarlo todavía) con
-// sueldo base y horas extra prellenados desde los datos del empleado
-// — el resto de conceptos se agregan manualmente, según la Sección 5
-// (la captura es manual, el sistema no inventa asistencia).
+// solo el sueldo base prellenado — el resto de conceptos (incluidos
+// "Horas extra" y "Desfase de horas") se agregan manualmente desde
+// el botón "+ Desfase de horas" o "+ Agregar concepto", según la
+// Sección 5 (la captura es manual, el sistema no inventa asistencia).
+// El desfase de inicio ya no se recalcula aquí en cada carga — se
+// aplica una sola vez, directo sobre esta misma fila de sueldo base,
+// desde aplicarDesfaseInicioNomina().
 function obtenerPeriodoNomina(empleadoId, periodoKey) {
 
   const clave = construirClavePeriodo(empleadoId, periodoKey);
@@ -505,24 +600,10 @@ function obtenerPeriodoNomina(empleadoId, periodoKey) {
   const empleado = obtenerEmpleadoNominaPorId(empleadoId);
   if (!empleado) return null;
 
-  // Sueldo base: si el empleado tiene desfase de inicio configurado y
-  // este periodo es al que le toca el ajuste, sale ya prorrateado (o
-  // con el extra sumado) — nunca como concepto aparte, ver
-  // calcularAjusteDesfaseSueldoBase(). Horas extra: la tarifa ya no la
-  // captura RH a mano, se calcula sola (ver calcularTarifaHoraExtraEmpleado).
-  const sueldoBaseAjustado = calcularAjusteDesfaseSueldoBase(empleado, periodoKey);
-  const tarifaHoraExtra = calcularTarifaHoraExtraEmpleado(empleado);
-  const tarifaHoraNormal = calcularTarifaHoraNormalEmpleado(empleado);
+  const salarioBase = Number(empleado.salarioBase) || 0;
 
   const conceptos = [
-    { filaId: `fila-${Date.now()}-1`, conceptoId: 'sueldo_base', nombre: 'Sueldo base', tipo: 'percepcion', cantidad: 1, importe: sueldoBaseAjustado, total: sueldoBaseAjustado },
-    { filaId: `fila-${Date.now()}-2`, conceptoId: 'horas_extra', nombre: 'Horas extra', tipo: 'percepcion', cantidad: 0, importe: tarifaHoraExtra, total: 0 },
-    // Ajuste de horario (cambio de turno): para horas de más o de
-    // menos que NO cuentan como hora extra (p. ej. alguien que
-    // ascendió de medio tiempo a tiempo completo a media semana) — se
-    // paga/descuenta a la tarifa NORMAL, no al doble. RH captura las
-    // horas a mano, igual que ya hace con "Horas extra".
-    { filaId: `fila-${Date.now()}-3`, conceptoId: 'ajuste_horario', nombre: 'Ajuste de horario', tipo: 'percepcion', cantidad: 0, importe: tarifaHoraNormal, total: 0 }
+    { filaId: `fila-${Date.now()}-1`, conceptoId: 'sueldo_base', nombre: 'Sueldo base', tipo: 'percepcion', cantidad: 1, importe: salarioBase, total: salarioBase }
   ];
 
   const totales = calcularTotalesPeriodo(conceptos);
@@ -854,6 +935,17 @@ function registrarPagoNomina(empleadoId, periodoKey, { montoPagado, registradoPo
   };
   periodo.estadoNomina = 'pagado';
   guardarPeriodosNomina(periodos);
+
+  // Si esta semana es la que le paga el desfase de inicio a este
+  // empleado (ver aplicarDesfaseInicioNomina), queda bloqueado para
+  // siempre en cuanto se registra el pago — ya no se puede volver a
+  // aplicar ni deshacer.
+  const empleados = obtenerEmpleadosNomina();
+  const empleado = empleados.find(e => e.id === empleadoId);
+  if (empleado?.desfaseInicioEstado?.periodoQuePaga === periodoKey && !empleado.desfaseInicioEstado.pagado) {
+    empleado.desfaseInicioEstado.pagado = true;
+    guardarEmpleadosNomina(empleados);
+  }
 
   if (typeof registrarAuditoriaAdmin === 'function') {
     registrarAuditoriaAdmin({
