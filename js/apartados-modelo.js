@@ -84,7 +84,17 @@ function sumarPagos(pagos = []) {
 
 function obtenerVentanasApartado() {
   try {
-    const ventanas = JSON.parse(localStorage.getItem(APARTADOS_MODELO_STORAGE_KEY));
+    const guardadas = localStorage.getItem(APARTADOS_MODELO_STORAGE_KEY);
+    if (guardadas === null) {
+      // Primera vez que se pide el registro: se siembra con compras de
+      // ejemplo ya liquidadas (igual que obtenerPersonas() siembra su
+      // propio registro) para que Comisiones/Plan MW tengan datos reales
+      // que mostrar en vez de $0 en todos lados.
+      const sembradas = typeof construirVentanasApartadoEjemplo === 'function' ? construirVentanasApartadoEjemplo() : [];
+      guardarVentanasApartado(sembradas);
+      return sembradas;
+    }
+    const ventanas = JSON.parse(guardadas);
     return Array.isArray(ventanas) ? ventanas : [];
   } catch (error) {
     return [];
@@ -186,6 +196,97 @@ function crearVentanaApartado(datos = {}) {
   };
 }
 
+
+// ============================================================
+// DATOS DE EJEMPLO — COMPRAS YA LIQUIDADAS (agosto/septiembre 2026)
+// ============================================================
+//
+// Sirve para que Admin → Comisiones y Admin → Plan MW tengan compras
+// reales que mostrar (antes de esto no existía ninguna compra
+// sembrada y todo se veía en $0). Cubre tres casos reales pedidos:
+// - ana-torres (Oro): SÍ alcanza el mínimo de su rango los dos meses.
+// - maria-camila-sanchez (Plata): en agosto solo alcanza Plata; en
+//   septiembre su equipo ya alcanza Oro — el ascenso se confirma con
+//   fecha de septiembre (ver historialLogros en personas-ejemplo.js),
+//   así que Comisiones muestra su bono de rango sin pagar ese mes.
+// - me-lider (Plata): NO alcanza el mínimo de su rango ningún mes —
+//   su equipo se quedó corto a propósito (ver personas-ejemplo.js).
+// Cada entrada es una compra normal (material 'oro-laminado', nunca
+// souvenir) ya liquidada de un solo pago, fechada en el sub-periodo
+// que le corresponde (p1 = día 10, p2 = día 20/22 del mes).
+function _compraLiquidadaEjemplo(idx, usuarioId, usuarioNombre, telefono, monto, fechaISO) {
+  if (!monto) return null;
+  const pieza = crearApartadoPieza({
+    id: `PIEZA-EJ-${idx}`,
+    producto: 'Pieza de catálogo',
+    material: 'oro-laminado',
+    total: monto,
+    estado: 'liquidada',
+    fechaSolicitud: fechaISO,
+    pagos: [{ monto, tipo: 'liquidacion', metodo: 'transferencia', referencia: null, fecha: fechaISO }]
+  });
+  return crearVentanaApartado({
+    id: `VENT-EJ-${idx}`,
+    usuarioId,
+    usuarioNombre,
+    telefono,
+    categoria: 'normal',
+    fechaInicio: fechaISO,
+    estado: 'cerrada',
+    resolucionDeposito: 'no_aplica',
+    apartados: [pieza]
+  });
+}
+
+function construirVentanasApartadoEjemplo() {
+
+  const FECHA_AGO_P1 = '2026-08-10T15:00:00.000Z';
+  const FECHA_AGO_P2 = '2026-08-22T15:00:00.000Z';
+  const FECHA_SEP_P1 = '2026-09-10T15:00:00.000Z';
+  const FECHA_SEP_P2 = '2026-09-20T15:00:00.000Z';
+
+  // [usuarioId, usuarioNombre, telefono, montoAgoP1, montoAgoP2, montoSepP1, montoSepP2]
+  const COMPRAS = [
+    // --- Equipo de ana-torres (Oro) — cumple los dos meses ---
+    ['ana-torres', 'Ana Torres', '444 111 2233', 1800, 1700, 1900, 2000],
+    ['maria-fernanda', 'María Fernanda Gómez Ruiz', '444 123 4567', 4250, 4250, 4250, 4250],
+    ['sofia-hernandez', 'Sofía Hernández', '444 234 5678', 4250, 4250, 4250, 4250],
+    ['paola-gonzalez', 'Paola González', '444 567 8901', 4250, 4250, 4250, 4250],
+
+    // --- Equipo de maria-camila-sanchez (Plata → Oro en septiembre) ---
+    ['maria-camila-sanchez', 'María Camila Sánchez Calles', '444 222 3344', 1600, 1550, 1800, 1700],
+    ['valeria-ramirez', 'Valeria Ramírez', '444 345 6789', 1800, 1800, 6500, 6500],
+    ['daniela-martinez', 'Daniela Martínez', '444 456 7890', 1600, 1600, 6500, 6500],
+    ['regina-flores', 'Regina Flores', '444 901 2345', 1600, 1600, 6500, 6500],
+    ['itzel-navarro', 'Itzel Navarro', '444 902 3456', 3500, 3000, 6500, 6500],
+    ['karla-torres', 'Karla Torres Beltrán', '444 890 1234', 4000, 4500, 700, 0],
+    ['monica-diaz', 'Mónica Díaz', '444 903 4567', 550, 0, 700, 0],
+    ['brenda-salazar', 'Brenda Salazar', '444 904 5678', 0, 0, 700, 0],
+    ['cynthia-mora', 'Cynthia Mora', '444 905 6789', 0, 0, 700, 0],
+    ['leslie-pineda', 'Leslie Pineda', '444 906 7890', 0, 0, 700, 0],
+    // andrea-castillo queda inactiva (sin compras) los dos meses.
+
+    // --- Equipo de me-lider (Plata) — NO alcanza el mínimo ningún mes ---
+    ['me-lider', 'Líder', '444 987 6543', 800, 600, 900, 1000],
+    ['gabriela-vega', 'Gabriela Vega', '444 907 8901', 2000, 1800, 1900, 2100],
+    ['renata-campos', 'Renata Campos', '444 908 9012', 1500, 1000, 1200, 1400],
+    ['ximena-duarte', 'Ximena Duarte', '444 909 0123', 600, 0, 0, 700]
+  ];
+
+  const ventanas = [];
+  let idx = 0;
+
+  COMPRAS.forEach(([usuarioId, usuarioNombre, telefono, agoP1, agoP2, sepP1, sepP2]) => {
+    [[agoP1, FECHA_AGO_P1], [agoP2, FECHA_AGO_P2], [sepP1, FECHA_SEP_P1], [sepP2, FECHA_SEP_P2]].forEach(([monto, fecha]) => {
+      idx++;
+      const ventana = _compraLiquidadaEjemplo(idx, usuarioId, usuarioNombre, telefono, monto, fecha);
+      if (ventana) ventanas.push(ventana);
+    });
+  });
+
+  return ventanas;
+
+}
 
 // ============================================================
 // CONSULTAS SOBRE UNA VENTANA

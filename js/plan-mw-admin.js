@@ -100,7 +100,17 @@ function calcularAscensoRango(persona) {
 // cambia ni la baja de rango sola.
 function calcularCumpleRangoActual(persona, periodoKey) {
 
-  const rango = RANGOS_MW.find(r => r.key === persona.rangoActualKey);
+  // El rango a exigir es el que estaba VIGENTE ese periodo (mismo
+  // criterio que ya usa el cálculo de comisiones en
+  // calcularRangoAplicadoPeriodo), no persona.rangoActualKey en crudo —
+  // ese campo ya pudo cambiar por un ascenso confirmado DESPUÉS de este
+  // periodo, y compararía un mes ya cerrado contra un rango que todavía
+  // no tenía entonces.
+  const rangoKey = periodoKey && typeof calcularRangoAplicadoPeriodo === 'function'
+    ? calcularRangoAplicadoPeriodo(persona, periodoKey).rangoKey
+    : persona.rangoActualKey;
+
+  const rango = RANGOS_MW.find(r => r.key === rangoKey);
   if (!rango || rango.key === 'sin_rango') return { aplica: false, cumple: true, items: [] };
 
   const rangoConfigurado = obtenerRangoConfigurado(rango);
