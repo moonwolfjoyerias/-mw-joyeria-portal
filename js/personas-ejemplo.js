@@ -154,10 +154,17 @@ function construirPersonasEjemplo() {
       password: 'MW0005MCSC',
       fechaAlta: '2023-08-02T00:00:00.000Z',
       liderId: 'ana-torres',
-      // Ya cumple los requisitos de Oro (10 personas / $52,500 / $1,500
-      // ambos periodos / 30% calificado) — sirve de ejemplo real para la
-      // verificación automática de ascenso de rango en Admin.
-      rangoActualKey: 'plata',
+      // Ejemplo real de ascenso de rango: en agosto 2026 su equipo real
+      // (ver js/apartados-modelo.js → construirVentanasApartadoEjemplo)
+      // solo alcanza los requisitos de Plata; en septiembre 2026 ya
+      // alcanza los de Oro (10 personas / $52,500 / $1,500 ambos
+      // periodos / 30% calificado) y el ascenso queda confirmado con
+      // fecha de septiembre — así Comisiones muestra el bono de rango
+      // sin pagar ese mes y Plan MW ya el nuevo rango vigente.
+      rangoActualKey: 'oro',
+      historialLogros: [
+        { tipo: 'ascenso_rango', fecha: '2026-09-20T18:00:00.000Z', rangoAnterior: 'plata', rangoNuevo: 'oro' }
+      ],
       stats: { personasActivas: 10, produccionGrupalMes: 52500, equipoCalificadoPct: 35, compraPersonalPeriodo1: 1800, compraPersonalPeriodo2: 1650 },
       constancia: { mesesCumplidos: 7, montoMesActual: 5200, metaMes: 8000 },
       rifa: { montoAcumuladoMes: 2150, meta: 3000 }
@@ -197,7 +204,23 @@ function construirPersonasEjemplo() {
     { id: 'paola-gonzalez', nombre: 'Paola', apellidos: 'González', telefono: '444 567 8901', liderId: 'ana-torres', usuario: 'MW0014', password: 'MW0014PG', fechaAlta: '2024-03-01T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 5, montoMesActual: 580, metaMes: 8000 }, rifa: { montoAcumuladoMes: 580, meta: 3000 } },
     { id: 'andrea-castillo', nombre: 'Andrea', apellidos: 'Castillo', telefono: '444 678 9012', liderId: 'maria-camila-sanchez', usuario: 'MW0015', password: 'MW0015AC', fechaAlta: '2023-09-22T00:00:00.000Z', categoria: 'normal', estado: 'inactiva', constancia: { mesesCumplidos: 4, montoMesActual: 0, metaMes: 8000 }, rifa: { montoAcumuladoMes: 0, meta: 3000 } },
     { id: 'camila-rojas', nombre: 'Camila', apellidos: 'Rojas', telefono: '444 789 0123', liderId: 'ana-torres', usuario: 'MW0016', password: 'MW0016CR', fechaAlta: '2024-05-30T00:00:00.000Z', categoria: 'foranea', estado: 'baja', constancia: { mesesCumplidos: 1, montoMesActual: 0, metaMes: 8000 }, rifa: { montoAcumuladoMes: 0, meta: 3000 } },
-    { id: 'karla-torres', nombre: 'Karla', apellidos: 'Torres Beltrán', telefono: '444 890 1234', liderId: 'maria-camila-sanchez', usuario: 'MW0017', password: 'MW0017KTB', fechaAlta: '2024-06-10T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 1, montoMesActual: 300, metaMes: 8000 }, rifa: { montoAcumuladoMes: 300, meta: 3000 } }
+    { id: 'karla-torres', nombre: 'Karla', apellidos: 'Torres Beltrán', telefono: '444 890 1234', liderId: 'maria-camila-sanchez', usuario: 'MW0017', password: 'MW0017KTB', fechaAlta: '2024-06-10T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 1, montoMesActual: 300, metaMes: 8000 }, rifa: { montoAcumuladoMes: 300, meta: 3000 } },
+    // Las siguientes 6 se agregaron para que el equipo real de María
+    // Camila alcance los 10 integrantes que exige Oro (ver nota de
+    // ascenso arriba y js/apartados-modelo.js para sus compras reales
+    // de agosto/septiembre 2026).
+    { id: 'regina-flores', nombre: 'Regina', apellidos: 'Flores', telefono: '444 901 2345', liderId: 'maria-camila-sanchez', usuario: 'MW0018', password: 'MW0018RF', fechaAlta: '2025-01-10T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 4, montoMesActual: 3200, metaMes: 8000 }, rifa: { montoAcumuladoMes: 3200, meta: 3000 } },
+    { id: 'itzel-navarro', nombre: 'Itzel', apellidos: 'Navarro', telefono: '444 902 3456', liderId: 'maria-camila-sanchez', usuario: 'MW0019', password: 'MW0019IN', fechaAlta: '2025-02-14T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 3, montoMesActual: 6500, metaMes: 8000 }, rifa: { montoAcumuladoMes: 6500, meta: 3000 } },
+    { id: 'monica-diaz', nombre: 'Mónica', apellidos: 'Díaz', telefono: '444 903 4567', liderId: 'maria-camila-sanchez', usuario: 'MW0020', password: 'MW0020MD', fechaAlta: '2025-03-05T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 1, montoMesActual: 700, metaMes: 8000 }, rifa: { montoAcumuladoMes: 700, meta: 3000 } },
+    { id: 'brenda-salazar', nombre: 'Brenda', apellidos: 'Salazar', telefono: '444 904 5678', liderId: 'maria-camila-sanchez', usuario: 'MW0021', password: 'MW0021BS', fechaAlta: '2025-04-18T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 1, montoMesActual: 700, metaMes: 8000 }, rifa: { montoAcumuladoMes: 700, meta: 3000 } },
+    { id: 'cynthia-mora', nombre: 'Cynthia', apellidos: 'Mora', telefono: '444 905 6789', liderId: 'maria-camila-sanchez', usuario: 'MW0022', password: 'MW0022CM', fechaAlta: '2025-05-22T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 1, montoMesActual: 700, metaMes: 8000 }, rifa: { montoAcumuladoMes: 700, meta: 3000 } },
+    { id: 'leslie-pineda', nombre: 'Leslie', apellidos: 'Pineda', telefono: '444 906 7890', liderId: 'maria-camila-sanchez', usuario: 'MW0023', password: 'MW0023LP', fechaAlta: '2025-06-30T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 1, montoMesActual: 700, metaMes: 8000 }, rifa: { montoAcumuladoMes: 700, meta: 3000 } },
+    // Equipo de "me-lider" — a propósito se queda corto de los 5
+    // integrantes que exige Plata, para servir de ejemplo real de una
+    // líder que NO alcanza el mínimo de su rango (ver Comisiones).
+    { id: 'gabriela-vega', nombre: 'Gabriela', apellidos: 'Vega', telefono: '444 907 8901', liderId: 'me-lider', usuario: 'MW0024', password: 'MW0024GV', fechaAlta: '2025-07-12T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 2, montoMesActual: 3900, metaMes: 8000 }, rifa: { montoAcumuladoMes: 3900, meta: 3000 } },
+    { id: 'renata-campos', nombre: 'Renata', apellidos: 'Campos', telefono: '444 908 9012', liderId: 'me-lider', usuario: 'MW0025', password: 'MW0025RC', fechaAlta: '2025-08-19T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 1, montoMesActual: 2500, metaMes: 8000 }, rifa: { montoAcumuladoMes: 2500, meta: 3000 } },
+    { id: 'ximena-duarte', nombre: 'Ximena', apellidos: 'Duarte', telefono: '444 909 0123', liderId: 'me-lider', usuario: 'MW0026', password: 'MW0026XD', fechaAlta: '2025-09-02T00:00:00.000Z', categoria: 'normal', estado: 'activa', constancia: { mesesCumplidos: 0, montoMesActual: 600, metaMes: 8000 }, rifa: { montoAcumuladoMes: 600, meta: 3000 } }
   ].map(datos => crearPersonaEjemplo({ ...datos, tipo: 'emprendedora', correo: `${datos.id.replace(/-/g, '.')}@example.com` }));
 
   // "me-emprendedora": la persona con la sesión abierta en el portal
