@@ -91,6 +91,38 @@ function calcularAscensoRango(persona) {
 
 }
 
+// A diferencia de calcularAscensoRango (que compara contra el
+// SIGUIENTE rango), esto compara contra los requisitos de SU PROPIO
+// rango actual — para avisar en Comisiones si una líder ya no alcanza
+// el mínimo de su propio rango este periodo. Es solo informativo: el
+// % de comisión que se le aplica ya quedó fijo para el periodo (ver
+// calcularRangoAplicadoPeriodo en comisiones-modelo.js), esto no lo
+// cambia ni la baja de rango sola.
+function calcularCumpleRangoActual(persona, periodoKey) {
+
+  const rango = RANGOS_MW.find(r => r.key === persona.rangoActualKey);
+  if (!rango || rango.key === 'sin_rango') return { aplica: false, cumple: true, items: [] };
+
+  const rangoConfigurado = obtenerRangoConfigurado(rango);
+
+  const statsReales = typeof calcularStatsRangoLider === 'function'
+    ? calcularStatsRangoLider(persona, periodoKey || mesKeyActualComprasModelo(), subPeriodoActualComprasModelo())
+    : persona.stats;
+
+  const { personasActivas, produccionGrupalMes, equipoCalificadoPct, compraPersonalPeriodo1, compraPersonalPeriodo2 } = statsReales;
+  const compraMinima = Math.min(compraPersonalPeriodo1, compraPersonalPeriodo2);
+
+  const items = [
+    { label: 'Personas activas', cumple: personasActivas >= rangoConfigurado.personas, valores: `${personasActivas} / ${rangoConfigurado.personas}` },
+    { label: 'Compra personal (ambos periodos)', cumple: compraMinima >= rangoConfigurado.compra, valores: `$${formatearDineroPersonas(compraPersonalPeriodo1)} y $${formatearDineroPersonas(compraPersonalPeriodo2)} / $${formatearDineroPersonas(rangoConfigurado.compra)}` },
+    { label: 'Equipo calificado', cumple: equipoCalificadoPct >= rangoConfigurado.calificado, valores: `${equipoCalificadoPct}% / ${rangoConfigurado.calificado}%` },
+    { label: 'Producción grupal', cumple: produccionGrupalMes >= rangoConfigurado.produccion, valores: `$${formatearDineroPersonas(produccionGrupalMes)} / $${formatearDineroPersonas(rangoConfigurado.produccion)}` }
+  ];
+
+  return { aplica: true, cumple: items.every(it => it.cumple), items };
+
+}
+
 // Para tarjetas de "Próximos a lograr": el requisito más atrasado (el
 // que realmente falta) y qué tan cerca está en general (0-100%).
 function calcularProximidadRango(persona) {

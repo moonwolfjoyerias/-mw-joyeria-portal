@@ -214,9 +214,23 @@ function aplicarFiltroLideres() {
 
 function construirCardLider(r) {
 
-  const info = obtenerInfoSubPeriodo(periodoActual, subPeriodoActual);
+  // r ya viene calculado para el sub-periodo elegido arriba (toggle
+  // Periodo 1/Periodo 2) — eso sigue rigiendo el pago (son dos pagos
+  // reales, en fechas distintas) y las exportaciones. Para la tabla de
+  // equipo, que ahora muestra los dos periodos juntos, se calcula
+  // aparte el que falte (reutilizando el mismo motor una sola vez más
+  // por líder, no todas las líderes).
+  const rP1 = subPeriodoActual === 'p1' ? r : calcularComisionesLider(r.lider, periodoActual, 'p1');
+  const rP2 = subPeriodoActual === 'p2' ? r : calcularComisionesLider(r.lider, periodoActual, 'p2');
+  const totalComisionCombinado = rP1.totalComision + rP2.totalComision;
+
   const estadoPagoLabel = r.estadoPago.estado === 'pagada' ? 'Pagada' : 'Pendiente';
   const estadoPagoClase = r.estadoPago.estado === 'pagada' ? 'badge-pagada' : 'badge-pendiente';
+
+  const minimo = typeof calcularCumpleRangoActual === 'function' ? calcularCumpleRangoActual(r.lider, periodoActual) : { aplica: false, cumple: true };
+  const avisoMinimo = minimo.aplica && !minimo.cumple
+    ? `<span class="badge badge-correccion" title="${minimo.items.filter(it => !it.cumple).map(it => `${it.label}: ${it.valores}`).join(' · ')}">No alcanza el mínimo de ${rangoLabel(r.rangoKey)} este periodo</span>`
+    : '';
 
   return `
     <div class="comm-lider-card" data-lider-card="${r.lider.id}" data-nombre-lider="${escapeAttributePersonas(nombreCompletoPersona(r.lider))}">
@@ -227,23 +241,15 @@ function construirCardLider(r) {
             <span class="badge badge-ascenso">Rango aplicado: ${rangoLabel(r.rangoKey)}</span>
             <span>Origen: ${escapeHTMLPersonas(r.origenRango)}</span>
             <span>· Equipo: ${r.totalEquipo}</span>
-            <span>· ${info.label} (paga ${info.fechaPago})</span>
             <span class="badge ${estadoPagoClase}">${estadoPagoLabel}</span>
             ${r.tieneAjustes ? '<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Con ajustes manuales</span>' : ''}
+            ${avisoMinimo}
           </div>
         </div>
         <div class="comm-lider-totales">
           <div class="comm-lider-total-item">
-            <span>Con comisión / Sin comisión</span>
-            <strong style="font-size:0.85rem;">${r.personasConComision} / ${r.personasSinComision}</strong>
-          </div>
-          <div class="comm-lider-total-item">
-            <span>Compra del equipo considerada</span>
-            <strong style="font-size:0.85rem;">${fmtMoneyComm(r.compraConsiderada)}</strong>
-          </div>
-          <div class="comm-lider-total-item">
-            <span>Comisión total</span>
-            <strong>${fmtMoneyComm(r.totalComision)}</strong>
+            <span>Comisión total (ambos periodos)</span>
+            <strong>${fmtMoneyComm(totalComisionCombinado)}</strong>
           </div>
           <button class="btn btn-outline comm-ver-equipo-btn" type="button" data-toggle-equipo="${r.lider.id}">${expandedLideres.has(r.lider.id) ? '－ Ocultar equipo' : '＋ Ver equipo'}</button>
           <button class="btn btn-outline comm-ver-equipo-btn" type="button" data-generar-pdf="${r.lider.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h12v20l-2-1.5L14 22l-2-1.5L10 22l-2-1.5L6 22V2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span> Generar PDF</button>
@@ -253,13 +259,11 @@ function construirCardLider(r) {
       ${r.bono ? construirBloqueBono(r) : ''}
 
       <div class="comm-niveles" id="niveles-${r.lider.id}" ${expandedLideres.has(r.lider.id) ? '' : 'hidden'}>
-        ${r.niveles.map(n => construirBloqueNivel(r, n)).join('')}
+        ${rP1.niveles.map((nP1, idx) => construirBloqueNivel(r.lider.id, nP1, rP2.niveles[idx])).join('')}
       </div>
 
       <div class="comm-pago-block">
-        <span>${r.estadoPago.estado === 'pagada'
-          ? `Pagada el ${formatearFechaPersonas(r.estadoPago.fechaPago)} por ${escapeHTMLPersonas(r.estadoPago.registradoPor)} — ${fmtMoneyComm(r.estadoPago.montoPagado)}`
-          : 'Sin registrar pago todavía. El pago se realiza por un proceso externo y se registra aquí manualmente.'}</span>
+        <span class="badge ${estadoPagoClase}">${estadoPagoLabel}</span>
         <button class="btn btn-outline" type="button" style="width:auto;" data-registrar-pago="${r.lider.id}">
           ${r.estadoPago.estado === 'pagada' ? 'Ver detalle de pago' : 'Registrar pago'}
         </button>
@@ -285,14 +289,18 @@ function construirBloqueBono(r) {
 // BLOQUE DE NIVEL
 // ============================================================
 
-function construirBloqueNivel(r, n) {
-  const claveNivel = `${r.lider.id}-${n.nivel}`;
+function construirBloqueNivel(liderId, nP1, nP2) {
+  const claveNivel = `${liderId}-${nP1.nivel}`;
   const abierto = expandedNiveles.has(claveNivel);
+  const totalNivelCombinado = nP1.filas.reduce((s, f1) => {
+    const f2 = (nP2?.filas || []).find(f => f.persona.id === f1.persona.id);
+    return s + f1.comisionFinal + (f2 ? f2.comisionFinal : 0);
+  }, 0);
   return `
     <div class="comm-nivel-block" data-nivel-block="${claveNivel}">
       <button type="button" class="comm-nivel-header ${abierto ? 'open' : ''}" data-toggle-nivel="${claveNivel}">
-        <span>Nivel ${n.nivel} · ${n.pct}% · ${n.filas.length} persona${n.filas.length === 1 ? '' : 's'}</span>
-        <span class="comm-nivel-total">${fmtMoneyComm(n.totalNivel)} <span class="comm-nivel-chevron">▾</span></span>
+        <span>Nivel ${nP1.nivel} · ${nP1.pct}% · ${nP1.filas.length} persona${nP1.filas.length === 1 ? '' : 's'}</span>
+        <span class="comm-nivel-total">${fmtMoneyComm(totalNivelCombinado)} <span class="comm-nivel-chevron">▾</span></span>
       </button>
       <div class="comm-nivel-body" id="nivel-body-${claveNivel}" ${abierto ? '' : 'hidden'}>
         <div class="catalog-table-wrap comm-tabla-wrap">
@@ -300,18 +308,24 @@ function construirBloqueNivel(r, n) {
             <thead>
               <tr>
                 <th>Emprendedora</th>
-                <th>Compra válida</th>
-                <th>Souvenirs</th>
-                <th>Base comisión</th>
+                <th>Periodo 1</th>
+                <th>Base Comisión P1</th>
                 <th>%</th>
-                <th>Comisión calculada</th>
+                <th>Comisión calculada P1</th>
+                <th>Periodo 2</th>
+                <th>Base Comisión P2</th>
+                <th>%</th>
+                <th>Comisión calculada P2</th>
                 <th>Ajuste manual</th>
                 <th>Comisión final</th>
               </tr>
             </thead>
             <tbody>
-              ${n.filas.length ? n.filas.map(f => construirFilaComisionHTML(r.lider.id, f)).join('') : `
-                <tr><td colspan="8" class="catalog-empty-cell">Todavía no hay integrantes en este nivel.</td></tr>
+              ${nP1.filas.length ? nP1.filas.map(f1 => {
+                const f2 = (nP2?.filas || []).find(f => f.persona.id === f1.persona.id) || null;
+                return construirFilaComisionHTML(liderId, f1, f2);
+              }).join('') : `
+                <tr><td colspan="11" class="catalog-empty-cell">Todavía no hay integrantes en este nivel.</td></tr>
               `}
             </tbody>
           </table>
@@ -321,37 +335,116 @@ function construirBloqueNivel(r, n) {
   `;
 }
 
-function construirFilaComisionHTML(liderId, f) {
+function construirCeldaEditableComision(liderId, f, subPeriodo) {
+  if (!f) return `<td>—</td>`;
   const ajustada = !!f.ajuste;
-  const diferencia = ajustada ? f.comisionFinal - f.comisionCalculada : 0;
+  return `<td class="comm-celda-editable ${ajustada ? 'ajustado' : 'calc'}"
+      data-editable-comision
+      data-clave="${f.clave}"
+      data-lider="${liderId}"
+      data-persona="${f.persona.id}"
+      data-subperiodo="${subPeriodo}"
+      data-calculada="${f.comisionCalculada}"
+      data-final="${f.comisionFinal}"
+      tabindex="0">${fmtMoneyComm(f.comisionFinal)}</td>`;
+}
+
+function construirFilaComisionHTML(liderId, f1, f2) {
+  const ajustada1 = !!f1.ajuste;
+  const ajustada2 = !!(f2 && f2.ajuste);
+  const diferencia1 = ajustada1 ? f1.comisionFinal - f1.comisionCalculada : 0;
+  const diferencia2 = ajustada2 ? f2.comisionFinal - f2.comisionCalculada : 0;
+  const ajusteCombinado = diferencia1 + diferencia2;
+  const comisionFinalCombinada = f1.comisionFinal + (f2 ? f2.comisionFinal : 0);
+
+  const iconoRestaurar = (f, subPeriodo) => !f || !f.ajuste ? '' : `<button type="button" class="comm-icon-btn" data-restaurar="${f.clave}" data-lider="${liderId}" data-persona="${f.persona.id}" data-subperiodo="${subPeriodo}" title="Restaurar cálculo automático (Periodo ${subPeriodo === 'p1' ? '1' : '2'})">↺</button>`;
+  const iconoHistorial = (f, subPeriodo) => !f ? '' : `<button type="button" class="comm-icon-btn" data-historial="${f.clave}" data-lider="${liderId}" data-persona="${f.persona.id}" data-subperiodo="${subPeriodo}" title="Ver historial (Periodo ${subPeriodo === 'p1' ? '1' : '2'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>`;
+
   return `
-    <tr data-fila-persona="${f.persona.id}" data-clave="${f.clave}">
-      <td>${escapeHTMLPersonas(nombreCompletoPersona(f.persona))}</td>
-      <td>${fmtMoneyComm(f.compraNormal)}</td>
-      <td>${f.compraSouvenir > 0 ? `${fmtMoneyComm(f.compraSouvenir)} <span style="color:var(--mw-text-muted);">(no comisiona)</span>` : '—'}</td>
-      <td>${fmtMoneyComm(f.base)}</td>
-      <td>${f.pct}%</td>
-      <td>${fmtMoneyComm(f.comisionCalculada)}</td>
-      <td>
-        ${ajustada ? `${diferencia >= 0 ? '+' : ''}${fmtMoneyComm(diferencia)}` : '—'}
-        ${ajustada ? `<button type="button" class="comm-icon-btn" data-restaurar="${f.clave}" data-lider="${liderId}" data-persona="${f.persona.id}" title="Restaurar cálculo automático">↺</button>` : ''}
-        <button type="button" class="comm-icon-btn" data-historial="${f.clave}" data-lider="${liderId}" data-persona="${f.persona.id}" title="Ver historial de cambios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>
+    <tr data-fila-persona="${f1.persona.id}">
+      <td>${escapeHTMLPersonas(nombreCompletoPersona(f1.persona))}</td>
+      <td>${fmtMoneyComm(f1.compraNormal)}</td>
+      <td>${fmtMoneyComm(f1.base)}</td>
+      <td>${f1.pct}%</td>
+      ${construirCeldaEditableComision(liderId, f1, 'p1')}
+      <td>${f2 ? fmtMoneyComm(f2.compraNormal) : '—'}</td>
+      <td>${f2 ? fmtMoneyComm(f2.base) : '—'}</td>
+      <td>${f2 ? `${f2.pct}%` : '—'}</td>
+      ${construirCeldaEditableComision(liderId, f2, 'p2')}
+      <td data-celda-ajuste>
+        ${ajustada1 || ajustada2 ? `${ajusteCombinado >= 0 ? '+' : ''}${fmtMoneyComm(ajusteCombinado)}` : '—'}
+        ${iconoRestaurar(f1, 'p1')}${iconoRestaurar(f2, 'p2')}
+        ${iconoHistorial(f1, 'p1')}${iconoHistorial(f2, 'p2')}
       </td>
-      <td class="comm-celda-editable ${ajustada ? 'ajustado' : 'calc'}"
-          data-editable-comision
-          data-clave="${f.clave}"
-          data-lider="${liderId}"
-          data-persona="${f.persona.id}"
-          data-calculada="${f.comisionCalculada}"
-          data-final="${f.comisionFinal}"
-          tabindex="0">${fmtMoneyComm(f.comisionFinal)}</td>
+      <td data-celda-final-combinada><strong>${fmtMoneyComm(comisionFinalCombinada)}</strong></td>
     </tr>
   `;
+}
+
+// Vuelve a calcular y pintar SOLO "Ajuste manual" y "Comisión final" de
+// una fila, leyendo el estado actual (ya editado) de sus dos celdas de
+// periodo — para que editar Periodo 1 o Periodo 2 se refleje de
+// inmediato en el total combinado, sin esperar el autoguardado
+// (~700ms) ni volver a pintar toda la tabla.
+function actualizarCombinadosFila(tr) {
+  if (!tr) return;
+
+  function leerCelda(selector) {
+    const celda = tr.querySelector(selector);
+    if (!celda) return null;
+    return {
+      clave: celda.dataset.clave,
+      lider: celda.dataset.lider,
+      persona: celda.dataset.persona,
+      calculada: parseFloat(celda.dataset.calculada) || 0,
+      final: parseFloat(celda.dataset.final) || 0,
+      ajustado: celda.classList.contains('ajustado')
+    };
+  }
+
+  const d1 = leerCelda('[data-subperiodo="p1"]');
+  const d2 = leerCelda('[data-subperiodo="p2"]');
+  const diferencia1 = d1 && d1.ajustado ? d1.final - d1.calculada : 0;
+  const diferencia2 = d2 && d2.ajustado ? d2.final - d2.calculada : 0;
+  const ajusteCombinado = diferencia1 + diferencia2;
+  const finalCombinado = (d1 ? d1.final : 0) + (d2 ? d2.final : 0);
+
+  const iconoRestaurar = (d, subPeriodo) => !d || !d.ajustado ? '' : `<button type="button" class="comm-icon-btn" data-restaurar="${d.clave}" data-lider="${d.lider}" data-persona="${d.persona}" data-subperiodo="${subPeriodo}" title="Restaurar cálculo automático (Periodo ${subPeriodo === 'p1' ? '1' : '2'})">↺</button>`;
+  const iconoHistorial = (d, subPeriodo) => !d ? '' : `<button type="button" class="comm-icon-btn" data-historial="${d.clave}" data-lider="${d.lider}" data-persona="${d.persona}" data-subperiodo="${subPeriodo}" title="Ver historial (Periodo ${subPeriodo === 'p1' ? '1' : '2'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>`;
+
+  const celdaAjuste = tr.querySelector('[data-celda-ajuste]');
+  if (celdaAjuste) {
+    celdaAjuste.innerHTML = `
+      ${(d1?.ajustado || d2?.ajustado) ? `${ajusteCombinado >= 0 ? '+' : ''}${fmtMoneyComm(ajusteCombinado)}` : '—'}
+      ${iconoRestaurar(d1, 'p1')}${iconoRestaurar(d2, 'p2')}
+      ${iconoHistorial(d1, 'p1')}${iconoHistorial(d2, 'p2')}
+    `;
+    wireBotonesAjusteFila(celdaAjuste);
+  }
+
+  const celdaFinal = tr.querySelector('[data-celda-final-combinada]');
+  if (celdaFinal) celdaFinal.innerHTML = `<strong>${fmtMoneyComm(finalCombinado)}</strong>`;
 }
 
 // ============================================================
 // EVENTOS DE LA TABLA
 // ============================================================
+
+function wireBotonesAjusteFila(scope) {
+  scope.querySelectorAll('[data-restaurar]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      confirmarRestaurarCalculo(btn.getAttribute('data-lider'), btn.getAttribute('data-persona'), btn.getAttribute('data-subperiodo'));
+    });
+  });
+
+  scope.querySelectorAll('[data-historial]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      abrirHistorialAjuste(btn.getAttribute('data-lider'), btn.getAttribute('data-persona'), btn.getAttribute('data-subperiodo'));
+    });
+  });
+}
 
 function wireEventosTabla() {
 
@@ -384,19 +477,7 @@ function wireEventosTabla() {
     });
   });
 
-  document.querySelectorAll('[data-restaurar]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      confirmarRestaurarCalculo(btn.getAttribute('data-lider'), btn.getAttribute('data-persona'));
-    });
-  });
-
-  document.querySelectorAll('[data-historial]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      abrirHistorialAjuste(btn.getAttribute('data-lider'), btn.getAttribute('data-persona'));
-    });
-  });
+  wireBotonesAjusteFila(document);
 
   document.querySelectorAll('[data-registrar-pago]').forEach(btn => {
     btn.addEventListener('click', () => abrirModalPago(btn.getAttribute('data-registrar-pago')));
@@ -509,7 +590,7 @@ function finalizarEdicionCelda(td, modo) {
       liderId: td.dataset.lider,
       emprendedoraId: td.dataset.persona,
       periodoKey: periodoActual,
-      subPeriodo: subPeriodoActual,
+      subPeriodo: td.dataset.subperiodo,
       valorCalculado: calculada,
       valorNuevo: nuevoValor,
       motivo: '',
@@ -521,6 +602,7 @@ function finalizarEdicionCelda(td, modo) {
     td.innerHTML = fmtMoneyComm(nuevoValor);
     td.className = 'comm-celda-editable ajustado';
 
+    actualizarCombinadosFila(td.closest('tr'));
     programarAutoguardado();
 
   } finally {
@@ -549,14 +631,15 @@ function moverAlaSiguienteCelda(tdActual, direccion = 1) {
 // RESTAURAR CÁLCULO AUTOMÁTICO
 // ============================================================
 
-function confirmarRestaurarCalculo(liderId, personaId) {
+function confirmarRestaurarCalculo(liderId, personaId, subPeriodo) {
+  subPeriodo = subPeriodo || subPeriodoActual;
   abrirAutorizacionAdmin({
     titulo: 'Restaurar cálculo automático',
-    mensaje: 'Se eliminará el ajuste manual de esta comisión y volverá a mostrarse el valor calculado automáticamente. Esta acción queda registrada.',
+    mensaje: `Se eliminará el ajuste manual de esta comisión (Periodo ${subPeriodo === 'p1' ? '1' : '2'}) y volverá a mostrarse el valor calculado automáticamente. Esta acción queda registrada.`,
     onConfirmar: () => {
-      delete pendienteBorrador[construirClaveAjuste(liderId, personaId, periodoActual, subPeriodoActual)];
+      delete pendienteBorrador[construirClaveAjuste(liderId, personaId, periodoActual, subPeriodo)];
       restaurarCalculoAutomatico({
-        liderId, emprendedoraId: personaId, periodoKey: periodoActual, subPeriodo: subPeriodoActual,
+        liderId, emprendedoraId: personaId, periodoKey: periodoActual, subPeriodo,
         usuarioAdminId: ADMIN_IDENTIDAD.usuarioId
       });
       mostrarToast('Cálculo automático restaurado.');
@@ -569,12 +652,13 @@ function confirmarRestaurarCalculo(liderId, personaId) {
 // HISTORIAL DE AJUSTES (TRAZABILIDAD)
 // ============================================================
 
-function abrirHistorialAjuste(liderId, personaId) {
+function abrirHistorialAjuste(liderId, personaId, subPeriodo) {
+  subPeriodo = subPeriodo || subPeriodoActual;
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
 
-  const historial = obtenerHistorialAjustePersona(liderId, personaId, periodoActual, subPeriodoActual);
+  const historial = obtenerHistorialAjustePersona(liderId, personaId, periodoActual, subPeriodo);
   const persona = obtenerPersonaPorId(personaId);
 
   box.style.maxWidth = '480px';
@@ -582,7 +666,7 @@ function abrirHistorialAjuste(liderId, personaId) {
     <button class="modal-close" data-close>&times;</button>
     <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
     <h3>Historial de ajustes</h3>
-    <p class="modal-sub">${escapeHTMLPersonas(nombreCompletoPersona(persona || {}))} · ${formatearPeriodoLabelComisiones(periodoActual)} · ${subPeriodoActual === 'p1' ? 'Periodo 1' : 'Periodo 2'}</p>
+    <p class="modal-sub">${escapeHTMLPersonas(nombreCompletoPersona(persona || {}))} · ${formatearPeriodoLabelComisiones(periodoActual)} · ${subPeriodo === 'p1' ? 'Periodo 1' : 'Periodo 2'}</p>
     ${historial.length ? `
       <div class="ct-detail-list" style="border-bottom:0;">
         ${historial.map(h => `
