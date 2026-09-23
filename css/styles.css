@@ -204,8 +204,15 @@ a:hover { color: var(--mw-gold); }
   line-height: 1.03;
   margin-bottom: 1.3rem;
 }
+.hero-subtitulo {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--mw-purple);
+  max-width: 480px;
+  margin-bottom: 0.6rem;
+}
 .hero .lede {
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   color: var(--mw-text-muted);
   max-width: 480px;
   margin-bottom: 2rem;
@@ -406,10 +413,12 @@ a:hover { color: var(--mw-gold); }
   margin: 0 auto 3rem;
   padding: 0 2rem;
 }
+.nosotros-historia-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; height: 100%; }
 .nosotros-fundadoras-foto { min-height: 320px; }
 @media (max-width: 760px) {
   .nosotros-historia-block { grid-template-columns: 1fr; }
-  .nosotros-fundadoras-foto { min-height: 0; }
+  .nosotros-historia-fotos { grid-template-columns: 1fr 1fr; }
+  .nosotros-fundadoras-foto { min-height: 160px; }
 }
 .collection-header {
   display: flex;
@@ -2080,6 +2089,27 @@ a:hover { color: var(--mw-gold); }
 
 .catalog-empty-cell strong { color: #422361; margin-bottom: 5px; }
 
+/* ---------- Placeholder "seguimos trabajando" (módulos en construcción) ---------- */
+.placeholder-en-construccion {
+  text-align: center;
+  padding: 4.5rem 1.5rem;
+  max-width: 420px;
+  margin: 2rem auto;
+}
+.placeholder-en-construccion .icon-circle-big {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--mw-lilac-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.3rem;
+}
+.placeholder-en-construccion .icon-circle-big svg { width: 40px; height: 40px; color: var(--mw-purple); }
+.placeholder-en-construccion h2 { font-size: 1.4rem; margin-bottom: 0.6rem; }
+.placeholder-en-construccion p { color: var(--mw-text-muted); font-size: 0.95rem; margin: 0; }
+
 /* ---------- Actividad (bitácora compartida Staff/RH/Admin) ---------- */
 .activity-person {
   display: flex;
@@ -3480,6 +3510,15 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   font-weight: 600;
 }
 
+.ine-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.ine-preview-grid .ine-preview { margin-bottom: 0; }
+@media (max-width: 480px) {
+  .ine-preview-grid { grid-template-columns: 1fr; }
+}
 .ine-preview {
   border: 1px dashed #ddd1e4;
   border-radius: 10px;
@@ -3487,6 +3526,7 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   text-align: center;
   margin-bottom: 16px;
 }
+.ine-preview .field-help { display: block; margin-bottom: 6px; font-weight: 600; }
 .ine-preview img {
   max-width: 100%;
   max-height: 260px;

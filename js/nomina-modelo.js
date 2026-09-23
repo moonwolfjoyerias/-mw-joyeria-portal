@@ -644,6 +644,30 @@ function guardarPeriodoNomina(periodo) {
   return periodos[clave];
 }
 
+// El empleado firma de recibido su propio recibo (Staff → Mi cuenta) —
+// aparte de estadoNomina (que es la validación RH/Admin del CONTENIDO
+// de la nómina, un proceso distinto) para no interferir con esa
+// máquina de estados. Solo aplica a un periodo que RH ya capturó
+// (periodo.guardado), y es de una sola vez: firmar de nuevo no cambia
+// la fecha ya registrada.
+function firmarReciboNomina(empleadoId, periodoKey, { usuarioId, usuarioNombre }) {
+
+  const periodo = obtenerPeriodoNomina(empleadoId, periodoKey);
+  if (!periodo || !periodo.guardado) return { ok: false, error: 'Todavía no hay una nómina capturada esta semana para firmar.' };
+  if (periodo.firmaEmpleado?.firmado) return { ok: true, periodo };
+
+  const clave = construirClavePeriodo(empleadoId, periodoKey);
+  const periodos = obtenerPeriodosNomina();
+  periodos[clave] = {
+    ...periodo,
+    firmaEmpleado: { firmado: true, fecha: new Date().toISOString(), usuarioId: usuarioId || null, usuarioNombre: usuarioNombre || '' }
+  };
+  guardarPeriodosNomina(periodos);
+
+  return { ok: true, periodo: periodos[clave] };
+
+}
+
 // RH puede modificar la fecha de pago propuesta (sección 6.1) — nunca
 // modifica otros periodos ni el dato permanente del empleado.
 function actualizarFechaPagoNomina(empleadoId, periodoKey, nuevaFecha, { usuarioId, usuarioNombre, usuarioRol }) {

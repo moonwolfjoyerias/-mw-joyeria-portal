@@ -84,7 +84,9 @@ function renderPerfilLider() {
 }
 
 // ---------- Datos bancarios (para el pago de comisiones) ----------
-function abrirModalDatosBancarios() {
+let caratulaClabeArchivoTemporal = null;
+
+async function abrirModalDatosBancarios() {
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
@@ -92,6 +94,7 @@ function abrirModalDatosBancarios() {
   const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
   const persona = idActual && typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(idActual) : null;
   const actuales = persona?.datosBancarios || {};
+  caratulaClabeArchivoTemporal = null;
 
   box.style.maxWidth = '420px';
   box.innerHTML = `
@@ -104,17 +107,42 @@ function abrirModalDatosBancarios() {
     <input type="text" id="inputBancoNombre" value="${(actuales.banco || '').replace(/"/g, '&quot;')}">
     <label for="inputBancoClabe" style="margin-top:10px;">CLABE interbancaria</label>
     <input type="text" id="inputBancoClabe" inputmode="numeric" maxlength="18" value="${(actuales.clabe || '').replace(/"/g, '&quot;')}">
+    <label for="inputCaratulaClabe" style="margin-top:10px;">Carátula de la CLABE (foto o PDF)</label>
+    <input type="file" id="inputCaratulaClabe" accept="image/*,application/pdf">
+    <small class="field-help" id="caratulaClabeActual">${actuales.caratulaClabeUrl ? 'Ya tienes una carátula guardada — sube otra solo si quieres reemplazarla.' : 'Todavía no subes tu carátula.'}</small>
+    <div id="datosBancariosError" class="auth-error" style="display:none;"></div>
     <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="guardarDatosBancariosBtn">Guardar</button>
   `;
   overlay.classList.add('open');
 
-  document.getElementById('guardarDatosBancariosBtn')?.addEventListener('click', () => {
+  document.getElementById('inputCaratulaClabe')?.addEventListener('change', (e) => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) { caratulaClabeArchivoTemporal = null; return; }
+    const validacion = validarArchivoDocumento(archivo, { permitirPdf: true });
+    if (!validacion.ok) {
+      const error = document.getElementById('datosBancariosError');
+      if (error) { error.textContent = validacion.error; error.style.display = 'block'; }
+      e.target.value = '';
+      caratulaClabeArchivoTemporal = null;
+      return;
+    }
+    caratulaClabeArchivoTemporal = archivo;
+  });
+
+  document.getElementById('guardarDatosBancariosBtn')?.addEventListener('click', async () => {
     if (!idActual) { mostrarToast('No se pudo identificar tu cuenta — vuelve a iniciar sesión.'); return; }
     const titular = document.getElementById('inputBancoTitular').value.trim();
     const banco = document.getElementById('inputBancoNombre').value.trim();
     const clabe = document.getElementById('inputBancoClabe').value.trim();
     if (clabe && !/^\d{18}$/.test(clabe)) { mostrarToast('La CLABE interbancaria debe tener 18 dígitos.'); return; }
-    actualizarDatosBancariosPersona(idActual, { titular, banco, clabe });
+
+    let caratulaClabeUrl;
+    if (caratulaClabeArchivoTemporal) {
+      caratulaClabeUrl = `datos-bancarios/${idActual}-caratula-${Date.now()}`;
+      await guardarBlobDocumento(caratulaClabeUrl, caratulaClabeArchivoTemporal);
+    }
+
+    actualizarDatosBancariosPersona(idActual, { titular, banco, clabe, caratulaClabeUrl });
     overlay.classList.remove('open');
     mostrarToast('Datos bancarios actualizados.');
     renderPerfilLider();
@@ -192,7 +220,7 @@ function renderProgresoRangoCuenta() {
   const idxActual = idxRango(LIDER_EJEMPLO.rangoActualKey);
   const esUltimo = idxActual === RANGOS_MW.length - 1;
   const siguiente = esUltimo ? null : RANGOS_MW[idxActual + 1];
-  const { personasActivas, produccionGrupalMes, equipoCalificadoPct, compraPersonalPeriodo1, compraPersonalPeriodo2 } = LIDER_EJEMPLO.stats;
+  const { personasActivas, produccionGrupalMes, personasCalificadas, compraPersonalPeriodo1, compraPersonalPeriodo2 } = LIDER_EJEMPLO.stats;
 
   setText('cuentaRangoActual', RANGOS_MW[idxActual].label.toUpperCase());
 
@@ -224,7 +252,7 @@ function renderProgresoRangoCuenta() {
     const items = [
       { label: 'Personas activas', cumple: personasActivas >= siguiente.personas, valores: `${personasActivas} / ${siguiente.personas}` },
       { label: 'Compra personal (ambos periodos)', cumple: compraMinima >= siguiente.compra, valores: `${fmtMoney(compraPersonalPeriodo1)} y ${fmtMoney(compraPersonalPeriodo2)} / ${fmtMoney(siguiente.compra)}` },
-      { label: 'Equipo calificado', cumple: equipoCalificadoPct >= siguiente.calificado, valores: `${equipoCalificadoPct}% / ${siguiente.calificado}%` },
+      { label: 'Equipo calificado', cumple: personasCalificadas >= siguiente.calificado, valores: `${personasCalificadas} / ${siguiente.calificado} personas` },
     ];
     document.getElementById('cuentaChecklist').innerHTML = items.map(it => `
       <div class="check-item light ${it.cumple ? 'met' : 'unmet'}">

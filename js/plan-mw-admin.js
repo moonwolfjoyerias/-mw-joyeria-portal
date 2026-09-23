@@ -77,13 +77,13 @@ function calcularAscensoRango(persona) {
     ? calcularStatsRangoLider(persona, mesKeyActualComprasModelo(), subPeriodoActualComprasModelo())
     : persona.stats;
 
-  const { personasActivas, produccionGrupalMes, equipoCalificadoPct, compraPersonalPeriodo1, compraPersonalPeriodo2 } = statsReales;
+  const { personasActivas, produccionGrupalMes, personasCalificadas, compraPersonalPeriodo1, compraPersonalPeriodo2 } = statsReales;
   const compraMinima = Math.min(compraPersonalPeriodo1, compraPersonalPeriodo2);
 
   const items = [
     { label: 'Personas activas', cumple: personasActivas >= siguiente.personas, valores: `${personasActivas} / ${siguiente.personas}`, ratio: siguiente.personas ? personasActivas / siguiente.personas : 1, faltante: Math.max(0, siguiente.personas - personasActivas), unidad: 'personas' },
     { label: 'Compra personal (ambos periodos)', cumple: compraMinima >= siguiente.compra, valores: `$${formatearDineroPersonas(compraPersonalPeriodo1)} y $${formatearDineroPersonas(compraPersonalPeriodo2)} / $${formatearDineroPersonas(siguiente.compra)}`, ratio: siguiente.compra ? compraMinima / siguiente.compra : 1, faltante: Math.max(0, siguiente.compra - compraMinima), unidad: 'dinero' },
-    { label: 'Equipo calificado', cumple: equipoCalificadoPct >= siguiente.calificado, valores: `${equipoCalificadoPct}% / ${siguiente.calificado}%`, ratio: siguiente.calificado ? equipoCalificadoPct / siguiente.calificado : 1, faltante: Math.max(0, siguiente.calificado - equipoCalificadoPct), unidad: 'pct' },
+    { label: 'Equipo calificado', cumple: personasCalificadas >= siguiente.calificado, valores: `${personasCalificadas} / ${siguiente.calificado} personas`, ratio: siguiente.calificado ? personasCalificadas / siguiente.calificado : 1, faltante: Math.max(0, siguiente.calificado - personasCalificadas), unidad: 'personas_calificadas' },
     { label: 'Producción grupal', cumple: produccionGrupalMes >= siguiente.produccion, valores: `$${formatearDineroPersonas(produccionGrupalMes)} / $${formatearDineroPersonas(siguiente.produccion)}`, ratio: siguiente.produccion ? produccionGrupalMes / siguiente.produccion : 1, faltante: Math.max(0, siguiente.produccion - produccionGrupalMes), unidad: 'dinero' }
   ];
 
@@ -119,13 +119,13 @@ function calcularCumpleRangoActual(persona, periodoKey) {
     ? calcularStatsRangoLider(persona, periodoKey || mesKeyActualComprasModelo(), subPeriodoActualComprasModelo())
     : persona.stats;
 
-  const { personasActivas, produccionGrupalMes, equipoCalificadoPct, compraPersonalPeriodo1, compraPersonalPeriodo2 } = statsReales;
+  const { personasActivas, produccionGrupalMes, personasCalificadas, compraPersonalPeriodo1, compraPersonalPeriodo2 } = statsReales;
   const compraMinima = Math.min(compraPersonalPeriodo1, compraPersonalPeriodo2);
 
   const items = [
     { label: 'Personas activas', cumple: personasActivas >= rangoConfigurado.personas, valores: `${personasActivas} / ${rangoConfigurado.personas}` },
     { label: 'Compra personal (ambos periodos)', cumple: compraMinima >= rangoConfigurado.compra, valores: `$${formatearDineroPersonas(compraPersonalPeriodo1)} y $${formatearDineroPersonas(compraPersonalPeriodo2)} / $${formatearDineroPersonas(rangoConfigurado.compra)}` },
-    { label: 'Equipo calificado', cumple: equipoCalificadoPct >= rangoConfigurado.calificado, valores: `${equipoCalificadoPct}% / ${rangoConfigurado.calificado}%` },
+    { label: 'Equipo calificado', cumple: personasCalificadas >= rangoConfigurado.calificado, valores: `${personasCalificadas} / ${rangoConfigurado.calificado} personas` },
     { label: 'Producción grupal', cumple: produccionGrupalMes >= rangoConfigurado.produccion, valores: `$${formatearDineroPersonas(produccionGrupalMes)} / $${formatearDineroPersonas(rangoConfigurado.produccion)}` }
   ];
 

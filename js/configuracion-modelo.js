@@ -215,7 +215,7 @@ function _asegurarSemillaRangosYComisiones() {
     _sembrarValor('rango', `${r.key}_personas`, r.personas, 'Plan MW', `Rango ${r.label} — personas activas`);
     _sembrarValor('rango', `${r.key}_produccion`, r.produccion, 'Plan MW', `Rango ${r.label} — producción grupal`);
     _sembrarValor('rango', `${r.key}_compra`, r.compra, 'Plan MW', `Rango ${r.label} — compra personal`);
-    _sembrarValor('rango', `${r.key}_calificado`, r.calificado, 'Plan MW', `Rango ${r.label} — % equipo calificado`);
+    _sembrarValor('rango', `${r.key}_calificado`, r.calificado, 'Plan MW', `Rango ${r.label} — personas del equipo calificadas`);
   });
 
   Object.entries(COMISIONES_PCT).forEach(([rango, pcts]) => {

@@ -8,8 +8,8 @@
 // Separa Souvenir de compra normal usando pieza.material (grabado al
 // momento de apartar en apartados-modelo.js, tomado del catálogo real):
 // Souvenirs SÍ cuentan para activa mensual / compra personal de líder /
-// % de equipo calificado, pero NUNCA para producción grupal, comisión
-// de líder, Reto de Constancia o Rifas (Sección 4).
+// número de personas del equipo calificadas, pero NUNCA para producción
+// grupal, comisión de líder, Reto de Constancia o Rifas (Sección 4).
 //
 // personaId aquí es el mismo id que usa personas-ejemplo.js — coincide
 // con ventana.usuarioId porque ambos se derivan de slugUsuarioId(nombre).
@@ -95,17 +95,19 @@ const UMBRAL_EQUIPO_CALIFICADO = 1500;   // compra total (normal+souvenir) del s
 
 // Estadísticas reales de rango de un líder para un mes dado — sustituye
 // a los campos estáticos persona.stats.* que antes se capturaban a
-// mano. equipoCalificadoPct exige que cada persona del equipo llegue al
+// mano. personasCalificadas exige que cada persona del equipo llegue al
 // umbral en LOS DOS sub-periodos del mes (p1 y p2) — igual que ya se le
 // exige a la propia líder en "Compra personal (ambos periodos)". Si a
 // alguien del equipo le falta calificar en cualquiera de los dos
-// periodos, no cuenta como calificada ese mes. subPeriodoVigente ya no
-// se usa aquí (se deja en la firma por compatibilidad con quien la
-// llama) — antes solo miraba el sub-periodo de hoy, lo cual dejaba
-// pasar a personas que solo habían calificado en uno de los dos.
+// periodos, no cuenta como calificada ese mes. Es un NÚMERO de personas
+// (no un %) — RANGOS_MW[x].calificado exige una cantidad fija sin
+// importar el tamaño del equipo. subPeriodoVigente ya no se usa aquí
+// (se deja en la firma por compatibilidad con quien la llama) — antes
+// solo miraba el sub-periodo de hoy, lo cual dejaba pasar a personas
+// que solo habían calificado en uno de los dos.
 function calcularStatsRangoLider(lider, mesKey, subPeriodoVigente) {
   if (typeof calcularDescendenciaPersona !== 'function') {
-    return { personasActivas: 0, produccionGrupalMes: 0, equipoCalificadoPct: 0, compraPersonalPeriodo1: 0, compraPersonalPeriodo2: 0 };
+    return { personasActivas: 0, produccionGrupalMes: 0, personasCalificadas: 0, compraPersonalPeriodo1: 0, compraPersonalPeriodo2: 0 };
   }
 
   const { conNivel } = calcularDescendenciaPersona(lider.id);
@@ -125,15 +127,13 @@ function calcularStatsRangoLider(lider, mesKey, subPeriodoVigente) {
     if (comprasP1.total >= UMBRAL_EQUIPO_CALIFICADO && comprasP2.total >= UMBRAL_EQUIPO_CALIFICADO) personasCalificadas++;
   });
 
-  const equipoCalificadoPct = equipo.length ? Math.round((personasCalificadas / equipo.length) * 100) : 0;
-
   const p1 = obtenerComprasLiquidadasPersonaSubPeriodo(lider.id, mesKey, 'p1');
   const p2 = obtenerComprasLiquidadasPersonaSubPeriodo(lider.id, mesKey, 'p2');
 
   return {
     personasActivas,
     produccionGrupalMes,
-    equipoCalificadoPct,
+    personasCalificadas,
     compraPersonalPeriodo1: p1.total,
     compraPersonalPeriodo2: p2.total
   };

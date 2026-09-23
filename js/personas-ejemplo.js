@@ -84,7 +84,7 @@ function crearPersonaEjemplo(datos) {
     stats: datos.stats || {
       personasActivas: 0,
       produccionGrupalMes: 0,
-      equipoCalificadoPct: 0,
+      personasCalificadas: 0,
       compraPersonalPeriodo1: 0,
       compraPersonalPeriodo2: 0
     },
@@ -137,7 +137,7 @@ function construirPersonasEjemplo() {
       fechaAlta: '2023-02-14T00:00:00.000Z',
       liderId: null,
       rangoActualKey: 'oro',
-      stats: { personasActivas: 11, produccionGrupalMes: 58000, equipoCalificadoPct: 40, compraPersonalPeriodo1: 1600, compraPersonalPeriodo2: 1550 },
+      stats: { personasActivas: 11, produccionGrupalMes: 58000, personasCalificadas: 6, compraPersonalPeriodo1: 1600, compraPersonalPeriodo2: 1550 },
       constancia: { mesesCumplidos: 11, montoMesActual: 6900, metaMes: 8000 },
       rifa: { montoAcumuladoMes: 3100, meta: 3000 }
     }),
@@ -165,7 +165,7 @@ function construirPersonasEjemplo() {
       historialLogros: [
         { tipo: 'ascenso_rango', fecha: '2026-09-20T18:00:00.000Z', rangoAnterior: 'plata', rangoNuevo: 'oro' }
       ],
-      stats: { personasActivas: 10, produccionGrupalMes: 52500, equipoCalificadoPct: 35, compraPersonalPeriodo1: 1800, compraPersonalPeriodo2: 1650 },
+      stats: { personasActivas: 10, produccionGrupalMes: 52500, personasCalificadas: 4, compraPersonalPeriodo1: 1800, compraPersonalPeriodo2: 1650 },
       constancia: { mesesCumplidos: 7, montoMesActual: 5200, metaMes: 8000 },
       rifa: { montoAcumuladoMes: 2150, meta: 3000 }
     }),
@@ -187,7 +187,7 @@ function construirPersonasEjemplo() {
       fechaAlta: '2023-05-10T00:00:00.000Z',
       liderId: null,
       rangoActualKey: 'plata',
-      stats: { personasActivas: 8, produccionGrupalMes: 38000, equipoCalificadoPct: 35, compraPersonalPeriodo1: 1800, compraPersonalPeriodo2: 1650 },
+      stats: { personasActivas: 8, produccionGrupalMes: 38000, personasCalificadas: 1, compraPersonalPeriodo1: 1800, compraPersonalPeriodo2: 1650 },
       constancia: { mesesCumplidos: 10, montoMesActual: 6200, metaMes: 8000 },
       rifa: { montoAcumuladoMes: 3400, meta: 3000 }
     })
@@ -287,27 +287,41 @@ function eliminarPersona(id) {
 }
 
 // ============================================================
-// BAJA FORMAL DE LÍDER + COMPRESIÓN DE EQUIPO (Sección 15.3/15.4)
+// SOLICITUD DE CAMBIO DE RAMA (primeros 5 días desde la inscripción)
 // ============================================================
 //
-// "estado: 'baja'" es reversible y no borra nada (a diferencia de
-// eliminarPersona arriba) — solo se llega ahí por este flujo de dos
-// pasos: la líder SUPERIOR de la persona solicita la baja, y solo
-// Admin la ejecuta. Al ejecutarse, el equipo directo de la persona
-// dada de baja se reasigna a SU PROPIA líder superior (comprime un
-// nivel del árbol); si esa persona no tenía superior (era líder de
-// primer nivel), sus hijos quedan disponibles para que Admin los
-// reasigne manualmente (ver reasignacionesManualesPorHijo abajo).
+// Antes "Gestionar equipo" era solo solicitudes de baja — ahora es
+// esto: si una emprendedora nueva quedó bajo la líder equivocada por
+// error, cualquiera de las dos líderes involucradas (la que la tiene
+// actualmente, o la que considera que debía quedar bajo ella) puede
+// solicitar el cambio dentro de los primeros 5 días desde su alta.
+// Solo aplica a Emprendedoras (nunca a Líderes) — Admin siempre
+// confirma o rechaza, nunca se mueve de rama sola. Dar de baja a una
+// persona sigue existiendo aparte, vía Configuración → editar cuenta.
 
-function crearSolicitudBajaPersona(personaId, { motivo, solicitadoPorId, solicitadoPorNombre }) {
+const DIAS_LIMITE_CAMBIO_RAMA = 5;
+
+function puedeSolicitarCambioRama(persona) {
+  if (!persona || persona.tipo !== 'emprendedora' || persona.estado === 'baja') return false;
+  if (persona.solicitudCambioRamaPendiente) return false;
+  const limite = new Date(persona.fechaAlta).getTime() + DIAS_LIMITE_CAMBIO_RAMA * 24 * 60 * 60 * 1000;
+  return Date.now() <= limite;
+}
+
+function crearSolicitudCambioRama(personaId, { liderPropuestaId, motivo, solicitadoPorId, solicitadoPorNombre }) {
 
   const personas = obtenerPersonas();
   const persona = personas.find(p => p.id === personaId);
   if (!persona) return { ok: false, error: 'La persona no existe.' };
-  if (persona.estado === 'baja') return { ok: false, error: 'Esta persona ya está dada de baja.' };
-  if (persona.solicitudBajaPendiente) return { ok: false, error: 'Ya existe una solicitud de baja pendiente para esta persona.' };
+  if (!puedeSolicitarCambioRama(persona)) return { ok: false, error: 'Ya pasaron los 5 días desde su inscripción, o ya hay una solicitud pendiente para ella.' };
 
-  persona.solicitudBajaPendiente = {
+  const liderPropuesta = personas.find(p => p.id === liderPropuestaId && p.tipo === 'lider' && p.estado !== 'baja');
+  if (!liderPropuesta) return { ok: false, error: 'Elige a la líder a la que debería pasar.' };
+  if (liderPropuesta.id === persona.liderId) return { ok: false, error: 'Ya está bajo esa líder.' };
+
+  persona.solicitudCambioRamaPendiente = {
+    liderActualId: persona.liderId || null,
+    liderPropuestaId: liderPropuesta.id,
     motivo: motivo || '',
     solicitadoPorId: solicitadoPorId || null,
     solicitadoPorNombre: solicitadoPorNombre || '',
@@ -317,7 +331,7 @@ function crearSolicitudBajaPersona(personaId, { motivo, solicitadoPorId, solicit
 
   if (typeof agregarNotificacion === 'function') {
     agregarNotificacion({
-      texto: `${solicitadoPorNombre} solicitó dar de baja a ${nombreCompletoPersona(persona)}${motivo ? `: "${motivo}"` : ''}. Revisa y confirma.`,
+      texto: `${solicitadoPorNombre} solicitó cambiar a ${nombreCompletoPersona(persona)} a la rama de ${nombreCompletoPersona(liderPropuesta)}${motivo ? `: "${motivo}"` : ''}. Revisa y confirma.`,
       link: `admin-emprendedoras-lideres.html?persona=${persona.id}`,
       paraId: 'admin01',
       rolDestino: 'admin',
@@ -329,59 +343,39 @@ function crearSolicitudBajaPersona(personaId, { motivo, solicitadoPorId, solicit
 
 }
 
-function cancelarSolicitudBajaPersona(personaId) {
+function cancelarSolicitudCambioRama(personaId) {
   const personas = obtenerPersonas();
   const persona = personas.find(p => p.id === personaId);
-  if (!persona || !persona.solicitudBajaPendiente) return { ok: false, error: 'No hay una solicitud de baja pendiente.' };
-  delete persona.solicitudBajaPendiente;
+  if (!persona || !persona.solicitudCambioRamaPendiente) return { ok: false, error: 'No hay una solicitud de cambio de rama pendiente.' };
+  delete persona.solicitudCambioRamaPendiente;
   guardarPersonas(personas);
   return { ok: true, persona };
 }
 
-// Hijos DIRECTOS de una persona que quedarían sin líder si se le da de
-// baja y ella no tiene superior — lo que Admin necesita ver para
-// decidir si hace falta reasignación manual antes de confirmar.
-function obtenerHijosDirectosPersona(personaId) {
-  return obtenerPersonas().filter(p => p.liderId === personaId);
-}
-
-// Ejecuta la baja. reasignacionesManualesPorHijo es opcional:
-// { [hijoId]: nuevoLiderId } — solo se usa para los hijos cuyo nuevo
-// líder Admin decidió a mano (por ejemplo, porque la persona dada de
-// baja no tenía superior). Los demás hijos heredan automáticamente el
-// liderId de la persona dada de baja (su superior).
-function ejecutarBajaPersonaConCompresion(personaId, { ejecutadoPorId, ejecutadoPorNombre }, reasignacionesManualesPorHijo = {}) {
+// Ejecuta el cambio: mueve a la persona a la líder propuesta. No
+// reasigna ni comprime nada más — una emprendedora recién inscrita
+// (única elegible para este flujo) no tiene equipo propio todavía.
+function ejecutarCambioRama(personaId, { ejecutadoPorId, ejecutadoPorNombre }) {
 
   const personas = obtenerPersonas();
   const persona = personas.find(p => p.id === personaId);
-  if (!persona) return { ok: false, error: 'La persona no existe.' };
+  if (!persona || !persona.solicitudCambioRamaPendiente) return { ok: false, error: 'No hay una solicitud de cambio de rama pendiente.' };
 
-  const superiorId = persona.liderId || null;
-  const hijos = personas.filter(p => p.liderId === personaId);
-
-  hijos.forEach(hijo => {
-    const manual = reasignacionesManualesPorHijo[hijo.id];
-    hijo.liderId = manual || superiorId || null;
-  });
-
-  persona.estado = 'baja';
-  delete persona.solicitudBajaPendiente;
-  persona.historialLogros = persona.historialLogros || [];
-  persona.historialLogros.push({ tipo: 'baja', fecha: new Date().toISOString(), ejecutadoPorId: ejecutadoPorId || null, ejecutadoPorNombre: ejecutadoPorNombre || '' });
-
+  const { liderActualId, liderPropuestaId } = persona.solicitudCambioRamaPendiente;
+  persona.liderId = liderPropuestaId;
+  delete persona.solicitudCambioRamaPendiente;
   guardarPersonas(personas);
 
-  if (typeof agregarNotificacion === 'function' && hijos.length) {
+  if (typeof agregarNotificacion === 'function') {
     agregarNotificacion({
-      texto: `El equipo de ${nombreCompletoPersona(persona)} (${hijos.length} persona${hijos.length === 1 ? '' : 's'}) fue reasignado tras su baja.`,
-      link: `admin-emprendedoras-lideres.html?persona=${persona.id}`,
-      paraId: 'admin01',
-      rolDestino: 'admin',
-      origen: 'emprendedora_lider'
+      texto: `Tu rama cambió — ahora perteneces al equipo de ${nombreCompletoPersona(obtenerPersonaPorId(liderPropuestaId))}.`,
+      link: 'cuenta',
+      paraId: persona.id,
+      rolDestino: 'emprendedora_lider'
     });
   }
 
-  return { ok: true, hijosReasignados: hijos.length, superiorId };
+  return { ok: true, persona, liderActualId, liderPropuestaId };
 
 }
 
@@ -413,14 +407,19 @@ function actualizarFotoPersona(id, fotoUrl) {
 // Datos para que Administración le deposite sus comisiones — solo
 // tiene sentido para Líderes (Emprendedoras no cobran comisión), pero
 // se deja disponible para cualquier persona por si algún día cambia.
-function actualizarDatosBancariosPersona(id, { titular, banco, clabe }) {
+// caratulaClabeUrl es una ruta de js/documentos-modelo.js (mismo patrón
+// que la INE de Solicitudes) — nunca se guarda el archivo aquí, solo la
+// referencia. Se deja fuera si no cambia (quien llama solo la manda
+// cuando el usuario subió un archivo nuevo).
+function actualizarDatosBancariosPersona(id, { titular, banco, clabe, caratulaClabeUrl }) {
   const personas = obtenerPersonas();
   const persona = personas.find(p => p.id === id);
   if (!persona) return { ok: false, error: 'La cuenta no existe.' };
   persona.datosBancarios = {
     titular: (titular || '').trim(),
     banco: (banco || '').trim(),
-    clabe: (clabe || '').trim()
+    clabe: (clabe || '').trim(),
+    caratulaClabeUrl: caratulaClabeUrl !== undefined ? caratulaClabeUrl : (persona.datosBancarios?.caratulaClabeUrl || null)
   };
   guardarPersonas(personas);
   return { ok: true, persona };

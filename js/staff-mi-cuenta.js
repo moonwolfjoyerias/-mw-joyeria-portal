@@ -242,6 +242,11 @@ function abrirReciboNomina(empleado) {
       <strong>Total a pagar:</strong> $${periodo.totalAPagar.toLocaleString('es-MX')} MXN
     </div>
 
+    ${periodo.firmaEmpleado?.firmado
+      ? `<div class="modal-note"><strong>Firmado de recibido</strong> el ${new Date(periodo.firmaEmpleado.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}.</div>`
+      : periodo.guardado
+        ? `<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" id="firmarReciboBtn">Firmar</button>`
+        : ''}
     <button class="btn btn-outline" style="width:100%;" data-close>Cerrar</button>
 
   `;
@@ -251,6 +256,46 @@ function abrirReciboNomina(empleado) {
   box.querySelector('[data-close]')?.addEventListener('click', () => {
     empleadoNominaPendiente = null;
     cerrarModalMiCuenta();
+  });
+
+  document.getElementById('firmarReciboBtn')?.addEventListener('click', () => abrirConfirmarFirmaRecibo(empleado, empleadoNominaReal, periodoKey));
+
+}
+
+// Modal extra de confirmación (Sección "Firmar") — separado del recibo
+// para que firmar sea una acción deliberada, no un clic accidental
+// sobre el mismo botón que abre el recibo.
+function abrirConfirmarFirmaRecibo(empleado, empleadoNominaReal, periodoKey) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.innerHTML = `
+    <button class="modal-close" data-close>×</button>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
+    <h3>Confirmar firma</h3>
+    <p class="modal-sub">¿Confirmas que firmas de recibido esta nómina? Esta acción queda registrada a tu nombre y no se puede deshacer.</p>
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button class="btn btn-outline" style="flex:1;" id="cancelarFirmaBtn" type="button">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1;" id="confirmarFirmaBtn" type="button">Confirmar</button>
+    </div>
+  `;
+  overlay.classList.add('open');
+
+  const volverAlRecibo = () => abrirReciboNomina(empleado);
+
+  box.querySelector('[data-close]')?.addEventListener('click', volverAlRecibo);
+  document.getElementById('cancelarFirmaBtn')?.addEventListener('click', volverAlRecibo);
+
+  document.getElementById('confirmarFirmaBtn')?.addEventListener('click', () => {
+    const resultado = firmarReciboNomina(empleadoNominaReal.id, periodoKey, {
+      usuarioId: empleado.usuario,
+      usuarioNombre: empleado.nombre
+    });
+    if (!resultado.ok) { mostrarToast(resultado.error); volverAlRecibo(); return; }
+    mostrarToast('Firmaste de recibido tu nómina.');
+    abrirReciboNomina(empleado);
   });
 
 }

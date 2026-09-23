@@ -10,15 +10,17 @@
 // y quedaba embebida completa dentro del registro de la solicitud en
 // localStorage — cualquiera con acceso a ese almacenamiento podía leerla,
 // y un campo así de pesado no cabría en un documento de Firestore (límite
-// de 1MB). Ahora el registro de la solicitud solo guarda una RUTA
-// (`ineUrl`, ver js/solicitudes-modelo.js) — el archivo real vive aparte.
+// de 1MB). Ahora el registro de la solicitud solo guarda dos RUTAS
+// (`ineFrenteUrl`/`ineReversoUrl`, ver js/solicitudes-modelo.js) — el
+// archivo real vive aparte.
 //
 // FASE 2 (Firebase): si js/firebase-init.js dejó `storageFirebase` con
 // valor (MODO_DEMO=false + config real), estas funciones suben/leen/
 // borran el archivo en Firebase Storage bajo esa misma ruta. Si no,
 // siguen usando IndexedDB para simularlo — mismo comportamiento en modo
 // demo, cero regresión. La forma de la ruta ("solicitudes-ine/...") no
-// cambia entre uno u otro, así que ineUrl nunca necesita migrarse.
+// cambia entre uno u otro, así que ineFrenteUrl/ineReversoUrl nunca
+// necesitan migrarse.
 
 const DOCUMENTOS_DB_NOMBRE = 'mw-documentos-db';
 const DOCUMENTOS_DB_VERSION = 1;
@@ -111,10 +113,14 @@ async function resolverSrcDocumento(storagePath) {
   return url;
 }
 
-function validarArchivoDocumento(archivo, { tamanoMaximo = 5 * 1024 * 1024 } = {}) {
+// permitirPdf: la carátula de CLABE (Mi cuenta de Líder) acepta foto
+// O documento PDF, a diferencia de la INE de Solicitudes (solo foto).
+function validarArchivoDocumento(archivo, { tamanoMaximo = 5 * 1024 * 1024, permitirPdf = false } = {}) {
   if (!archivo) return { ok: false, error: 'Selecciona un archivo.' };
-  if (!archivo.type || !archivo.type.startsWith('image/')) {
-    return { ok: false, error: 'El archivo debe ser una imagen (JPG, PNG, etc.).' };
+  const esImagen = archivo.type && archivo.type.startsWith('image/');
+  const esPdf = permitirPdf && archivo.type === 'application/pdf';
+  if (!esImagen && !esPdf) {
+    return { ok: false, error: permitirPdf ? 'El archivo debe ser una imagen o un PDF.' : 'El archivo debe ser una imagen (JPG, PNG, etc.).' };
   }
   if (archivo.size > tamanoMaximo) {
     return { ok: false, error: `El archivo pesa demasiado (máximo ${Math.round(tamanoMaximo / 1024 / 1024)} MB). Comprímelo e inténtalo de nuevo.` };
