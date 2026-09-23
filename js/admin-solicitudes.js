@@ -1,24 +1,32 @@
-// MW JOYERÍA — Admin: Solicitudes de inscripción
+// MW JOYERÍA — Admin: Solicitudes
 //
 // Ver, buscar, filtrar y resolver (aprobar/rechazar) las solicitudes
-// que Emprendedoras y Líderes envían desde "Mi cuenta". Reutiliza
-// js/solicitudes-modelo.js para toda la lógica (nada de datos ni
-// reglas paralelas), y js/admin-comun.js para la autorización
+// que Emprendedoras y Líderes envían: de inscripción (desde "Mi
+// cuenta", js/solicitudes-modelo.js) y de evento (desde el calendario,
+// js/solicitudes-eventos-modelo.js). Son dos colecciones separadas —
+// nunca se mezclan en el almacenamiento — que esta pantalla une SOLO
+// para la lista y el filtro por tipo; cada una abre su propio modal de
+// detalle. Reutiliza js/admin-comun.js para la autorización
 // administrativa (abrirAutorizacionAdmin) y la bitácora
-// (registrarAuditoriaAdmin, ya usada dentro de solicitudes-modelo.js).
+// (registrarAuditoriaAdmin, ya usada dentro de ambos modelos).
 
 document.addEventListener('DOMContentLoaded', () => {
 
   renderListaSolicitudesAdmin();
 
   document.getElementById('solicitudSearchInput')?.addEventListener('input', renderListaSolicitudesAdmin);
+  document.getElementById('solicitudFilterTipo')?.addEventListener('change', renderListaSolicitudesAdmin);
   document.getElementById('solicitudFilterEstado')?.addEventListener('change', renderListaSolicitudesAdmin);
   document.getElementById('solicitudOrden')?.addEventListener('change', renderListaSolicitudesAdmin);
 
-  // Enlace directo desde una notificación (?solicitud=ID) — abre de una
-  // vez el detalle de esa solicitud.
-  const solicitudDesdeUrl = new URLSearchParams(window.location.search).get('solicitud');
-  if (solicitudDesdeUrl) abrirDetalleSolicitudAdmin(solicitudDesdeUrl);
+  // Enlace directo desde una notificación (?solicitud=ID[&tipo=evento])
+  // — abre de una vez el detalle de esa solicitud.
+  const params = new URLSearchParams(window.location.search);
+  const solicitudDesdeUrl = params.get('solicitud');
+  if (solicitudDesdeUrl) {
+    if (params.get('tipo') === 'evento') abrirDetalleSolicitudEventoAdmin(solicitudDesdeUrl);
+    else abrirDetalleSolicitudAdmin(solicitudDesdeUrl);
+  }
 
 });
 
@@ -32,16 +40,21 @@ async function renderListaSolicitudesAdmin() {
   if (!body) return;
 
   const texto = (document.getElementById('solicitudSearchInput')?.value || '').toLowerCase().trim();
+  const tipoFiltro = document.getElementById('solicitudFilterTipo')?.value || '';
   const estadoFiltro = document.getElementById('solicitudFilterEstado')?.value || '';
   const orden = document.getElementById('solicitudOrden')?.value || 'reciente';
 
-  const todasLasSolicitudes = await obtenerSolicitudes();
+  const solicitudesInscripcion = (await obtenerSolicitudes()).map(s => ({ ...s, _tipo: 'inscripcion', _titulo: s.nombreCompleto }));
+  const solicitudesEvento = (typeof obtenerSolicitudesEventos === 'function' ? obtenerSolicitudesEventos() : []).map(s => ({ ...s, _tipo: 'evento', _titulo: s.titulo }));
+
+  const todasLasSolicitudes = [...solicitudesInscripcion, ...solicitudesEvento];
 
   let solicitudes = todasLasSolicitudes.filter(s => {
+    if (tipoFiltro && s._tipo !== tipoFiltro) return false;
     if (estadoFiltro && s.estado !== estadoFiltro) return false;
     if (texto) {
       const coincide =
-        s.nombreCompleto.toLowerCase().includes(texto) ||
+        s._titulo.toLowerCase().includes(texto) ||
         s.solicitanteNombre.toLowerCase().includes(texto);
       if (!coincide) return false;
     }
@@ -59,7 +72,7 @@ async function renderListaSolicitudesAdmin() {
   if (!solicitudes.length) {
     body.innerHTML = `
       <tr>
-        <td colspan="5" class="catalog-empty-cell">
+        <td colspan="6" class="catalog-empty-cell">
           <strong>No hay solicitudes que coincidan</strong>
           <span>Prueba con otro nombre o cambia los filtros.</span>
         </td>
@@ -70,16 +83,20 @@ async function renderListaSolicitudesAdmin() {
 
   body.innerHTML = solicitudes.map(s => `
     <tr>
-      <td><strong>${escapeHTMLSolAdmin(s.nombreCompleto)}</strong></td>
-      <td>${escapeHTMLSolAdmin(s.solicitanteNombre)} <span class="badge">${s.solicitanteRol === 'lider' ? 'Líder' : 'Emprendedora'}</span></td>
+      <td><span class="badge">${s._tipo === 'evento' ? 'Evento' : 'Inscripción'}</span></td>
+      <td><strong>${escapeHTMLSolAdmin(s._titulo)}</strong></td>
+      <td>${escapeHTMLSolAdmin(s.solicitanteNombre)}${s.solicitanteRol ? ` <span class="badge">${s.solicitanteRol === 'lider' ? 'Líder' : 'Emprendedora'}</span>` : ''}</td>
       <td><span class="badge estado-badge ${s.estado}">${ESTADOS_SOLICITUD[s.estado] || s.estado}</span></td>
       <td>${formatearFechaSolAdmin(s.fechaSolicitud)}</td>
-      <td><button class="action-btn detail-action" data-ver="${s.id}">Ver detalle</button></td>
+      <td><button class="action-btn detail-action" data-ver="${s.id}" data-tipo="${s._tipo}">Ver detalle</button></td>
     </tr>
   `).join('');
 
   body.querySelectorAll('[data-ver]').forEach(btn => {
-    btn.addEventListener('click', () => abrirDetalleSolicitudAdmin(btn.getAttribute('data-ver')));
+    btn.addEventListener('click', () => {
+      if (btn.getAttribute('data-tipo') === 'evento') abrirDetalleSolicitudEventoAdmin(btn.getAttribute('data-ver'));
+      else abrirDetalleSolicitudAdmin(btn.getAttribute('data-ver'));
+    });
   });
 
 }
@@ -330,6 +347,155 @@ function abrirModalRechazarAdmin(solicitud) {
     overlay.classList.remove('open');
     renderListaSolicitudesAdmin();
     mostrarToastSolAdmin(`Solicitud de ${solicitud.nombreCompleto} rechazada.`);
+
+  });
+
+}
+
+// ============================================================
+// SOLICITUDES DE EVENTO
+// ============================================================
+
+function abrirDetalleSolicitudEventoAdmin(id) {
+
+  const solicitud = obtenerSolicitudEventoPorId(id);
+  if (!solicitud) return;
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const esPendiente = solicitud.estado === 'pendiente';
+
+  box.style.maxWidth = '520px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Solicitud de evento</h3>
+    <p class="modal-sub">Evento propuesto por una Emprendedora/Líder para invitar a toda la comunidad.</p>
+
+    <h4 class="profile-section-title">Solicitante</h4>
+    <div class="detail-grid">
+      <div><span>Nombre</span><strong>${escapeHTMLSolAdmin(solicitud.solicitanteNombre)}</strong></div>
+      <div><span>Fecha de solicitud</span><strong>${formatearFechaSolAdmin(solicitud.fechaSolicitud)}</strong></div>
+    </div>
+
+    <h4 class="profile-section-title" style="margin-top:18px;">Evento</h4>
+    <div class="detail-grid">
+      <div><span>Título</span><strong>${escapeHTMLSolAdmin(solicitud.titulo)}</strong></div>
+      <div><span>Tipo</span><strong>${solicitud.tipo === 'virtual' ? 'Virtual' : 'Presencial'}</strong></div>
+      <div><span>Fecha</span><strong>${escapeHTMLSolAdmin(solicitud.fecha)}</strong></div>
+      <div><span>Hora</span><strong>${escapeHTMLSolAdmin(solicitud.hora)}</strong></div>
+      <div class="full" style="grid-column:1/-1;"><span>${solicitud.tipo === 'virtual' ? 'Enlace / cómo conectarse' : 'Lugar'}</span><strong>${escapeHTMLSolAdmin(solicitud.lugarTexto)}</strong></div>
+      <div class="full" style="grid-column:1/-1;"><span>Descripción</span><strong>${escapeHTMLSolAdmin(solicitud.descripcion)}</strong></div>
+      <div><span>Estado</span><strong>${ESTADOS_SOLICITUD_EVENTO[solicitud.estado] || solicitud.estado}</strong></div>
+    </div>
+
+    ${solicitud.estado === 'rechazada' ? `
+      <div class="solicitud-motivo" style="margin-top:16px;">
+        <strong style="display:block;margin-bottom:4px;">Motivo del rechazo</strong>
+        ${escapeHTMLSolAdmin(solicitud.motivoRechazo)}
+      </div>
+      <p class="bp-sub" style="margin-top:10px;">Revisado por ${escapeHTMLSolAdmin(solicitud.revisadoPor)} · ${formatearFechaSolAdmin(solicitud.fechaRevision)}</p>
+    ` : ''}
+    ${solicitud.estado === 'aprobada' ? `
+      <p class="bp-sub" style="margin-top:16px;">Publicado en el calendario · aprobado por ${escapeHTMLSolAdmin(solicitud.revisadoPor)} · ${formatearFechaSolAdmin(solicitud.fechaRevision)}</p>
+    ` : ''}
+
+    ${esPendiente ? `
+      <div class="profile-actions" style="border-top:0;padding-top:0;">
+        <button class="btn btn-primary" id="aprobarSolicitudEventoBtn" type="button">Aprobar y publicar</button>
+        <button class="btn btn-danger" id="rechazarSolicitudEventoBtn" type="button">Rechazar solicitud</button>
+      </div>
+    ` : ''}
+  `;
+
+  overlay.classList.add('open');
+
+  if (esPendiente) {
+    document.getElementById('aprobarSolicitudEventoBtn')?.addEventListener('click', () => abrirConfirmarAprobarEventoAdmin(solicitud));
+    document.getElementById('rechazarSolicitudEventoBtn')?.addEventListener('click', () => abrirModalRechazarEventoAdmin(solicitud));
+  }
+
+}
+
+function abrirConfirmarAprobarEventoAdmin(solicitud) {
+
+  abrirAutorizacionAdmin({
+    titulo: 'Aprobar solicitud de evento',
+    mensaje: `¿Confirmas la publicación de "${escapeHTMLSolAdmin(solicitud.titulo)}" en el calendario? Toda la comunidad podrá verlo e invitarse.`,
+    onConfirmar: () => {
+
+      const resultado = aprobarSolicitudEvento(solicitud.id, {
+        adminId: ADMIN_IDENTIDAD.usuarioId,
+        adminNombre: ADMIN_IDENTIDAD.usuarioNombre
+      });
+
+      if (!resultado.ok) {
+        mostrarToastSolAdmin(resultado.error);
+        renderListaSolicitudesAdmin();
+        return;
+      }
+
+      document.getElementById('modalOverlay')?.classList.remove('open');
+      renderListaSolicitudesAdmin();
+      mostrarToastSolAdmin(`Evento "${solicitud.titulo}" publicado en el calendario.`);
+
+    }
+  });
+
+}
+
+function abrirModalRechazarEventoAdmin(solicitud) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.style.maxWidth = '460px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="auth-icon danger">!</div>
+    <h3>Rechazar solicitud de evento</h3>
+    <p class="modal-sub">Explica por qué se rechaza "<strong>${escapeHTMLSolAdmin(solicitud.titulo)}</strong>". ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} podrá ver este motivo.</p>
+
+    <label for="motivoRechazoEventoInput">Motivo del rechazo *</label>
+    <textarea id="motivoRechazoEventoInput" rows="3" placeholder="Ej. Ya hay otro evento programado ese día." style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;resize:vertical;"></textarea>
+
+    <div id="motivoEventoError" class="auth-error" style="display:none;"></div>
+
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="btn btn-outline" style="flex:1;" data-close type="button">Cancelar</button>
+      <button class="btn btn-danger" style="flex:1;" id="confirmarRechazoEventoBtn" type="button">Rechazar solicitud</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+
+  document.getElementById('confirmarRechazoEventoBtn')?.addEventListener('click', () => {
+
+    const motivo = document.getElementById('motivoRechazoEventoInput')?.value.trim();
+
+    if (!motivo) {
+      const error = document.getElementById('motivoEventoError');
+      if (error) { error.textContent = 'Escribe el motivo del rechazo.'; error.style.display = 'block'; }
+      return;
+    }
+
+    const resultado = rechazarSolicitudEvento(solicitud.id, {
+      adminId: ADMIN_IDENTIDAD.usuarioId,
+      adminNombre: ADMIN_IDENTIDAD.usuarioNombre,
+      motivo
+    });
+
+    if (!resultado.ok) {
+      const error = document.getElementById('motivoEventoError');
+      if (error) { error.textContent = resultado.error; error.style.display = 'block'; }
+      return;
+    }
+
+    overlay.classList.remove('open');
+    renderListaSolicitudesAdmin();
+    mostrarToastSolAdmin(`Solicitud de evento "${solicitud.titulo}" rechazada.`);
 
   });
 
