@@ -825,10 +825,10 @@ function renderSeccionApartadosConfig() {
       <p class="cfg-card-sub"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Cualquier cambio aquí solo aplica a ventanas de apartado <strong>nuevas</strong> — las que ya están abiertas conservan su depósito y fecha de vencimiento tal como se calcularon.</p>
       <div class="catalog-table-wrap cfg-tabla-wrap">
         <table class="catalog-table">
-          <thead><tr><th>Depósito base</th><th>Ventana nacional</th><th>Ventana foránea</th></tr></thead>
+          <thead><tr><th>Depósito base</th><th>Ventana normal</th><th>Ventana foránea</th></tr></thead>
           <tbody><tr>
             ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'deposito_base', seccion: 'Apartados', etiqueta: 'Depósito base', tipoValor: 'moneda' })}
-            ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'ventana_normal_dias', seccion: 'Apartados', etiqueta: 'Ventana nacional (días)', tipoValor: 'dias' })}
+            ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'ventana_normal_dias', seccion: 'Apartados', etiqueta: 'Ventana normal (días)', tipoValor: 'dias' })}
             ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'ventana_foranea_dias', seccion: 'Apartados', etiqueta: 'Ventana foránea (días)', tipoValor: 'dias' })}
           </tr></tbody>
         </table>
