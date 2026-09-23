@@ -224,7 +224,7 @@ function renderDetallePersona() {
           ${esLider ? `<span class="badge">${rangoLabel(persona.rangoActualKey)}</span>` : ''}
           ${persona.ascensoPendiente ? `<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></span> Sube de rango</span>` : ''}
           ${persona.recompensaPendiente ? `<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M4 9h16M12 9v11"/><path d="M8 9c0-2 1-4 4-4s4 2 4 4"/></svg></span> Recompensa lista</span>` : ''}
-          ${persona.solicitudBajaPendiente ? `<span class="badge badge-ascenso" style="background:#fbe7e9;color:#a3272f;">Solicitud de baja</span>` : ''}
+          ${persona.solicitudCambioRamaPendiente ? `<span class="badge badge-ascenso" style="background:#fbe7e9;color:#a3272f;">Solicitud de cambio de rama</span>` : ''}
         </div>
       </div>
       <button class="modal-close" type="button" id="cerrarPerfilBtn" style="position:static;">×</button>
@@ -316,6 +316,53 @@ function renderAccionesPerfil(persona) {
 // SECCIÓN: INFORMACIÓN
 // ============================================================
 
+// Solo tiene sentido para Líderes (Emprendedoras no cobran comisión) —
+// mismos datos que ella captura en su Mi cuenta (js/lider-cuenta.js).
+// La carátula (foto o PDF) se resuelve aparte de forma asíncrona (ver
+// cargarPreviewCaratulaClabe) porque vive en IndexedDB, no en el
+// registro de personas.
+function renderDatosBancariosPersonaHTML(persona) {
+  const datosBancarios = persona.datosBancarios;
+  const tieneDatos = datosBancarios && (datosBancarios.titular || datosBancarios.banco || datosBancarios.clabe);
+  return `
+    <h4 class="profile-section-title" style="margin-top:18px;">Datos bancarios</h4>
+    ${tieneDatos ? `
+      <div class="detail-grid">
+        <div><span>Titular</span><strong>${escapeHTMLPersonas(datosBancarios.titular) || '—'}</strong></div>
+        <div><span>Banco</span><strong>${escapeHTMLPersonas(datosBancarios.banco) || '—'}</strong></div>
+        <div><span>CLABE</span><strong>${escapeHTMLPersonas(datosBancarios.clabe) || '—'}</strong></div>
+      </div>
+      <div class="ine-preview" id="caratulaClabeWrap" style="max-width:320px;">
+        <small class="field-help">Carátula de la CLABE</small>
+        ${datosBancarios.caratulaClabeUrl
+          ? `<div id="caratulaClabeContenido"><p class="bp-sub" style="margin:0;">Cargando…</p></div>`
+          : `<p class="bp-sub" style="margin:0;">Todavía no la sube.</p>`}
+      </div>
+    ` : `<p class="bp-sub">Todavía no registra sus datos bancarios.</p>`}
+  `;
+}
+
+async function cargarPreviewCaratulaClabe(persona) {
+  const url = persona.datosBancarios?.caratulaClabeUrl;
+  const contenido = document.getElementById('caratulaClabeContenido');
+  if (!url || !contenido) return;
+
+  // Firebase Storage ya entrega una URL directa (resolverSrcDocumento);
+  // en modo demo (IndexedDB) se necesita el blob real para saber si es
+  // imagen o PDF antes de decidir <img> vs enlace.
+  const blob = typeof storageFirebase === 'undefined' || !storageFirebase
+    ? await obtenerBlobDocumento(url)
+    : null;
+  const src = await resolverSrcDocumento(url);
+
+  if (!src) { contenido.innerHTML = '<p class="bp-sub" style="margin:0;">No pudimos cargar la carátula.</p>'; return; }
+
+  const esPdf = blob ? blob.type === 'application/pdf' : false;
+  contenido.innerHTML = esPdf
+    ? `<a href="${src}" target="_blank" rel="noopener">Ver PDF de la carátula</a>`
+    : `<img src="${src}" alt="Carátula de la CLABE" style="max-width:100%;border-radius:6px;">`;
+}
+
 function renderSeccionInfoPersona(persona, editando) {
 
   const sec = document.querySelector('.profile-section[data-section="info"]');
@@ -338,6 +385,8 @@ function renderSeccionInfoPersona(persona, editando) {
         <div><span>Tipo de cuenta</span><strong>${persona.tipo === 'lider' ? 'Líder' : 'Emprendedora'}</strong></div>
       </div>
 
+      ${persona.tipo === 'lider' ? renderDatosBancariosPersonaHTML(persona) : ''}
+
       ${persona.estado === 'inactiva' ? `
         <div class="ascenso-banner" style="margin-top:16px;">
           <div>
@@ -350,15 +399,15 @@ function renderSeccionInfoPersona(persona, editando) {
         </div>
       ` : ''}
 
-      ${persona.solicitudBajaPendiente ? `
+      ${persona.solicitudCambioRamaPendiente ? `
         <div class="ascenso-banner" style="margin-top:16px;">
           <div>
-            <strong><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Solicitud de baja pendiente</strong>
-            <p>${escapeHTMLPersonas(persona.solicitudBajaPendiente.solicitadoPorNombre)} solicitó dar de baja a esta persona${persona.solicitudBajaPendiente.motivo ? `: "${escapeHTMLPersonas(persona.solicitudBajaPendiente.motivo)}"` : ''}.</p>
+            <strong><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 21l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></span> Solicitud de cambio de rama pendiente</strong>
+            <p>${escapeHTMLPersonas(persona.solicitudCambioRamaPendiente.solicitadoPorNombre)} solicitó cambiar a esta persona de ${persona.solicitudCambioRamaPendiente.liderActualId ? escapeHTMLPersonas(nombreCompletoPersona(obtenerPersonaPorId(persona.solicitudCambioRamaPendiente.liderActualId) || {})) : 'sin líder'} a ${escapeHTMLPersonas(nombreCompletoPersona(obtenerPersonaPorId(persona.solicitudCambioRamaPendiente.liderPropuestaId) || {}))}${persona.solicitudCambioRamaPendiente.motivo ? `: "${escapeHTMLPersonas(persona.solicitudCambioRamaPendiente.motivo)}"` : ''}.</p>
           </div>
           <div style="display:flex;gap:8px;">
-            <button class="btn btn-outline" id="rechazarBajaBtn" type="button">Rechazar</button>
-            <button class="btn btn-danger" id="confirmarBajaBtn" type="button">Confirmar baja</button>
+            <button class="btn btn-outline" id="rechazarCambioRamaBtn" type="button">Rechazar</button>
+            <button class="btn btn-primary" id="confirmarCambioRamaBtn" type="button">Confirmar cambio</button>
           </div>
         </div>
       ` : ''}
@@ -380,14 +429,16 @@ function renderSeccionInfoPersona(persona, editando) {
       mostrarToastPersonas(`${nombreCompletoPersona(actual)} quedó activa de nuevo, sin líder asignada.`);
     });
 
-    document.getElementById('confirmarBajaBtn')?.addEventListener('click', () => abrirConfirmarBajaPersona(persona));
-    document.getElementById('rechazarBajaBtn')?.addEventListener('click', () => {
-      cancelarSolicitudBajaPersona(persona.id);
-      registrarAuditoriaAdmin({ modulo: 'personas', accion: 'rechazar_solicitud_baja', descripcion: `Solicitud de baja de ${nombreCompletoPersona(persona)} rechazada` });
+    document.getElementById('confirmarCambioRamaBtn')?.addEventListener('click', () => abrirConfirmarCambioRama(persona));
+    document.getElementById('rechazarCambioRamaBtn')?.addEventListener('click', () => {
+      cancelarSolicitudCambioRama(persona.id);
+      registrarAuditoriaAdmin({ modulo: 'personas', accion: 'rechazar_solicitud_cambio_rama', descripcion: `Solicitud de cambio de rama de ${nombreCompletoPersona(persona)} rechazada` });
       aplicarBusquedaPersonas();
       renderDetallePersona();
-      mostrarToastPersonas('Solicitud de baja rechazada.');
+      mostrarToastPersonas('Solicitud de cambio de rama rechazada.');
     });
+
+    if (persona.tipo === 'lider') cargarPreviewCaratulaClabe(persona);
 
     return;
   }
@@ -547,7 +598,7 @@ function abrirConfirmarConvertirLider(persona) {
       actual.tipo = 'lider';
       actual.rangoActualKey = actual.rangoActualKey || 'sin_rango';
       actual.stats = actual.stats || {
-        personasActivas: 0, produccionGrupalMes: 0, equipoCalificadoPct: 0,
+        personasActivas: 0, produccionGrupalMes: 0, personasCalificadas: 0,
         compraPersonalPeriodo1: 0, compraPersonalPeriodo2: 0
       };
 
@@ -1018,87 +1069,42 @@ function construirRangoChecklistHTML(persona) {
 
 }
 
-// Confirma la baja de una persona (Sección 15.3/15.4). Si no tiene
-// líder superior Y tiene equipo directo, ese equipo se quedaría sin
-// líder — se pide a Admin reasignarlo a mano ANTES de poder confirmar,
-// en vez de dejarlo huérfano en silencio.
-function abrirConfirmarBajaPersona(persona) {
+// Confirma el cambio de rama de una emprendedora (ver nota de
+// arquitectura en personas-ejemplo.js) — solo mueve su liderId, nunca
+// hay equipo propio que reasignar (solo aplica a Emprendedoras recién
+// inscritas).
+function abrirConfirmarCambioRama(persona) {
 
-  const hijos = obtenerHijosDirectosPersona(persona.id);
-  const superior = persona.liderId ? obtenerPersonaPorId(persona.liderId) : null;
+  const solicitud = persona.solicitudCambioRamaPendiente;
+  if (!solicitud) return;
 
-  if (!hijos.length || superior) {
-    abrirAutorizacionAdmin({
-      titulo: 'Confirmar baja',
-      peligrosa: true,
-      mensaje: hijos.length
-        ? `Vas a dar de baja a ${escapeHTMLPersonas(nombreCompletoPersona(persona))}. Su equipo directo (${hijos.length} persona${hijos.length === 1 ? '' : 's'}) se reasignará automáticamente a su líder superior, ${escapeHTMLPersonas(nombreCompletoPersona(superior))}.`
-        : `Vas a dar de baja a ${escapeHTMLPersonas(nombreCompletoPersona(persona))}. Esta persona no tiene equipo directo que reasignar.`,
-      onConfirmar: () => ejecutarYRefrescarBajaPersona(persona, {})
-    });
-    return;
-  }
+  const liderPropuesta = obtenerPersonaPorId(solicitud.liderPropuestaId);
 
-  // Sin superior y con equipo directo — reasignación manual obligatoria.
-  const overlay = document.getElementById('modalOverlay');
-  const box = document.getElementById('modalBox');
-  if (!overlay || !box) return;
+  abrirAutorizacionAdmin({
+    titulo: 'Confirmar cambio de rama',
+    mensaje: `${escapeHTMLPersonas(nombreCompletoPersona(persona))} pasará a formar parte del equipo de ${escapeHTMLPersonas(nombreCompletoPersona(liderPropuesta || {}))}. ¿Confirmas el cambio?`,
+    onConfirmar: () => {
 
-  const posiblesLideres = obtenerPersonas().filter(p => p.tipo === 'lider' && p.id !== persona.id && p.estado !== 'baja');
+      const resultado = ejecutarCambioRama(persona.id, {
+        ejecutadoPorId: ADMIN_IDENTIDAD?.usuarioId,
+        ejecutadoPorNombre: ADMIN_IDENTIDAD?.usuarioNombre
+      });
 
-  box.innerHTML = `
-    <button class="modal-close" data-close>×</button>
-    <div class="auth-icon danger">!</div>
-    <h3>Reasignar equipo antes de dar de baja</h3>
-    <p class="modal-sub">${escapeHTMLPersonas(nombreCompletoPersona(persona))} no tiene líder superior. Elige a qué líder pasa cada integrante de su equipo directo antes de confirmar la baja.</p>
-    <div class="form-grid" id="reasignarEquipoLista">
-      ${hijos.map(hijo => `
-        <div class="form-field full">
-          <label>${escapeHTMLPersonas(nombreCompletoPersona(hijo))}</label>
-          <select data-reasignar-hijo="${hijo.id}">
-            <option value="">Sin líder asignada</option>
-            ${posiblesLideres.map(l => `<option value="${l.id}">${escapeHTMLPersonas(nombreCompletoPersona(l))}</option>`).join('')}
-          </select>
-        </div>
-      `).join('')}
-    </div>
-    <div id="formErrorBaja" class="auth-error" style="display:none;"></div>
-    <button class="btn btn-danger" style="width:100%;margin-top:10px;" id="confirmarBajaConReasignacionBtn">Confirmar baja</button>
-  `;
-  overlay.classList.add('open');
+      if (!resultado.ok) { mostrarToastPersonas(resultado.error); return; }
 
-  document.getElementById('confirmarBajaConReasignacionBtn').addEventListener('click', () => {
-    const reasignaciones = {};
-    box.querySelectorAll('[data-reasignar-hijo]').forEach(sel => {
-      const hijoId = sel.getAttribute('data-reasignar-hijo');
-      if (sel.value) reasignaciones[hijoId] = sel.value;
-    });
-    overlay.classList.remove('open');
-    ejecutarYRefrescarBajaPersona(persona, reasignaciones);
+      registrarAuditoriaAdmin({
+        modulo: 'personas',
+        accion: 'cambio_rama',
+        descripcion: `${nombreCompletoPersona(persona)} cambió de rama — ahora en el equipo de ${nombreCompletoPersona(liderPropuesta || {})}`
+      });
+
+      aplicarBusquedaPersonas();
+      renderFiltroLideres();
+      renderDetallePersona();
+      mostrarToastPersonas(`${nombreCompletoPersona(persona)} ahora es parte del equipo de ${nombreCompletoPersona(liderPropuesta || {})}.`);
+
+    }
   });
-
-}
-
-function ejecutarYRefrescarBajaPersona(persona, reasignacionesManualesPorHijo) {
-
-  const resultado = ejecutarBajaPersonaConCompresion(
-    persona.id,
-    { ejecutadoPorId: ADMIN_IDENTIDAD?.usuarioId, ejecutadoPorNombre: ADMIN_IDENTIDAD?.usuarioNombre },
-    reasignacionesManualesPorHijo
-  );
-
-  if (!resultado.ok) { mostrarToastPersonas(resultado.error); return; }
-
-  registrarAuditoriaAdmin({
-    modulo: 'personas',
-    accion: 'baja_persona',
-    descripcion: `${nombreCompletoPersona(persona)} dada de baja${resultado.hijosReasignados ? ` — ${resultado.hijosReasignados} persona(s) de su equipo reasignadas` : ''}`
-  });
-
-  aplicarBusquedaPersonas();
-  renderFiltroLideres();
-  renderDetallePersona();
-  mostrarToastPersonas(`${nombreCompletoPersona(persona)} fue dada de baja.`);
 
 }
 

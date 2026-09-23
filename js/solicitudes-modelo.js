@@ -123,7 +123,7 @@ function puedeSolicitarInscripcion(rol) {
   return rol === 'emprendedora' || rol === 'lider';
 }
 
-async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, solicitanteRol, nombreCompleto, telefono, correo, ineUrl }) {
+async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, solicitanteRol, nombreCompleto, telefono, correo, ineFrenteUrl, ineReversoUrl }) {
 
   if (!puedeSolicitarInscripcion(solicitanteRol)) {
     return { ok: false, error: 'Tu cuenta no tiene permiso para enviar solicitudes de inscripción.' };
@@ -136,7 +136,8 @@ async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, sol
   if (!nombreCompleto) return { ok: false, error: 'Escribe el nombre completo de la persona.' };
   if (!telefono) return { ok: false, error: 'Escribe su número de celular.' };
   if (!correoValido(correo)) return { ok: false, error: 'Escribe un correo electrónico válido.' };
-  if (!ineUrl) return { ok: false, error: 'Adjunta la foto de identificación oficial (INE).' };
+  if (!ineFrenteUrl) return { ok: false, error: 'Adjunta la foto del frente de la identificación oficial (INE).' };
+  if (!ineReversoUrl) return { ok: false, error: 'Adjunta la foto del reverso de la identificación oficial (INE).' };
 
   const telefonoNorm = telefono.replace(/\D/g, '');
   const correoNorm = correo.toLowerCase();
@@ -162,7 +163,8 @@ async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, sol
     nombreCompleto,
     telefono,
     correo,
-    ineUrl,
+    ineFrenteUrl,
+    ineReversoUrl,
 
     estado: 'pendiente',
 

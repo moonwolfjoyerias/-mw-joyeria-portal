@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Catálogo — Portal MW</title>
+  <title>Mis compras — Portal MW</title>
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="../../css/styles.css?v=30">
   <link rel="icon" type="image/png" href="../../assets/images/favicon.png">
@@ -25,7 +25,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
           Inicio
         </a>
-        <a href="../emprendedora/emprendedora-catalogo.html" class="active">
+        <a href="../emprendedora/emprendedora-catalogo.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg>
           Catálogo
         </a>
@@ -33,7 +33,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
           Mis apartados
         </a>
-        <a href="../emprendedora/emprendedora-mis-compras.html">
+        <a href="../emprendedora/emprendedora-mis-compras.html" class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14.7 6.3a4 4 0 00-5.66 5.66L4 17l3 3 5.04-5.04a4 4 0 005.66-5.66l-2.12 2.12-2.82-2.82 2.12-2.12z"/></svg>
           Mis compras
         </a>
@@ -55,8 +55,8 @@
     <main class="main-content">
       <header class="portal-header">
         <div>
-          <h1>Catálogo</h1>
-          <p class="portal-sub">Precio etiqueta y tu precio emprendedora con descuento aplicado.</p>
+          <h1>Mis compras</h1>
+          <p class="portal-sub">El historial de tus compras liquidadas.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -83,45 +83,12 @@
         </div>
       </header>
 
-      <div class="catalog-layout">
-        <aside class="filter-panel">
-          <div class="filter-panel-header">
-            <h3>Filtros</h3>
-            <button id="clearFiltersBtn">Limpiar</button>
-          </div>
-
-          <div class="filter-group">
-            <h4>Material</h4>
-            <div id="filterMateriales"></div>
-          </div>
-
-          <div class="filter-group">
-            <h4>Categoría</h4>
-            <div id="filterCategorias"></div>
-          </div>
-
-          <div class="filter-group conditional visible">
-            <h4>Calidad (Oro Laminado)</h4>
-            <div id="filterCalidad"></div>
-          </div>
-
-          <div class="filter-group conditional visible">
-            <h4>Color de oro</h4>
-            <div id="filterColorOro"></div>
-          </div>
-
-          <div class="filter-group">
-            <h4>Talla (Anillos / Cadenas)</h4>
-            <select id="filterTalla"></select>
-          </div>
-        </aside>
-
-        <div class="catalog-grid-wrap">
-          <div class="catalog-toolbar">
-            <span class="result-count" id="resultCount"></span>
-          </div>
-          <div class="catalog-product-grid" id="catalogGrid"></div>
+      <div class="placeholder-en-construccion">
+        <div class="icon-circle-big">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14.7 6.3a4 4 0 00-5.66 5.66L4 17l3 3 5.04-5.04a4 4 0 005.66-5.66l-2.12 2.12-2.82-2.82 2.12-2.12z"/></svg>
         </div>
+        <h2>Seguimos trabajando</h2>
+        <p>Esta sección todavía está en construcción — muy pronto vas a poder ver aquí el historial de tus compras.</p>
       </div>
     </main>
   </div>
@@ -131,7 +98,6 @@
   </div>
 
   <script src="../../js/notificaciones-ejemplo.js"></script>
-  <script src="../../js/eventos-ejemplo.js"></script>
   <script>
   const PORTAL_LINKS = {
     inicio: '../emprendedora/emprendedora-portal.html',
@@ -145,12 +111,5 @@
   </script>
   <script src="../../js/portal-common.js"></script>
   <script src="../../js/notificaciones-modelo.js"></script>
-  <script src="../../js/personas-ejemplo.js"></script>
-  <script src="../../js/apartados-modelo.js"></script>
-  <script src="../../js/staff-catalogo-ejemplo.js"></script>
-  <script src="../../js/catalogo-variantes-modelo.js"></script>
-  <script src="../../js/apartados-ejemplo.js"></script>
-  <script src="../../js/catalogo-modelo.js"></script>
-  <script src="../../js/catalogo.js"></script>
 </body>
 </html>

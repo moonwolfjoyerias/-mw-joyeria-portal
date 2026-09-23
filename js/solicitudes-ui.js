@@ -9,10 +9,13 @@
 // cargado su propio archivo de identidad (cuenta-ejemplo.js o
 // lider-cuenta-ejemplo.js) para saber quién es el solicitante.
 
-// Guarda el ARCHIVO real (no su contenido en base64) — se sube a
+// Guarda los ARCHIVOS reales (no su contenido en base64) — se suben a
 // IndexedDB vía js/documentos-modelo.js recién al enviar la solicitud,
 // nunca se guarda su contenido dentro del registro de la solicitud.
-let ineArchivoTemporal = null;
+// Se piden las dos caras de la INE (frente y reverso) porque Admin
+// necesita poder leer ambos lados para validar la identificación.
+let ineFrenteArchivoTemporal = null;
+let ineReversoArchivoTemporal = null;
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -95,7 +98,8 @@ function abrirModalNuevaSolicitud() {
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
 
-  ineArchivoTemporal = null;
+  ineFrenteArchivoTemporal = null;
+  ineReversoArchivoTemporal = null;
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
@@ -111,9 +115,12 @@ function abrirModalNuevaSolicitud() {
     <label for="solCorreo">Correo electrónico *</label>
     <input id="solCorreo" type="email" placeholder="correo@ejemplo.com">
 
-    <label for="solIne">Foto de identificación oficial (INE) *</label>
-    <input id="solIne" type="file" accept="image/*">
-    <small class="field-help">Información confidencial: solo el personal Administrativo autorizado podrá verla.</small>
+    <label for="solIneFrente">Foto de identificación oficial (INE) — frente *</label>
+    <input id="solIneFrente" type="file" accept="image/*">
+
+    <label for="solIneReverso">Foto de identificación oficial (INE) — reverso *</label>
+    <input id="solIneReverso" type="file" accept="image/*">
+    <small class="field-help">Información confidencial: solo el personal Administrativo autorizado podrá verla. Sube las dos caras para que se pueda validar sin problema.</small>
 
     <div id="solError" class="auth-error" style="display:none;"></div>
 
@@ -122,17 +129,30 @@ function abrirModalNuevaSolicitud() {
 
   overlay.classList.add('open');
 
-  document.getElementById('solIne')?.addEventListener('change', (e) => {
+  document.getElementById('solIneFrente')?.addEventListener('change', (e) => {
     const archivo = e.target.files?.[0];
-    if (!archivo) { ineArchivoTemporal = null; return; }
+    if (!archivo) { ineFrenteArchivoTemporal = null; return; }
     const validacion = validarArchivoDocumento(archivo);
     if (!validacion.ok) {
       mostrarErrorSolicitud(validacion.error);
       e.target.value = '';
-      ineArchivoTemporal = null;
+      ineFrenteArchivoTemporal = null;
       return;
     }
-    ineArchivoTemporal = archivo;
+    ineFrenteArchivoTemporal = archivo;
+  });
+
+  document.getElementById('solIneReverso')?.addEventListener('change', (e) => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) { ineReversoArchivoTemporal = null; return; }
+    const validacion = validarArchivoDocumento(archivo);
+    if (!validacion.ok) {
+      mostrarErrorSolicitud(validacion.error);
+      e.target.value = '';
+      ineReversoArchivoTemporal = null;
+      return;
+    }
+    ineReversoArchivoTemporal = archivo;
   });
 
   document.getElementById('enviarSolicitudBtn')?.addEventListener('click', () => enviarNuevaSolicitud(identidad));
@@ -158,14 +178,22 @@ async function enviarNuevaSolicitud(identidad) {
   const telefono = document.getElementById('solTelefono')?.value || '';
   const correo = document.getElementById('solCorreo')?.value || '';
 
-  if (!ineArchivoTemporal) {
-    mostrarErrorSolicitud('Adjunta una foto de identificación oficial (INE).');
+  if (!ineFrenteArchivoTemporal) {
+    mostrarErrorSolicitud('Adjunta la foto del frente de la identificación oficial (INE).');
+    if (boton) { boton.disabled = false; boton.textContent = 'Enviar solicitud'; }
+    return;
+  }
+  if (!ineReversoArchivoTemporal) {
+    mostrarErrorSolicitud('Adjunta la foto del reverso de la identificación oficial (INE).');
     if (boton) { boton.disabled = false; boton.textContent = 'Enviar solicitud'; }
     return;
   }
 
-  const ineStoragePath = `solicitudes-ine/${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-  await guardarBlobDocumento(ineStoragePath, ineArchivoTemporal);
+  const sufijo = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+  const ineFrenteStoragePath = `solicitudes-ine/${sufijo}-frente`;
+  const ineReversoStoragePath = `solicitudes-ine/${sufijo}-reverso`;
+  await guardarBlobDocumento(ineFrenteStoragePath, ineFrenteArchivoTemporal);
+  await guardarBlobDocumento(ineReversoStoragePath, ineReversoArchivoTemporal);
 
   const resultado = await crearSolicitudInscripcion({
     solicitanteId: identidad.id,
@@ -174,11 +202,13 @@ async function enviarNuevaSolicitud(identidad) {
     nombreCompleto,
     telefono,
     correo,
-    ineUrl: ineStoragePath
+    ineFrenteUrl: ineFrenteStoragePath,
+    ineReversoUrl: ineReversoStoragePath
   });
 
   if (!resultado.ok) {
-    await eliminarBlobDocumento(ineStoragePath);
+    await eliminarBlobDocumento(ineFrenteStoragePath);
+    await eliminarBlobDocumento(ineReversoStoragePath);
     mostrarErrorSolicitud(resultado.error);
     if (boton) { boton.disabled = false; boton.textContent = 'Enviar solicitud'; }
     return;

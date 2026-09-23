@@ -43,7 +43,8 @@ const ESPACIOS_FOTOS_SITIO = [
   { seccion: 'colecciones', seccionLabel: 'Colecciones', ubicacion: 'hero-carousel', ubicacionLabel: 'Carrusel de portada', tipo: 'multiple', dondeAparece: 'colecciones.html — banner del encabezado' },
 
   { seccion: 'nosotros', seccionLabel: 'Nosotros', ubicacion: 'fachada-interior', ubicacionLabel: 'Fachada o interior del local', tipo: 'unica', dondeAparece: 'nosotros.html — junto al texto de introducción' },
-  { seccion: 'nosotros', seccionLabel: 'Nosotros', ubicacion: 'fundadoras', ubicacionLabel: 'Fundadoras / inicios de MW', tipo: 'unica', dondeAparece: 'nosotros.html — sección "Nuestra historia"' },
+  { seccion: 'nosotros', seccionLabel: 'Nosotros', ubicacion: 'fundadoras', ubicacionLabel: 'Fundadoras / inicios de MW (1 de 2)', tipo: 'unica', dondeAparece: 'nosotros.html — sección "Nuestra historia"' },
+  { seccion: 'nosotros', seccionLabel: 'Nosotros', ubicacion: 'fundadoras-2', ubicacionLabel: 'Fundadoras / inicios de MW (2 de 2)', tipo: 'unica', dondeAparece: 'nosotros.html — sección "Nuestra historia"' },
   { seccion: 'nosotros', seccionLabel: 'Nosotros', ubicacion: 'galeria-equipo', ubicacionLabel: 'Galería — Equipo MW', tipo: 'unica', dondeAparece: 'nosotros.html — galería de fotos' },
   { seccion: 'nosotros', seccionLabel: 'Nosotros', ubicacion: 'galeria-taller', ubicacionLabel: 'Galería — Taller / proceso de las piezas', tipo: 'unica', dondeAparece: 'nosotros.html — galería de fotos' },
   { seccion: 'nosotros', seccionLabel: 'Nosotros', ubicacion: 'galeria-eventos', ubicacionLabel: 'Galería — Familia MW en eventos', tipo: 'unica', dondeAparece: 'nosotros.html — galería de fotos' },

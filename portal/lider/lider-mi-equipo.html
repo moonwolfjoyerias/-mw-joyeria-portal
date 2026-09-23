@@ -33,6 +33,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
           Mis apartados
         </a>
+        <a href="../lider/lider-mis-compras.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14.7 6.3a4 4 0 00-5.66 5.66L4 17l3 3 5.04-5.04a4 4 0 005.66-5.66l-2.12 2.12-2.82-2.82 2.12-2.12z"/></svg>
+          Mis compras
+        </a>
         <a href="../lider/lider-mi-equipo.html" class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M2 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M14 20c.3-2.6 2-4.5 4.5-4.5"/></svg>
           Mi equipo
@@ -92,7 +96,7 @@
       <div class="org-tree-card">
         <div class="org-tree-card-header">
           <h3>Árbol de tu equipo</h3>
-          <button class="btn btn-primary" id="descargarArbolBtn"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h4l1.5 2.5h5L16 12h4"/><path d="M4 12v6a1.5 1.5 0 001.5 1.5h13A1.5 1.5 0 0020 18v-6"/><path d="M12 3v9"/><path d="M8.5 8.5L12 12l3.5-3.5"/></svg></span> Descargar mi árbol (PDF)</button>
+          <button class="btn btn-primary" id="descargarArbolBtn"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h4l1.5 2.5h5L16 12h4"/><path d="M4 12v6a1.5 1.5 0 001.5 1.5h13A1.5 1.5 0 0020 18v-6"/><path d="M12 3v9"/><path d="M8.5 8.5L12 12l3.5-3.5"/></svg></span> Descargar mi árbol (Excel)</button>
         </div>
         <div class="org-tree-wrap">
           <div id="orgTreeContainer"></div>
@@ -103,8 +107,19 @@
         <div class="org-tree-card-header">
           <h3>Gestionar equipo</h3>
         </div>
-        <p class="modal-sub" style="margin:0 0 12px;">Si alguien de tu equipo va a dejar el negocio, solicita su baja — Administración la revisa y confirma.</p>
+        <p class="modal-sub" style="margin:0 0 12px;">Si una emprendedora se inscribió bajo la líder equivocada por error, cualquiera de las dos puede pedir su cambio de rama dentro de los primeros 5 días — Administración lo revisa y confirma.</p>
         <div id="gestionEquipoLista"></div>
+      </div>
+
+      <div class="org-tree-card" style="margin-top:16px;">
+        <div class="org-tree-card-header">
+          <h3>Reclamar una emprendedora</h3>
+        </div>
+        <p class="modal-sub" style="margin:0 0 12px;">¿Crees que una emprendedora recién inscrita (últimos 5 días) debía haber quedado bajo ti? Búscala aquí y solicita el cambio.</p>
+        <div class="form-field full" style="margin-bottom:12px;">
+          <input type="text" id="reclamarBuscarInput" autocomplete="off" placeholder="Buscar por nombre...">
+        </div>
+        <div id="reclamarLista"></div>
       </div>
     </main>
   </div>
@@ -113,9 +128,6 @@
     <div class="modal-box" id="modalBox"></div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
   <script src="../../js/notificaciones-ejemplo.js"></script>
   <script src="../../js/eventos-ejemplo.js"></script>
   <script>
@@ -123,6 +135,7 @@
     inicio: '../lider/lider-portal.html',
     catalogo: '../lider/lider-catalogo.html',
     apartados: '../lider/lider-apartados.html',
+    compras: '../lider/lider-mis-compras.html',
     equipo: '../lider/lider-mi-equipo.html',
     deseos: '../lider/lider-lista-deseos.html',
     calendario: '../lider/lider-calendario.html',

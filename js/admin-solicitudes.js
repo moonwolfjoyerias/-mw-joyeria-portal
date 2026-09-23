@@ -125,9 +125,17 @@ async function abrirDetalleSolicitudAdmin(id) {
     <div class="modal-note confidential-warning">
       <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span> Información confidencial. Uso exclusivo administrativo.
     </div>
-    <div class="ine-preview">
-      <img id="inePreviewImg" src="" alt="INE de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}" style="display:none;">
-      <p class="bp-sub" id="inePreviewCargando" style="margin:0;">Cargando identificación…</p>
+    <div class="ine-preview-grid">
+      <div class="ine-preview">
+        <small class="field-help">Frente</small>
+        <img id="inePreviewFrenteImg" src="" alt="INE (frente) de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}" style="display:none;">
+        <p class="bp-sub" id="inePreviewFrenteCargando" style="margin:0;">Cargando identificación…</p>
+      </div>
+      <div class="ine-preview">
+        <small class="field-help">Reverso</small>
+        <img id="inePreviewReversoImg" src="" alt="INE (reverso) de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}" style="display:none;">
+        <p class="bp-sub" id="inePreviewReversoCargando" style="margin:0;">Cargando identificación…</p>
+      </div>
     </div>
 
     ${!esPendiente ? construirResolucionHTML(solicitud) : ''}
@@ -147,19 +155,23 @@ async function abrirDetalleSolicitudAdmin(id) {
     document.getElementById('rechazarSolicitudBtn')?.addEventListener('click', () => abrirModalRechazarAdmin(solicitud));
   }
 
-  const ineSrc = await resolverSrcDocumento(solicitud.ineUrl);
-  const ineImg = document.getElementById('inePreviewImg');
-  const ineCargando = document.getElementById('inePreviewCargando');
-  if (ineImg && ineCargando) {
-    if (ineSrc) {
-      ineImg.src = ineSrc;
-      ineImg.style.display = '';
-      ineCargando.style.display = 'none';
-    } else {
-      ineCargando.textContent = 'No pudimos cargar la identificación de esta solicitud.';
-    }
-  }
+  await cargarPreviewIne(solicitud.ineFrenteUrl, 'inePreviewFrenteImg', 'inePreviewFrenteCargando');
+  await cargarPreviewIne(solicitud.ineReversoUrl, 'inePreviewReversoImg', 'inePreviewReversoCargando');
 
+}
+
+async function cargarPreviewIne(storagePath, idImg, idCargando) {
+  const src = await resolverSrcDocumento(storagePath);
+  const img = document.getElementById(idImg);
+  const cargando = document.getElementById(idCargando);
+  if (!img || !cargando) return;
+  if (src) {
+    img.src = src;
+    img.style.display = '';
+    cargando.style.display = 'none';
+  } else {
+    cargando.textContent = 'No pudimos cargar la identificación de esta solicitud.';
+  }
 }
 
 function construirResolucionHTML(solicitud) {

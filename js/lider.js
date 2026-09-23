@@ -55,6 +55,7 @@ function abrirModalBeneficios() {
       </table>
     </div>
     <p class="modal-sub" style="margin-top:0.8rem;">Los niveles son las generaciones de tu red (hasta 5 niveles hacia abajo).</p>
+    <p class="modal-sub">El bono por rango se otorga una sola vez: la primera vez que alcanzas ese rango. Si bajas y vuelves a alcanzarlo, no se vuelve a pagar.</p>
   `;
   box.classList.add('modal-box-wide');
   overlay.classList.add('open');
@@ -89,10 +90,10 @@ function setText(id, val) {
 }
 
 function renderStatCards() {
-  const { personasActivas, produccionGrupalMes, equipoCalificadoPct } = LIDER_EJEMPLO.stats;
+  const { personasActivas, produccionGrupalMes, personasCalificadas } = LIDER_EJEMPLO.stats;
   setText('statPersonas', personasActivas);
   setText('statProduccion', fmtMoney(produccionGrupalMes));
-  setText('statCalificado', `${equipoCalificadoPct}%`);
+  setText('statCalificado', personasCalificadas);
   setText('statRango', RANGOS_MW[idxRango(LIDER_EJEMPLO.rangoActualKey)].label.toUpperCase());
 }
 
@@ -100,7 +101,7 @@ function renderProgresoRango() {
   const idxActual = idxRango(LIDER_EJEMPLO.rangoActualKey);
   const esUltimo = idxActual === RANGOS_MW.length - 1;
   const siguiente = esUltimo ? null : RANGOS_MW[idxActual + 1];
-  const { personasActivas, produccionGrupalMes, equipoCalificadoPct, compraPersonalPeriodo1, compraPersonalPeriodo2 } = LIDER_EJEMPLO.stats;
+  const { personasActivas, produccionGrupalMes, personasCalificadas, compraPersonalPeriodo1, compraPersonalPeriodo2 } = LIDER_EJEMPLO.stats;
 
   // Línea de tiempo (todos los rangos, avance según producción grupal acumulada)
   const nodesWrap = document.getElementById('rankNodes');
@@ -156,8 +157,8 @@ function renderProgresoRango() {
     },
     {
       label: 'Equipo calificado',
-      cumple: equipoCalificadoPct >= siguiente.calificado,
-      valores: `${equipoCalificadoPct}% / ${siguiente.calificado}%`,
+      cumple: personasCalificadas >= siguiente.calificado,
+      valores: `${personasCalificadas} / ${siguiente.calificado} personas`,
     },
   ];
 

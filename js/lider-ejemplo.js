@@ -2,13 +2,15 @@
 // ⚠️ TEMPORAL: se reemplaza por Firestore en Fase 3.
 // Los umbrales de rango son los REALES del documento de Fase 1 (Sección 7.2) —
 // no inventar otros ni agregar rangos que no existen (no hay "Bronce").
+// "calificado" es el NÚMERO de personas del equipo que deben llegar al
+// umbral de compra en ambos periodos (ya no es un %).
 
 const RANGOS_MW = [
   { key: 'sin_rango', label: 'Sin Rango', personas: 0, produccion: 0, compra: 0, calificado: 0 },
-  { key: 'plata', label: 'Plata', personas: 5, produccion: 22500, compra: 1500, calificado: 30 },
-  { key: 'oro', label: 'Oro', personas: 10, produccion: 52500, compra: 1500, calificado: 30 },
-  { key: 'diamante', label: 'Diamante', personas: 15, produccion: 75000, compra: 3000, calificado: 50 },
-  { key: 'corona', label: 'Corona', personas: 30, produccion: 180000, compra: 3000, calificado: 50 },
+  { key: 'plata', label: 'Plata', personas: 5, produccion: 22500, compra: 1500, calificado: 3 },
+  { key: 'oro', label: 'Oro', personas: 10, produccion: 52500, compra: 1500, calificado: 6 },
+  { key: 'diamante', label: 'Diamante', personas: 15, produccion: 75000, compra: 3000, calificado: 9 },
+  { key: 'corona', label: 'Corona', personas: 30, produccion: 180000, compra: 3000, calificado: 15 },
 ];
 
 const LIDER_EJEMPLO = {
@@ -18,7 +20,7 @@ const LIDER_EJEMPLO = {
   stats: {
     personasActivas: 8,
     produccionGrupalMes: 38000,
-    equipoCalificadoPct: 35,
+    personasCalificadas: 4,
     compraPersonalPeriodo1: 1800,
     compraPersonalPeriodo2: 1650,
   },

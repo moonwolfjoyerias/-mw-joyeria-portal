@@ -16,12 +16,21 @@ document.addEventListener('DOMContentLoaded', () => {
   renderNivelCards();
   renderArbolVisual();
   renderGestionEquipo();
+  renderReclamarEmprendedora();
 
-  const btnPdf = document.getElementById('descargarArbolBtn');
-  if (btnPdf) btnPdf.addEventListener('click', descargarArbolPDF);
+  const btnExcel = document.getElementById('descargarArbolBtn');
+  if (btnExcel) btnExcel.addEventListener('click', descargarArbolExcel);
+
+  document.getElementById('reclamarBuscarInput')?.addEventListener('input', renderReclamarEmprendedora);
 });
 
-// ---------- Gestionar equipo (solicitar baja — Sección 15.3) ----------
+// ---------- Gestionar equipo (solicitar cambio de rama) ----------
+//
+// Antes era "solicitar baja" — ver nota de arquitectura en
+// personas-ejemplo.js (crearSolicitudCambioRama). Solo las
+// Emprendedoras directas dentro de sus primeros 5 días desde la
+// inscripción pueden cambiarse de rama; dar de baja a alguien de tu
+// equipo se sigue pidiendo por otro medio (contacta a Administración).
 function renderGestionEquipo() {
 
   const wrap = document.getElementById('gestionEquipoLista');
@@ -31,29 +40,144 @@ function renderGestionEquipo() {
   if (!liderReal) { wrap.innerHTML = '<p class="equipo-modal-empty">No se pudo cargar tu equipo.</p>'; return; }
 
   const { conNivel } = calcularDescendenciaPersona(LIDER_ACTUAL_ID_REAL);
-  const equipo = conNivel.map(n => n.persona).filter(p => p.estado !== 'baja');
+  const directas = conNivel
+    .filter(n => n.nivel === 1)
+    .map(n => n.persona)
+    .filter(p => p.tipo === 'emprendedora' && p.estado !== 'baja');
 
-  if (!equipo.length) {
-    wrap.innerHTML = '<p class="equipo-modal-empty">Todavía no tienes integrantes en tu equipo.</p>';
+  if (!directas.length) {
+    wrap.innerHTML = '<p class="equipo-modal-empty">Todavía no tienes emprendedoras directas en tu equipo.</p>';
     return;
   }
 
-  wrap.innerHTML = equipo.map(p => `
-    <div class="equipo-modal-row">
-      <span>${escapeHTMLMiEquipo(nombreCompletoPersona(p))} <small style="color:var(--mw-text-muted);">(${p.tipo === 'lider' ? 'Líder' : 'Emprendedora'})</small></span>
-      ${p.solicitudBajaPendiente
-        ? '<span class="badge badge-ascenso" style="background:#fbe7e9;color:#a3272f;">Baja pendiente de revisión</span>'
-        : `<button class="btn btn-outline" type="button" data-solicitar-baja="${p.id}">Solicitar baja</button>`}
-    </div>
-  `).join('');
+  wrap.innerHTML = directas.map(p => {
+    if (p.solicitudCambioRamaPendiente) {
+      return `
+        <div class="equipo-modal-row">
+          <span>${escapeHTMLMiEquipo(nombreCompletoPersona(p))}</span>
+          <span class="badge badge-ascenso" style="background:#fbe7e9;color:#a3272f;">Cambio de rama pendiente</span>
+        </div>
+      `;
+    }
+    if (!puedeSolicitarCambioRama(p)) {
+      return `
+        <div class="equipo-modal-row">
+          <span>${escapeHTMLMiEquipo(nombreCompletoPersona(p))}</span>
+          <small style="color:var(--mw-text-muted);">Ya pasaron los 5 días desde su inscripción</small>
+        </div>
+      `;
+    }
+    return `
+      <div class="equipo-modal-row">
+        <span>${escapeHTMLMiEquipo(nombreCompletoPersona(p))}</span>
+        <button class="btn btn-outline" type="button" data-solicitar-cambio-rama="${p.id}">Solicitar cambio de rama</button>
+      </div>
+    `;
+  }).join('');
 
-  wrap.querySelectorAll('[data-solicitar-baja]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalSolicitarBaja(btn.getAttribute('data-solicitar-baja'), liderReal));
+  wrap.querySelectorAll('[data-solicitar-cambio-rama]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalCambioRama(btn.getAttribute('data-solicitar-cambio-rama'), liderReal));
   });
 
 }
 
-function abrirModalSolicitarBaja(personaId, liderReal) {
+function abrirModalCambioRama(personaId, liderReal) {
+
+  const persona = obtenerPersonaPorId(personaId);
+  if (!persona) return;
+
+  const otrasLideres = obtenerPersonas().filter(p => p.tipo === 'lider' && p.estado !== 'baja' && p.id !== liderReal.id);
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Solicitar cambio de rama de ${escapeHTMLMiEquipo(nombreCompletoPersona(persona))}</h3>
+    <p class="modal-sub">Administración revisará tu solicitud y decidirá si la confirma.</p>
+    <label for="liderDestinoSelect">¿A la rama de qué líder debería pasar?</label>
+    <select id="liderDestinoSelect" style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;margin-bottom:1.1rem;">
+      ${otrasLideres.map(l => `<option value="${l.id}">${escapeHTMLMiEquipo(nombreCompletoPersona(l))}</option>`).join('')}
+    </select>
+    <label for="motivoCambioRamaInput">Motivo (opcional)</label>
+    <textarea id="motivoCambioRamaInput" rows="3" placeholder="Ej. se inscribió bajo mí por error, en realidad es invitada de..." style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;resize:vertical;"></textarea>
+    <div id="cambioRamaError" class="auth-error" style="display:none;"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="confirmarSolicitarCambioRamaBtn">Enviar solicitud</button>
+  `;
+  overlay.classList.add('open');
+
+  document.getElementById('confirmarSolicitarCambioRamaBtn').addEventListener('click', () => {
+    const liderPropuestaId = document.getElementById('liderDestinoSelect').value;
+    const motivo = document.getElementById('motivoCambioRamaInput').value.trim();
+    const resultado = crearSolicitudCambioRama(personaId, {
+      liderPropuestaId,
+      motivo,
+      solicitadoPorId: liderReal.id,
+      solicitadoPorNombre: nombreCompletoPersona(liderReal)
+    });
+    if (!resultado.ok) {
+      const error = document.getElementById('cambioRamaError');
+      if (error) { error.textContent = resultado.error; error.style.display = 'block'; }
+      return;
+    }
+    overlay.classList.remove('open');
+    renderGestionEquipo();
+    mostrarToast(`Se envió la solicitud de cambio de rama de ${nombreCompletoPersona(persona)} a Administración.`);
+  });
+
+}
+
+// ---------- Reclamar una emprendedora de otra líder ----------
+//
+// La otra mitad del mismo flujo: si crees que una emprendedora recién
+// inscrita (últimos 5 días) debía haber quedado bajo ti y no bajo
+// quien la registró, puedes buscarla aquí y solicitar el cambio —
+// misma solicitud que arriba, Admin decide igual.
+function renderReclamarEmprendedora() {
+
+  const wrap = document.getElementById('reclamarLista');
+  if (!wrap) return;
+
+  const liderReal = obtenerPersonaPorId(LIDER_ACTUAL_ID_REAL);
+  if (!liderReal) return;
+
+  const texto = (document.getElementById('reclamarBuscarInput')?.value || '').trim().toLowerCase();
+
+  if (!texto) {
+    wrap.innerHTML = '<p class="equipo-modal-empty">Escribe un nombre para buscar.</p>';
+    return;
+  }
+
+  const candidatas = obtenerPersonas().filter(p =>
+    p.tipo === 'emprendedora' &&
+    p.liderId !== liderReal.id &&
+    puedeSolicitarCambioRama(p) &&
+    nombreCompletoPersona(p).toLowerCase().includes(texto)
+  );
+
+  if (!candidatas.length) {
+    wrap.innerHTML = '<p class="equipo-modal-empty">No hay emprendedoras recién inscritas (últimos 5 días) que coincidan.</p>';
+    return;
+  }
+
+  wrap.innerHTML = candidatas.map(p => {
+    const liderActual = p.liderId ? obtenerPersonaPorId(p.liderId) : null;
+    return `
+      <div class="equipo-modal-row">
+        <span>${escapeHTMLMiEquipo(nombreCompletoPersona(p))} <small style="color:var(--mw-text-muted);">(actualmente con ${liderActual ? escapeHTMLMiEquipo(nombreCompletoPersona(liderActual)) : 'sin líder'})</small></span>
+        <button class="btn btn-outline" type="button" data-reclamar="${p.id}">Solicitar a mi equipo</button>
+      </div>
+    `;
+  }).join('');
+
+  wrap.querySelectorAll('[data-reclamar]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalReclamar(btn.getAttribute('data-reclamar'), liderReal));
+  });
+
+}
+
+function abrirModalReclamar(personaId, liderReal) {
 
   const persona = obtenerPersonaPorId(personaId);
   if (!persona) return;
@@ -64,25 +188,31 @@ function abrirModalSolicitarBaja(personaId, liderReal) {
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <h3>Solicitar baja de ${escapeHTMLMiEquipo(nombreCompletoPersona(persona))}</h3>
+    <h3>Solicitar a ${escapeHTMLMiEquipo(nombreCompletoPersona(persona))} para tu equipo</h3>
     <p class="modal-sub">Administración revisará tu solicitud y decidirá si la confirma.</p>
-    <label for="motivoBajaInput">Motivo (opcional)</label>
-    <textarea id="motivoBajaInput" rows="3" placeholder="Ej. ya no está participando en el negocio"></textarea>
-    <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="confirmarSolicitarBajaBtn">Enviar solicitud</button>
+    <label for="motivoReclamarInput">Motivo (opcional)</label>
+    <textarea id="motivoReclamarInput" rows="3" placeholder="Ej. yo la invité, se inscribió bajo otra líder por error" style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;resize:vertical;"></textarea>
+    <div id="reclamarError" class="auth-error" style="display:none;"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="confirmarReclamarBtn">Enviar solicitud</button>
   `;
   overlay.classList.add('open');
 
-  document.getElementById('confirmarSolicitarBajaBtn').addEventListener('click', () => {
-    const motivo = document.getElementById('motivoBajaInput').value.trim();
-    const resultado = crearSolicitudBajaPersona(personaId, {
+  document.getElementById('confirmarReclamarBtn').addEventListener('click', () => {
+    const motivo = document.getElementById('motivoReclamarInput').value.trim();
+    const resultado = crearSolicitudCambioRama(personaId, {
+      liderPropuestaId: liderReal.id,
       motivo,
       solicitadoPorId: liderReal.id,
       solicitadoPorNombre: nombreCompletoPersona(liderReal)
     });
+    if (!resultado.ok) {
+      const error = document.getElementById('reclamarError');
+      if (error) { error.textContent = resultado.error; error.style.display = 'block'; }
+      return;
+    }
     overlay.classList.remove('open');
-    if (!resultado.ok) { mostrarToast(resultado.error); return; }
-    renderGestionEquipo();
-    mostrarToast(`Se envió la solicitud de baja de ${nombreCompletoPersona(persona)} a Administración.`);
+    renderReclamarEmprendedora();
+    mostrarToast(`Se envió tu solicitud para que ${nombreCompletoPersona(persona)} pase a tu equipo.`);
   });
 
 }
@@ -195,43 +325,57 @@ function renderArbolVisual() {
   }
 }
 
-// ---------- Descargar árbol en PDF ----------
-async function descargarArbolPDF() {
-  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
-    mostrarToast('No se pudo generar el PDF — intenta de nuevo en un momento.');
+// ---------- Descargar árbol en Excel ----------
+// La captura de pantalla del árbol (html2canvas + jsPDF) se veía mal en
+// árboles anchos o con muchos niveles — se reemplaza por una tabla real
+// (Nivel / Nombre / Puntos por periodo), más útil para revisar cifras
+// que una imagen. Los puntos por periodo se calculan de las mismas
+// "compras" de cada persona (equipo-ejemplo.js) que ya suman su
+// "puntos" total — mismo criterio p1 (días 1–15) / p2 (16–fin de mes)
+// que usa el resto del Plan MW.
+function calcularPuntosPorPeriodoArbol(persona) {
+  let p1 = 0;
+  let p2 = 0;
+  (persona.compras || []).forEach(c => {
+    const dia = new Date(c.fecha).getDate();
+    if (dia <= 15) p1 += c.monto; else p2 += c.monto;
+  });
+  return { p1, p2 };
+}
+
+function descargarArbolExcel() {
+
+  const depths = calcularProfundidades();
+
+  const filas = EQUIPO_ARBOL_EJEMPLO
+    .filter(m => m.id !== 'yo' && depths[m.id] >= 1 && depths[m.id] <= 5)
+    .map(m => {
+      const { p1, p2 } = calcularPuntosPorPeriodoArbol(m);
+      return { nivel: depths[m.id], nombre: m.nombre, p1, p2 };
+    })
+    .sort((a, b) => a.nivel - b.nivel || a.nombre.localeCompare(b.nombre));
+
+  if (!filas.length) {
+    mostrarToast('Todavía no hay integrantes en tu equipo para exportar.');
     return;
   }
 
-  const viewport = document.getElementById('orgTreeContainer');
+  const encabezado = ['Nivel', 'Nombre', 'Puntos periodo 1', 'Puntos periodo 2', 'Puntos totales'];
+  const cuerpo = filas.map(f => [f.nivel, f.nombre, f.p1.toFixed(2), f.p2.toFixed(2), (f.p1 + f.p2).toFixed(2)]);
 
-  try {
+  const csv = '﻿' + [encabezado, ...cuerpo]
+    .map(fila => fila.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    .join('\r\n');
 
-    // Espera a que las fuentes web terminen de cargar — capturar antes de
-    // tiempo es una causa común de que html2canvas genere un lienzo vacío.
-    if (document.fonts?.ready) await document.fonts.ready;
-
-    const canvas = await html2canvas(viewport, {
-      backgroundColor: '#ffffff',
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: viewport.scrollWidth,
-      windowHeight: viewport.scrollHeight
-    });
-
-    const imgData = canvas.toDataURL('image/png');
-
-    const { jsPDF } = window.jspdf;
-    const orientacion = canvas.width > canvas.height ? 'l' : 'p';
-    const pdf = new jsPDF({ orientation: orientacion, unit: 'pt', format: [canvas.width, canvas.height] });
-    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-    pdf.save('mi-arbol-mw.pdf');
-
-  } catch (error) {
-    console.error('Error al generar el PDF del árbol:', error);
-    mostrarToast('No se pudo generar el PDF — intenta de nuevo en un momento.');
-  }
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mi-arbol-mw.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  mostrarToast('Excel generado.');
 
 }

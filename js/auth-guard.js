@@ -97,6 +97,12 @@ function aplicarIdentidadSesionEnHeader() {
   const nombreEl = document.querySelector('.profile-btn .profile-info strong');
   if (avatar) avatar.textContent = sesion.nombre.trim().charAt(0).toUpperCase() || '?';
   if (nombreEl) nombreEl.textContent = sesion.nombre;
+
+  // "Bienvenid@, {nombre}" en el dashboard de cada portal (excepto
+  // Staff, por la misma razón de cuenta compartida de arriba) — el
+  // primer nombre solamente, para que el saludo no se vea tan largo.
+  const bienvenidaEl = document.querySelector('.portal-bienvenida-nombre');
+  if (bienvenidaEl) bienvenidaEl.textContent = sesion.nombre.trim().split(' ')[0] || sesion.nombre;
 }
 
 // "Cerrar sesión" ya existe como un link normal a login.html en las 44

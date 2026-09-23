@@ -678,7 +678,7 @@ function renderSeccionPlanMW() {
       <p class="cfg-card-sub">Mismos umbrales reales del Plan MW. Cambiarlos aquí no recalcula ascensos ya confirmados.</p>
       <div class="catalog-table-wrap cfg-tabla-wrap">
         <table class="catalog-table" id="cfgTablaRangos">
-          <thead><tr><th>Rango</th><th>Personas activas</th><th>Producción grupal</th><th>Compra personal</th><th>% Equipo calificado</th></tr></thead>
+          <thead><tr><th>Rango</th><th>Personas activas</th><th>Producción grupal</th><th>Compra personal</th><th>Equipo calificado (personas)</th></tr></thead>
           <tbody>
             ${RANGOS_MW.filter(r => r.key !== 'sin_rango').map(r => `
               <tr>
@@ -686,7 +686,7 @@ function renderSeccionPlanMW() {
                 ${construirCeldaVersionada({ tipo: 'rango', parametro: `${r.key}_personas`, seccion: 'Plan MW', etiqueta: `Rango ${r.label} — personas activas`, tipoValor: 'numero' })}
                 ${construirCeldaVersionada({ tipo: 'rango', parametro: `${r.key}_produccion`, seccion: 'Plan MW', etiqueta: `Rango ${r.label} — producción grupal`, tipoValor: 'moneda' })}
                 ${construirCeldaVersionada({ tipo: 'rango', parametro: `${r.key}_compra`, seccion: 'Plan MW', etiqueta: `Rango ${r.label} — compra personal`, tipoValor: 'moneda' })}
-                ${construirCeldaVersionada({ tipo: 'rango', parametro: `${r.key}_calificado`, seccion: 'Plan MW', etiqueta: `Rango ${r.label} — % equipo calificado`, tipoValor: 'porcentaje' })}
+                ${construirCeldaVersionada({ tipo: 'rango', parametro: `${r.key}_calificado`, seccion: 'Plan MW', etiqueta: `Rango ${r.label} — personas del equipo calificadas`, tipoValor: 'numero' })}
               </tr>
             `).join('')}
           </tbody>

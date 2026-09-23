@@ -264,6 +264,7 @@ function construirCardLider(r) {
 
       <div class="comm-pago-block">
         <span class="badge ${estadoPagoClase}">${estadoPagoLabel}</span>
+        <button class="btn btn-outline" type="button" style="width:auto;" data-ver-datos-bancarios="${r.lider.id}">Datos bancarios</button>
         <button class="btn btn-outline" type="button" style="width:auto;" data-registrar-pago="${r.lider.id}">
           ${r.estadoPago.estado === 'pagada' ? 'Ver detalle de pago' : 'Registrar pago'}
         </button>
@@ -483,6 +484,10 @@ function wireEventosTabla() {
     btn.addEventListener('click', () => abrirModalPago(btn.getAttribute('data-registrar-pago')));
   });
 
+  document.querySelectorAll('[data-ver-datos-bancarios]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalDatosBancariosLider(btn.getAttribute('data-ver-datos-bancarios')));
+  });
+
   document.querySelectorAll('[data-pagar-bono]').forEach(btn => {
     btn.addEventListener('click', () => confirmarPagarBono(btn.getAttribute('data-pagar-bono')));
   });
@@ -681,6 +686,58 @@ function abrirHistorialAjuste(liderId, personaId, subPeriodo) {
     ` : `<p class="bp-sub" style="margin:0;">Esta comisión no tiene ajustes manuales registrados en este periodo.</p>`}
   `;
   overlay.classList.add('open');
+}
+
+// ============================================================
+// DATOS BANCARIOS (consulta rápida, sin pasar por el pago)
+// ============================================================
+
+async function abrirModalDatosBancariosLider(liderId) {
+  const r = comisionesData.find(x => x.lider.id === liderId);
+  if (!r) return;
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const datosBancarios = r.lider.datosBancarios;
+  const tieneDatosBancarios = datosBancarios && (datosBancarios.titular || datosBancarios.banco || datosBancarios.clabe);
+
+  box.style.maxWidth = '420px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
+    <h3>Datos bancarios</h3>
+    <p class="modal-sub">${escapeHTMLPersonas(nombreCompletoPersona(r.lider))}</p>
+    ${tieneDatosBancarios ? `
+      <div class="detail-grid">
+        <div><span>Titular</span><strong>${escapeHTMLPersonas(datosBancarios.titular) || '—'}</strong></div>
+        <div><span>Banco</span><strong>${escapeHTMLPersonas(datosBancarios.banco) || '—'}</strong></div>
+        <div><span>CLABE</span><strong>${escapeHTMLPersonas(datosBancarios.clabe) || '—'}</strong></div>
+      </div>
+      <div class="ine-preview" style="margin-top:10px;">
+        <small class="field-help">Carátula de la CLABE</small>
+        <div id="comisionesCaratulaClabeContenido">${datosBancarios.caratulaClabeUrl ? '<p class="bp-sub" style="margin:0;">Cargando…</p>' : '<p class="bp-sub" style="margin:0;">Todavía no la sube.</p>'}</div>
+      </div>
+    ` : `<div class="modal-note" style="margin-top:10px;">Esta líder todavía no registró sus datos bancarios en su Mi cuenta.</div>`}
+  `;
+  overlay.classList.add('open');
+
+  if (datosBancarios?.caratulaClabeUrl && typeof resolverSrcDocumento === 'function') {
+    const url = datosBancarios.caratulaClabeUrl;
+    const blob = (typeof storageFirebase === 'undefined' || !storageFirebase) ? await obtenerBlobDocumento(url) : null;
+    const src = await resolverSrcDocumento(url);
+    const contenido = document.getElementById('comisionesCaratulaClabeContenido');
+    if (contenido) {
+      if (!src) {
+        contenido.innerHTML = '<p class="bp-sub" style="margin:0;">No pudimos cargar la carátula.</p>';
+      } else if (blob && blob.type === 'application/pdf') {
+        contenido.innerHTML = `<a href="${src}" target="_blank" rel="noopener">Ver PDF de la carátula</a>`;
+      } else {
+        contenido.innerHTML = `<img src="${src}" alt="Carátula de la CLABE" style="max-width:100%;border-radius:6px;">`;
+      }
+    }
+  }
 }
 
 // ============================================================
