@@ -28,6 +28,21 @@ function rangoLabel(key) {
   return RANGOS_MW.find(r => r.key === key)?.label || 'Sin Rango';
 }
 
+// Próximo día 15 (entrega de premios del Reto de Constancia) — mismo
+// criterio que calcularProximoPagoLider() en js/lider-cuenta.js: solo
+// cuenta una fecha que todavía no llega, así que si hoy ya es 15, "el
+// próximo" pasa directo al 15 del mes siguiente.
+function calcularProximoDia15(ahora = new Date()) {
+  const hoyMedianoche = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const candidato = new Date(ahora.getFullYear(), ahora.getMonth(), 15);
+  return candidato > hoyMedianoche ? candidato : new Date(ahora.getFullYear(), ahora.getMonth() + 1, 15);
+}
+
+function formatearProximoDia15(ahora = new Date()) {
+  const fecha = calcularProximoDia15(ahora);
+  return `15 de ${fecha.toLocaleDateString('es-MX', { month: 'long' })}`;
+}
+
 // Admin → Configuración → Plan MW es dueña de estos umbrales y premios
 // (ver js/configuracion-modelo.js). Si esta página no la tiene cargada,
 // se usan los mismos RANGOS_MW / HITOS_CONSTANCIA_PERSONA de siempre.
@@ -393,6 +408,7 @@ function procesarCierresMensualesPlanMW(persona) {
   persona.constancia.mesesProcesados = persona.constancia.mesesProcesados || [];
   persona.constancia.excedenteDisponible = persona.constancia.excedenteDisponible || 0;
   persona.constancia.mesesCumplidos = persona.constancia.mesesCumplidos || 0;
+  persona.constancia.fechasLogroMes = persona.constancia.fechasLogroMes || {};
 
   persona.rifa = persona.rifa || { montoAcumuladoMes: 0, meta: META_RIFA_MENSUAL };
   persona.rifa.mesesProcesados = persona.rifa.mesesProcesados || [];
@@ -456,6 +472,16 @@ function procesarCierresMensualesPlanMW(persona) {
   const comprasMesActual = obtenerComprasLiquidadasPersonaMes(persona.id, mesKeyHoy).normal;
   if (persona.constancia.montoMesActual !== comprasMesActual) { persona.constancia.montoMesActual = comprasMesActual; huboCambios = true; }
   if (persona.rifa.montoAcumuladoMes !== comprasMesActual) { persona.rifa.montoAcumuladoMes = comprasMesActual; huboCambios = true; }
+
+  // Fecha real en que se alcanzaron los $8,000 del mes en curso — se
+  // guarda una sola vez por mesKey (idempotente), en cuanto se detecta
+  // el cruce (misma condición con la que se cerraría el mes: compras +
+  // excedente disponible). Queda como historial aunque el mes ya cierre.
+  const totalConExcedenteMesActual = comprasMesActual + persona.constancia.excedenteDisponible;
+  if (totalConExcedenteMesActual >= META_CONSTANCIA_MENSUAL && !persona.constancia.fechasLogroMes[mesKeyHoy]) {
+    persona.constancia.fechasLogroMes[mesKeyHoy] = new Date().toISOString();
+    huboCambios = true;
+  }
 
   return huboCambios;
 
@@ -548,6 +574,15 @@ function evaluarActividadMensualPersona(persona) {
 // RETO DE CONSTANCIA
 // ============================================================
 
+// Fecha real (ISO) en que esta persona alcanzó los $8,000 del mes EN
+// CURSO, o null si todavía no los alcanza. La ve tanto ella misma (Mi
+// cuenta) como Admin (Plan MW).
+function obtenerFechaLogroMesActual(persona) {
+  if (typeof mesKeyActualComprasModelo !== 'function') return null;
+  const mesKeyHoy = mesKeyActualComprasModelo();
+  return (persona.constancia && persona.constancia.fechasLogroMes && persona.constancia.fechasLogroMes[mesKeyHoy]) || null;
+}
+
 // Primer hito que todavía no ha sido otorgado, y qué tan cerca está.
 function calcularProximidadConstancia(persona) {
 
@@ -638,7 +673,7 @@ function abrirConfirmarRecompensaConstancia(persona, onExito) {
 
       if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('recompensa_constancia_entregada'))) {
         agregarNotificacion({
-          texto: `¡Felicidades! Ganaste "${premio}" por cumplir ${meses} compras del Reto de Constancia <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20l5-13"/><path d="M9 7l2 2M13 4l1 2M6 15l2 1"/><circle cx="17" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="11" r="1" fill="currentColor" stroke="none"/></svg></span>`,
+          texto: `¡Felicidades! Ganaste "${premio}" por cumplir ${meses} compras del Reto de Constancia. Pasa a partir del ${formatearProximoDia15()} para recogerlo <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20l5-13"/><path d="M9 7l2 2M13 4l1 2M6 15l2 1"/><circle cx="17" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="11" r="1" fill="currentColor" stroke="none"/></svg></span>`,
           link: 'cuenta',
           paraId: actual.id,
           rolDestino: 'emprendedora_lider'

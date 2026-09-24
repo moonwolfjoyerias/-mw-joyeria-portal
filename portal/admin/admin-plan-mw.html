@@ -109,71 +109,105 @@
         </div>
       </header>
 
-      <div class="planmw-toolbar">
-        <div class="filtro-chips" id="planmwFiltros">
-          <button type="button" class="filtro-chip active" data-filtro="todos">Todos</button>
-          <button type="button" class="filtro-chip" data-filtro="proximos">Próximos</button>
-          <button type="button" class="filtro-chip" data-filtro="alcanzados">Alcanzados</button>
+      <nav class="cfg-nav" id="planmwNavPrincipal">
+        <button type="button" class="cfg-nav-item active" data-planmw-vista="seguimiento">Seguimiento</button>
+        <button type="button" class="cfg-nav-item" data-planmw-vista="rifa">Rifa del mes</button>
+      </nav>
+
+      <div id="planmwVistaSeguimiento">
+
+        <div class="planmw-toolbar">
+          <div class="filtro-chips" id="planmwFiltros">
+            <button type="button" class="filtro-chip active" data-filtro="todos">Todos</button>
+            <button type="button" class="filtro-chip" data-filtro="proximos">Próximos</button>
+            <button type="button" class="filtro-chip" data-filtro="alcanzados">Alcanzados</button>
+          </div>
+          <select id="periodoSelect"></select>
         </div>
-        <select id="periodoSelect"></select>
+
+        <section class="stat-cards catalog-summary">
+          <div class="stat-card">
+            <div class="icon-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7L2 9.2l7.1-.6z"/></svg>
+            </div>
+            <div>
+              <h4>Logros del periodo</h4>
+              <span class="stat-num" id="statLogros">0</span>
+              <span class="stat-link">En el periodo seleccionado</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="icon-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+            </div>
+            <div>
+              <h4>Subieron de rango</h4>
+              <span class="stat-num" id="statAscensos">0</span>
+              <span class="stat-link">En el periodo seleccionado</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="icon-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12v8H4v-8"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7C9 7 8 5 8 4a2 2 0 114 0 2 2 0 114 0c0 1-1 3-4 3z"/></svg>
+            </div>
+            <div>
+              <h4>Recompensas ganadas</h4>
+              <span class="stat-num" id="statRecompensas">0</span>
+              <span class="stat-link">En el periodo seleccionado</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="icon-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            </div>
+            <div>
+              <h4>Próximos a lograr</h4>
+              <span class="stat-num" id="statProximos">0</span>
+              <span class="stat-link">Ahora mismo</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="seccionProximos">
+          <div class="section-head">
+            <h2><span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg></span> Próximos a lograr</h2>
+          </div>
+          <div class="planmw-grid" id="proximosGrid"></div>
+        </section>
+
+        <section id="seccionLogros" style="margin-top:28px;">
+          <div class="section-head">
+            <h2><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 4h10v4a5 5 0 01-10 0V4z"/><path d="M7 5H4a3 3 0 003 4M17 5h3a3 3 0 01-3 4"/><path d="M12 13v4"/><path d="M9 20h6"/><path d="M9.5 17h5l.5 3h-6l.5-3z"/></svg></span> Logros del periodo</h2>
+          </div>
+          <div class="planmw-grid" id="logrosGrid"></div>
+        </section>
+
       </div>
 
-      <section class="stat-cards catalog-summary">
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7L2 9.2l7.1-.6z"/></svg>
-          </div>
-          <div>
-            <h4>Logros del periodo</h4>
-            <span class="stat-num" id="statLogros">0</span>
-            <span class="stat-link">En el periodo seleccionado</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
-          </div>
-          <div>
-            <h4>Subieron de rango</h4>
-            <span class="stat-num" id="statAscensos">0</span>
-            <span class="stat-link">En el periodo seleccionado</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12v8H4v-8"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7C9 7 8 5 8 4a2 2 0 114 0 2 2 0 114 0c0 1-1 3-4 3z"/></svg>
-          </div>
-          <div>
-            <h4>Recompensas ganadas</h4>
-            <span class="stat-num" id="statRecompensas">0</span>
-            <span class="stat-link">En el periodo seleccionado</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
-          </div>
-          <div>
-            <h4>Próximos a lograr</h4>
-            <span class="stat-num" id="statProximos">0</span>
-            <span class="stat-link">Ahora mismo</span>
-          </div>
-        </div>
-      </section>
-
-      <section id="seccionProximos">
+      <div id="planmwVistaRifa" hidden>
         <div class="section-head">
-          <h2><span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg></span> Próximos a lograr</h2>
+          <h2><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 9a2 2 0 012-2h14a2 2 0 012 2v1a1.5 1.5 0 000 3v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1a1.5 1.5 0 000-3V9z"/><path d="M9 7v10"/></svg></span> Rifa del mes — <span id="rifaMesLabel">—</span></h2>
         </div>
-        <div class="planmw-grid" id="proximosGrid"></div>
-      </section>
+        <p class="portal-sub" style="margin-top:-6px;">Elige cómo participan las Emprendedoras/Líderes en la rifa de este mes.</p>
 
-      <section id="seccionLogros" style="margin-top:28px;">
-        <div class="section-head">
-          <h2><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 4h10v4a5 5 0 01-10 0V4z"/><path d="M7 5H4a3 3 0 003 4M17 5h3a3 3 0 01-3 4"/><path d="M12 13v4"/><path d="M9 20h6"/><path d="M9.5 17h5l.5 3h-6l.5-3z"/></svg></span> Logros del periodo</h2>
+        <div class="rifa-modo-chips" id="rifaModoChips">
+          <button type="button" class="filtro-chip" data-rifa-modo="solicitud">Solicitud — cada quien escribe qué le gustaría</button>
+          <button type="button" class="filtro-chip" data-rifa-modo="votacion">Votación — eligen entre las opciones de Admin</button>
         </div>
-        <div class="planmw-grid" id="logrosGrid"></div>
-      </section>
+
+        <div id="rifaOpcionesBloque" hidden>
+          <div class="section-head" style="margin-top:22px;">
+            <h3>Opciones para votar</h3>
+            <button class="btn btn-outline" type="button" id="rifaAgregarOpcionBtn">+ Agregar opción</button>
+          </div>
+          <div class="rifa-opciones-grid" id="rifaOpcionesGrid"></div>
+        </div>
+
+        <div class="section-head" style="margin-top:26px;">
+          <h3 id="rifaResultadosTitulo">Resultados</h3>
+        </div>
+        <div id="rifaResultadosBloque"></div>
+      </div>
 
     </main>
   </div>
@@ -194,6 +228,7 @@
   <script src="../../js/compras-modelo.js"></script>
   <script src="../../js/plan-mw-admin.js"></script>
   <script src="../../js/alertas-inactividad-modelo.js"></script>
+  <script src="../../js/rifa-mensual-modelo.js"></script>
   <script src="../../js/admin-plan-mw.js"></script>
 </body>
 </html>
