@@ -56,6 +56,7 @@ function abrirModalBeneficios() {
     </div>
     <p class="modal-sub" style="margin-top:0.8rem;">Los niveles son las generaciones de tu red (hasta 5 niveles hacia abajo).</p>
     <p class="modal-sub">El bono por rango se otorga una sola vez: la primera vez que alcanzas ese rango. Si bajas y vuelves a alcanzarlo, no se vuelve a pagar.</p>
+    <p class="modal-sub">Tu rango más alto queda como reconocimiento permanente, pero tu comisión de cada mes se calcula según el rango que realmente cumples ese mes — si un mes no te recalificas, tu comisión de ese mes se calcula con un rango menor.</p>
   `;
   box.classList.add('modal-box-wide');
   overlay.classList.add('open');
@@ -75,6 +76,22 @@ function idxRango(key) {
 function fmtMoney(n) {
   return `$${n.toLocaleString('es-MX')}`;
 }
+// Producción grupal (requisito de rango) se mide en "puntos", no en
+// pesos (Plan MW, Sección 1) — aunque hoy 1 punto = 1 peso de compra,
+// nunca se le pone signo de $.
+function fmtPuntos(n) {
+  return `${Math.round(n).toLocaleString('es-MX')} puntos`;
+}
+// Misma regla que js/plan-mw-admin.js → cumpleCompraPersonalRango: Plata
+// y Oro exigen $1,500 en AMBOS periodos; Diamante y Corona, $3,000 pero
+// solo en el periodo de consolidación (el mayor de los dos). Copiada
+// aquí (no importada) porque esta página todavía usa datos de ejemplo
+// desconectados del motor real de Plan MW — ver nota de arquitectura.
+function cumpleCompraPersonalRangoLider(rangoKey, p1, p2, montoRequerido) {
+  const soloUnPeriodo = rangoKey === 'diamante' || rangoKey === 'corona';
+  const valorComparado = soloUnPeriodo ? Math.max(p1, p2) : Math.min(p1, p2);
+  return { cumple: valorComparado >= montoRequerido, soloUnPeriodo };
+}
 
 function renderRankHero() {
   const idx = idxRango(LIDER_EJEMPLO.rangoActualKey);
@@ -92,7 +109,7 @@ function setText(id, val) {
 function renderStatCards() {
   const { personasActivas, produccionGrupalMes, personasCalificadas } = LIDER_EJEMPLO.stats;
   setText('statPersonas', personasActivas);
-  setText('statProduccion', fmtMoney(produccionGrupalMes));
+  setText('statProduccion', fmtPuntos(produccionGrupalMes));
   setText('statCalificado', personasCalificadas);
   setText('statRango', RANGOS_MW[idxRango(LIDER_EJEMPLO.rangoActualKey)].label.toUpperCase());
 }
@@ -114,7 +131,7 @@ function renderProgresoRango() {
             ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>'
             : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4"/></svg>'}
         </div>
-        <span class="node-label">${r.label}<br>${fmtMoney(r.produccion)}</span>
+        <span class="node-label">${r.label}<br>${fmtPuntos(r.produccion)}</span>
       </div>
     `;
   }).join('');
@@ -129,7 +146,7 @@ function renderProgresoRango() {
     tituloProgreso.innerHTML = `Progreso hacia ${siguiente.label.toUpperCase()} <span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z"/></svg></span>`;
     const faltante = Math.max(0, siguiente.produccion - produccionGrupalMes);
     subProgreso.textContent = faltante > 0
-      ? `Te faltan ${fmtMoney(faltante)} de producción grupal para alcanzar ${siguiente.label}.`
+      ? `Te faltan ${fmtPuntos(faltante)} de producción grupal para alcanzar ${siguiente.label}.`
       : `¡Ya cumples la producción grupal para ${siguiente.label}! Revisa los demás requisitos abajo.`;
   } else {
     tituloProgreso.innerHTML = '¡Estás en el rango más alto! <span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z"/></svg></span>';
@@ -143,7 +160,7 @@ function renderProgresoRango() {
     return;
   }
 
-  const compraMinima = Math.min(compraPersonalPeriodo1, compraPersonalPeriodo2);
+  const compra = cumpleCompraPersonalRangoLider(siguiente.key, compraPersonalPeriodo1, compraPersonalPeriodo2, siguiente.compra);
   const items = [
     {
       label: 'Personas activas',
@@ -151,8 +168,8 @@ function renderProgresoRango() {
       valores: `${personasActivas} / ${siguiente.personas}`,
     },
     {
-      label: 'Compra personal (ambos periodos)',
-      cumple: compraMinima >= siguiente.compra,
+      label: compra.soloUnPeriodo ? 'Compra personal (periodo de consolidación)' : 'Compra personal (ambos periodos)',
+      cumple: compra.cumple,
       valores: `${fmtMoney(compraPersonalPeriodo1)} y ${fmtMoney(compraPersonalPeriodo2)} / ${fmtMoney(siguiente.compra)}`,
     },
     {

@@ -966,7 +966,7 @@ function renderArbolEquipoAdmin(persona) {
     const produccion = typeof calcularStatsRangoLider === 'function'
       ? calcularStatsRangoLider(p, mesKeyActualComprasModelo(), subPeriodoActualComprasModelo()).produccionGrupalMes
       : p.stats.produccionGrupalMes;
-    return `$${formatearDineroPersonas(produccion)} MXN`;
+    return `${formatearDineroPersonas(produccion)} puntos`;
   }
 
   function renderNodo(p, esRaiz, nivel) {

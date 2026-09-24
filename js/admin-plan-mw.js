@@ -220,6 +220,7 @@ function construirTextoFaltante(limitante, siguienteLabel) {
   if (!limitante || limitante.faltante <= 0) return `Está muy cerca de alcanzar: <strong>${siguienteLabel}</strong>.`;
   let valor;
   if (limitante.unidad === 'dinero') valor = `$${formatearDineroPersonas(limitante.faltante)}`;
+  else if (limitante.unidad === 'puntos') valor = `${formatearDineroPersonas(limitante.faltante)} puntos`;
   else if (limitante.unidad === 'personas_calificadas') valor = `${Math.ceil(limitante.faltante)} persona${limitante.faltante === 1 ? '' : 's'} calificada${limitante.faltante === 1 ? '' : 's'}`;
   else valor = `${Math.ceil(limitante.faltante)} persona${limitante.faltante === 1 ? '' : 's'} activas`;
   const esPersonas = limitante.unidad === 'personas' || limitante.unidad === 'personas_calificadas';
@@ -351,6 +352,7 @@ function abrirDetallePlanMW(personaId) {
 function construirTextoFaltanteCorto(limitante) {
   if (!limitante || limitante.faltante <= 0) return '—';
   if (limitante.unidad === 'dinero') return `$${formatearDineroPersonas(limitante.faltante)}`;
+  if (limitante.unidad === 'puntos') return `${formatearDineroPersonas(limitante.faltante)} puntos`;
   if (limitante.unidad === 'personas_calificadas') return `${Math.ceil(limitante.faltante)} persona${limitante.faltante === 1 ? '' : 's'} calificada${limitante.faltante === 1 ? '' : 's'}`;
   return `${Math.ceil(limitante.faltante)} personas activas`;
 }

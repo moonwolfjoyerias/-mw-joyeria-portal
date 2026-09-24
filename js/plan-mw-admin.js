@@ -58,6 +58,27 @@ function obtenerHitosConstanciaConfigurados() {
 // RANGOS
 // ============================================================
 
+// Compra personal (Sección 6 del Plan MW): Plata y Oro exigen $1,500
+// en CADA sub-periodo (ambos, sin excepción). Diamante y Corona exigen
+// $3,000, pero SOLO en el periodo en que se consolida el rango — no
+// hace falta cumplirlo también en el otro periodo (Sección 7, "regla
+// especial de Diamante y Corona").
+function cumpleCompraPersonalRango(rangoKey, p1, p2, montoRequerido) {
+  const soloUnPeriodo = rangoKey === 'diamante' || rangoKey === 'corona';
+  const valorComparado = soloUnPeriodo ? Math.max(p1, p2) : Math.min(p1, p2);
+  return { cumple: valorComparado >= montoRequerido, valorComparado, soloUnPeriodo };
+}
+
+// Producción que cuenta para el requisito del rango — con el tope del
+// 50% por línea ya aplicado (Sección 5). La producción real/sin capar
+// (statsReales.produccionGrupalMes) sigue usándose tal cual para
+// comisiones; esta versión capada es SOLO para saber si se cumple el
+// requisito de puntos de un rango.
+function calcularProduccionParaRequisitoRango(personaId, mesKey, produccionRequerida) {
+  if (typeof calcularProduccionCapadaParaRango !== 'function') return null;
+  return calcularProduccionCapadaParaRango(personaId, mesKey, produccionRequerida);
+}
+
 // Requisitos del SIGUIENTE rango comparados contra los datos REALES de
 // la líder — antes se leían de persona.stats (campos capturados a
 // mano); ahora se calculan a partir de las piezas de apartado
@@ -65,7 +86,9 @@ function obtenerHitosConstanciaConfigurados() {
 // no cargó compras-modelo.js, cae a persona.stats como red de
 // seguridad (no debería ocurrir — se agregó a todas las páginas que
 // cargan este archivo).
-function calcularAscensoRango(persona) {
+function calcularAscensoRango(persona, mesKey) {
+
+  mesKey = mesKey || mesKeyActualComprasModelo();
 
   const idxActual = RANGOS_MW.findIndex(r => r.key === persona.rangoActualKey);
   const esUltimo = idxActual === RANGOS_MW.length - 1;
@@ -74,17 +97,19 @@ function calcularAscensoRango(persona) {
   if (!siguiente) return { siguiente: null, items: [], elegible: false };
 
   const statsReales = typeof calcularStatsRangoLider === 'function'
-    ? calcularStatsRangoLider(persona, mesKeyActualComprasModelo(), subPeriodoActualComprasModelo())
+    ? calcularStatsRangoLider(persona, mesKey, subPeriodoActualComprasModelo())
     : persona.stats;
 
   const { personasActivas, produccionGrupalMes, personasCalificadas, compraPersonalPeriodo1, compraPersonalPeriodo2 } = statsReales;
-  const compraMinima = Math.min(compraPersonalPeriodo1, compraPersonalPeriodo2);
+  const compra = cumpleCompraPersonalRango(siguiente.key, compraPersonalPeriodo1, compraPersonalPeriodo2, siguiente.compra);
+  const produccionParaRequisito = calcularProduccionParaRequisitoRango(persona.id, mesKey, siguiente.produccion);
+  const produccionEvaluada = produccionParaRequisito !== null ? produccionParaRequisito : produccionGrupalMes;
 
   const items = [
     { label: 'Personas activas', cumple: personasActivas >= siguiente.personas, valores: `${personasActivas} / ${siguiente.personas}`, ratio: siguiente.personas ? personasActivas / siguiente.personas : 1, faltante: Math.max(0, siguiente.personas - personasActivas), unidad: 'personas' },
-    { label: 'Compra personal (ambos periodos)', cumple: compraMinima >= siguiente.compra, valores: `$${formatearDineroPersonas(compraPersonalPeriodo1)} y $${formatearDineroPersonas(compraPersonalPeriodo2)} / $${formatearDineroPersonas(siguiente.compra)}`, ratio: siguiente.compra ? compraMinima / siguiente.compra : 1, faltante: Math.max(0, siguiente.compra - compraMinima), unidad: 'dinero' },
+    { label: compra.soloUnPeriodo ? 'Compra personal (periodo de consolidación)' : 'Compra personal (ambos periodos)', cumple: compra.cumple, valores: `$${formatearDineroPersonas(compraPersonalPeriodo1)} y $${formatearDineroPersonas(compraPersonalPeriodo2)} / $${formatearDineroPersonas(siguiente.compra)}`, ratio: siguiente.compra ? compra.valorComparado / siguiente.compra : 1, faltante: Math.max(0, siguiente.compra - compra.valorComparado), unidad: 'dinero' },
     { label: 'Equipo calificado', cumple: personasCalificadas >= siguiente.calificado, valores: `${personasCalificadas} / ${siguiente.calificado} personas`, ratio: siguiente.calificado ? personasCalificadas / siguiente.calificado : 1, faltante: Math.max(0, siguiente.calificado - personasCalificadas), unidad: 'personas_calificadas' },
-    { label: 'Producción grupal', cumple: produccionGrupalMes >= siguiente.produccion, valores: `$${formatearDineroPersonas(produccionGrupalMes)} / $${formatearDineroPersonas(siguiente.produccion)}`, ratio: siguiente.produccion ? produccionGrupalMes / siguiente.produccion : 1, faltante: Math.max(0, siguiente.produccion - produccionGrupalMes), unidad: 'dinero' }
+    { label: 'Producción grupal', cumple: produccionEvaluada >= siguiente.produccion, valores: `${formatearDineroPersonas(produccionEvaluada)} / ${formatearDineroPersonas(siguiente.produccion)} puntos`, ratio: siguiente.produccion ? produccionEvaluada / siguiente.produccion : 1, faltante: Math.max(0, siguiente.produccion - produccionEvaluada), unidad: 'puntos' }
   ];
 
   return { siguiente, items, elegible: items.every(it => it.cumple) };
@@ -120,16 +145,101 @@ function calcularCumpleRangoActual(persona, periodoKey) {
     : persona.stats;
 
   const { personasActivas, produccionGrupalMes, personasCalificadas, compraPersonalPeriodo1, compraPersonalPeriodo2 } = statsReales;
-  const compraMinima = Math.min(compraPersonalPeriodo1, compraPersonalPeriodo2);
+  const mesKeyEvaluado = periodoKey || mesKeyActualComprasModelo();
+  const compra = cumpleCompraPersonalRango(rangoConfigurado.key, compraPersonalPeriodo1, compraPersonalPeriodo2, rangoConfigurado.compra);
+  const produccionParaRequisito = calcularProduccionParaRequisitoRango(persona.id, mesKeyEvaluado, rangoConfigurado.produccion);
+  const produccionEvaluada = produccionParaRequisito !== null ? produccionParaRequisito : produccionGrupalMes;
 
   const items = [
     { label: 'Personas activas', cumple: personasActivas >= rangoConfigurado.personas, valores: `${personasActivas} / ${rangoConfigurado.personas}` },
-    { label: 'Compra personal (ambos periodos)', cumple: compraMinima >= rangoConfigurado.compra, valores: `$${formatearDineroPersonas(compraPersonalPeriodo1)} y $${formatearDineroPersonas(compraPersonalPeriodo2)} / $${formatearDineroPersonas(rangoConfigurado.compra)}` },
+    { label: compra.soloUnPeriodo ? 'Compra personal (periodo de consolidación)' : 'Compra personal (ambos periodos)', cumple: compra.cumple, valores: `$${formatearDineroPersonas(compraPersonalPeriodo1)} y $${formatearDineroPersonas(compraPersonalPeriodo2)} / $${formatearDineroPersonas(rangoConfigurado.compra)}` },
     { label: 'Equipo calificado', cumple: personasCalificadas >= rangoConfigurado.calificado, valores: `${personasCalificadas} / ${rangoConfigurado.calificado} personas` },
-    { label: 'Producción grupal', cumple: produccionGrupalMes >= rangoConfigurado.produccion, valores: `$${formatearDineroPersonas(produccionGrupalMes)} / $${formatearDineroPersonas(rangoConfigurado.produccion)}` }
+    { label: 'Producción grupal', cumple: produccionEvaluada >= rangoConfigurado.produccion, valores: `${formatearDineroPersonas(produccionEvaluada)} / ${formatearDineroPersonas(rangoConfigurado.produccion)} puntos` }
   ];
 
   return { aplica: true, cumple: items.every(it => it.cumple), items };
+
+}
+
+// ============================================================
+// RANGO EFECTIVO DEL MES (Secciones 9/12) — recalificación mensual
+// ============================================================
+//
+// persona.rangoActualKey (arriba) es el rango HISTÓRICO: el máximo que
+// alguna vez alcanzó, nunca baja, y es lo único que dispara el bono de
+// "primera vez" (Sección 10) al confirmarse un ascenso. Esto es algo
+// DISTINTO: el rango EFECTIVO de un mes ya cerrado — el que realmente
+// cumplió ese mes en concreto, evaluando TODOS los rangos de arriba
+// hacia abajo (no solo "el siguiente"), y que sí puede ser menor al
+// histórico si ese mes no se recalificó. Las comisiones se calculan
+// sobre este rango efectivo, nunca sobre el histórico directamente
+// (ver calcularRangoAplicadoPeriodo en comisiones-modelo.js).
+function calcularRangoEfectivoMes(persona, mesKey) {
+
+  if (persona.tipo !== 'lider') return 'sin_rango';
+
+  const statsReales = typeof calcularStatsRangoLider === 'function'
+    ? calcularStatsRangoLider(persona, mesKey, 'p2')
+    : persona.stats;
+
+  const { personasActivas, personasCalificadas, compraPersonalPeriodo1, compraPersonalPeriodo2 } = statsReales;
+
+  // De Corona hacia Plata (nunca sin_rango, que siempre "cumple" por
+  // definición) — el primero que cumpla TODOS sus requisitos es el
+  // rango efectivo de ese mes.
+  for (let i = RANGOS_MW.length - 1; i >= 1; i--) {
+
+    const rango = obtenerRangoConfigurado(RANGOS_MW[i]);
+
+    const cumplePersonas = personasActivas >= rango.personas;
+    const cumpleCalificado = personasCalificadas >= rango.calificado;
+    const compra = cumpleCompraPersonalRango(rango.key, compraPersonalPeriodo1, compraPersonalPeriodo2, rango.compra);
+    const produccionParaRequisito = calcularProduccionParaRequisitoRango(persona.id, mesKey, rango.produccion);
+    const produccionEvaluada = produccionParaRequisito !== null ? produccionParaRequisito : statsReales.produccionGrupalMes;
+    const cumpleProduccion = produccionEvaluada >= rango.produccion;
+
+    if (cumplePersonas && cumpleCalificado && compra.cumple && cumpleProduccion) return rango.key;
+
+  }
+
+  return 'sin_rango';
+
+}
+
+// Recorre TODAS las líderes y cierra, de forma idempotente, el rango
+// efectivo de los meses pasados que les falten procesar — mismo patrón
+// de cursor que procesarCierresMensualesPlanMW (Constancia/Rifas), pero
+// para persona.historialRangoEfectivo. El mes en curso NUNCA se cierra
+// aquí (todavía puede cambiar): por eso comisiones-modelo.js siempre
+// termina usando el último mes YA cerrado como el rango vigente del
+// periodo que esté pagando, nunca una recalificación a medias.
+function procesarRangoEfectivoMensual(persona) {
+
+  if (persona.tipo !== 'lider') return false;
+  if (typeof mesKeyActualComprasModelo !== 'function') return false;
+
+  persona.historialRangoEfectivo = persona.historialRangoEfectivo || [];
+
+  const mesKeyHoy = mesKeyActualComprasModelo();
+  let cursor = (persona.fechaAlta || mesKeyHoy).slice(0, 7);
+  if (cursor < MES_INICIO_CIERRE_AUTOMATICO) cursor = MES_INICIO_CIERRE_AUTOMATICO;
+  let vueltas = 0;
+  let huboCambios = false;
+
+  while (cursor < mesKeyHoy && vueltas < 240) {
+
+    if (!persona.historialRangoEfectivo.some(h => h.mesKey === cursor)) {
+      const rangoKey = calcularRangoEfectivoMes(persona, cursor);
+      persona.historialRangoEfectivo.push({ mesKey: cursor, rangoKey });
+      huboCambios = true;
+    }
+
+    cursor = _siguienteMesKey(cursor);
+    vueltas++;
+
+  }
+
+  return huboCambios;
 
 }
 
@@ -363,6 +473,7 @@ function procesarCierresMensualesPlanMWTodas() {
   personas.forEach(persona => {
     if (procesarCierresMensualesPlanMW(persona)) huboCambios = true;
     if (evaluarActividadMensualPersona(persona)) huboCambios = true;
+    if (procesarRangoEfectivoMensual(persona)) huboCambios = true;
   });
 
   if (huboCambios) guardarPersonas(personas);

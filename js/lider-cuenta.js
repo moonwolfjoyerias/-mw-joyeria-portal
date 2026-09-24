@@ -48,6 +48,22 @@ function setText(id, val) {
 function fmtMoney(n) {
   return `$${Math.round(n).toLocaleString('es-MX')}`;
 }
+// Producción grupal (requisito de rango) se mide en "puntos", no en
+// pesos (Plan MW, Sección 1) — aunque hoy 1 punto = 1 peso de compra,
+// nunca se le pone signo de $.
+function fmtPuntos(n) {
+  return `${Math.round(n).toLocaleString('es-MX')} puntos`;
+}
+// Misma regla que js/plan-mw-admin.js → cumpleCompraPersonalRango: Plata
+// y Oro exigen $1,500 en AMBOS periodos; Diamante y Corona, $3,000 pero
+// solo en el periodo de consolidación (el mayor de los dos). Copiada
+// aquí (no importada) porque esta página todavía usa datos de ejemplo
+// desconectados del motor real de Plan MW — ver nota de arquitectura.
+function cumpleCompraPersonalRangoCuenta(rangoKey, p1, p2, montoRequerido) {
+  const soloUnPeriodo = rangoKey === 'diamante' || rangoKey === 'corona';
+  const valorComparado = soloUnPeriodo ? Math.max(p1, p2) : Math.min(p1, p2);
+  return { cumple: valorComparado >= montoRequerido, soloUnPeriodo };
+}
 function idxRango(key) {
   return RANGOS_MW.findIndex(r => r.key === key);
 }
@@ -231,7 +247,7 @@ function renderProgresoRangoCuenta() {
         <div class="node-circle">
           ${alcanzado ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4"/></svg>'}
         </div>
-        <span class="node-label">${r.label}<br>${fmtMoney(r.produccion)}</span>
+        <span class="node-label">${r.label}<br>${fmtPuntos(r.produccion)}</span>
       </div>
     `;
   }).join('');
@@ -245,13 +261,13 @@ function renderProgresoRangoCuenta() {
     titulo.textContent = `Progreso hacia ${siguiente.label.toUpperCase()}`;
     const faltante = Math.max(0, siguiente.produccion - produccionGrupalMes);
     sub.textContent = faltante > 0
-      ? `Te faltan ${fmtMoney(faltante)} de producción grupal para alcanzar ${siguiente.label}.`
+      ? `Te faltan ${fmtPuntos(faltante)} de producción grupal para alcanzar ${siguiente.label}.`
       : `¡Ya cumples la producción grupal para ${siguiente.label}!`;
 
-    const compraMinima = Math.min(compraPersonalPeriodo1, compraPersonalPeriodo2);
+    const compra = cumpleCompraPersonalRangoCuenta(siguiente.key, compraPersonalPeriodo1, compraPersonalPeriodo2, siguiente.compra);
     const items = [
       { label: 'Personas activas', cumple: personasActivas >= siguiente.personas, valores: `${personasActivas} / ${siguiente.personas}` },
-      { label: 'Compra personal (ambos periodos)', cumple: compraMinima >= siguiente.compra, valores: `${fmtMoney(compraPersonalPeriodo1)} y ${fmtMoney(compraPersonalPeriodo2)} / ${fmtMoney(siguiente.compra)}` },
+      { label: compra.soloUnPeriodo ? 'Compra personal (periodo de consolidación)' : 'Compra personal (ambos periodos)', cumple: compra.cumple, valores: `${fmtMoney(compraPersonalPeriodo1)} y ${fmtMoney(compraPersonalPeriodo2)} / ${fmtMoney(siguiente.compra)}` },
       { label: 'Equipo calificado', cumple: personasCalificadas >= siguiente.calificado, valores: `${personasCalificadas} / ${siguiente.calificado} personas` },
     ];
     document.getElementById('cuentaChecklist').innerHTML = items.map(it => `
