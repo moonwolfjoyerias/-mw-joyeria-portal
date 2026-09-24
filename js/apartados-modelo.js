@@ -147,6 +147,43 @@ function establecerCredito(usuarioId, monto) {
   guardarCreditosApartado({ 'me-emprendedora': DEPOSITO_BASE });
 })();
 
+// ⚠️ PRUEBA TEMPORAL — BÓRRAME: solo para probar en vivo "fecha real de
+// los $8,000 del mes" (Reto de Constancia) con la cuenta de ejemplo
+// 'me-emprendedora' (Claudia Ramírez). Agrega una compra normal ya
+// liquidada de $8,000 fechada HOY, sin importar qué haya ya en
+// localStorage (a diferencia de sembrarCreditoDemoInicial, no espera a
+// que el registro esté vacío — por eso corre siempre, pero solo agrega
+// la pieza una vez gracias al id fijo). Quitar este bloque completo
+// cuando ya no se necesite.
+(function sembrarCompraDePruebaOchoMil() {
+  if (typeof localStorage === 'undefined') return;
+  const ID_PRUEBA = 'VENT-PRUEBA-8000-CLAUDIA';
+  const ventanas = obtenerVentanasApartado();
+  if (ventanas.some(v => v.id === ID_PRUEBA)) return;
+  const ahoraISO = new Date().toISOString();
+  const pieza = crearApartadoPieza({
+    id: 'PIEZA-PRUEBA-8000-CLAUDIA',
+    producto: 'Pieza de prueba ($8,000)',
+    material: 'oro-laminado',
+    total: 8000,
+    estado: 'liquidada',
+    fechaSolicitud: ahoraISO,
+    pagos: [{ monto: 8000, tipo: 'liquidacion', metodo: 'transferencia', referencia: null, fecha: ahoraISO }]
+  });
+  ventanas.push(crearVentanaApartado({
+    id: ID_PRUEBA,
+    usuarioId: 'me-emprendedora',
+    usuarioNombre: 'Claudia Ramírez',
+    telefono: '444 123 4567',
+    categoria: 'normal',
+    fechaInicio: ahoraISO,
+    estado: 'cerrada',
+    resolucionDeposito: 'no_aplica',
+    apartados: [pieza]
+  }));
+  guardarVentanasApartado(ventanas);
+})();
+
 
 // ============================================================
 // CREAR ENTIDADES
