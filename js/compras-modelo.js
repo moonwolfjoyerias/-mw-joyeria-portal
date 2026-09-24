@@ -78,6 +78,14 @@ function obtenerComprasLiquidadasPersonaSubPeriodo(personaId, mesKey, subPeriodo
   });
 }
 
+// Compras liquidadas de UNA persona desde una fecha ISO hasta hoy —
+// ventana rodante en días (no mes calendario), a diferencia de las dos
+// funciones de arriba. Usada por js/alertas-inactividad-modelo.js para
+// la alerta de "N semanas sin compra mínima" hacia las líderes.
+function obtenerComprasLiquidadasPersonaDesde(personaId, fechaDesdeISO) {
+  return _acumularComprasLiquidadasPersona(personaId, fecha => fecha >= fechaDesdeISO);
+}
+
 // Producción grupal de TODO el equipo (toda la descendencia, no solo
 // directos) de un líder en un mes — solo compra NORMAL, nunca souvenir
 // (Sección 4/7.2). Requiere personas-ejemplo.js (calcularDescendenciaPersona).

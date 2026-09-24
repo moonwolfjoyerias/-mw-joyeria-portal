@@ -17,6 +17,14 @@
 const CATEGORIAS_PERSONA = { normal: 'Normal', vip: 'VIP', foranea: 'Foránea' };
 const ESTADOS_CUENTA_PERSONA = { activa: 'Activa', inactiva: 'Inactiva', baja: 'Baja' };
 
+// persona.alertaInactividad ({ desde: ISO } | null): bandera de
+// "seguimiento" para líderes, calculada por
+// js/alertas-inactividad-modelo.js cuando una Emprendedora lleva varias
+// semanas sin compra mínima. NO es lo mismo que `estado` (activa/
+// inactiva/baja) de arriba — esta bandera nunca bloquea el login ni
+// afecta comisiones/rango, es solo una señal para que su línea de
+// líderes la contacte y vea qué pasa.
+
 const PERSONAS_STORAGE_KEY = 'mw_admin_personas_demo';
 
 // Contraseñas guardadas APARTE del registro de personas (mapa id →
@@ -485,6 +493,24 @@ function calcularDescendenciaPersona(raizId) {
 
   return { conNivel, porLider };
 
+}
+
+// Inversa de calcularDescendenciaPersona: camina liderId hacia ARRIBA
+// desde una persona, hasta maxNiveles líderes (o hasta llegar a la raíz
+// del árbol, lo que pase primero). Usada por
+// js/alertas-inactividad-modelo.js para avisarle a la línea de líderes
+// de una Emprendedora — no filtra por estado, la propia líder decide si
+// actúa aunque su cuenta esté marcada inactiva.
+function calcularCadenaLideresHaciaArriba(personaId, maxNiveles) {
+  const cadena = [];
+  let actual = obtenerPersonaPorId(personaId);
+  while (actual?.liderId && cadena.length < maxNiveles) {
+    const lider = obtenerPersonaPorId(actual.liderId);
+    if (!lider) break;
+    cadena.push(lider);
+    actual = lider;
+  }
+  return cadena;
 }
 
 // Usado por el módulo de Solicitudes de inscripción (js/solicitudes-modelo.js)

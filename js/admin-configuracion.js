@@ -627,7 +627,9 @@ const EVENTOS_NOTIF_CONFIG = [
   { clave: 'cambio_rango_confirmado', label: 'Cambio de rango confirmado (avisa a la persona)' },
   { clave: 'constancia_hito_detectado', label: 'Se cumplió un hito del Reto de Constancia (avisa a Admin)' },
   { clave: 'recompensa_constancia_entregada', label: 'Recompensa de Constancia entregada (avisa a la persona)' },
-  { clave: 'apartado_vencido', label: 'El plazo de un apartado ya venció (avisa a Admin)' }
+  { clave: 'apartado_vencido', label: 'El plazo de un apartado ya venció (avisa a Admin)' },
+  { clave: 'emprendedora_sin_actividad_detectada', label: 'Una Emprendedora lleva varias semanas sin compra mínima (avisa a su línea de líderes)' },
+  { clave: 'emprendedora_actividad_recuperada', label: 'Una Emprendedora marcada sin actividad volvió a comprar (avisa a su línea de líderes)' }
 ];
 
 function renderSeccionNotificaciones() {
@@ -751,6 +753,20 @@ function renderSeccionPlanMW() {
           <tbody><tr>
             ${construirCeldaVersionada({ tipo: 'rifa', parametro: 'meta_mensual', seccion: 'Plan MW', etiqueta: 'Rifa — meta mensual', tipoValor: 'moneda' })}
             ${construirCeldaVersionada({ tipo: 'rifa', parametro: 'monto_por_boleto_extra', seccion: 'Plan MW', etiqueta: 'Rifa — monto por boleto extra', tipoValor: 'moneda' })}
+          </tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="cfg-card">
+      <h3 class="cfg-card-title">Alerta de inactividad hacia líderes</h3>
+      <p class="cfg-card-sub">Si una Emprendedora no llega a la compra mínima en esta ventana de semanas, se avisa a su línea de líderes (Sección "Notificaciones" para activar/desactivar el aviso). No afecta el estado de su cuenta ni bloquea su acceso al portal.</p>
+      <div class="catalog-table-wrap cfg-tabla-wrap">
+        <table class="catalog-table">
+          <thead><tr><th>Semanas sin actividad</th><th>Compra mínima</th></tr></thead>
+          <tbody><tr>
+            ${construirCeldaVersionada({ tipo: 'inactividad', parametro: 'semanas_alerta', seccion: 'Plan MW', etiqueta: 'Alerta de inactividad — semanas sin compra mínima', tipoValor: 'numero' })}
+            ${construirCeldaVersionada({ tipo: 'inactividad', parametro: 'monto_minimo', seccion: 'Plan MW', etiqueta: 'Alerta de inactividad — compra mínima', tipoValor: 'moneda' })}
           </tr></tbody>
         </table>
       </div>

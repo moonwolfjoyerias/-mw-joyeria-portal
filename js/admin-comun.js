@@ -178,6 +178,7 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
   if (typeof verificarAscensosPendientes === 'function') verificarAscensosPendientes();
   if (typeof verificarRecompensasConstancia === 'function') verificarRecompensasConstancia();
   if (typeof verificarApartadosVencidosPendientes === 'function') verificarApartadosVencidosPendientes();
+  if (typeof procesarAlertasInactividadTodas === 'function') procesarAlertasInactividadTodas();
 
   const todas = typeof obtenerNotificacionesCompartidas === 'function' ? obtenerNotificacionesCompartidas() : [];
   const noLeidas = todas.filter(n => !n.leida).length;
