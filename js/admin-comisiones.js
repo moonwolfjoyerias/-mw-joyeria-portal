@@ -28,18 +28,12 @@ let expandedNiveles = new Set(); // claves "liderId-nivel"
 document.addEventListener('DOMContentLoaded', () => {
 
   renderSelectorPeriodoComisiones();
-  document.getElementById('pagoSelect').value = subPeriodoActual;
 
   revisarBorradorAlCargar();
   renderComisiones();
 
   document.getElementById('periodoSelect')?.addEventListener('change', (e) => {
     periodoActual = e.target.value;
-    renderComisiones();
-  });
-
-  document.getElementById('pagoSelect')?.addEventListener('change', (e) => {
-    subPeriodoActual = e.target.value;
     renderComisiones();
   });
 
@@ -214,18 +208,19 @@ function aplicarFiltroLideres() {
 
 function construirCardLider(r) {
 
-  // r ya viene calculado para el sub-periodo elegido arriba (toggle
-  // Periodo 1/Periodo 2) — eso sigue rigiendo el pago (son dos pagos
-  // reales, en fechas distintas) y las exportaciones. Para la tabla de
-  // equipo, que ahora muestra los dos periodos juntos, se calcula
-  // aparte el que falte (reutilizando el mismo motor una sola vez más
-  // por líder, no todas las líderes).
-  const rP1 = subPeriodoActual === 'p1' ? r : calcularComisionesLider(r.lider, periodoActual, 'p1');
-  const rP2 = subPeriodoActual === 'p2' ? r : calcularComisionesLider(r.lider, periodoActual, 'p2');
+  // El pago (y su comprobante) ahora se maneja por periodo dentro del
+  // modal de "Pago y comprobante" — la tarjeta ya no depende de un
+  // sub-periodo elegido en el toolbar, así que rP1/rP2 siempre se
+  // calculan frescos los dos, sin importar qué venga en r.
+  const rP1 = calcularComisionesLider(r.lider, periodoActual, 'p1');
+  const rP2 = calcularComisionesLider(r.lider, periodoActual, 'p2');
   const totalComisionCombinado = rP1.totalComision + rP2.totalComision;
 
-  const estadoPagoLabel = r.estadoPago.estado === 'pagada' ? 'Pagada' : 'Pendiente';
-  const estadoPagoClase = r.estadoPago.estado === 'pagada' ? 'badge-pagada' : 'badge-pendiente';
+  const ambosPagados = rP1.estadoPago.estado === 'pagada' && rP2.estadoPago.estado === 'pagada';
+  const ningunoPagado = rP1.estadoPago.estado !== 'pagada' && rP2.estadoPago.estado !== 'pagada';
+  const estadoPagoLabel = ambosPagados ? 'Pagado' : ningunoPagado ? 'Pendiente' : 'Pago parcial';
+  const estadoPagoClase = ambosPagados ? 'badge-pagada' : 'badge-pendiente';
+  const tieneAjustes = rP1.tieneAjustes || rP2.tieneAjustes;
 
   const minimo = typeof calcularCumpleRangoActual === 'function' ? calcularCumpleRangoActual(r.lider, periodoActual) : { aplica: false, cumple: true };
   const avisoMinimo = minimo.aplica && !minimo.cumple
@@ -242,7 +237,7 @@ function construirCardLider(r) {
             <span>Origen: ${escapeHTMLPersonas(r.origenRango)}</span>
             <span>· Equipo: ${r.totalEquipo}</span>
             <span class="badge ${estadoPagoClase}">${estadoPagoLabel}</span>
-            ${r.tieneAjustes ? '<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Con ajustes manuales</span>' : ''}
+            ${tieneAjustes ? '<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Con ajustes manuales</span>' : ''}
             ${avisoMinimo}
           </div>
         </div>
@@ -260,7 +255,6 @@ function construirCardLider(r) {
             <strong>${fmtMoneyComm(totalComisionCombinado)}</strong>
           </div>
           <button class="btn btn-outline comm-ver-equipo-btn" type="button" data-toggle-equipo="${r.lider.id}">${expandedLideres.has(r.lider.id) ? '－ Ocultar equipo' : '＋ Ver equipo'}</button>
-          <button class="btn btn-outline comm-ver-equipo-btn" type="button" data-generar-pdf="${r.lider.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h12v20l-2-1.5L14 22l-2-1.5L10 22l-2-1.5L6 22V2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span> Generar PDF</button>
         </div>
       </div>
 
@@ -273,9 +267,7 @@ function construirCardLider(r) {
       <div class="comm-pago-block">
         <span class="badge ${estadoPagoClase}">${estadoPagoLabel}</span>
         <button class="btn btn-outline" type="button" style="width:auto;" data-ver-datos-bancarios="${r.lider.id}">Datos bancarios</button>
-        <button class="btn btn-outline" type="button" style="width:auto;" data-registrar-pago="${r.lider.id}">
-          ${r.estadoPago.estado === 'pagada' ? 'Ver detalle de pago' : 'Registrar pago'}
-        </button>
+        <button class="btn btn-primary" type="button" style="width:auto;" data-registrar-pago="${r.lider.id}">Pago y comprobante</button>
       </div>
     </div>
   `;
@@ -489,7 +481,7 @@ function wireEventosTabla() {
   wireBotonesAjusteFila(document);
 
   document.querySelectorAll('[data-registrar-pago]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalPago(btn.getAttribute('data-registrar-pago')));
+    btn.addEventListener('click', () => abrirModalPagoComision(btn.getAttribute('data-registrar-pago')));
   });
 
   document.querySelectorAll('[data-ver-datos-bancarios]').forEach(btn => {
@@ -498,10 +490,6 @@ function wireEventosTabla() {
 
   document.querySelectorAll('[data-pagar-bono]').forEach(btn => {
     btn.addEventListener('click', () => confirmarPagarBono(btn.getAttribute('data-pagar-bono')));
-  });
-
-  document.querySelectorAll('[data-generar-pdf]').forEach(btn => {
-    btn.addEventListener('click', () => generarPDFComision(btn.getAttribute('data-generar-pdf')));
   });
 
 }
@@ -752,72 +740,110 @@ async function abrirModalDatosBancariosLider(liderId) {
 // PAGO DE COMISIÓN
 // ============================================================
 
-function abrirModalPago(liderId) {
-  const r = comisionesData.find(x => x.lider.id === liderId);
-  if (!r) return;
+// Modal combinado: registrar el pago de Periodo 1 y/o Periodo 2 por
+// separado (son dos pagos reales, en fechas distintas), y desde aquí
+// mismo generar el comprobante en PDF — por periodo o del mes completo.
+function abrirModalPagoComision(liderId) {
+
+  const lider = obtenerPersonaPorId(liderId);
+  if (!lider) return;
+
+  const rP1 = calcularComisionesLider(lider, periodoActual, 'p1');
+  const rP2 = calcularComisionesLider(lider, periodoActual, 'p2');
 
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
 
-  const datosBancarios = r.lider.datosBancarios;
+  const datosBancarios = lider.datosBancarios;
   const tieneDatosBancarios = datosBancarios && (datosBancarios.titular || datosBancarios.banco || datosBancarios.clabe);
   const bloqueDatosBancarios = tieneDatosBancarios
-    ? `<div class="detail-grid" style="margin-top:10px;">
+    ? `<div class="detail-grid" style="margin-top:6px;">
         <div><span>Titular</span><strong>${escapeHTMLPersonas(datosBancarios.titular) || '—'}</strong></div>
         <div><span>Banco</span><strong>${escapeHTMLPersonas(datosBancarios.banco) || '—'}</strong></div>
         <div><span>CLABE</span><strong>${escapeHTMLPersonas(datosBancarios.clabe) || '—'}</strong></div>
       </div>`
-    : `<div class="modal-note" style="margin-top:10px;">Esta líder todavía no registró sus datos bancarios en su Mi cuenta.</div>`;
+    : `<div class="modal-note" style="margin-top:6px;">Esta líder todavía no registró sus datos bancarios en su Mi cuenta.</div>`;
 
-  if (r.estadoPago.estado === 'pagada') {
-    box.style.maxWidth = '420px';
-    box.innerHTML = `
-      <button class="modal-close" data-close>&times;</button>
-      <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
-      <h3>Pago registrado</h3>
-      <div class="detail-grid">
-        <div><span>Fecha de pago</span><strong>${formatearFechaPersonas(r.estadoPago.fechaPago)}</strong></div>
-        <div><span>Registrado por</span><strong>${escapeHTMLPersonas(r.estadoPago.registradoPor)}</strong></div>
-        <div><span>Monto pagado</span><strong>${fmtMoneyComm(r.estadoPago.montoPagado)}</strong></div>
-        <div><span>Periodo</span><strong>${r.estadoPago.periodo}</strong></div>
-      </div>
-      <h4 class="profile-section-title" style="margin-top:14px;">Datos bancarios</h4>
-      ${bloqueDatosBancarios}
-    `;
-    overlay.classList.add('open');
-    return;
-  }
-
-  const sugerido = (r.totalComision + (r.bono && !r.bono.pagado ? r.bono.monto : 0)).toFixed(2);
-
-  box.style.maxWidth = '420px';
+  box.style.maxWidth = '460px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     <div class="auth-icon">$</div>
-    <h3>Registrar pago de comisión</h3>
-    <p class="modal-sub">${escapeHTMLPersonas(nombreCompletoPersona(r.lider))} · ${formatearPeriodoLabelComisiones(periodoActual)} · ${subPeriodoActual === 'p1' ? 'Periodo 1' : 'Periodo 2'}</p>
-    <h4 class="profile-section-title" style="margin-top:10px;">Datos bancarios</h4>
+    <h3>Pago y comprobante</h3>
+    <p class="modal-sub">${escapeHTMLPersonas(nombreCompletoPersona(lider))} · ${formatearPeriodoLabelComisiones(periodoActual)}</p>
+
+    <h4 class="profile-section-title" style="margin-top:8px;">Datos bancarios</h4>
     ${bloqueDatosBancarios}
-    <label class="form-label" style="display:block;margin-top:10px;font-size:0.78rem;color:var(--mw-text-muted);">Monto pagado</label>
-    <input type="number" step="0.01" id="montoPagoInput" value="${sugerido}" style="width:100%;padding:0.6em 0.8em;border:1px solid var(--mw-border);border-radius:8px;font-size:0.85rem;">
-    <div class="modal-note" style="margin-top:10px;"><strong>Recordatorio.</strong> El pago se realiza por un proceso externo; aquí solo se registra que ya ocurrió.</div>
-    <div style="display:flex;gap:10px;margin-top:14px;">
-      <button class="btn btn-outline" style="flex:1;" id="cancelarPagoBtn" type="button">Cancelar</button>
-      <button class="btn btn-primary" style="flex:1;" id="confirmarPagoBtn" type="button">Registrar pago</button>
+
+    <h4 class="profile-section-title" style="margin-top:14px;">Periodo 1 · 1–15</h4>
+    ${construirBloquePeriodoPago(rP1, 'p1')}
+
+    <h4 class="profile-section-title" style="margin-top:14px;">Periodo 2 · 16–fin</h4>
+    ${construirBloquePeriodoPago(rP2, 'p2')}
+
+    <h4 class="profile-section-title" style="margin-top:14px;">Comprobante PDF</h4>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+      <button class="btn btn-outline" style="flex:1;min-width:130px;" type="button" data-pdf-modal="p1">PDF Periodo 1</button>
+      <button class="btn btn-outline" style="flex:1;min-width:130px;" type="button" data-pdf-modal="p2">PDF Periodo 2</button>
+      <button class="btn btn-outline" style="flex:1;min-width:130px;" type="button" data-pdf-modal="mes">PDF Mes completo</button>
     </div>
   `;
   overlay.classList.add('open');
 
   box.querySelector('[data-close]')?.addEventListener('click', () => overlay.classList.remove('open'));
-  document.getElementById('cancelarPagoBtn')?.addEventListener('click', () => overlay.classList.remove('open'));
-  document.getElementById('confirmarPagoBtn')?.addEventListener('click', () => {
-    const monto = parseFloat(document.getElementById('montoPagoInput').value);
+
+  wireRegistrarPagoPeriodo(box, liderId, 'p1');
+  wireRegistrarPagoPeriodo(box, liderId, 'p2');
+
+  box.querySelectorAll('[data-pdf-modal]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const modo = btn.getAttribute('data-pdf-modal');
+      if (modo === 'mes') generarPDFComisionMes(liderId);
+      else generarPDFComision(liderId, modo);
+    });
+  });
+
+}
+
+function construirBloquePeriodoPago(r, subPeriodo) {
+
+  if (r.estadoPago.estado === 'pagada') {
+    return `
+      <div class="detail-grid" style="margin-top:6px;">
+        <div><span>Estado</span><strong>Pagada</strong></div>
+        <div><span>Fecha de pago</span><strong>${formatearFechaPersonas(r.estadoPago.fechaPago)}</strong></div>
+        <div><span>Registrado por</span><strong>${escapeHTMLPersonas(r.estadoPago.registradoPor)}</strong></div>
+        <div><span>Monto pagado</span><strong>${fmtMoneyComm(r.estadoPago.montoPagado)}</strong></div>
+      </div>
+    `;
+  }
+
+  const sugerido = r.totalComision.toFixed(2);
+
+  return `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">
+      <span class="badge badge-pendiente">Pendiente</span>
+      <span style="font-size:0.85rem;">Comisión calculada: <strong>${fmtMoneyComm(r.totalComision)}</strong></span>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+      <input type="number" step="0.01" id="montoPago-${subPeriodo}" value="${sugerido}" style="flex:1;padding:0.5em 0.7em;border:1px solid var(--mw-border);border-radius:8px;font-size:0.85rem;">
+      <button class="btn btn-primary" style="width:auto;" type="button" data-confirmar-pago="${subPeriodo}">Registrar pago</button>
+    </div>
+  `;
+
+}
+
+function wireRegistrarPagoPeriodo(container, liderId, subPeriodo) {
+  const btn = container.querySelector(`[data-confirmar-pago="${subPeriodo}"]`);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const input = container.querySelector(`#montoPago-${subPeriodo}`);
+    const monto = parseFloat(input?.value);
     if (Number.isNaN(monto) || monto <= 0) return;
-    registrarPago({ liderId, periodoKey: periodoActual, subPeriodo: subPeriodoActual, montoPagado: monto, registradoPor: ADMIN_IDENTIDAD.usuarioNombre });
-    overlay.classList.remove('open');
-    mostrarToast('Pago registrado.');
+    registrarPago({ liderId, periodoKey: periodoActual, subPeriodo, montoPagado: monto, registradoPor: ADMIN_IDENTIDAD.usuarioNombre });
+    mostrarToast(`Pago de ${subPeriodo === 'p1' ? 'Periodo 1' : 'Periodo 2'} registrado.`);
     renderComisiones();
+    abrirModalPagoComision(liderId);
   });
 }
 
@@ -946,24 +972,25 @@ function sanitizarNombreArchivo(t) {
   return String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
-function generarPDFComision(liderId) {
-  const r = comisionesData.find(x => x.lider.id === liderId);
-  if (!r) return;
+function generarPDFComision(liderId, subPeriodo) {
+  const lider = obtenerPersonaPorId(liderId);
+  if (!lider) return;
+  const r = calcularComisionesLider(lider, periodoActual, subPeriodo);
 
   if (Object.keys(pendienteBorrador).length) {
     abrirAutorizacionAdmin({
       titulo: 'Hay cambios sin sincronizar',
       mensaje: 'Este comprobante se generará antes de que algunos ajustes terminen de sincronizarse. Se recomienda esperar unos segundos. ¿Generar de todas formas?',
       peligrosa: true,
-      onConfirmar: () => ejecutarGeneracionPDF(r)
+      onConfirmar: () => ejecutarGeneracionPDF(r, subPeriodo)
     });
     return;
   }
 
-  ejecutarGeneracionPDF(r);
+  ejecutarGeneracionPDF(r, subPeriodo);
 }
 
-async function ejecutarGeneracionPDF(r) {
+async function ejecutarGeneracionPDF(r, subPeriodo) {
 
   if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
     mostrarToast('No se pudo generar el PDF — intenta de nuevo en un momento.');
@@ -971,7 +998,7 @@ async function ejecutarGeneracionPDF(r) {
   }
 
   const contenedor = document.getElementById('commPdfTemplate');
-  contenedor.innerHTML = construirHTMLTicketPDF(r);
+  contenedor.innerHTML = construirHTMLTicketPDF(r, subPeriodo);
 
   try {
     if (document.fonts?.ready) await document.fonts.ready;
@@ -996,7 +1023,7 @@ async function ejecutarGeneracionPDF(r) {
 
     const nombreArchivo = sanitizarNombreArchivo(nombreCompletoPersona(r.lider));
     const periodoArchivo = sanitizarNombreArchivo(formatearPeriodoLabelComisiones(periodoActual));
-    pdf.save(`MW_Comision_${nombreArchivo}_${periodoArchivo}_${subPeriodoActual.toUpperCase()}.pdf`);
+    pdf.save(`MW_Comision_${nombreArchivo}_${periodoArchivo}_${subPeriodo.toUpperCase()}.pdf`);
 
     mostrarToast('Comprobante generado.');
   } catch (error) {
@@ -1007,14 +1034,83 @@ async function ejecutarGeneracionPDF(r) {
 
 }
 
-function construirHTMLTicketPDF(r) {
+// PDF del mes completo de UNA líder — igual que "Comprobante de todas"
+// en modo "mes" (Sección PDF general), arma los dos tickets (Periodo 1
+// y Periodo 2) uno tras otro en el mismo documento, en vez de sumarlos
+// en un solo número — así se ve exactamente cómo se paga cada quincena.
+function generarPDFComisionMes(liderId) {
+  const lider = obtenerPersonaPorId(liderId);
+  if (!lider) return;
 
-  const info = obtenerInfoSubPeriodo(periodoActual, subPeriodoActual);
+  if (Object.keys(pendienteBorrador).length) {
+    abrirAutorizacionAdmin({
+      titulo: 'Hay cambios sin sincronizar',
+      mensaje: 'Este comprobante se generará antes de que algunos ajustes terminen de sincronizarse. Se recomienda esperar unos segundos. ¿Generar de todas formas?',
+      peligrosa: true,
+      onConfirmar: () => ejecutarGeneracionPDFMes(lider)
+    });
+    return;
+  }
+
+  ejecutarGeneracionPDFMes(lider);
+}
+
+async function ejecutarGeneracionPDFMes(lider) {
+
+  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+    mostrarToast('No se pudo generar el PDF — intenta de nuevo en un momento.');
+    return;
+  }
+
+  const rP1 = calcularComisionesLider(lider, periodoActual, 'p1');
+  const rP2 = calcularComisionesLider(lider, periodoActual, 'p2');
+
+  const contenedor = document.getElementById('commPdfTemplate');
+  contenedor.innerHTML = `
+    ${construirHTMLTicketPDF(rP1, 'p1')}
+    <div style="page-break-after:always;border-top:2px dashed #ddd5e3;margin:10px 0;"></div>
+    ${construirHTMLTicketPDF(rP2, 'p2')}
+  `;
+
+  try {
+    if (document.fonts?.ready) await document.fonts.ready;
+    const logos = contenedor.querySelectorAll('[data-pdf-logo]');
+    await Promise.all(Array.from(logos).map(logo => logo.complete ? Promise.resolve() : new Promise((resolve, reject) => {
+      logo.addEventListener('load', resolve, { once: true });
+      logo.addEventListener('error', reject, { once: true });
+    })));
+
+    const canvas = await html2canvas(contenedor, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: [canvas.width, canvas.height] });
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+
+    const nombreArchivo = sanitizarNombreArchivo(nombreCompletoPersona(lider));
+    const periodoArchivo = sanitizarNombreArchivo(formatearPeriodoLabelComisiones(periodoActual));
+    pdf.save(`MW_Comision_${nombreArchivo}_${periodoArchivo}_MES_COMPLETO.pdf`);
+
+    mostrarToast('Comprobante generado.');
+  } catch (error) {
+    mostrarToast('No se pudo generar el PDF — intenta de nuevo en un momento.');
+  } finally {
+    contenedor.innerHTML = '';
+  }
+
+}
+
+function construirHTMLTicketPDF(r, subPeriodo) {
+
+  const info = obtenerInfoSubPeriodo(periodoActual, subPeriodo);
   const ahora = new Date();
   const todasLasFilas = r.niveles.flatMap(n => n.filas);
   const totalAjustes = todasLasFilas.filter(f => f.ajuste);
   const totalSouvenirs = todasLasFilas.reduce((s, f) => s + f.compraSouvenir, 0);
-  const totalAPagar = r.totalComision + (r.bono ? r.bono.monto : 0);
 
   const estiloBase = `font-family:Poppins,Arial,sans-serif;color:#2A2230;padding:24px;font-size:12px;`;
 
@@ -1075,9 +1171,8 @@ function construirHTMLTicketPDF(r) {
       ${totalSouvenirs > 0 ? `<div style="font-size:10px;color:#6B6270;margin-bottom:12px;">Souvenirs incluidos en las compras del equipo: ${fmtMoneyComm(totalSouvenirs)} — los souvenirs no generan comisión.</div>` : ''}
 
       <div style="border-top:2px solid #5E1A8A;padding-top:10px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;"><span>COMISIÓN TOTAL</span><strong>${fmtMoneyComm(r.totalComision)}</strong></div>
-        <div style="display:flex;justify-content:space-between;"><span>BONO POR RANGO</span><strong>${r.bono ? fmtMoneyComm(r.bono.monto) : '$0.00'}</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:14px;color:#5E1A8A;margin-top:6px;"><span>TOTAL A PAGAR</span><strong>${fmtMoneyComm(totalAPagar)}</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;color:#5E1A8A;"><span>COMISIÓN DE ESTE PERIODO</span><strong>${fmtMoneyComm(r.totalComision)}</strong></div>
+        ${r.bono ? `<div style="font-size:9px;color:#6B6270;margin-top:4px;">Bono por rango (${fmtMoneyComm(r.bono.monto)}) se paga aparte — no está incluido en este monto.</div>` : ''}
       </div>
 
       <div style="font-size:10px;margin-bottom:10px;"><strong>Estado del pago:</strong> ${r.estadoPago.estado === 'pagada' ? `Pagada el ${formatearFechaPersonas(r.estadoPago.fechaPago)} por ${escapeHTMLPersonas(r.estadoPago.registradoPor)}` : 'Pendiente de pago'}</div>
