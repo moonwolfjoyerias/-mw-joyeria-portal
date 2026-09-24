@@ -2977,6 +2977,13 @@ a:hover { color: var(--mw-gold); }
   margin-top: 3px;
 }
 
+.team-alert-badge {
+  background: #FBEAEA;
+  color: #B3312C;
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+
 .origen-badge.mw {
   background: var(--mw-gold-soft);
   color: var(--mw-purple-dark);

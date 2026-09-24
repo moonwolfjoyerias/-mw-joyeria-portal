@@ -184,6 +184,7 @@ function asegurarSemillaConfiguracion() {
   _asegurarSemillaRifa();
   _asegurarSemillaRangosYComisiones();
   _asegurarSemillaConstancia();
+  _asegurarSemillaAlertaInactividad();
 }
 
 function _asegurarSemillaFormulaYRedondeo() {
@@ -237,6 +238,17 @@ function _asegurarSemillaConstancia() {
   });
 }
 
+// Alerta de inactividad hacia las líderes (js/alertas-inactividad-modelo.js)
+// — independiente del ciclo activa/inactiva/baja de 6 meses de arriba.
+// Mismo monto ($500) que ya usa esa regla mensual, pero en una ventana
+// de semanas mucho más corta, pensada como aviso temprano para que la
+// línea de líderes pueda contactar a la persona, no como sanción de
+// cuenta.
+function _asegurarSemillaAlertaInactividad() {
+  _sembrarValor('inactividad', 'semanas_alerta', 5, 'Plan MW', 'Alerta de inactividad — semanas sin compra mínima');
+  _sembrarValor('inactividad', 'monto_minimo', 500, 'Plan MW', 'Alerta de inactividad — compra mínima');
+}
+
 // ============================================================
 // CONFIGURACIÓN "SIMPLE" (sin vigencia — no afecta dinero histórico):
 // Datos de MW, Sistema, y qué eventos generan notificación.
@@ -271,7 +283,9 @@ function obtenerConfigSimple() {
       cambio_rango_confirmado: true,
       constancia_hito_detectado: true,
       recompensa_constancia_entregada: true,
-      apartado_vencido: true
+      apartado_vencido: true,
+      emprendedora_sin_actividad_detectada: true,
+      emprendedora_actividad_recuperada: true
     }
   };
 

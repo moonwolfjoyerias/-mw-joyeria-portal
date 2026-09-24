@@ -937,7 +937,7 @@ function abrirModalNivelAdmin(nivel, personas) {
   const filas = personas.length
     ? personas.map(p => `
       <div class="equipo-modal-row">
-        <span>${escapeHTMLPersonas(nombreCompletoPersona(p))} <span class="badge">${p.tipo === 'lider' ? 'Líder' : 'Emprendedora'}</span></span>
+        <span>${escapeHTMLPersonas(nombreCompletoPersona(p))} <span class="badge">${p.tipo === 'lider' ? 'Líder' : 'Emprendedora'}</span>${p.alertaInactividad ? ' <span class="badge team-alert-badge">Sin actividad</span>' : ''}</span>
         <span class="em-puntos">${ESTADOS_CUENTA_PERSONA[p.estado] || p.estado}</span>
       </div>
     `).join('')
@@ -974,7 +974,7 @@ function renderArbolEquipoAdmin(persona) {
     const hijos = porLider[p.id] || [];
     const nodeHtml = `
       <div class="org-node ${lvlClass}">
-        <span class="on-name">${escapeHTMLPersonas(nombreCompletoPersona(p))}</span>
+        <span class="on-name">${escapeHTMLPersonas(nombreCompletoPersona(p))}${p.alertaInactividad ? ' <span class="badge team-alert-badge">Sin actividad</span>' : ''}</span>
         <span class="on-tag">${esRaiz ? (p.tipo === 'lider' ? 'Líder' : 'Emprendedora') : `Nivel ${nivel}`}</span>
         <span class="on-points">${metricaNodo(p)}</span>
       </div>

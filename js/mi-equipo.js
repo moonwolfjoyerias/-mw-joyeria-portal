@@ -2,19 +2,28 @@
 // Depende de EQUIPO_ARBOL_EJEMPLO (equipo-ejemplo.js) para las tarjetas
 // de nivel y el árbol visual — dataset de ejemplo, sin vínculo por
 // sesión a una persona real todavía (limitación conocida y ya
-// reportada). "Gestionar equipo" (solicitar baja) SÍ usa el registro
-// real de personas (js/personas-ejemplo.js), porque una solicitud de
-// baja necesita ejecutarse sobre una persona real que Admin pueda
-// encontrar y confirmar — no tendría sentido pedir la baja de alguien
-// que no existe en el sistema real.
+// reportada). "Gestionar equipo" (solicitar baja/cambio de rama) y
+// "Alertas de tu equipo" (js/alertas-inactividad-modelo.js) SÍ usan el
+// registro real de personas (js/personas-ejemplo.js): una solicitud de
+// cambio de rama y un aviso de inactividad necesitan actuar sobre una
+// persona real que Admin/la propia líder puedan encontrar — no tendría
+// sentido pedirlos, o avisarlos, sobre alguien que no existe en el
+// sistema real.
 // ⚠️ TEMPORAL: 'ana-torres' se usa como identidad fija de "la Líder con
 // sesión abierta" (misma convención que RH_EMPLEADO/ADMIN_EMPLEADO en
 // otros portales) hasta que exista sesión real vinculada a una persona.
 const LIDER_ACTUAL_ID_REAL = 'ana-torres';
 
 document.addEventListener('DOMContentLoaded', () => {
+  // No hay ningún otro "tick" que corra en el portal de Líder (a
+  // diferencia de Admin, donde admin-comun.js ya lo hace al abrir la
+  // campana) — se corre aquí para que la alerta de inactividad esté al
+  // día apenas la líder entra a Mi equipo.
+  if (typeof procesarAlertasInactividadTodas === 'function') procesarAlertasInactividadTodas();
+
   renderNivelCards();
   renderArbolVisual();
+  renderAlertasInactividadEquipo();
   renderGestionEquipo();
   renderReclamarEmprendedora();
 
@@ -125,6 +134,73 @@ function abrirModalCambioRama(personaId, liderReal) {
     renderGestionEquipo();
     mostrarToast(`Se envió la solicitud de cambio de rama de ${nombreCompletoPersona(persona)} a Administración.`);
   });
+
+}
+
+// ---------- Alertas de inactividad (datos reales) ----------
+//
+// A diferencia del árbol visual de abajo (todavía sobre datos de
+// ejemplo, ver nota de arquitectura al inicio del archivo), esta
+// sección SÍ usa el registro real de personas — calcularDescendenciaPersona
+// y persona.alertaInactividad (js/alertas-inactividad-modelo.js) — para
+// que la líder vea de verdad a quién de su equipo hay que contactar.
+function renderAlertasInactividadEquipo() {
+
+  const wrap = document.getElementById('alertasInactividadLista');
+  if (!wrap || typeof calcularDescendenciaPersona !== 'function') return;
+
+  const { conNivel } = calcularDescendenciaPersona(LIDER_ACTUAL_ID_REAL);
+  const conAlerta = conNivel
+    .map(n => n.persona)
+    .filter(p => p.alertaInactividad)
+    .sort((a, b) => a.alertaInactividad.desde.localeCompare(b.alertaInactividad.desde));
+
+  if (!conAlerta.length) {
+    wrap.innerHTML = '<p class="equipo-modal-empty">Todo tu equipo tiene actividad reciente — no hay alertas por ahora.</p>';
+    return;
+  }
+
+  wrap.innerHTML = conAlerta.map(p => `
+    <div class="equipo-modal-row">
+      <span>${escapeHTMLMiEquipo(nombreCompletoPersona(p))} <span class="badge team-alert-badge">Sin actividad desde ${formatearFechaCortaMiEquipo(p.alertaInactividad.desde)}</span></span>
+      <button class="btn btn-outline" type="button" data-contactar="${p.id}">Contactar por WhatsApp</button>
+    </div>
+  `).join('');
+
+  wrap.querySelectorAll('[data-contactar]').forEach(btn => {
+    btn.addEventListener('click', () => abrirContactoWhatsappInactividad(obtenerPersonaPorId(btn.getAttribute('data-contactar'))));
+  });
+
+}
+
+function formatearFechaCortaMiEquipo(fechaISO) {
+  const fecha = new Date(fechaISO);
+  if (Number.isNaN(fecha.getTime())) return '—';
+  return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+}
+
+function abrirContactoWhatsappInactividad(persona) {
+
+  if (!persona) return;
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const numero = (persona.telefono || '').replace(/\D/g, '');
+  const mensaje = `Hola ${persona.nombre}, ¿cómo estás? Hace tiempo no te veo comprar y quería saber cómo vas — ¿todo bien? Cualquier cosa que necesites, aquí estoy.`;
+  const enlace = numero ? `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}` : '#';
+
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Contactar a ${escapeHTMLMiEquipo(nombreCompletoPersona(persona))}</h3>
+    <p class="modal-sub">Lleva sin llegar a la compra mínima desde el ${formatearFechaCortaMiEquipo(persona.alertaInactividad?.desde)}.</p>
+    ${numero
+      ? `<a class="btn btn-primary" style="width:100%;display:grid;place-items:center;text-decoration:none;" href="${enlace}" target="_blank" rel="noopener">Abrir WhatsApp</a>`
+      : '<p class="auth-error">Esta persona no tiene un número de teléfono registrado.</p>'}
+  `;
+
+  overlay.classList.add('open');
 
 }
 
