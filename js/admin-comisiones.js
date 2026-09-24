@@ -248,7 +248,15 @@ function construirCardLider(r) {
         </div>
         <div class="comm-lider-totales">
           <div class="comm-lider-total-item">
-            <span>Comisión total (ambos periodos)</span>
+            <span>Periodo 1</span>
+            <strong>${fmtMoneyComm(rP1.totalComision)}</strong>
+          </div>
+          <div class="comm-lider-total-item">
+            <span>Periodo 2</span>
+            <strong>${fmtMoneyComm(rP2.totalComision)}</strong>
+          </div>
+          <div class="comm-lider-total-item">
+            <span>Comisión total</span>
             <strong>${fmtMoneyComm(totalComisionCombinado)}</strong>
           </div>
           <button class="btn btn-outline comm-ver-equipo-btn" type="button" data-toggle-equipo="${r.lider.id}">${expandedLideres.has(r.lider.id) ? '－ Ocultar equipo' : '＋ Ver equipo'}</button>
