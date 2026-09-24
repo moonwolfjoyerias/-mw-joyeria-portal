@@ -759,6 +759,12 @@ function renderSeccionPlanMWPersona(persona) {
     <div class="detail-grid" style="grid-template-columns:1fr 1fr;margin-bottom:16px;">
       <div><span>Reto de Constancia — compras cumplidas</span><strong>${mesesCumplidos}</strong></div>
       <div><span>Compra del mes en curso</span><strong>$${formatearDineroPersonas(montoMesActual)} / $${formatearDineroPersonas(metaMes)} MXN</strong></div>
+      ${(() => {
+        const fechaLogro = typeof obtenerFechaLogroMesActual === 'function' ? obtenerFechaLogroMesActual(persona) : null;
+        if (!fechaLogro) return '';
+        const texto = new Date(fechaLogro).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+        return `<div><span>Llegó a sus $${formatearDineroPersonas(metaMes)} este mes el</span><strong>${texto}</strong></div>`;
+      })()}
     </div>
     <div class="timeline-wrap" style="margin-bottom:18px;">
       <div class="timeline-track"><div class="timeline-fill" style="width:${pctConstancia}%"></div></div>

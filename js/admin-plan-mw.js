@@ -9,6 +9,7 @@
 
 let periodoActual = '';
 let filtroPlanMW = 'todos';
+let planmwVista = 'seguimiento';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -30,6 +31,30 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('#planmwFiltros [data-filtro]').forEach(b => b.classList.toggle('active', b === btn));
       aplicarFiltroSeccionesPlanMW();
     });
+  });
+
+  document.querySelectorAll('#planmwNavPrincipal [data-planmw-vista]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      planmwVista = btn.getAttribute('data-planmw-vista');
+      document.querySelectorAll('#planmwNavPrincipal [data-planmw-vista]').forEach(b => b.classList.toggle('active', b === btn));
+      document.getElementById('planmwVistaSeguimiento').hidden = planmwVista !== 'seguimiento';
+      document.getElementById('planmwVistaRifa').hidden = planmwVista !== 'rifa';
+      if (planmwVista === 'rifa') renderRifaMes();
+    });
+  });
+
+  document.querySelectorAll('#rifaModoChips [data-rifa-modo]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const modo = btn.getAttribute('data-rifa-modo');
+      const mesKey = obtenerMesKeyActualRifaMensual();
+      establecerModoRifaMes(mesKey, modo, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre });
+      mostrarToast(`Modo de la Rifa del mes: ${MODOS_RIFA_MENSUAL[modo]}.`);
+      renderRifaMes();
+    });
+  });
+
+  document.getElementById('rifaAgregarOpcionBtn')?.addEventListener('click', () => {
+    abrirModalOpcionRifa(obtenerMesKeyActualRifaMensual(), null);
   });
 
 });
@@ -326,6 +351,12 @@ function abrirDetallePlanMW(personaId) {
       <div><span>Compras de Constancia</span><strong>${persona.constancia.mesesCumplidos}</strong></div>
       <div><span>Próxima recompensa</span><strong>${constancia ? `${escapeHTMLPersonas(constancia.siguienteHito.premio)} (${constancia.mesesFaltantes === 0 ? 'lista' : `faltan ${constancia.mesesFaltantes} compra${constancia.mesesFaltantes === 1 ? '' : 's'}`})` : 'Todos los hitos otorgados'}</strong></div>
       <div><span>Compra del mes en curso</span><strong>$${formatearDineroPersonas(persona.constancia.montoMesActual)} MXN</strong></div>
+      ${(() => {
+        const fechaLogro = typeof obtenerFechaLogroMesActual === 'function' ? obtenerFechaLogroMesActual(persona) : null;
+        if (!fechaLogro) return '';
+        const texto = new Date(fechaLogro).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+        return `<div><span>Llegó a sus $${formatearDineroPersonas(persona.constancia.metaMes)} este mes el</span><strong>${texto}</strong></div>`;
+      })()}
     </div>
 
     <h4 class="profile-section-title" style="margin-top:16px;">Logros obtenidos</h4>
@@ -360,4 +391,222 @@ function construirTextoFaltanteCorto(limitante) {
 function setTextPlanMW(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;
+}
+
+// ============================================================
+// RIFA DEL MES (js/rifa-mensual-modelo.js) — solicitud o votación
+// ============================================================
+
+function renderRifaMes() {
+
+  const mesKey = obtenerMesKeyActualRifaMensual();
+  setTextPlanMW('rifaMesLabel', formatearPeriodoLabel(mesKey));
+
+  const config = obtenerConfigRifaMes(mesKey);
+
+  document.querySelectorAll('#rifaModoChips [data-rifa-modo]').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-rifa-modo') === config.modo);
+  });
+
+  const opcionesBloque = document.getElementById('rifaOpcionesBloque');
+  opcionesBloque.hidden = config.modo !== 'votacion';
+  if (config.modo === 'votacion') renderOpcionesRifaMes(config);
+
+  renderResultadosRifaMes(config);
+
+}
+
+function renderOpcionesRifaMes(config) {
+
+  const grid = document.getElementById('rifaOpcionesGrid');
+  const conteo = obtenerConteoVotosRifaMes(config.mesKey);
+
+  if (!config.opciones || !config.opciones.length) {
+    grid.innerHTML = '<p class="bp-sub">Todavía no agregas ninguna opción — usa "+ Agregar opción".</p>';
+    return;
+  }
+
+  grid.innerHTML = config.opciones.map(op => {
+    const votosOpcion = (conteo.find(c => c.opcion.id === op.id) || { votos: [] }).votos;
+    return `
+      <div class="rifa-opcion-card">
+        ${op.fotoUrl ? `<img src="${op.fotoUrl}" alt="${escapeHTMLPersonas(op.nombre)}">` : '<div class="rifa-opcion-sinfoto">Sin foto</div>'}
+        <div class="rifa-opcion-body">
+          <strong>${escapeHTMLPersonas(op.nombre)}</strong>
+          ${op.descripcion ? `<p>${escapeHTMLPersonas(op.descripcion)}</p>` : ''}
+          <span class="rifa-opcion-votos">${votosOpcion.length} voto${votosOpcion.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="rifa-opcion-acciones">
+          <button class="btn btn-outline" type="button" data-editar-opcion="${op.id}">Editar</button>
+          <button class="btn btn-outline" type="button" data-eliminar-opcion="${op.id}">Eliminar</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  grid.querySelectorAll('[data-editar-opcion]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalOpcionRifa(config.mesKey, btn.getAttribute('data-editar-opcion')));
+  });
+
+  grid.querySelectorAll('[data-eliminar-opcion]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const opcionId = btn.getAttribute('data-eliminar-opcion');
+      const opcion = config.opciones.find(o => o.id === opcionId);
+      abrirAutorizacionAdmin({
+        titulo: 'Eliminar opción de la rifa',
+        mensaje: `¿Eliminar "${escapeHTMLPersonas(opcion ? opcion.nombre : '')}" de las opciones de este mes? Los votos que ya tenía quedan como historial.`,
+        peligrosa: true,
+        onConfirmar: () => {
+          eliminarOpcionRifaMes(config.mesKey, opcionId, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre });
+          mostrarToast('Opción eliminada.');
+          renderRifaMes();
+        }
+      });
+    });
+  });
+
+}
+
+function renderResultadosRifaMes(config) {
+
+  const bloque = document.getElementById('rifaResultadosBloque');
+  const tituloEl = document.getElementById('rifaResultadosTitulo');
+  const mesKey = config.mesKey;
+
+  if (!config.modo) {
+    tituloEl.textContent = 'Resultados';
+    bloque.innerHTML = '<p class="bp-sub">Elige un modo arriba para empezar a recibir participación este mes.</p>';
+    return;
+  }
+
+  if (config.modo === 'solicitud') {
+    const solicitudes = obtenerSolicitudesRifaMes(mesKey);
+    tituloEl.textContent = `Solicitudes recibidas (${solicitudes.length})`;
+    bloque.innerHTML = solicitudes.length ? `<div class="ct-detail-list" style="border-bottom:0;">${solicitudes.map(s => `
+      <div class="ct-detail-row">
+        <div>
+          <strong>${escapeHTMLPersonas(s.personaNombre)}</strong>
+          <span class="ct-detail-sub">${formatearFechaLogro(s.actualizadoEn || s.fecha)}</span>
+          <p style="margin:6px 0 0;">${escapeHTMLPersonas(s.texto)}</p>
+        </div>
+        ${s.fotoUrl ? `<img src="${s.fotoUrl}" alt="Foto de ${escapeHTMLPersonas(s.personaNombre)}" class="rifa-solicitud-foto">` : ''}
+      </div>
+    `).join('')}</div>` : '<p class="bp-sub">Todavía nadie ha enviado su solicitud este mes.</p>';
+    return;
+  }
+
+  // modo votación
+  const conteo = obtenerConteoVotosRifaMes(mesKey);
+  const totalVotos = conteo.reduce((suma, c) => suma + c.votos.length, 0);
+  tituloEl.textContent = `Votos recibidos (${totalVotos})`;
+
+  if (!config.opciones || !config.opciones.length) {
+    bloque.innerHTML = '<p class="bp-sub">Agrega opciones arriba para que las Emprendedoras/Líderes puedan votar.</p>';
+    return;
+  }
+
+  bloque.innerHTML = conteo.map(({ opcion, votos }) => `
+    <div class="ct-row-wrap">
+      <button type="button" class="ct-row" data-toggle-opcion-votos="${opcion.id}" aria-expanded="false">
+        <div><span class="ct-level">${escapeHTMLPersonas(opcion.nombre)}</span></div>
+        <span class="ct-amount">${votos.length} voto${votos.length === 1 ? '' : 's'} <span class="ct-chevron">▾</span></span>
+      </button>
+      <div class="ct-detail-list" id="votosDetalle${opcion.id}" hidden>
+        ${votos.length ? votos.map(v => `
+          <div class="ct-detail-row">
+            <div><strong>${escapeHTMLPersonas(v.personaNombre)}</strong><span class="ct-detail-sub">${formatearFechaLogro(v.actualizadoEn || v.fecha)}</span></div>
+          </div>
+        `).join('') : '<div class="ct-detail-empty">Nadie ha votado esta opción todavía.</div>'}
+      </div>
+    </div>
+  `).join('');
+
+  bloque.querySelectorAll('[data-toggle-opcion-votos]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const detalle = document.getElementById(`votosDetalle${btn.getAttribute('data-toggle-opcion-votos')}`);
+      if (!detalle) return;
+      detalle.hidden = !detalle.hidden;
+      btn.classList.toggle('open', !detalle.hidden);
+      btn.setAttribute('aria-expanded', String(!detalle.hidden));
+    });
+  });
+
+}
+
+// ---------- Modal: agregar/editar opción de votación ----------
+let rifaOpcionFotoTemporal;
+
+function abrirModalOpcionRifa(mesKey, opcionId) {
+
+  const config = obtenerConfigRifaMes(mesKey);
+  const opcion = opcionId ? (config.opciones || []).find(o => o.id === opcionId) : null;
+  rifaOpcionFotoTemporal = opcion ? opcion.fotoUrl : '';
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.style.maxWidth = '420px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>${opcion ? 'Editar opción' : 'Nueva opción de la rifa'}</h3>
+    <p class="modal-sub">${formatearPeriodoLabel(mesKey)}</p>
+    <label for="rifaOpcionNombre">Nombre del regalo</label>
+    <input type="text" id="rifaOpcionNombre" value="${(opcion ? opcion.nombre : '').replace(/"/g, '&quot;')}">
+    <label for="rifaOpcionDescripcion" style="margin-top:10px;">Descripción</label>
+    <textarea id="rifaOpcionDescripcion" rows="3">${opcion ? escapeHTMLPersonas(opcion.descripcion || '') : ''}</textarea>
+    <label for="rifaOpcionFoto" style="margin-top:10px;">Foto</label>
+    <input type="file" id="rifaOpcionFoto" accept="image/*">
+    <small class="field-help" id="rifaOpcionFotoActual">${opcion && opcion.fotoUrl ? 'Ya tiene una foto — sube otra solo si quieres reemplazarla.' : 'Sin foto todavía.'}</small>
+    <div id="rifaOpcionError" class="auth-error" style="display:none;"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="rifaOpcionGuardarBtn">Guardar</button>
+  `;
+  overlay.classList.add('open');
+
+  box.querySelector('[data-close]')?.addEventListener('click', () => { overlay.classList.remove('open'); });
+
+  document.getElementById('rifaOpcionFoto')?.addEventListener('change', (e) => {
+    const archivo = e.target.files?.[0];
+    const error = document.getElementById('rifaOpcionError');
+    if (!archivo) return;
+    if (!archivo.type.startsWith('image/')) {
+      e.target.value = '';
+      if (error) { error.textContent = 'Selecciona un archivo de imagen válido.'; error.style.display = 'block'; }
+      return;
+    }
+    if (archivo.size > 2 * 1024 * 1024) {
+      e.target.value = '';
+      if (error) { error.textContent = 'La imagen no puede superar 2 MB.'; error.style.display = 'block'; }
+      return;
+    }
+    if (error) error.style.display = 'none';
+    const lector = new FileReader();
+    lector.onload = () => { rifaOpcionFotoTemporal = lector.result; };
+    lector.readAsDataURL(archivo);
+  });
+
+  document.getElementById('rifaOpcionGuardarBtn')?.addEventListener('click', () => {
+    const nombre = document.getElementById('rifaOpcionNombre').value.trim();
+    const descripcion = document.getElementById('rifaOpcionDescripcion').value.trim();
+    const error = document.getElementById('rifaOpcionError');
+    if (!nombre) {
+      if (error) { error.textContent = 'Escribe el nombre del regalo.'; error.style.display = 'block'; }
+      return;
+    }
+
+    const identidad = { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre };
+    const resultado = opcion
+      ? editarOpcionRifaMes(mesKey, opcion.id, { nombre, fotoUrl: rifaOpcionFotoTemporal, descripcion })
+      : agregarOpcionRifaMes(mesKey, { nombre, fotoUrl: rifaOpcionFotoTemporal, descripcion }, identidad);
+
+    if (!resultado.ok) {
+      if (error) { error.textContent = resultado.error; error.style.display = 'block'; }
+      return;
+    }
+
+    overlay.classList.remove('open');
+    mostrarToast(opcion ? 'Opción actualizada.' : 'Opción agregada.');
+    renderRifaMes();
+  });
+
 }

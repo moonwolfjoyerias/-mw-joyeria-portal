@@ -1,12 +1,16 @@
 // MW JOYERÍA — Mi cuenta (Líder)
-// Depende de: PERFIL_LIDER_EJEMPLO, RIFA_LIDER_EJEMPLO, CONSTANCIA_LIDER_EJEMPLO,
-// COMISIONES_PCT (lider-cuenta-ejemplo.js) + RANGOS_MW, LIDER_EJEMPLO (lider-ejemplo.js)
-// + EQUIPO_ARBOL_EJEMPLO (equipo-ejemplo.js).
+// Depende de: PERFIL_LIDER_EJEMPLO, COMISIONES_PCT (lider-cuenta-ejemplo.js)
+// + RANGOS_MW, LIDER_EJEMPLO (lider-ejemplo.js) + EQUIPO_ARBOL_EJEMPLO
+// (equipo-ejemplo.js). La Rifa mensual y el Reto de Constancia son la
+// excepción: usan el registro REAL de la persona con sesión abierta
+// (personas-ejemplo.js + plan-mw-admin.js), no RIFA_LIDER_EJEMPLO ni
+// CONSTANCIA_LIDER_EJEMPLO.
 
 document.addEventListener('DOMContentLoaded', () => {
   renderPerfilLider();
   renderRifaLider();
   renderConstanciaLider();
+  renderRifaMesLider();
   renderProgresoRangoCuenta();
   renderTicketComisiones();
   renderProximoPago();
@@ -165,12 +169,31 @@ async function abrirModalDatosBancarios() {
   });
 }
 
+// Persona real con sesión abierta, con su Plan MW (Rifa/Constancia) al
+// día — misma función de cierre idempotente que usa Admin en cada
+// carga (js/plan-mw-admin.js), así nunca se desincroniza de lo que ve
+// Administración de esta misma persona.
+function obtenerPersonaConPlanMWAlDia() {
+  const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
+  if (!idActual || typeof obtenerPersonas !== 'function') return null;
+  const personas = obtenerPersonas();
+  const persona = personas.find(p => p.id === idActual);
+  if (!persona) return null;
+  if (typeof procesarCierresMensualesPlanMW === 'function' && procesarCierresMensualesPlanMW(persona)) {
+    guardarPersonas(personas);
+  }
+  return persona;
+}
+
 // ---------- Rifa mensual ----------
 function renderRifaLider() {
-  const { montoAcumuladoMes } = RIFA_LIDER_EJEMPLO;
+  const persona = obtenerPersonaConPlanMWAlDia();
+  if (!persona) return;
+
+  const montoAcumuladoMes = (persona.rifa && persona.rifa.montoAcumuladoMes) || 0;
   // Admin → Configuración → Plan MW es dueña de estas dos reglas; si no
   // está cargada aquí, se usan los mismos valores fijos de siempre.
-  const meta = (typeof obtenerValorVigente === 'function' && obtenerValorVigente('rifa', 'meta_mensual')) || RIFA_LIDER_EJEMPLO.meta;
+  const meta = (typeof obtenerValorVigente === 'function' && obtenerValorVigente('rifa', 'meta_mensual')) || (persona.rifa && persona.rifa.meta) || 3000;
   const montoPorBoletoExtra = (typeof obtenerValorVigente === 'function' && obtenerValorVigente('rifa', 'monto_por_boleto_extra')) || 1000;
 
   const pctBase = Math.min(100, (montoAcumuladoMes / meta) * 100);
@@ -194,8 +217,17 @@ function renderRifaLider() {
 
 // ---------- Reto de Constancia ----------
 function renderConstanciaLider() {
-  const { comprasCumplidas, montoMesActual, metaMes, hitos } = CONSTANCIA_LIDER_EJEMPLO;
-  const puntosLinea = [0, ...hitos.map(h => h.compras)];
+  const persona = obtenerPersonaConPlanMWAlDia();
+  if (!persona) return;
+
+  // Admin → Configuración → Plan MW puede tener premios propios por
+  // hito; si no, se usan los mismos hitos reales de siempre.
+  const hitos = typeof obtenerHitosConstanciaConfigurados === 'function' ? obtenerHitosConstanciaConfigurados() : HITOS_CONSTANCIA_PERSONA;
+  const comprasCumplidas = (persona.constancia && persona.constancia.mesesCumplidos) || 0;
+  const montoMesActual = (persona.constancia && persona.constancia.montoMesActual) || 0;
+  const metaMes = (persona.constancia && persona.constancia.metaMes) || 8000;
+
+  const puntosLinea = [0, ...hitos.map(h => h.meses)];
   let segmentoActual = puntosLinea.length - 2;
   for (let i = 0; i < puntosLinea.length - 1; i++) {
     if (comprasCumplidas <= puntosLinea[i + 1]) { segmentoActual = i; break; }
@@ -207,28 +239,40 @@ function renderConstanciaLider() {
   document.getElementById('constanciaFill').style.width = `${pctGeneral}%`;
 
   document.getElementById('constanciaNodes').innerHTML = hitos.map(h => {
-    const alcanzado = comprasCumplidas >= h.compras;
+    const alcanzado = comprasCumplidas >= h.meses;
     return `
       <div class="timeline-node ${alcanzado ? 'reached' : ''}">
         <div class="node-circle">
-          ${alcanzado ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>' : `<span style="font-family:var(--font-heading); font-weight:700; font-size:0.85rem;">${h.compras}</span>`}
+          ${alcanzado ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>' : `<span style="font-family:var(--font-heading); font-weight:700; font-size:0.85rem;">${h.meses}</span>`}
         </div>
-        <span class="node-label">${h.compras}° compra<br>${h.premio}</span>
+        <span class="node-label">${h.meses}° compra<br>${h.premio}</span>
       </div>
     `;
   }).join('');
 
   setText('constanciaResumen', `Llevas ${comprasCumplidas} compras cumplidas.`);
-  const siguienteHito = hitos.find(h => h.compras > comprasCumplidas);
+  const siguienteHito = hitos.find(h => h.meses > comprasCumplidas);
   const nota = document.getElementById('constanciaNota');
   nota.textContent = siguienteHito
-    ? `Te falta${siguienteHito.compras - comprasCumplidas === 1 ? '' : 'n'} ${siguienteHito.compras - comprasCumplidas} compra${siguienteHito.compras - comprasCumplidas === 1 ? '' : 's'} para tu siguiente recompensa: ${siguienteHito.premio}.`
+    ? `Te falta${siguienteHito.meses - comprasCumplidas === 1 ? '' : 'n'} ${siguienteHito.meses - comprasCumplidas} compra${siguienteHito.meses - comprasCumplidas === 1 ? '' : 's'} para tu siguiente recompensa: ${siguienteHito.premio}.`
     : '¡Has alcanzado todas las recompensas! Pronto habrá una nueva categoría.';
 
   const pctMes = Math.min(100, (montoMesActual / metaMes) * 100);
   document.getElementById('mesFill').style.width = `${pctMes}%`;
   setText('mesMontoActual', fmtMoney(montoMesActual));
   setText('mesMontoMeta', fmtMoney(metaMes));
+
+  const fechaLogroEl = document.getElementById('mesFechaLogro');
+  if (fechaLogroEl) {
+    const fechaLogro = typeof obtenerFechaLogroMesActual === 'function' ? obtenerFechaLogroMesActual(persona) : null;
+    if (fechaLogro) {
+      const texto = new Date(fechaLogro).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+      fechaLogroEl.textContent = `Llegaste a tus $8,000 de este mes el ${texto}.`;
+      fechaLogroEl.style.display = '';
+    } else {
+      fechaLogroEl.style.display = 'none';
+    }
+  }
 }
 
 // ---------- Progreso de rango (detalle completo) ----------
@@ -421,4 +465,102 @@ function renderProximoPago() {
   const mes = fechaPago.toLocaleDateString('es-MX', { month: 'long' });
   const texto = `${diaSemana} ${fechaPago.getDate()} de ${mes}`;
   setText('proximoPago', texto.charAt(0).toUpperCase() + texto.slice(1));
+}
+
+// ---------- Rifa del mes (solicitud o votación, según decida Admin) ----------
+function formatearMesLabelRifaCuenta(mesKey) {
+  const [anio, mes] = mesKey.split('-').map(Number);
+  const nombres = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  return `${nombres[mes - 1].charAt(0).toUpperCase()}${nombres[mes - 1].slice(1)} ${anio}`;
+}
+
+function renderRifaMesLider() {
+  if (typeof obtenerConfigRifaMes !== 'function') return;
+
+  const persona = obtenerPersonaConPlanMWAlDia();
+  if (!persona) return;
+
+  const mesKey = obtenerMesKeyActualRifaMensual();
+  const config = obtenerConfigRifaMes(mesKey);
+  setText('rifaMesLabelCuenta', formatearMesLabelRifaCuenta(mesKey));
+
+  const contenido = document.getElementById('rifaMesContenido');
+  const sub = document.getElementById('rifaMesSub');
+  if (!contenido || !sub) return;
+
+  if (!config.modo) {
+    sub.textContent = 'Administración todavía no elige cómo va a funcionar la rifa de este mes.';
+    contenido.innerHTML = '';
+    return;
+  }
+
+  if (config.modo === 'solicitud') {
+    sub.textContent = 'Escribe y sube una foto de algo que te gustaría que se rifara este mes.';
+    const solicitud = obtenerSolicitudRifaPersona(persona.id, mesKey);
+
+    contenido.innerHTML = `
+      <label for="rifaMesTexto">¿Qué te gustaría que se rifara?</label>
+      <textarea id="rifaMesTexto" rows="3">${solicitud ? solicitud.texto.replace(/</g, '&lt;') : ''}</textarea>
+      <label for="rifaMesFoto" style="margin-top:10px;">Foto (opcional)</label>
+      <input type="file" id="rifaMesFoto" accept="image/*">
+      ${solicitud && solicitud.fotoUrl ? `<img src="${solicitud.fotoUrl}" alt="Tu foto" class="rifa-solicitud-foto-propia">` : ''}
+      <button class="btn btn-primary" type="button" id="rifaMesGuardarBtn" style="margin-top:12px;">${solicitud ? 'Actualizar mi solicitud' : 'Enviar mi solicitud'}</button>
+      ${solicitud ? `<p class="bp-sub" style="margin-top:8px;margin-bottom:0;">Enviada el ${new Date(solicitud.actualizadoEn || solicitud.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}.</p>` : ''}
+    `;
+
+    let fotoTemporal = solicitud ? solicitud.fotoUrl : '';
+    document.getElementById('rifaMesFoto')?.addEventListener('change', (e) => {
+      const archivo = e.target.files?.[0];
+      if (!archivo) return;
+      if (!archivo.type.startsWith('image/')) { e.target.value = ''; mostrarToast('Selecciona un archivo de imagen válido.'); return; }
+      if (archivo.size > 2 * 1024 * 1024) { e.target.value = ''; mostrarToast('La imagen no puede superar 2 MB.'); return; }
+      const lector = new FileReader();
+      lector.onload = () => { fotoTemporal = lector.result; };
+      lector.readAsDataURL(archivo);
+    });
+
+    document.getElementById('rifaMesGuardarBtn')?.addEventListener('click', () => {
+      const texto = document.getElementById('rifaMesTexto').value.trim();
+      const resultado = guardarSolicitudRifaPersona({ personaId: persona.id, personaNombre: nombreCompletoPersona(persona), mesKey, texto, fotoUrl: fotoTemporal });
+      if (!resultado.ok) { mostrarToast(resultado.error); return; }
+      mostrarToast('¡Gracias! Tu solicitud para la rifa de este mes quedó guardada.');
+      renderRifaMesLider();
+    });
+
+    return;
+  }
+
+  // modo votación
+  sub.textContent = 'Vota por el regalo que te gustaría que se rifara este mes — puedes cambiar tu voto mientras siga abierta.';
+  const voto = obtenerVotoRifaPersona(persona.id, mesKey);
+
+  if (!config.opciones || !config.opciones.length) {
+    contenido.innerHTML = '<p class="bp-sub" style="margin:0;">Todavía no hay opciones para votar este mes.</p>';
+    return;
+  }
+
+  contenido.innerHTML = `<div class="rifa-opciones-grid">${config.opciones.map(op => {
+    const esMiVoto = voto && voto.opcionId === op.id;
+    return `
+      <div class="rifa-opcion-card${esMiVoto ? ' votada' : ''}">
+        ${op.fotoUrl ? `<img src="${op.fotoUrl}" alt="${op.nombre.replace(/</g, '&lt;')}">` : '<div class="rifa-opcion-sinfoto">Sin foto</div>'}
+        <div class="rifa-opcion-body">
+          <strong>${op.nombre.replace(/</g, '&lt;')}</strong>
+          ${op.descripcion ? `<p>${op.descripcion.replace(/</g, '&lt;')}</p>` : ''}
+        </div>
+        <button class="btn ${esMiVoto ? 'btn-outline' : 'btn-primary'}" type="button" data-votar-opcion="${op.id}">${esMiVoto ? 'Tu voto' : 'Votar'}</button>
+      </div>
+    `;
+  }).join('')}</div>`;
+
+  contenido.querySelectorAll('[data-votar-opcion]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const opcionId = btn.getAttribute('data-votar-opcion');
+      const votoActual = obtenerVotoRifaPersona(persona.id, mesKey);
+      if (votoActual && votoActual.opcionId === opcionId) return;
+      votarOpcionRifaMes({ personaId: persona.id, personaNombre: nombreCompletoPersona(persona), mesKey, opcionId });
+      mostrarToast('¡Listo! Tu voto quedó registrado.');
+      renderRifaMesLider();
+    });
+  });
 }

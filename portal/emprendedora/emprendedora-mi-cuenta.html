@@ -129,6 +129,12 @@
             <div class="progress-message" id="rifaMensaje"></div>
           </div>
 
+          <div class="benefit-panel" id="rifaMesPanel">
+            <h3><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12v8H4v-8"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7C9 7 8 5 8 4a2 2 0 114 0 2 2 0 114 0c0 1-1 3-4 3z"/></svg></span> Rifa del mes — <span id="rifaMesLabelCuenta"></span></h3>
+            <p class="bp-sub" id="rifaMesSub"></p>
+            <div id="rifaMesContenido"></div>
+          </div>
+
           <div class="benefit-panel">
             <h3><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 4h10v4a5 5 0 01-10 0V4z"/><path d="M7 5H4a3 3 0 003 4M17 5h3a3 3 0 01-3 4"/><path d="M12 13v4"/><path d="M9 20h6"/><path d="M9.5 17h5l.5 3h-6l.5-3z"/></svg></span> Reto de Constancia</h3>
             <p class="bp-sub">Compra $8,000 al mes (precio emprendedora) para que cuente como compra cumplida — cada hito te da un premio.</p>
@@ -150,6 +156,7 @@
                 <span id="mesMontoActual">$0</span>
                 <span id="mesMontoMeta">$0</span>
               </div>
+              <p class="bp-sub" id="mesFechaLogro" style="margin-top:0.5rem; margin-bottom:0; display:none;"></p>
             </div>
           </div>
         </div>
@@ -176,10 +183,15 @@
   };
   </script>
   <script src="../../js/cuenta-ejemplo.js"></script>
-  <script src="../../js/cuenta.js"></script>
   <script src="../../js/auditoria-modelo.js"></script>
   <script src="../../js/notificaciones-modelo.js"></script>
   <script src="../../js/personas-ejemplo.js"></script>
+  <script src="../../js/configuracion-modelo.js"></script>
+  <script src="../../js/apartados-modelo.js"></script>
+  <script src="../../js/compras-modelo.js"></script>
+  <script src="../../js/plan-mw-admin.js"></script>
+  <script src="../../js/rifa-mensual-modelo.js"></script>
+  <script src="../../js/cuenta.js"></script>
   <!-- Fase 2: SDK compat de Firebase — solo se activa si js/firebase-config.js tiene MODO_DEMO=false y credenciales reales; si no, no hace nada. -->
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
