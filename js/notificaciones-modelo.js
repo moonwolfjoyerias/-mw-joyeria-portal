@@ -178,6 +178,20 @@ function obtenerRolPortalActual() {
 // Notificaciones que le tocan a la bandeja de un rol específico —
 // usada por la campana de Emprendedora/Líder, Staff y RH. Admin no la
 // usa (ve las tres bandejas divididas, no una sola filtrada).
+//
+// La bandeja 'emprendedora_lider' es personal, no de equipo (a
+// diferencia de 'staff'/'rh', que sí son bandejas compartidas a
+// propósito): cada aviso que se genera ahí ya trae paraId puesto por
+// quien lo crea (ver todos los agregarNotificacion({ rolDestino:
+// 'emprendedora_lider', ... }) del portal), así que además de la
+// bandeja hay que exigir que sea PARA la persona con la sesión
+// abierta — si no, cualquier Emprendedora o Líder ve los avisos
+// privados de todas las demás (premios, ascensos, alertas de equipo
+// ajeno, etc.). Los pocos ejemplos sin paraId (NOTIFICACIONES_EJEMPLO)
+// se siguen mostrando a cualquiera, igual que siempre.
 function obtenerNotificacionesPorRol(rol) {
-  return obtenerNotificacionesCompartidas().filter(n => (n.rolDestino || 'emprendedora_lider') === rol);
+  const notificaciones = obtenerNotificacionesCompartidas().filter(n => (n.rolDestino || 'emprendedora_lider') === rol);
+  if (rol !== 'emprendedora_lider') return notificaciones;
+  const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
+  return notificaciones.filter(n => !n.paraId || n.paraId === idActual);
 }
