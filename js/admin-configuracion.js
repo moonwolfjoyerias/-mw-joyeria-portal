@@ -108,6 +108,7 @@ function actualizarPillConfig(modo) {
 function formatearValorTipo(valor, tipoValor) {
   if (valor === null || valor === undefined) return '—';
   if (tipoValor === 'moneda') return `$${Number(valor).toLocaleString('es-MX')}`;
+  if (tipoValor === 'puntos') return `${Number(valor).toLocaleString('es-MX')} puntos`;
   if (tipoValor === 'porcentaje') return `${valor}%`;
   if (tipoValor === 'dias') return `${valor} día${Number(valor) === 1 ? '' : 's'}`;
   return String(valor);
@@ -677,16 +678,16 @@ function renderSeccionPlanMW() {
   cont.innerHTML = `
     <div class="cfg-card">
       <h3 class="cfg-card-title">Rangos — requisitos</h3>
-      <p class="cfg-card-sub">Mismos umbrales reales del Plan MW. Cambiarlos aquí no recalcula ascensos ya confirmados.</p>
+      <p class="cfg-card-sub">Mismos umbrales reales del Plan MW. Cambiarlos aquí no recalcula ascensos ya confirmados. Reglas fijas que no se editan aquí: ninguna línea (equipo de una sola persona invitada directa) puede aportar más del 50% de los puntos de producción que exige un rango; personas activas y equipo calificado se evalúan en ambos periodos del mes; y la compra personal de Diamante/Corona solo se exige en el periodo en que se consolida el rango (Plata/Oro la exigen en ambos periodos).</p>
       <div class="catalog-table-wrap cfg-tabla-wrap">
         <table class="catalog-table" id="cfgTablaRangos">
-          <thead><tr><th>Rango</th><th>Personas activas</th><th>Producción grupal</th><th>Compra personal</th><th>Equipo calificado (personas)</th></tr></thead>
+          <thead><tr><th>Rango</th><th>Personas activas</th><th>Producción grupal (puntos)</th><th>Compra personal</th><th>Equipo calificado (personas)</th></tr></thead>
           <tbody>
             ${RANGOS_MW.filter(r => r.key !== 'sin_rango').map(r => `
               <tr>
                 <td><strong>${r.label}</strong></td>
                 ${construirCeldaVersionada({ tipo: 'rango', parametro: `${r.key}_personas`, seccion: 'Plan MW', etiqueta: `Rango ${r.label} — personas activas`, tipoValor: 'numero' })}
-                ${construirCeldaVersionada({ tipo: 'rango', parametro: `${r.key}_produccion`, seccion: 'Plan MW', etiqueta: `Rango ${r.label} — producción grupal`, tipoValor: 'moneda' })}
+                ${construirCeldaVersionada({ tipo: 'rango', parametro: `${r.key}_produccion`, seccion: 'Plan MW', etiqueta: `Rango ${r.label} — producción grupal`, tipoValor: 'puntos' })}
                 ${construirCeldaVersionada({ tipo: 'rango', parametro: `${r.key}_compra`, seccion: 'Plan MW', etiqueta: `Rango ${r.label} — compra personal`, tipoValor: 'moneda' })}
                 ${construirCeldaVersionada({ tipo: 'rango', parametro: `${r.key}_calificado`, seccion: 'Plan MW', etiqueta: `Rango ${r.label} — personas del equipo calificadas`, tipoValor: 'numero' })}
               </tr>

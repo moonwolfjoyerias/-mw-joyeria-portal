@@ -165,8 +165,8 @@ function construirPersonasEjemplo() {
       // Ejemplo real de ascenso de rango: en agosto 2026 su equipo real
       // (ver js/apartados-modelo.js → construirVentanasApartadoEjemplo)
       // solo alcanza los requisitos de Plata; en septiembre 2026 ya
-      // alcanza los de Oro (10 personas / $52,500 / $1,500 ambos
-      // periodos / 30% calificado) y el ascenso queda confirmado con
+      // alcanza los de Oro (10 personas activas / 52,500 puntos /
+      // $1,500 ambos periodos / 6 personas calificadas) y el ascenso queda confirmado con
       // fecha de septiembre — así Comisiones muestra el bono de rango
       // sin pagar ese mes y Plan MW ya el nuevo rango vigente.
       rangoActualKey: 'oro',

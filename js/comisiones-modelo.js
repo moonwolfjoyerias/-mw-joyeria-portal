@@ -126,6 +126,23 @@ function obtenerInfoSubPeriodo(periodoKey, subPeriodo) {
 
 function calcularRangoAplicadoPeriodo(persona, periodoKey) {
 
+  // Rango EFECTIVO del último mes ya cerrado antes de este periodo (ver
+  // js/plan-mw-admin.js → calcularRangoEfectivoMes/procesarRangoEfectivoMensual)
+  // — este es el que manda: puede ser MENOR al rango histórico si ese
+  // mes no se recalificó (Sección 9/12 del Plan MW). Solo si todavía no
+  // existe ningún mes procesado con este mecanismo (persona vieja de
+  // antes de esta función, o mes actual/futuro que nunca se cierra) se
+  // usa el método anterior (caminar historialLogros) como respaldo, para
+  // no alterar comisiones de meses que ya se mostraron con ese criterio.
+  const historialRangoEfectivo = (persona.historialRangoEfectivo || [])
+    .filter(h => h.mesKey < periodoKey)
+    .sort((a, b) => b.mesKey.localeCompare(a.mesKey));
+
+  if (historialRangoEfectivo.length) {
+    const ultimo = historialRangoEfectivo[0];
+    return { rangoKey: ultimo.rangoKey, origen: `recalificación de ${ultimo.mesKey}` };
+  }
+
   const inicioPeriodo = `${periodoKey}-01T00:00:00.000Z`;
 
   const historialAscensos = (persona.historialLogros || [])

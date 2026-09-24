@@ -98,21 +98,22 @@ function obtenerProduccionGrupalLiderMes(liderId, mesKey) {
 // Umbrales reales del Plan MW (Sección 15/7.2) — no existían como
 // constantes en ningún lado del código; se documentan aquí para que
 // cualquier ajuste futuro se haga en un solo lugar.
-const UMBRAL_ACTIVA_MENSUAL = 500;       // compra total (normal+souvenir) del mes para contar como "activa"
+const UMBRAL_ACTIVA_MENSUAL = 500;       // compra total (normal+souvenir) POR SUB-PERIODO para contar como "activa" ese sub-periodo
 const UMBRAL_EQUIPO_CALIFICADO = 1500;   // compra total (normal+souvenir) del sub-periodo para contar como "calificada" — mismo monto que exige RANGOS_MW[x].compra a la propia líder
 
 // Estadísticas reales de rango de un líder para un mes dado — sustituye
 // a los campos estáticos persona.stats.* que antes se capturaban a
-// mano. personasCalificadas exige que cada persona del equipo llegue al
-// umbral en LOS DOS sub-periodos del mes (p1 y p2) — igual que ya se le
-// exige a la propia líder en "Compra personal (ambos periodos)". Si a
-// alguien del equipo le falta calificar en cualquiera de los dos
-// periodos, no cuenta como calificada ese mes. Es un NÚMERO de personas
-// (no un %) — RANGOS_MW[x].calificado exige una cantidad fija sin
+// mano. Tanto personasActivas como personasCalificadas exigen que cada
+// persona del equipo llegue a su umbral en LOS DOS sub-periodos del mes
+// (p1 y p2) — especificación del Plan MW (Sección 3/4): "la actividad
+// debe evaluarse por periodo, no solamente por mes". Si a alguien del
+// equipo le falta calificar en cualquiera de los dos periodos, no
+// cuenta como activa/calificada ese mes. Son NÚMEROS de personas (no un
+// %) — RANGOS_MW[x].personas/calificado exigen una cantidad fija sin
 // importar el tamaño del equipo. subPeriodoVigente ya no se usa aquí
 // (se deja en la firma por compatibilidad con quien la llama) — antes
 // solo miraba el sub-periodo de hoy, lo cual dejaba pasar a personas
-// que solo habían calificado en uno de los dos.
+// que solo habían calificado/activado en uno de los dos.
 function calcularStatsRangoLider(lider, mesKey, subPeriodoVigente) {
   if (typeof calcularDescendenciaPersona !== 'function') {
     return { personasActivas: 0, produccionGrupalMes: 0, personasCalificadas: 0, compraPersonalPeriodo1: 0, compraPersonalPeriodo2: 0 };
@@ -128,10 +129,10 @@ function calcularStatsRangoLider(lider, mesKey, subPeriodoVigente) {
   equipo.forEach(p => {
     const comprasMes = obtenerComprasLiquidadasPersonaMes(p.id, mesKey);
     produccionGrupalMes += comprasMes.normal;
-    if (comprasMes.total >= UMBRAL_ACTIVA_MENSUAL) personasActivas++;
 
     const comprasP1 = obtenerComprasLiquidadasPersonaSubPeriodo(p.id, mesKey, 'p1');
     const comprasP2 = obtenerComprasLiquidadasPersonaSubPeriodo(p.id, mesKey, 'p2');
+    if (comprasP1.total >= UMBRAL_ACTIVA_MENSUAL && comprasP2.total >= UMBRAL_ACTIVA_MENSUAL) personasActivas++;
     if (comprasP1.total >= UMBRAL_EQUIPO_CALIFICADO && comprasP2.total >= UMBRAL_EQUIPO_CALIFICADO) personasCalificadas++;
   });
 
@@ -145,4 +146,46 @@ function calcularStatsRangoLider(lider, mesKey, subPeriodoVigente) {
     compraPersonalPeriodo1: p1.total,
     compraPersonalPeriodo2: p2.total
   };
+}
+
+// ============================================================
+// PRODUCCIÓN POR LÍNEA — Regla del 50% (Plan MW, Sección 5)
+// ============================================================
+//
+// Una "línea" es cada persona invitada DIRECTAMENTE por la líder
+// (descendiente de nivel 1) junto con todo su equipo debajo — nunca
+// más del 50% de los puntos que exige un rango puede venir de UNA sola
+// línea. Esto NO afecta comisiones ni ningún otro cálculo: solo decide
+// si la producción CUENTA para el requisito de producción de ese rango
+// en particular (el tope es distinto para cada rango, porque es 50%
+// del requisito de ESE rango — no un tope fijo).
+
+// Producción normal del mes de cada línea (nivel 1 + toda su descendencia).
+function calcularProduccionPorLineaLider(liderId, mesKey) {
+  if (typeof calcularDescendenciaPersona !== 'function') return [];
+
+  const { porLider } = calcularDescendenciaPersona(liderId);
+  const lineas = porLider[liderId] || []; // hijos directos (nivel 1) = raíz de cada línea
+
+  return lineas.map(raizLinea => {
+    const { conNivel } = calcularDescendenciaPersona(raizLinea.id);
+    const integrantesLinea = [raizLinea, ...conNivel.map(n => n.persona)];
+    const produccion = integrantesLinea.reduce(
+      (suma, p) => suma + obtenerComprasLiquidadasPersonaMes(p.id, mesKey).normal,
+      0
+    );
+    return { liderLineaId: raizLinea.id, nombreLinea: typeof nombreCompletoPersona === 'function' ? nombreCompletoPersona(raizLinea) : raizLinea.nombre, produccion };
+  });
+}
+
+// Producción "capada" al 50% del requisito de UN rango específico — se
+// usa solo para decidir si se cumple el requisito de producción de ese
+// rango. El excedente de una línea que se pasa del tope no se pierde:
+// sigue existiendo para comisiones (produccionGrupalMes, sin tocar),
+// solo no cuenta aquí para no dejar que una sola línea cargue sola con
+// todo el rango.
+function calcularProduccionCapadaParaRango(liderId, mesKey, produccionRequerida) {
+  const lineas = calcularProduccionPorLineaLider(liderId, mesKey);
+  const topePorLinea = produccionRequerida * 0.5;
+  return lineas.reduce((suma, l) => suma + Math.min(l.produccion, topePorLinea), 0);
 }
