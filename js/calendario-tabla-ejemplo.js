@@ -31,3 +31,8 @@ const TIPOS_EVENTO_CALENDARIO = [
   { key: 'presencial', label: 'Presencial' },
   { key: 'virtual', label: 'Virtual' }
 ];
+
+const ORIGENES_EVENTO_CALENDARIO = [
+  { key: 'mw', label: 'MW' },
+  { key: 'emprendedora_lider', label: 'Emprendedora/Líder' }
+];

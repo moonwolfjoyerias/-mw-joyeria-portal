@@ -196,6 +196,14 @@ function renderTablaCalendario() {
 
   });
 
+  tbody.querySelectorAll('[data-asistencia]').forEach(btn => {
+
+    btn.addEventListener('click', () => {
+      abrirModalAsistenciaEvento(eventosCalendario.find(ev => ev.id === btn.dataset.asistencia));
+    });
+
+  });
+
 }
 
 
@@ -211,7 +219,10 @@ function renderFilaEvento(ev) {
       <td>
         <div class="catalog-product-cell">
           <img src="../../assets/images/isotipo-morado.png" alt="">
-          <strong>${escapeHTML(ev.titulo)}</strong>
+          <div>
+            <strong>${escapeHTML(ev.titulo)}</strong>
+            <div><span class="badge origen-badge ${ev.origen === 'emprendedora_lider' ? 'emprendedora-lider' : 'mw'}">${ev.origen === 'emprendedora_lider' ? 'Emprendedora/Líder' : 'MW'}</span></div>
+          </div>
         </div>
       </td>
 
@@ -232,6 +243,7 @@ function renderFilaEvento(ev) {
       <td>
         <div class="catalog-actions">
           <button class="action-btn primary-action" data-editar="${ev.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></span> Editar</button>
+          <button class="action-btn" data-asistencia="${ev.id}">Asistencia (${(ev.asistentes || []).length})</button>
           <button class="action-btn danger-action" data-eliminar="${ev.id}"><span>×</span> Eliminar</button>
         </div>
       </td>
@@ -650,6 +662,70 @@ function ejecutarAccionCalendario(accion, empleado) {
     mostrarToast(`"${evento.titulo}" fue eliminado por ${empleado.nombre}.`);
 
   }
+
+}
+
+
+// ============================================================
+// LISTA DE ASISTENCIA
+// ============================================================
+
+function abrirModalAsistenciaEvento(evento) {
+
+  if (!evento) return;
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const asistentes = (evento.asistentes || []).slice().sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  box.style.maxWidth = '460px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>×</button>
+    <h3>Lista de asistencia</h3>
+    <p class="modal-sub">${escapeHTML(evento.titulo)} — ${asistentes.length} confirmación${asistentes.length === 1 ? '' : 'es'}.</p>
+
+    ${asistentes.length ? `
+      <div class="equipo-modal-list">
+        ${asistentes.map(a => `
+          <div class="detail-grid" style="margin-bottom:6px;">
+            <div class="full" style="grid-column:1/-1;"><strong>${escapeHTML(a.nombre)}</strong></div>
+          </div>
+        `).join('')}
+      </div>
+    ` : `<p class="bp-sub">Todavía nadie ha confirmado su asistencia a este evento.</p>`}
+
+    <button class="btn btn-outline" id="descargarAsistenciaBtn" style="width:100%;margin-top:12px;" type="button" ${asistentes.length ? '' : 'disabled'}>Descargar lista de asistencia (CSV)</button>
+  `;
+
+  overlay.classList.add('open');
+
+  document.getElementById('descargarAsistenciaBtn')?.addEventListener('click', () => descargarAsistenciaEventoCSV(evento));
+
+}
+
+function descargarAsistenciaEventoCSV(evento) {
+
+  const asistentes = (evento.asistentes || []).slice().sort((a, b) => a.nombre.localeCompare(b.nombre));
+  if (!asistentes.length) return;
+
+  const encabezado = ['Evento', 'Fecha del evento', 'Nombre', 'Fecha de confirmación'];
+  const cuerpo = asistentes.map(a => [evento.titulo, evento.fecha, a.nombre, formatearFechaHoraLarga(a.fecha)]);
+
+  const csv = '﻿' + [encabezado, ...cuerpo]
+    .map(fila => fila.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    .join('\r\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `asistencia-${evento.id}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 
 }
 
