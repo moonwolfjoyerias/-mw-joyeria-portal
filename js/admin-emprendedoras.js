@@ -143,6 +143,13 @@ function renderResultadosPersonas(personas) {
     card.addEventListener('click', () => seleccionarPersonaAdmin(card.getAttribute('data-ver-perfil')));
   });
 
+  lista.querySelectorAll('[data-cambiar-lider-directo]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      abrirModalCambiarLiderDirecto(btn.getAttribute('data-cambiar-lider-directo'));
+    });
+  });
+
 }
 
 function crearTarjetaResultadoPersona(p, todas) {
@@ -166,11 +173,85 @@ function crearTarjetaResultadoPersona(p, todas) {
         </span>
         <span class="persona-result-meta">
           ${lider ? `Líder: ${escapeHTMLPersonas(nombreCompletoPersona(lider))}` : 'Sin líder asignada'}
+          ${p.tipo === 'emprendedora' ? `<button type="button" class="btn-link-ajuste" data-cambiar-lider-directo="${p.id}">Cambiar líder</button>` : ''}
         </span>
       </span>
       <button type="button" class="action-btn detail-action" data-ver-perfil="${p.id}">Ver perfil</button>
     </div>
   `;
+
+}
+
+// ============================================================
+// CAMBIAR LÍDER — DIRECTO (Lista A, fusión con mi-equipo)
+// ============================================================
+//
+// Botón adicional en cada tarjeta de emprendedora: mueve su rama en el
+// momento, sin pasar por la solicitud de 5 días ni por el formulario
+// general de "Editar información" — ambos siguen intactos, esto es
+// puramente un atajo directo para Admin.
+function abrirModalCambiarLiderDirecto(personaId) {
+
+  const persona = obtenerPersonaPorId(personaId);
+  if (!persona) return;
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  let liderElegida = null;
+
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Cambiar líder de ${escapeHTMLPersonas(nombreCompletoPersona(persona))}</h3>
+    <p class="modal-sub">Efecto inmediato — no requiere solicitud ni aprobación. Si tiene equipo propio, se mueve con ella.</p>
+    <label for="cambiarLiderDirectoInput">Nueva líder</label>
+    <div class="persona-autocomplete" id="cambiarLiderDirectoWrap">
+      <input type="text" id="cambiarLiderDirectoInput" autocomplete="off" placeholder="Escribir nombre...">
+      <div class="persona-autocomplete-list" id="cambiarLiderDirectoList" hidden></div>
+    </div>
+    <div id="cambiarLiderDirectoError" class="auth-error" style="display:none;"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="confirmarCambiarLiderDirectoBtn">Cambiar ahora</button>
+  `;
+  overlay.classList.add('open');
+
+  crearAutocompletePersonas({
+    inputEl: document.getElementById('cambiarLiderDirectoInput'),
+    listEl: document.getElementById('cambiarLiderDirectoList'),
+    obtenerCandidatos: (texto) => obtenerPersonas().filter(p =>
+      p.tipo === 'lider' && p.estado !== 'baja' && p.id !== persona.id && nombreCompletoPersona(p).toLowerCase().includes(texto)
+    ),
+    onSeleccionar: (p) => { liderElegida = { id: p.id, nombre: nombreCompletoPersona(p) }; },
+    onLimpiar: () => { liderElegida = null; }
+  });
+
+  document.getElementById('confirmarCambiarLiderDirectoBtn')?.addEventListener('click', () => {
+    const error = document.getElementById('cambiarLiderDirectoError');
+    if (!liderElegida) {
+      if (error) { error.textContent = 'Elige a la nueva líder de la lista.'; error.style.display = 'block'; }
+      return;
+    }
+
+    abrirAutorizacionAdmin({
+      titulo: 'Cambiar líder',
+      mensaje: `¿Mover a ${escapeHTMLPersonas(nombreCompletoPersona(persona))} a la rama de ${escapeHTMLPersonas(liderElegida.nombre)} ahora mismo? Esta acción quedará registrada.`,
+      onConfirmar: () => {
+        const resultado = cambiarLiderDirectoAdmin(personaId, {
+          liderNuevoId: liderElegida.id,
+          ejecutadoPorId: ADMIN_IDENTIDAD?.usuarioId,
+          ejecutadoPorNombre: ADMIN_IDENTIDAD?.usuarioNombre
+        });
+        if (!resultado.ok) {
+          if (error) { error.textContent = resultado.error; error.style.display = 'block'; }
+          return;
+        }
+        overlay.classList.remove('open');
+        mostrarToastPersonas(`${nombreCompletoPersona(persona)} ahora está en la rama de ${liderElegida.nombre}.`);
+        aplicarBusquedaPersonas();
+        if (personaSeleccionadaId === personaId) renderDetallePersona();
+      }
+    });
+  });
 
 }
 

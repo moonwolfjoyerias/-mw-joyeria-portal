@@ -58,6 +58,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('exportarExcelBtn')?.addEventListener('click', exportarComisionesExcel);
   document.getElementById('comprobanteGeneralBtn')?.addEventListener('click', abrirModalComprobanteGeneral);
 
+  document.getElementById('exportarArbolBtn')?.addEventListener('click', () => {
+    exportarArbolCompletoCSV();
+    mostrarToast('Árbol completo exportado.');
+  });
+  document.getElementById('importarArbolBtn')?.addEventListener('click', abrirModalImportarArbol);
+  document.getElementById('cargaMasivaPuntosBtn')?.addEventListener('click', abrirModalCargaMasivaPuntos);
+  document.getElementById('historialComisionesBtn')?.addEventListener('click', abrirModalHistorialComisiones);
+  document.getElementById('descargaConsolidadaBtn')?.addEventListener('click', () => {
+    descargarPagoConsolidadoExcel();
+    mostrarToast('Consolidado de pago generado.');
+  });
+
   document.getElementById('commRecuperarBtn')?.addEventListener('click', recuperarBorrador);
   document.getElementById('commDescartarBtn')?.addEventListener('click', descartarBorradorUI);
 
@@ -233,12 +245,14 @@ function construirCardLider(r) {
         <div class="comm-lider-info">
           <span class="comm-lider-nombre">${escapeHTMLPersonas(nombreCompletoPersona(r.lider))}</span>
           <div class="comm-lider-meta">
+            ${typeof personaFueraDeUltimaImportacionArbol === 'function' && personaFueraDeUltimaImportacionArbol(r.lider.id) ? '<span class="badge badge-fuera-importacion" title="No aparece en el último Excel del árbol que se importó">No está en el último Excel importado</span>' : ''}
             <span class="badge badge-ascenso">Rango aplicado: ${rangoLabel(r.rangoKey)}</span>
             <span>Origen: ${escapeHTMLPersonas(r.origenRango)}</span>
             <span>· Equipo: ${r.totalEquipo}</span>
             <span class="badge ${estadoPagoClase}">${estadoPagoLabel}</span>
             ${tieneAjustes ? '<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Con ajustes manuales</span>' : ''}
             ${avisoMinimo}
+            <button class="btn-link-ajuste" type="button" data-rango-manual="${r.lider.id}">${typeof obtenerRangoManualComision === 'function' && obtenerRangoManualComision(r.lider.id, periodoActual) ? 'Cambiar rango manual de este mes' : 'Ajustar rango manual de este mes'}</button>
           </div>
         </div>
         <div class="comm-lider-totales">
@@ -363,7 +377,7 @@ function construirFilaComisionHTML(liderId, f1, f2) {
 
   return `
     <tr data-fila-persona="${f1.persona.id}">
-      <td>${escapeHTMLPersonas(nombreCompletoPersona(f1.persona))}</td>
+      <td>${escapeHTMLPersonas(nombreCompletoPersona(f1.persona))}${typeof personaFueraDeUltimaImportacionArbol === 'function' && personaFueraDeUltimaImportacionArbol(f1.persona.id) ? ' <span class="badge badge-fuera-importacion" title="No aparece en el último Excel del árbol que se importó">fuera del Excel</span>' : ''}</td>
       <td>${fmtMoneyComm(f1.compraNormal)}</td>
       <td>${fmtMoneyComm(f1.base)}</td>
       <td>${f1.pct}%</td>
@@ -490,6 +504,10 @@ function wireEventosTabla() {
 
   document.querySelectorAll('[data-pagar-bono]').forEach(btn => {
     btn.addEventListener('click', () => confirmarPagarBono(btn.getAttribute('data-pagar-bono')));
+  });
+
+  document.querySelectorAll('[data-rango-manual]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalRangoManual(btn.getAttribute('data-rango-manual')));
   });
 
 }
@@ -1406,4 +1424,376 @@ function construirHTMLComprobanteGeneral(modo) {
     </div>
   `;
 
+}
+
+// ============================================================
+// IMPORTAR ÁRBOL COMPLETO (EXCEL) — Lista A, fusión con mi-equipo
+// ============================================================
+
+let importacionArbolPrevia = null; // { filas, resumen } de previsualizarImportacionArbol
+
+function abrirModalConAncho(html, alCerrar) {
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return null;
+  box.innerHTML = html;
+  box.classList.add('modal-box-xwide');
+  overlay.classList.add('open');
+  const cerrar = () => {
+    overlay.classList.remove('open');
+    box.classList.remove('modal-box-xwide');
+    if (alCerrar) alCerrar();
+  };
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); }, { once: true });
+  return { overlay, box, cerrar };
+}
+
+function abrirModalImportarArbol() {
+  importacionArbolPrevia = null;
+
+  abrirModalConAncho(`
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Importar árbol completo</h3>
+    <p class="modal-sub">Solo agrega personas nuevas y actualiza datos de las que ya existen en el registro — nunca borra a nadie. Si alguien del árbol actual no aparece en el archivo, se marcará con un aviso (no se elimina).</p>
+    <button class="btn btn-outline" id="descargarPlantillaArbolBtn" type="button" style="margin-bottom:14px;">Descargar plantilla</button>
+    <label for="archivoArbolInput">Archivo (.csv exportado de aquí mismo, o basado en la plantilla)</label>
+    <input type="file" id="archivoArbolInput" accept=".csv">
+    <div id="importarArbolResultado" style="margin-top:16px;"></div>
+  `);
+
+  document.getElementById('descargarPlantillaArbolBtn')?.addEventListener('click', descargarPlantillaArbolCSV);
+
+  document.getElementById('archivoArbolInput')?.addEventListener('change', (e) => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = () => {
+      const wrap = document.getElementById('importarArbolResultado');
+      try {
+        const filas = parsearCSVTextoArbol(String(lector.result));
+        if (!filas.length) { wrap.innerHTML = '<p class="auth-error">El archivo no tiene filas con datos.</p>'; return; }
+        importacionArbolPrevia = previsualizarImportacionArbol(filas);
+        renderPrevisualizacionImportacionArbol();
+      } catch (error) {
+        wrap.innerHTML = `<p class="auth-error">No se pudo leer el archivo: ${escapeHTMLPersonas(error.message)}</p>`;
+      }
+    };
+    lector.readAsText(archivo, 'UTF-8');
+  });
+}
+
+function renderPrevisualizacionImportacionArbol() {
+  const wrap = document.getElementById('importarArbolResultado');
+  if (!wrap || !importacionArbolPrevia) return;
+  const { filas, resumen } = importacionArbolPrevia;
+
+  const etiquetaAccion = { nuevo: 'Nuevo', actualizado: 'Actualizado', sin_cambios: 'Sin cambios', ambiguo: 'Nombre ambiguo', error: 'Error' };
+  const claseAccion = { nuevo: 'badge-pagada', actualizado: 'badge-ascenso', sin_cambios: '', ambiguo: 'badge-correccion', error: 'badge-correccion' };
+
+  wrap.innerHTML = `
+    <div class="comm-legend" style="margin-bottom:10px;">
+      <span><strong>${resumen.nuevos}</strong> nuevos</span>
+      <span><strong>${resumen.actualizados}</strong> actualizados</span>
+      <span><strong>${resumen.sinCambios}</strong> sin cambios</span>
+      ${resumen.conProblema ? `<span style="color:#a3272f;"><strong>${resumen.conProblema}</strong> con problema (no se importan)</span>` : ''}
+    </div>
+    <div class="catalog-table-wrap" style="max-height:340px;overflow:auto;">
+      <table class="catalog-table">
+        <thead><tr><th>Incluir</th><th>Nombre</th><th>Tipo</th><th>Líder</th><th>Acción</th></tr></thead>
+        <tbody>
+          ${filas.map((f, i) => `
+            <tr>
+              <td><input type="checkbox" data-fila-importar="${i}" ${f.accion === 'error' || f.accion === 'ambiguo' ? 'disabled' : 'checked'}></td>
+              <td>${escapeHTMLPersonas(f.nombreCompleto || `${f.cols[1] || ''} ${f.cols[2] || ''}`)}</td>
+              <td>${f.tipo === 'lider' ? 'Líder' : 'Emprendedora'}</td>
+              <td>${f.liderNombre ? escapeHTMLPersonas(f.liderNombre) : '—'}${f.errorLider ? `<div style="color:#a3272f;font-size:0.78rem;">${escapeHTMLPersonas(f.errorLider)}</div>` : ''}</td>
+              <td><span class="badge ${claseAccion[f.accion] || ''}">${etiquetaAccion[f.accion] || f.accion}</span>${f.error ? `<div style="color:#a3272f;font-size:0.78rem;">${escapeHTMLPersonas(f.error)}</div>` : ''}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <button class="btn btn-primary" id="confirmarImportarArbolBtn" type="button" style="width:100%;margin-top:14px;">Aplicar importación</button>
+  `;
+
+  document.getElementById('confirmarImportarArbolBtn')?.addEventListener('click', () => {
+    const seleccionadas = new Set();
+    wrap.querySelectorAll('[data-fila-importar]:checked').forEach(chk => seleccionadas.add(Number(chk.getAttribute('data-fila-importar'))));
+    const filasAprobadas = importacionArbolPrevia.filas.filter((f, i) => seleccionadas.has(i));
+    if (!filasAprobadas.length) { mostrarToast('No hay ninguna fila seleccionada para importar.'); return; }
+    aplicarImportacionArbol(filasAprobadas);
+    document.getElementById('modalOverlay')?.classList.remove('open');
+    document.getElementById('modalBox')?.classList.remove('modal-box-xwide');
+    mostrarToast(`Importación aplicada: ${filasAprobadas.length} persona(s).`);
+    renderComisiones();
+  });
+}
+
+// ============================================================
+// CARGA MASIVA DE PUNTOS (EXCEL) — genera compras liquidadas reales
+// ============================================================
+//
+// Decisión confirmada por Admin: esto NO es un campo de "puntos"
+// aparte — crea ventanas de apartado ya liquidadas, exactamente como
+// una compra real, para que fluya por el mismo cálculo de Constancia/
+// Rifa/Rango/Comisiones que cualquier otra compra (ver apartados-
+// modelo.js / compras-modelo.js).
+
+const CARGA_PUNTOS_ENCABEZADO = ['ID o nombre completo', 'Monto', 'Fecha (AAAA-MM-DD, opcional)', 'Tipo (normal/souvenir, opcional)'];
+
+function abrirModalCargaMasivaPuntos() {
+  abrirModalConAncho(`
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Carga masiva de puntos</h3>
+    <p class="modal-sub">Cada fila crea una compra liquidada real a nombre de esa persona — cuenta para Constancia, Rifa, Rango y Comisiones igual que cualquier compra hecha desde Apartados.</p>
+    <button class="btn btn-outline" id="descargarPlantillaPuntosBtn" type="button" style="margin-bottom:14px;">Descargar plantilla</button>
+    <label for="archivoPuntosInput">Archivo (.csv)</label>
+    <input type="file" id="archivoPuntosInput" accept=".csv">
+    <div id="cargaPuntosResultado" style="margin-top:16px;"></div>
+  `);
+
+  document.getElementById('descargarPlantillaPuntosBtn')?.addEventListener('click', () => {
+    const ejemplo = [['', '1500', '', 'normal']];
+    descargarCSVArbol(generarCSVArbol(CARGA_PUNTOS_ENCABEZADO, ejemplo), 'plantilla-carga-puntos-mw.csv');
+  });
+
+  document.getElementById('archivoPuntosInput')?.addEventListener('change', (e) => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = () => {
+      const wrap = document.getElementById('cargaPuntosResultado');
+      try {
+        const filas = parsearCSVTextoArbol(String(lector.result));
+        if (!filas.length) { wrap.innerHTML = '<p class="auth-error">El archivo no tiene filas con datos.</p>'; return; }
+        renderPrevisualizacionCargaPuntos(previsualizarCargaMasivaPuntos(filas));
+      } catch (error) {
+        wrap.innerHTML = `<p class="auth-error">No se pudo leer el archivo: ${escapeHTMLPersonas(error.message)}</p>`;
+      }
+    };
+    lector.readAsText(archivo, 'UTF-8');
+  });
+}
+
+function previsualizarCargaMasivaPuntos(filas) {
+  const personas = obtenerPersonas();
+  const encabezadoDetectado = filas[0] && normalizarNombrePersona(filas[0][1] || '') === 'monto';
+  const filasDatos = encabezadoDetectado ? filas.slice(1) : filas;
+
+  return filasDatos.map((cols, indice) => {
+    const [idONombre, montoTexto, fechaTexto, tipoTexto] = cols.map(v => (v || '').trim());
+    const monto = Number(String(montoTexto).replace(/[^0-9.\-]/g, ''));
+
+    if (!idONombre) return { indice, cols, error: 'Falta el ID o nombre de la persona.' };
+    if (!monto || monto <= 0) return { indice, cols, error: 'El monto debe ser mayor a cero.' };
+
+    let persona = personas.find(p => p.id === idONombre);
+    let ambiguo = false;
+    if (!persona) {
+      const resultado = emparejarPersonaPorNombre(idONombre, personas);
+      persona = resultado.persona;
+      ambiguo = resultado.ambiguo;
+    }
+    if (ambiguo) return { indice, cols, error: `Hay varias personas con el nombre "${idONombre}" — usa su ID.` };
+    if (!persona) return { indice, cols, error: `No se encontró a "${idONombre}" en el registro.` };
+
+    const fecha = fechaTexto && !Number.isNaN(new Date(fechaTexto).getTime()) ? new Date(fechaTexto).toISOString() : new Date().toISOString();
+    const tipo = normalizarNombrePersona(tipoTexto) === 'souvenir' ? 'souvenir' : 'normal';
+
+    return { indice, cols, persona, monto, fecha, tipo, error: null };
+  });
+}
+
+function renderPrevisualizacionCargaPuntos(filas) {
+  const wrap = document.getElementById('cargaPuntosResultado');
+  if (!wrap) return;
+  const validas = filas.filter(f => !f.error).length;
+  const conError = filas.length - validas;
+
+  wrap.innerHTML = `
+    <div class="comm-legend" style="margin-bottom:10px;">
+      <span><strong>${validas}</strong> lista(s) para crear</span>
+      ${conError ? `<span style="color:#a3272f;"><strong>${conError}</strong> con error (no se crean)</span>` : ''}
+    </div>
+    <div class="catalog-table-wrap" style="max-height:340px;overflow:auto;">
+      <table class="catalog-table">
+        <thead><tr><th>Incluir</th><th>Persona</th><th>Monto</th><th>Fecha</th><th>Tipo</th></tr></thead>
+        <tbody>
+          ${filas.map((f, i) => `
+            <tr>
+              <td><input type="checkbox" data-fila-puntos="${i}" ${f.error ? 'disabled' : 'checked'}></td>
+              <td>${f.persona ? escapeHTMLPersonas(nombreCompletoPersona(f.persona)) : escapeHTMLPersonas(f.cols[0] || '')}${f.error ? `<div style="color:#a3272f;font-size:0.78rem;">${escapeHTMLPersonas(f.error)}</div>` : ''}</td>
+              <td>${f.monto ? fmtMoneyComm(f.monto) : '—'}</td>
+              <td>${f.fecha ? new Date(f.fecha).toLocaleDateString('es-MX') : '—'}</td>
+              <td>${f.tipo === 'souvenir' ? 'Souvenir' : 'Normal'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <button class="btn btn-primary" id="confirmarCargaPuntosBtn" type="button" style="width:100%;margin-top:14px;">Crear compras</button>
+  `;
+
+  document.getElementById('confirmarCargaPuntosBtn')?.addEventListener('click', () => {
+    const seleccionadas = new Set();
+    wrap.querySelectorAll('[data-fila-puntos]:checked').forEach(chk => seleccionadas.add(Number(chk.getAttribute('data-fila-puntos'))));
+    const aprobadas = filas.filter((f, i) => seleccionadas.has(i) && !f.error);
+    if (!aprobadas.length) { mostrarToast('No hay ninguna fila seleccionada.'); return; }
+
+    const ventanas = obtenerVentanasApartado();
+    aprobadas.forEach((f, n) => {
+      const pieza = crearApartadoPieza({
+        id: `PIEZA-IMP-${Date.now()}-${n}`,
+        producto: 'Carga masiva de puntos (Admin)',
+        material: f.tipo === 'souvenir' ? 'souvenirs' : null,
+        total: f.monto,
+        estado: 'liquidada',
+        fechaSolicitud: f.fecha,
+        pagos: [{ monto: f.monto, tipo: 'liquidacion', metodo: 'carga_masiva', referencia: null, fecha: f.fecha }]
+      });
+      ventanas.push(crearVentanaApartado({
+        id: `VENT-IMP-${Date.now()}-${n}`,
+        usuarioId: f.persona.id,
+        usuarioNombre: nombreCompletoPersona(f.persona),
+        telefono: f.persona.telefono || '',
+        categoria: 'normal',
+        fechaInicio: f.fecha,
+        estado: 'cerrada',
+        resolucionDeposito: 'no_aplica',
+        apartados: [pieza]
+      }));
+    });
+    guardarVentanasApartado(ventanas);
+
+    document.getElementById('modalOverlay')?.classList.remove('open');
+    document.getElementById('modalBox')?.classList.remove('modal-box-xwide');
+    mostrarToast(`${aprobadas.length} compra(s) creada(s).`);
+    renderComisiones();
+  });
+}
+
+// ============================================================
+// HISTORIAL DE COMISIONES MES A MES (TODAS LAS LÍDERES)
+// ============================================================
+
+function obtenerUltimosPeriodosComisiones(cantidad) {
+  const periodos = [];
+  const [anioActual, mesActual] = obtenerPeriodoActualKey().split('-').map(Number);
+  for (let i = cantidad - 1; i >= 0; i--) {
+    const d = new Date(anioActual, mesActual - 1 - i, 1);
+    periodos.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  return periodos;
+}
+
+function calcularHistorialComisionesTodas(cantidadMeses) {
+  const periodos = obtenerUltimosPeriodosComisiones(cantidadMeses);
+  const lideres = obtenerPersonas().filter(p => p.tipo === 'lider' && p.estado !== 'baja');
+
+  const filas = lideres.map(lider => {
+    const porMes = periodos.map(periodoKey => {
+      const rP1 = calcularComisionesLider(lider, periodoKey, 'p1');
+      const rP2 = calcularComisionesLider(lider, periodoKey, 'p2');
+      const bono = obtenerBonoRangoPeriodo(lider, periodoKey);
+      return rP1.totalComision + rP2.totalComision + (bono ? bono.monto : 0);
+    });
+    const acumulado = porMes.reduce((s, v) => s + v, 0);
+    return { lider, porMes, acumulado };
+  }).sort((a, b) => b.acumulado - a.acumulado);
+
+  return { periodos, filas };
+}
+
+function abrirModalHistorialComisiones() {
+  const { periodos, filas } = calcularHistorialComisionesTodas(6);
+
+  abrirModalConAncho(`
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Historial de comisiones — todas las líderes</h3>
+    <p class="modal-sub">Últimos ${periodos.length} meses (incluye el mes en curso), ordenado por acumulado.</p>
+    <button class="btn btn-outline" id="exportarHistorialBtn" type="button" style="margin-bottom:14px;">Exportar Excel</button>
+    <div class="catalog-table-wrap" style="max-height:420px;overflow:auto;">
+      <table class="catalog-table">
+        <thead>
+          <tr>
+            <th>Líder</th>
+            ${periodos.map(p => `<th>${formatearPeriodoLabelComisiones(p)}</th>`).join('')}
+            <th>Acumulado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filas.map(f => `
+            <tr>
+              <td>${escapeHTMLPersonas(nombreCompletoPersona(f.lider))}</td>
+              ${f.porMes.map(v => `<td>${fmtMoneyComm(v)}</td>`).join('')}
+              <td><strong>${fmtMoneyComm(f.acumulado)}</strong></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `);
+
+  document.getElementById('exportarHistorialBtn')?.addEventListener('click', () => {
+    const encabezado = ['Líder', ...periodos.map(p => formatearPeriodoLabelComisiones(p)), 'Acumulado'];
+    const cuerpo = filas.map(f => [nombreCompletoPersona(f.lider), ...f.porMes.map(v => v.toFixed(2)), f.acumulado.toFixed(2)]);
+    descargarCSVArbol(generarCSVArbol(encabezado, cuerpo), `historial-comisiones-mw-${new Date().toISOString().slice(0, 10)}.csv`);
+    mostrarToast('Historial exportado.');
+  });
+}
+
+// ============================================================
+// DESCARGA CONSOLIDADA DE PAGO (TODAS LAS LÍDERES, UN SOLO EXCEL)
+// ============================================================
+
+function descargarPagoConsolidadoExcel() {
+  const encabezado = ['Líder', 'Rango aplicado', 'Comisión Periodo 1', 'Comisión Periodo 2', 'Bono de rango', 'Total a pagar', 'Estado P1', 'Estado P2'];
+  const cuerpo = comisionesData.map(r => {
+    const rP1 = calcularComisionesLider(r.lider, periodoActual, 'p1');
+    const rP2 = calcularComisionesLider(r.lider, periodoActual, 'p2');
+    const bonoMonto = r.bono ? r.bono.monto : 0;
+    return [
+      nombreCompletoPersona(r.lider),
+      rangoLabel(r.rangoKey),
+      rP1.totalComision.toFixed(2),
+      rP2.totalComision.toFixed(2),
+      bonoMonto.toFixed(2),
+      (rP1.totalComision + rP2.totalComision + bonoMonto).toFixed(2),
+      rP1.estadoPago.estado,
+      rP2.estadoPago.estado
+    ];
+  });
+  descargarCSVArbol(generarCSVArbol(encabezado, cuerpo), `pago-consolidado-comisiones-${formatearPeriodoLabelComisiones(periodoActual).replace(/\s+/g, '_')}.csv`);
+}
+
+// ============================================================
+// RANGO MANUAL (OVERRIDE) — solo para el mes de pago vigente
+// ============================================================
+
+function abrirModalRangoManual(liderId) {
+  const lider = obtenerPersonaPorId(liderId);
+  if (!lider) return;
+
+  const actual = obtenerRangoManualComision(liderId, periodoActual);
+
+  const modal = abrirModalConAncho(`
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Rango manual — ${escapeHTMLPersonas(nombreCompletoPersona(lider))}</h3>
+    <p class="modal-sub">Cambia solo el % que se paga en ${formatearPeriodoLabelComisiones(periodoActual)}. No modifica su rango histórico ni su recalificación real de Plan MW.</p>
+    <label for="rangoManualSelect">Rango a aplicar este mes de pago</label>
+    <select id="rangoManualSelect" style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;margin-bottom:1.1rem;">
+      <option value="">Usar el rango calculado automáticamente</option>
+      ${RANGOS_MW.map(r => `<option value="${r.key}" ${actual === r.key ? 'selected' : ''}>${r.label}</option>`).join('')}
+    </select>
+    <button class="btn btn-primary" style="width:100%;" id="guardarRangoManualBtn" type="button">Guardar</button>
+  `);
+
+  document.getElementById('guardarRangoManualBtn')?.addEventListener('click', () => {
+    const valor = document.getElementById('rangoManualSelect').value;
+    guardarRangoManualComision(liderId, periodoActual, valor || null);
+    modal?.cerrar();
+    mostrarToast(valor ? `Rango manual aplicado para ${formatearPeriodoLabelComisiones(periodoActual)}.` : 'Se quitó el ajuste manual — se vuelve a calcular automático.');
+    renderComisiones();
+  });
 }

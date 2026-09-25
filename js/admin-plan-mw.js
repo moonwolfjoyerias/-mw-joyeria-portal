@@ -39,8 +39,26 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('#planmwNavPrincipal [data-planmw-vista]').forEach(b => b.classList.toggle('active', b === btn));
       document.getElementById('planmwVistaSeguimiento').hidden = planmwVista !== 'seguimiento';
       document.getElementById('planmwVistaRifa').hidden = planmwVista !== 'rifa';
+      document.getElementById('planmwVistaRangos').hidden = planmwVista !== 'rangos';
       if (planmwVista === 'rifa') renderRifaMes();
+      if (planmwVista === 'rangos') renderHistorialRangos();
     });
+  });
+
+  document.getElementById('descargarTodosBoletosBtn')?.addEventListener('click', () => {
+    const mesKey = obtenerMesKeyActualRifaMensual();
+    const boletos = obtenerBoletosRifaMes(mesKey);
+    if (!boletos.length) { mostrarToast('Todavía no hay boletos este mes.'); return; }
+    boletos.forEach((b, i) => setTimeout(() => descargarSVGBoletoRifa(b), i * 150));
+    mostrarToast(`Descargando ${boletos.length} boleto(s)...`);
+  });
+
+  document.getElementById('exportarHistorialRangosBtn')?.addEventListener('click', () => {
+    const { periodos, filas } = calcularHistorialRangosTodas(6);
+    const encabezado = ['Líder', ...periodos.map(p => formatearPeriodoLabelComisiones(p))];
+    const cuerpo = filas.map(f => [nombreCompletoPersona(f.lider), ...f.porMes.map(k => rangoLabel(k))]);
+    descargarCSVArbol(generarCSVArbol(encabezado, cuerpo), `historial-rangos-mw-${new Date().toISOString().slice(0, 10)}.csv`);
+    mostrarToast('Historial exportado.');
   });
 
   document.querySelectorAll('#rifaModoChips [data-rifa-modo]').forEach(btn => {
@@ -413,6 +431,7 @@ function renderRifaMes() {
   if (config.modo === 'votacion') renderOpcionesRifaMes(config);
 
   renderResultadosRifaMes(config);
+  renderBoletosRifaMes();
 
 }
 
@@ -608,5 +627,160 @@ function abrirModalOpcionRifa(mesKey, opcionId) {
     mostrarToast(opcion ? 'Opción actualizada.' : 'Opción agregada.');
     renderRifaMes();
   });
+
+}
+
+// ============================================================
+// BOLETOS DE LA RIFA (folio + fecha de sorteo + SVG imprimible)
+// Lista A, fusión con mi-equipo — ver js/rifa-boletos-modelo.js
+// ============================================================
+
+function renderBoletosRifaMes() {
+
+  const mesKey = obtenerMesKeyActualRifaMensual();
+  setTextPlanMW('boletosSorteoFecha', `Sorteo oficial: ${formatearFechaSorteoRifaMes(mesKey)}`);
+
+  const resumen = obtenerResumenBoletosPorPersonaRifaMes(mesKey);
+  const bloque = document.getElementById('boletosRifaBloque');
+  if (!bloque) return;
+
+  if (!resumen.length) {
+    bloque.innerHTML = '<p class="bp-sub">Todavía nadie tiene boletos este mes.</p>';
+    return;
+  }
+
+  bloque.innerHTML = `
+    <div class="catalog-table-wrap">
+      <table class="catalog-table">
+        <thead><tr><th>Persona</th><th>Boletos</th><th>Folios</th><th></th></tr></thead>
+        <tbody>
+          ${resumen.map(r => `
+            <tr>
+              <td>${escapeHTMLPersonas(r.personaNombre)}</td>
+              <td>${r.boletos.length}</td>
+              <td>${r.boletos.map(b => formatearFolioBoleto(b.folio)).join(', ')}</td>
+              <td><button class="btn btn-outline" type="button" data-ver-boletos="${r.personaId}">Ver boletos</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  bloque.querySelectorAll('[data-ver-boletos]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalBoletosPersona(btn.getAttribute('data-ver-boletos'), mesKey));
+  });
+
+}
+
+function abrirModalBoletosPersona(personaId, mesKey) {
+
+  const resumen = obtenerResumenBoletosPorPersonaRifaMes(mesKey).find(r => r.personaId === personaId);
+  if (!resumen) return;
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Boletos de ${escapeHTMLPersonas(resumen.personaNombre)}</h3>
+    <p class="modal-sub">${formatearFechaSorteoRifaMes(mesKey)}</p>
+    <div class="boletos-lista">
+      ${resumen.boletos.map(b => `
+        <div class="boleto-preview-row">
+          <div class="boleto-preview-svg">${construirSVGBoletoRifa(b)}</div>
+          <button class="btn btn-outline" type="button" data-descargar-boleto="${b.folio}">Descargar SVG</button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  box.classList.add('modal-box-wide');
+  overlay.classList.add('open');
+
+  const cerrar = () => { overlay.classList.remove('open'); box.classList.remove('modal-box-wide'); };
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); }, { once: true });
+
+  box.querySelectorAll('[data-descargar-boleto]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const folio = Number(btn.getAttribute('data-descargar-boleto'));
+      const boleto = resumen.boletos.find(b => b.folio === folio);
+      if (boleto) descargarSVGBoletoRifa(boleto);
+    });
+  });
+
+}
+
+// ============================================================
+// HISTORIAL DE RANGOS MES A MES (TODAS LAS LÍDERES)
+// Lista A, fusión con mi-equipo — usa comisiones-modelo.js
+// (calcularRangoAplicadoPeriodo), el mismo cálculo de rango
+// aplicado que ya usa Comisiones — un solo criterio, no dos.
+// ============================================================
+
+function obtenerUltimosPeriodosPlanMW(cantidad) {
+  const periodos = [];
+  const [anio, mes] = obtenerPeriodoActualKey().split('-').map(Number);
+  for (let i = cantidad - 1; i >= 0; i--) {
+    const d = new Date(anio, mes - 1 - i, 1);
+    periodos.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  return periodos;
+}
+
+function calcularHistorialRangosTodas(cantidadMeses) {
+  const periodos = obtenerUltimosPeriodosPlanMW(cantidadMeses);
+  const lideres = obtenerPersonas()
+    .filter(p => p.tipo === 'lider' && p.estado !== 'baja')
+    .sort((a, b) => nombreCompletoPersona(a).localeCompare(nombreCompletoPersona(b)));
+
+  const filas = lideres.map(lider => ({
+    lider,
+    porMes: periodos.map(p => calcularRangoAplicadoPeriodo(lider, p).rangoKey)
+  }));
+
+  return { periodos, filas };
+}
+
+function ordenRangoPlanMW(key) {
+  return RANGOS_MW.findIndex(r => r.key === key);
+}
+
+function renderHistorialRangos() {
+
+  const { periodos, filas } = calcularHistorialRangosTodas(6);
+  const bloque = document.getElementById('historialRangosBloque');
+  if (!bloque) return;
+
+  bloque.innerHTML = `
+    <div class="catalog-table-wrap">
+      <table class="catalog-table">
+        <thead>
+          <tr>
+            <th>Líder</th>
+            ${periodos.map(p => `<th>${formatearPeriodoLabelComisiones(p)}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${filas.map(f => `
+            <tr>
+              <td>${escapeHTMLPersonas(nombreCompletoPersona(f.lider))}</td>
+              ${f.porMes.map((rangoKey, i) => {
+                const anterior = i > 0 ? f.porMes[i - 1] : null;
+                let flecha = '';
+                if (anterior && anterior !== rangoKey) {
+                  flecha = ordenRangoPlanMW(rangoKey) > ordenRangoPlanMW(anterior)
+                    ? ' <span style="color:#1f7a34;">▲</span>'
+                    : ' <span style="color:#a3272f;">▼</span>';
+                }
+                return `<td>${rangoLabel(rangoKey)}${flecha}</td>`;
+              }).join('')}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 
 }
