@@ -3857,6 +3857,22 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 .comm-actions-row-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .comm-actions-row-btns .btn { width: auto; padding: 0.55em 1.1em; white-space: nowrap; }
 
+.comm-accion-lista { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.comm-accion-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0.85em 1em;
+  border: 1px solid var(--mw-border);
+  border-radius: var(--radius);
+  background: #fafafa;
+}
+.comm-accion-item-texto { display: flex; flex-direction: column; gap: 2px; }
+.comm-accion-item-texto strong { font-size: 0.86rem; color: var(--mw-text); }
+.comm-accion-item-texto span { font-size: 0.76rem; color: var(--mw-text-muted); }
+.comm-accion-item .btn { width: auto; padding: 0.5em 1.1em; white-space: nowrap; flex-shrink: 0; }
+
 .comm-busqueda-resultado {
   background: var(--mw-lilac-soft);
   border: 1px solid var(--mw-lilac);

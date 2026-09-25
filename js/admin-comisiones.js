@@ -55,20 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('expandirTodoBtn')?.addEventListener('click', () => alternarTodo(true));
   document.getElementById('contraerTodoBtn')?.addEventListener('click', () => alternarTodo(false));
-  document.getElementById('exportarExcelBtn')?.addEventListener('click', exportarComisionesExcel);
-  document.getElementById('comprobanteGeneralBtn')?.addEventListener('click', abrirModalComprobanteGeneral);
-
-  document.getElementById('exportarArbolBtn')?.addEventListener('click', () => {
-    exportarArbolCompletoCSV();
-    mostrarToast('Árbol completo exportado.');
-  });
-  document.getElementById('importarArbolBtn')?.addEventListener('click', abrirModalImportarArbol);
-  document.getElementById('cargaMasivaPuntosBtn')?.addEventListener('click', abrirModalCargaMasivaPuntos);
-  document.getElementById('historialComisionesBtn')?.addEventListener('click', abrirModalHistorialComisiones);
-  document.getElementById('descargaConsolidadaBtn')?.addEventListener('click', () => {
-    descargarPagoConsolidadoExcel();
-    mostrarToast('Consolidado de pago generado.');
-  });
+  document.getElementById('exportarImportarBtn')?.addEventListener('click', abrirModalExportarImportar);
 
   document.getElementById('commRecuperarBtn')?.addEventListener('click', recuperarBorrador);
   document.getElementById('commDescartarBtn')?.addEventListener('click', descartarBorradorUI);
@@ -1447,6 +1434,79 @@ function abrirModalConAncho(html, alCerrar) {
   box.querySelector('[data-close]')?.addEventListener('click', cerrar);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); }, { once: true });
   return { overlay, box, cerrar };
+}
+
+// Lista única de acciones de exportar/importar — reemplaza los botones
+// sueltos que antes llenaban la barra de herramientas. Cada acción reutiliza
+// exactamente la misma función que ya tenía (sin cambios de lógica), solo
+// cambia cómo se dispara.
+const ACCIONES_EXPORTAR_IMPORTAR_COMISIONES = [
+  {
+    titulo: 'Exportar Excel',
+    descripcion: 'Descarga la tabla de comisiones del periodo actual (todas las líderes visibles) en un archivo compatible con Excel.',
+    ejecutar: () => exportarComisionesExcel()
+  },
+  {
+    titulo: 'Comprobante de todas',
+    descripcion: 'Genera un PDF con el comprobante de comisión de cada líder del periodo actual, listo para entregar.',
+    ejecutar: () => abrirModalComprobanteGeneral()
+  },
+  {
+    titulo: 'Exportar árbol completo (Excel)',
+    descripcion: 'Descarga el árbol completo de personas (todas las líderes y sus equipos) en un archivo Excel.',
+    ejecutar: () => { exportarArbolCompletoCSV(); mostrarToast('Árbol completo exportado.'); }
+  },
+  {
+    titulo: 'Importar árbol (Excel)',
+    descripcion: 'Sube un archivo Excel para agregar personas nuevas o actualizar datos existentes en el árbol. Nunca elimina a nadie.',
+    ejecutar: () => abrirModalImportarArbol()
+  },
+  {
+    titulo: 'Carga masiva de puntos (Excel)',
+    descripcion: 'Sube un archivo Excel para actualizar los puntos de producción de muchas personas a la vez, con vista previa antes de aplicar.',
+    ejecutar: () => abrirModalCargaMasivaPuntos()
+  },
+  {
+    titulo: 'Historial de comisiones (todas)',
+    descripcion: 'Consulta el historial mes a mes de las comisiones pagadas a todas las líderes.',
+    ejecutar: () => abrirModalHistorialComisiones()
+  },
+  {
+    titulo: 'Descargar pago consolidado (Excel)',
+    descripcion: 'Descarga un Excel con el consolidado de pago de comisiones de todas las líderes del periodo actual.',
+    ejecutar: () => { descargarPagoConsolidadoExcel(); mostrarToast('Consolidado de pago generado.'); }
+  }
+];
+
+function abrirModalExportarImportar() {
+
+  const filas = ACCIONES_EXPORTAR_IMPORTAR_COMISIONES.map((accion, indice) => `
+    <div class="comm-accion-item">
+      <div class="comm-accion-item-texto">
+        <strong>${accion.titulo}</strong>
+        <span>${accion.descripcion}</span>
+      </div>
+      <button class="btn btn-outline" type="button" data-accion-exp-imp="${indice}">Abrir</button>
+    </div>
+  `).join('');
+
+  const modal = abrirModalConAncho(`
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Exportar / Importar</h3>
+    <p class="modal-sub">Elige qué archivo quieres descargar o subir.</p>
+    <div class="comm-accion-lista">${filas}</div>
+  `);
+
+  if (!modal) return;
+
+  modal.box.querySelectorAll('[data-accion-exp-imp]').forEach((boton) => {
+    boton.addEventListener('click', () => {
+      const accion = ACCIONES_EXPORTAR_IMPORTAR_COMISIONES[Number(boton.dataset.accionExpImp)];
+      modal.cerrar();
+      accion?.ejecutar();
+    });
+  });
+
 }
 
 function abrirModalImportarArbol() {
