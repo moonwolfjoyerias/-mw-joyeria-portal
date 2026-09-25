@@ -14,9 +14,9 @@
 // bandeja rolDestino:'emprendedora_lider' de abajo (esos son avisos para
 // ELLA, con links que solo tienen sentido dentro de su propio portal).
 //
-// rolDestino:'admin', origen:'rh' — lo que RH le hace llegar a
-// Administración (nómina lista para validar, solicitud de alta/baja de
-// personal). Admin las ve en su propio grupo "De Recursos Humanos".
+// rolDestino:'admin', origen:'encargado' — lo que Encargado le hace
+// llegar a Administración (nómina lista para validar, solicitud de
+// alta/baja de personal). Admin las ve en su propio grupo "De Encargado".
 //
 // rolDestino:'emprendedora_lider' — avisos para ELLA sobre SU propia
 // cuenta (boleto de rifa, evento nuevo, apartado confirmado), en
@@ -32,5 +32,5 @@ const NOTIFICACIONES_EJEMPLO = [
 { id: 4, texto: '¡Ya tienes tu boleto para la rifa de este mes! <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 9a2 2 0 012-2h14a2 2 0 012 2v1a1.5 1.5 0 000 3v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1a1.5 1.5 0 000-3V9z"/><path d="M9 7v10"/></svg></span>', link: 'cuenta', leida: false, rolDestino: 'emprendedora_lider' },
 { id: 5, texto: 'Hay un nuevo evento en el calendario: "Actividad de comunidad" el 12 de septiembre.', link: 'calendario', leida: false, rolDestino: 'emprendedora_lider' },
 { id: 6, texto: 'Tu apartado fue confirmado — ya puedes ver tus piezas.', link: 'apartados', leida: true, rolDestino: 'emprendedora_lider' },
-{ id: 7, texto: 'La nómina de Ana López (semana del 1 al 7) está lista para validación.', link: 'admin-nomina.html', leida: false, rolDestino: 'admin', origen: 'rh' },
+{ id: 7, texto: 'La nómina de Ana López (semana del 1 al 7) está lista para validación.', link: 'admin-nomina.html', leida: false, rolDestino: 'admin', origen: 'encargado' },
 ];

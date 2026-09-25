@@ -3,7 +3,7 @@
 // ⚠️ TEMPORAL: se reemplazará por Firestore en Fase 3.
 //
 // Según el documento de requisitos (Sección 17), la nómina es solo para
-// Staff, Administrativos y RH. Cada quien ve ÚNICAMENTE su propio
+// Staff, Administrativos y Encargado. Cada quien ve ÚNICAMENTE su propio
 // recibo, y para Staff (cuenta compartida del dispositivo) esto exige
 // capturar nombre + contraseña individual antes de mostrarlo.
 //

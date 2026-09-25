@@ -1131,8 +1131,9 @@ function renderSeccionUsuarios() {
 
   const cont = document.getElementById('seccion-usuarios');
   const filas = [
-    ['Dashboard / Catálogo / Apartados / Calendario / Lista de deseos / Actividad', 'si', 'si', 'si', '—', '—'],
-    ['Nómina', 'si', 'si', '—', '—', '—'],
+    ['Dashboard / Catálogo / Apartados / Calendario / Lista de deseos / Actividad', 'si', 'según cuenta', 'si', '—', '—'],
+    ['Actividades del Staff', 'si', 'según cuenta', '—', '—', '—'],
+    ['Nómina', 'si', 'según cuenta', '—', '—', '—'],
     ['Comisiones', 'si', '—', '—', 'equipo propio', '—'],
     ['Plan MW (seguimiento y alertas)', 'si', '—', '—', '—', '—'],
     ['Solicitudes de inscripción / INE', 'si', '—', '—', '—', '—'],
@@ -1150,7 +1151,7 @@ function renderSeccionUsuarios() {
       <p class="cfg-card-sub">Esta tabla es informativa: refleja el acceso que YA existe hoy en el sistema (qué páginas tiene cada rol en su portal), no un panel de permisos editable.</p>
       <div class="catalog-table-wrap cfg-tabla-wrap">
         <table class="catalog-table">
-          <thead><tr><th>Permiso</th><th>Administrativo</th><th>RH</th><th>Staff</th><th>Líder</th><th>Emprendedora</th></tr></thead>
+          <thead><tr><th>Permiso</th><th>Administrativo</th><th>Encargado</th><th>Staff</th><th>Líder</th><th>Emprendedora</th></tr></thead>
           <tbody>
             ${filas.map(f => `<tr>${f.map((c, i) => i === 0 ? `<td>${escapeHTMLPersonas(c)}</td>` : `<td style="text-align:center;">${c === 'si' ? '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span>' : c}</td>`).join('')}</tr>`).join('')}
           </tbody>
@@ -1200,20 +1201,25 @@ function renderSeccionUsuarios() {
     <div class="cfg-card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:0.4rem;">
         <div>
-          <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Cuentas internas — Staff / RH / Admin</h3>
-          <p class="cfg-card-sub" style="margin-bottom:0;">Sirven para reautorizar acciones en Apartados, Catálogo, Lista de deseos, Nómina y Calendario.</p>
+          <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Cuentas internas — Staff / Encargado / Admin</h3>
+          <p class="cfg-card-sub" style="margin-bottom:0;">Sirven para iniciar sesión y reautorizar acciones en Apartados, Catálogo, Lista de deseos, Nómina y Calendario. A diferencia de Staff (cuenta compartida), cada Encargado tiene su propia cuenta y sus propios permisos por módulo.</p>
         </div>
         <button class="btn btn-primary" id="cfgCrearCuentaInternaBtn" style="width:auto;" type="button">＋ Crear cuenta</button>
       </div>
       <div class="catalog-table-wrap cfg-tabla-wrap" style="margin-top:10px;">
         <table class="catalog-table">
-          <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Contraseña</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Permisos</th><th>Contraseña</th><th>Acciones</th></tr></thead>
           <tbody>
             ${internas.length ? internas.map(c => `
               <tr>
                 <td>${escapeHTMLPersonas(c.nombre)}</td>
                 <td>${escapeHTMLPersonas(c.usuario)}</td>
                 <td>${escapeHTMLPersonas(ROLES_CUENTA_INTERNA[c.rol] || c.rol)}</td>
+                <td>
+                  ${c.rol === 'encargado'
+                    ? `<button type="button" class="cfg-icon-btn" data-cfg-editar-permisos="${c.id}" title="Editar permisos por módulo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12l5 5L20 6"/></svg> ${Object.values(c.permisos || {}).filter(Boolean).length}/${Object.keys(MODULOS_PERMISO_ENCARGADO).length}</button>`
+                    : '—'}
+                </td>
                 <td style="white-space:nowrap;">
                   <span class="cfg-password-texto" data-password-real="${escapeAttributePersonas(c.password || '(sin contraseña)')}" style="font-family:monospace;">••••••••</span>
                   <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -1223,7 +1229,7 @@ function renderSeccionUsuarios() {
                   <button type="button" class="cfg-icon-btn" data-cfg-eliminar-interna="${c.id}" title="Eliminar cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
                 </td>
               </tr>
-            `).join('') : `<tr><td colspan="5" class="catalog-empty-cell">Todavía no hay cuentas registradas.</td></tr>`}
+            `).join('') : `<tr><td colspan="6" class="catalog-empty-cell">Todavía no hay cuentas registradas.</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -1231,7 +1237,7 @@ function renderSeccionUsuarios() {
       <div class="cfg-disclosure">
         <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Las contraseñas se guardan en texto plano para que puedas recuperarlas si alguien las olvida — esto es aceptable únicamente porque este portal todavía no tiene un backend real. Con Firebase Auth, esto se reemplazará por "restablecer contraseña" en vez de "ver la contraseña actual".
         <br><br>
-        <code>admin01</code> y <code>rh01</code> son las cuentas fijas de esta demo (Claudia y Recursos Humanos). Eliminarlas aquí no cierra su acceso al portal, porque ese acceso todavía no depende de esta lista — es solo la cuenta que usan para reautorizar acciones en Apartados/Catálogo/etc.
+        <code>admin01</code> y <code>encargado01</code> son las cuentas fijas de esta demo (Claudia y Valentina Cruz). Eliminarlas aquí no cierra su acceso al portal, porque ese acceso todavía no depende de esta lista — es solo la cuenta que usan para reautorizar acciones en Apartados/Catálogo/etc.
       </div>
     </div>
   `;
@@ -1389,7 +1395,7 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
 }
 
 // ============================================================
-// CUENTAS — internas (Staff / RH / Admin)
+// CUENTAS — internas (Staff / Encargado / Admin)
 // ============================================================
 
 function wireCuentasInternas(cont) {
@@ -1430,6 +1436,58 @@ function wireCuentasInternas(cont) {
     });
   });
 
+  cont.querySelectorAll('[data-cfg-editar-permisos]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalPermisosEncargado(btn.getAttribute('data-cfg-editar-permisos')));
+  });
+
+}
+
+// ============================================================
+// PERMISOS POR MÓDULO — cuentas de Encargado
+// ============================================================
+
+function abrirModalPermisosEncargado(id) {
+
+  const cuenta = obtenerCuentasInternas().find(c => c.id === id);
+  if (!cuenta) return;
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const permisos = cuenta.permisos || permisosEncargadoPorDefecto();
+
+  box.style.maxWidth = '420px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Permisos de ${escapeHTMLPersonas(cuenta.nombre)}</h3>
+    <p class="modal-sub">Qué módulos puede usar esta cuenta. Actividades del Staff, Catálogo, Apartados, Lista de deseos, Calendario y Actividad vienen habilitados por default — Nómina no.</p>
+    <div class="cfg-permisos-lista">
+      ${Object.entries(MODULOS_PERMISO_ENCARGADO).map(([clave, label]) => `
+        <label class="cfg-permiso-item">
+          <input type="checkbox" data-permiso-modulo="${clave}" ${permisos[clave] ? 'checked' : ''}>
+          <span>${escapeHTMLPersonas(label)}</span>
+        </label>
+      `).join('')}
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="cfgGuardarPermisosBtn" type="button">Guardar</button>
+  `;
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+
+  document.getElementById('cfgGuardarPermisosBtn')?.addEventListener('click', () => {
+    const nuevosPermisos = {};
+    box.querySelectorAll('[data-permiso-modulo]').forEach(chk => {
+      nuevosPermisos[chk.getAttribute('data-permiso-modulo')] = chk.checked;
+    });
+    const resultado = actualizarPermisosCuentaInterna(id, nuevosPermisos);
+    if (!resultado.ok) { mostrarToast(resultado.error); return; }
+    cerrar();
+    mostrarToast(`Permisos actualizados para ${cuenta.nombre}.`);
+    renderSeccionUsuarios();
+  });
+
 }
 
 function abrirModalCrearCuentaInterna() {
@@ -1451,7 +1509,7 @@ function abrirModalCrearCuentaInterna() {
       <label>Rol
         <select id="cfgNuevoRolInterno">
           <option value="staff">Staff</option>
-          <option value="rh">RH</option>
+          <option value="encargado">Encargado</option>
           <option value="admin">Admin</option>
         </select>
       </label>

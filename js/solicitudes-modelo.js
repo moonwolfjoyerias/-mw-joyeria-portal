@@ -10,7 +10,7 @@
 // - js/personas-ejemplo.js — registro de cuentas (crearPersonaEjemplo,
 //   obtenerPersonas/guardarPersonas, existePersonaConCorreoOTelefono).
 // - js/auditoria-modelo.js — registrarAuditoria (misma bitácora que ya
-//   usan Staff/RH/Admin, no se crea un sistema de auditoría aparte).
+//   usan Staff/Encargado/Admin, no se crea un sistema de auditoría aparte).
 // - js/notificaciones-modelo.js — agregarNotificacion (extiende la
 //   campana de notificaciones existente).
 //

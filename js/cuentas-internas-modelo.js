@@ -1,4 +1,4 @@
-// MW JOYERÍA — Cuentas internas (Staff / RH / Admin)
+// MW JOYERÍA — Cuentas internas (Staff / Encargado / Admin)
 //
 // Antes de este archivo, cada módulo (Apartados, Catálogo, Lista de
 // deseos, Mi cuenta/Nómina, Calendario) tenía su PROPIA lista de
@@ -27,13 +27,77 @@
 
 const CUENTAS_INTERNAS_STORAGE_KEY = 'mw-cuentas-internas-v1';
 
-const ROLES_CUENTA_INTERNA = { staff: 'Staff', rh: 'RH', admin: 'Admin' };
+const ROLES_CUENTA_INTERNA = { staff: 'Staff', encargado: 'Encargado', admin: 'Admin' };
+
+// Encargado (antes "RH") es de cuenta INDIVIDUAL — cada persona tiene su
+// propio usuario/contraseña, a diferencia de Staff (cuenta compartida
+// entre varias colaboradoras, con mini-login aparte para identificarse
+// en acciones puntuales — ver js/staff-actividad-staff.js). Por eso cada
+// cuenta de Encargado tiene su propio objeto `permisos`: qué módulos
+// puede usar. Todos los módulos vienen habilitados por default salvo
+// Nómina — Admin decide caso por caso quién sí la maneja. Staff/Admin no
+// usan este campo (Staff no tiene módulos restringibles por cuenta;
+// Admin siempre tiene acceso completo).
+const MODULOS_PERMISO_ENCARGADO = {
+  nomina: 'Nómina',
+  actividadesStaff: 'Actividades del Staff',
+  catalogo: 'Catálogo',
+  apartados: 'Apartados',
+  listaDeseos: 'Lista de deseos',
+  calendario: 'Calendario',
+  actividad: 'Actividad'
+};
+
+function permisosEncargadoPorDefecto(overrides = {}) {
+  return {
+    nomina: false,
+    actividadesStaff: true,
+    catalogo: true,
+    apartados: true,
+    listaDeseos: true,
+    calendario: true,
+    actividad: true,
+    ...overrides
+  };
+}
+
+// true si esta cuenta puede usar ese módulo. Para roles que no son
+// 'encargado' siempre regresa true — el permiso por módulo solo aplica
+// a Encargado (Staff/Admin no tienen este campo).
+function tienePermisoEncargado(cuenta, modulo) {
+  if (!cuenta || cuenta.rol !== 'encargado') return true;
+  return !!(cuenta.permisos && cuenta.permisos[modulo]);
+}
+
+function actualizarPermisosCuentaInterna(id, permisos) {
+
+  const cuentas = obtenerCuentasInternas();
+  const cuenta = cuentas.find(c => c.id === id);
+  if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
+  if (cuenta.rol !== 'encargado') return { ok: false, error: 'Los permisos por módulo solo aplican a cuentas de Encargado.' };
+
+  cuenta.permisos = permisosEncargadoPorDefecto(permisos);
+  guardarCuentasInternas(cuentas);
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    const modulosActivos = Object.keys(cuenta.permisos).filter(m => cuenta.permisos[m]).map(m => MODULOS_PERMISO_ENCARGADO[m]).join(', ');
+    registrarAuditoriaAdmin({
+      modulo: 'cuentas',
+      accion: 'actualizar_permisos_encargado',
+      descripcion: `Permisos actualizados para ${cuenta.nombre} (${cuenta.usuario}): ${modulosActivos || 'ninguno'}`
+    });
+  }
+
+  return { ok: true, cuenta };
+
+}
 
 // Semilla: mismas personas/contraseñas que ya existían en
 // PERSONAL_STAFF_EJEMPLO (js/staff-mi-cuenta-ejemplo.js) más las
-// identidades fijas de RH y Admin (mismas de CALENDARIO_USUARIOS_EJEMPLO)
-// — no se inventan personas nuevas. Se excluye MW0005 porque ya es una
-// Líder con su propia cuenta en personas-ejemplo.js; no se duplica aquí.
+// identidades fijas de Encargado y Admin (mismas de
+// CALENDARIO_USUARIOS_EJEMPLO) — no se inventan personas nuevas. Se
+// excluye MW0005 porque ya es una Líder con su propia cuenta en
+// personas-ejemplo.js; no se duplica aquí.
 function construirCuentasInternasEjemplo() {
   return [
     { id: 'staff01', usuario: 'staff01', nombre: 'Ana López', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
@@ -43,7 +107,7 @@ function construirCuentasInternasEjemplo() {
     { id: 'staff05', usuario: 'staff05', nombre: 'Jorge Salinas', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
     { id: 'staff06', usuario: 'staff06', nombre: 'Paulina Gómez', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
     { id: 'staff07', usuario: 'staff07', nombre: 'Luis Medina', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
-    { id: 'rh01', usuario: 'rh01', nombre: 'Recursos Humanos', rol: 'rh', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
+    { id: 'encargado01', usuario: 'encargado01', nombre: 'Valentina Cruz', rol: 'encargado', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true, permisos: permisosEncargadoPorDefecto({ nomina: true }) },
     { id: 'admin01', usuario: 'admin01', nombre: 'Claudia', rol: 'admin', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true }
   ];
 }
@@ -76,7 +140,7 @@ function verificarCredencialInterna(usuario, password) {
   return obtenerCuentasInternas().find(c => c.usuario === usuario && c.password === password && c.activa !== false) || null;
 }
 
-function crearCuentaInterna({ usuario, nombre, rol, password, empleadoNominaId }) {
+function crearCuentaInterna({ usuario, nombre, rol, password, empleadoNominaId, permisos }) {
 
   usuario = String(usuario || '').trim();
   nombre = String(nombre || '').trim();
@@ -101,7 +165,8 @@ function crearCuentaInterna({ usuario, nombre, rol, password, empleadoNominaId }
     password,
     fechaAlta: new Date().toISOString(),
     activa: true,
-    empleadoNominaId: empleadoNominaId || null
+    empleadoNominaId: empleadoNominaId || null,
+    ...(rol === 'encargado' ? { permisos: permisosEncargadoPorDefecto(permisos) } : {})
   };
 
   cuentas.push(nueva);

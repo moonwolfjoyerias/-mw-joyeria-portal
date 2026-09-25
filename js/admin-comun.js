@@ -2,11 +2,11 @@
 // Usado por las páginas admin-*.html con funcionalidad real
 // (Catálogo, Apartados, Calendario, Lista de deseos).
 //
-// Igual que RH, Admin tiene cuenta individual: NO vuelve a pedir
+// Igual que Encargado, Admin tiene cuenta individual: NO vuelve a pedir
 // credenciales en cada acción sensible. En su lugar, antes de
 // ejecutar una acción sensible se muestra un modal de Autorización
 // con un mensaje dinámico explicando exactamente qué está a punto de
-// pasar (mismo patrón que js/rh-comun.js).
+// pasar (mismo patrón que js/encargado-comun.js).
 //
 // ⚠️ TEMPORAL: localStorage simula la base de datos / Firestore.
 
@@ -74,7 +74,7 @@ function cerrarModalOverlayAdmin() {
 
 
 // ============================================================
-// AUDITORÍA (preparada para Firebase — misma bitácora que RH)
+// AUDITORÍA (preparada para Firebase — misma bitácora que Encargado)
 // ============================================================
 
 function registrarAuditoriaAdmin({ modulo, accion, descripcion }) {
@@ -110,7 +110,7 @@ function obtenerAuditoriaAdmin() {
 // ============================================================
 //
 // Admin es el único rol que ve las tres bandejas a la vez (en vez de
-// una sola bandeja filtrada como Emprendedora/Líder, Staff o RH — ver
+// una sola bandeja filtrada como Emprendedora/Líder, Staff o Encargado — ver
 // initNotifPanel en portal-common.js). Esta función existe solo aquí
 // porque admin-comun.js se carga en todas las páginas de Admin; si
 // existe, initNotifPanel la usa en vez de su propio render genérico.
@@ -122,20 +122,21 @@ function obtenerAuditoriaAdmin() {
 // ver sobre Emprendedoras/Líderes son los avisos que YA le tocan a ella
 // (rolDestino:'admin'): ascensos de rango, solicitudes de inscripción y
 // apartados vencidos — divididos del resto de avisos de Administración
-// (los que le llegan de RH) usando el campo "origen".
+// (los que le llegan de Encargado) usando el campo "origen".
 const NOTIF_ADMIN_GRUPOS = [
   { rol: 'admin', origen: 'emprendedora_lider', titulo: 'Emprendedoras/Líderes' },
-  { rol: 'admin', origen: 'rh', titulo: 'De Recursos Humanos' },
+  { rol: 'admin', origen: 'encargado', titulo: 'De Encargado' },
   { rol: 'staff', titulo: 'Staff' },
-  { rol: 'rh', titulo: 'RH' }
+  { rol: 'encargado', titulo: 'Encargado' }
 ];
 
-// Las bandejas 'staff' y 'rh' traen links pensados para mostrarse DENTRO
-// del portal de Staff/RH (una clave de PORTAL_LINKS como 'misActividades'
-// o 'deseos', o un nombre de archivo literal como "staff-apartados.html"
-// / "rh-nomina.html"). Solo 5 de las 14 páginas de Admin definen su
-// propio PORTAL_LINKS, así que depender de esa variable llevaba a un 404
-// en las otras 9 (empezando por el propio Dashboard). Admin tiene su
+// Las bandejas 'staff' y 'encargado' traen links pensados para mostrarse
+// DENTRO del portal de Staff/Encargado (una clave de PORTAL_LINKS como
+// 'misActividades' o 'deseos', o un nombre de archivo literal como
+// "staff-apartados.html" / "encargado-nomina.html"). Solo 5 de las 14
+// páginas de Admin definen su propio PORTAL_LINKS, así que depender de
+// esa variable llevaba a un 404 en las otras 9 (empezando por el propio
+// Dashboard). Admin tiene su
 // propia página equivalente para cada función compartida (admin-*.html),
 // así que este mapa fijo resuelve el link sin importar qué página de
 // Admin tenga abierta la campana.
@@ -152,7 +153,7 @@ const ADMIN_NOTIF_LINK_MAP = {
 function resolverLinkNotifAdmin(link) {
   if (typeof link !== 'string') return link || '';
   if (ADMIN_NOTIF_LINK_MAP[link]) return ADMIN_NOTIF_LINK_MAP[link];
-  if (/^(staff|rh)-/.test(link)) return link.replace(/^(staff|rh)-/, 'admin-');
+  if (/^(staff|encargado)-/.test(link)) return link.replace(/^(staff|encargado)-/, 'admin-');
   return link; // Ya es un nombre de archivo admin-*.html (o similar).
 }
 

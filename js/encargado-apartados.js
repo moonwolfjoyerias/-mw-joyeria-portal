@@ -1,4 +1,4 @@
-// MW JOYERÍA — Apartados RH
+// MW JOYERÍA — Apartados Encargado
 // Mismas capacidades y reglas de negocio que Apartados de Staff (ver
 // js/apartados-modelo.js, fuente única de verdad, y
 // js/staff-apartados-ejemplo.js, reutilizado tal cual para los datos
@@ -8,7 +8,7 @@
 //
 // Única diferencia respecto a Staff: las acciones sensibles NO piden
 // usuario/contraseña de nuevo — muestran un modal de Autorización con
-// mensaje dinámico (ver js/rh-comun.js) y quedan en la auditoría de RH.
+// mensaje dinámico (ver js/encargado-comun.js) y quedan en la auditoría de Encargado.
 
 let ventanas = [];
 let filtroEstado = "todos";
@@ -18,7 +18,7 @@ const filasExpandidas = new Set();
 const MENSAJE_WHATSAPP_VENCIDO = "Tu apartado venció. Por favor contáctanos para revisar las opciones disponibles.";
 
 // "empleado" que esperan las funciones de apartados-modelo.js.
-const RH_EMPLEADO = { nombre: RH_IDENTIDAD.usuarioNombre };
+const ENCARGADO_EMPLEADO = { nombre: ENCARGADO_IDENTIDAD.usuarioNombre };
 
 
 // ============================================================
@@ -151,7 +151,7 @@ function abrirModalNuevaVentana() {
     const usuarioId = slugUsuarioId(nombre);
     const tieneCredito = obtenerCreditoDisponible(usuarioId) > 0;
 
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: "Autorizar nueva ventana",
       mensaje: tieneCredito
         ? `Estás a punto de abrir una nueva ventana de apartado para "${nombre}", reutilizando su crédito guardado.`
@@ -174,7 +174,7 @@ function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante,
 
   if (ventanaExistente) {
 
-    const resultadoPiezaExistente = agregarPiezaAVentana(ventanaExistente, { producto, variante, total, productoId, varianteId }, RH_EMPLEADO);
+    const resultadoPiezaExistente = agregarPiezaAVentana(ventanaExistente, { producto, variante, total, productoId, varianteId }, ENCARGADO_EMPLEADO);
 
     if (!resultadoPiezaExistente.ok) {
       cerrarModal();
@@ -187,7 +187,7 @@ function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante,
     renderTabla();
     cerrarModal();
 
-    registrarAuditoriaRH({
+    registrarAuditoriaEncargado({
       modulo: "apartados",
       accion: "agregar_pieza_ventana_existente",
       descripcion: `Pieza ${producto} agregada a la ventana ya activa de ${nombre}`
@@ -198,8 +198,8 @@ function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante,
 
   }
 
-  const nuevaVentana = abrirVentanaApartado({ usuarioId, usuarioNombre: nombre, telefono, categoria }, RH_EMPLEADO);
-  const resultadoPieza = agregarPiezaAVentana(nuevaVentana, { producto, variante, total, productoId, varianteId }, RH_EMPLEADO);
+  const nuevaVentana = abrirVentanaApartado({ usuarioId, usuarioNombre: nombre, telefono, categoria }, ENCARGADO_EMPLEADO);
+  const resultadoPieza = agregarPiezaAVentana(nuevaVentana, { producto, variante, total, productoId, varianteId }, ENCARGADO_EMPLEADO);
 
   if (!resultadoPieza.ok) {
     cerrarModal();
@@ -214,7 +214,7 @@ function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante,
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaRH({
+  registrarAuditoriaEncargado({
     modulo: "apartados",
     accion: "nueva_ventana",
     descripcion: nuevaVentana.metodoDeposito === "credito_anterior"
@@ -224,16 +224,16 @@ function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante,
 
   mostrarToast(
     nuevaVentana.metodoDeposito === "credito_anterior"
-      ? `Ventana abierta con crédito reutilizado por ${RH_IDENTIDAD.usuarioNombre}.`
-      : `Ventana creada por ${RH_IDENTIDAD.usuarioNombre}.`
+      ? `Ventana abierta con crédito reutilizado por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`
+      : `Ventana creada por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`
   );
 
 }
 
 
 // ============================================================
-// EVENTOS DE FILA (propios de RH: no piden credenciales, muestran
-// un modal de confirmación con mensaje dinámico vía rh-comun.js)
+// EVENTOS DE FILA (propios de Encargado: no piden credenciales, muestran
+// un modal de confirmación con mensaje dinámico vía encargado-comun.js)
 // ============================================================
 
 function agregarEventosFilas() {
@@ -332,7 +332,7 @@ function abrirModalConfirmarDeposito(ventanaId) {
       return;
     }
 
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: "Autorizar depósito",
       mensaje: `Estás a punto de confirmar el depósito de $${monto} MXN de "${v.usuarioNombre}".`,
       onConfirmar: () => ejecutarConfirmarDeposito(v.id, { monto, metodo, referencia: referencia || null })
@@ -347,15 +347,15 @@ function ejecutarConfirmarDeposito(ventanaId, datos) {
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v) return;
 
-  confirmarDepositoVentana(v, datos, RH_EMPLEADO);
+  confirmarDepositoVentana(v, datos, ENCARGADO_EMPLEADO);
 
   guardarVentanas();
   actualizarResumen();
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaRH({ modulo: "apartados", accion: "confirmar_deposito", descripcion: `Depósito de $${datos.monto} confirmado para ${v.usuarioNombre}` });
-  mostrarToast(`Depósito confirmado por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: "apartados", accion: "confirmar_deposito", descripcion: `Depósito de $${datos.monto} confirmado para ${v.usuarioNombre}` });
+  mostrarToast(`Depósito confirmado por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }
 
@@ -436,7 +436,7 @@ function abrirModalLiquidar(v, decisionDeposito) {
     if (decisionDeposito === "aplicar") mensaje += ` Se aplicará su depósito de $${v.depositoApartadoDisponible} MXN a la compra.`;
     if (decisionDeposito === "credito") mensaje += ` Su depósito de $${v.depositoApartadoDisponible} MXN se guardará como crédito.`;
 
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: "Autorizar liquidación",
       mensaje,
       onConfirmar: () => ejecutarLiquidar(v.id, { monto, metodo, referencia }, decisionDeposito)
@@ -451,10 +451,10 @@ function ejecutarLiquidar(ventanaId, datos, decisionDeposito) {
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v) return;
 
-  const resultado = liquidarVentanaCompleta(v, datos, RH_EMPLEADO);
+  const resultado = liquidarVentanaCompleta(v, datos, ENCARGADO_EMPLEADO);
 
   if (resultado?.requiereResolucionDeposito && decisionDeposito) {
-    resolverDepositoVentana(v, decisionDeposito, RH_EMPLEADO);
+    resolverDepositoVentana(v, decisionDeposito, ENCARGADO_EMPLEADO);
   }
 
   guardarVentanas();
@@ -462,8 +462,8 @@ function ejecutarLiquidar(ventanaId, datos, decisionDeposito) {
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaRH({ modulo: "apartados", accion: "liquidar_ventana", descripcion: `Apartado de ${v.usuarioNombre} liquidado por $${datos.monto}` });
-  mostrarToast(`Apartado liquidado por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: "apartados", accion: "liquidar_ventana", descripcion: `Apartado de ${v.usuarioNombre} liquidado por $${datos.monto}` });
+  mostrarToast(`Apartado liquidado por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }
 
@@ -481,7 +481,7 @@ function confirmarCancelarVentana(ventanaId) {
     ? `Estás a punto de cancelar el apartado de "${v.usuarioNombre}". Su depósito de $${v.depositoApartadoDisponible} MXN se guardará como crédito para su próximo apartado.`
     : `Estás a punto de cancelar el apartado de "${v.usuarioNombre}".`;
 
-  abrirAutorizacionRH({
+  abrirAutorizacionEncargado({
     titulo: "Autorizar cancelación",
     mensaje,
     peligrosa: true,
@@ -495,15 +495,15 @@ function ejecutarCancelar(ventanaId) {
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v) return;
 
-  cancelarVentanaCompleta(v, RH_EMPLEADO);
+  cancelarVentanaCompleta(v, ENCARGADO_EMPLEADO);
 
   guardarVentanas();
   actualizarResumen();
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaRH({ modulo: "apartados", accion: "cancelar_ventana", descripcion: `Apartado de ${v.usuarioNombre} cancelado` });
-  mostrarToast(`Apartado cancelado por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: "apartados", accion: "cancelar_ventana", descripcion: `Apartado de ${v.usuarioNombre} cancelado` });
+  mostrarToast(`Apartado cancelado por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }
 
@@ -512,7 +512,7 @@ function confirmarAprobarVip(ventanaId) {
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v) return;
 
-  abrirAutorizacionRH({
+  abrirAutorizacionEncargado({
     titulo: "Aprobar apartado VIP",
     mensaje: `Estás a punto de aprobar el apartado VIP de "${v.usuarioNombre}".`,
     onConfirmar: () => ejecutarAprobarVip(ventanaId)
@@ -525,15 +525,15 @@ function ejecutarAprobarVip(ventanaId) {
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v) return;
 
-  aprobarVentanaVip(v, RH_EMPLEADO);
+  aprobarVentanaVip(v, ENCARGADO_EMPLEADO);
 
   guardarVentanas();
   actualizarResumen();
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaRH({ modulo: "apartados", accion: "aprobar_vip_ventana", descripcion: `Apartado VIP de ${v.usuarioNombre} aprobado` });
-  mostrarToast(`Apartado VIP aprobado por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: "apartados", accion: "aprobar_vip_ventana", descripcion: `Apartado VIP de ${v.usuarioNombre} aprobado` });
+  mostrarToast(`Apartado VIP aprobado por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }
 
@@ -553,7 +553,7 @@ function confirmarDesapartarVentana(ventanaId) {
     ? `Estás a punto de desapartar el apartado vencido de "${v.usuarioNombre}". Esto cancelará sus piezas restantes y perderá su depósito de $${v.depositoApartadoDisponible} MXN de forma definitiva.`
     : `Estás a punto de desapartar el apartado vencido de "${v.usuarioNombre}". Esto cancelará sus piezas restantes.`;
 
-  abrirAutorizacionRH({
+  abrirAutorizacionEncargado({
     titulo: "Autorizar desapartar",
     mensaje,
     peligrosa: true,
@@ -567,14 +567,14 @@ function ejecutarDesapartar(ventanaId) {
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v) return;
 
-  desapartarVentanaVencida(v, RH_EMPLEADO);
+  desapartarVentanaVencida(v, ENCARGADO_EMPLEADO);
 
   guardarVentanas();
   actualizarResumen();
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaRH({ modulo: "apartados", accion: "desapartar_ventana", descripcion: `Apartado vencido de ${v.usuarioNombre} desapartado` });
-  mostrarToast(`Apartado desapartado por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: "apartados", accion: "desapartar_ventana", descripcion: `Apartado vencido de ${v.usuarioNombre} desapartado` });
+  mostrarToast(`Apartado desapartado por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }

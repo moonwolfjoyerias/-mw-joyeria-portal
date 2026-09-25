@@ -1,13 +1,13 @@
-// MW JOYERÍA — RH: Lista de deseos y Solicitud de resurtido
+// MW JOYERÍA — Encargado: Lista de deseos y Solicitud de resurtido
 //
 // Mismo comportamiento que Staff (ver js/staff-lista-deseos.js y
 // js/lista-deseos-modelo.js), pero "mis solicitudes" filtra por
-// creadoPorRol==='rh' / solicitadoPorRol==='rh' en vez de 'staff'.
+// creadoPorRol==='encargado' / solicitadoPorRol==='encargado' en vez de 'staff'.
 //
 // Única diferencia respecto a Staff: las acciones sensibles NO piden
 // usuario/contraseña de nuevo — muestran el modal de Autorización de
-// RH con mensaje dinámico (ver js/rh-comun.js) y quedan en la
-// auditoría de RH.
+// Encargado con mensaje dinámico (ver js/encargado-comun.js) y quedan en la
+// auditoría de Encargado.
 
 let ldVista = 'deseos';
 let ldFiltroTexto = '';
@@ -20,8 +20,8 @@ let personaSeleccionadaForm = null; // { id, nombre }
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  renderTablaDeseosRH();
-  renderTablaResurtidoRH();
+  renderTablaDeseosEncargado();
+  renderTablaResurtidoEncargado();
   inicializarEventosListaDeseos();
 
 });
@@ -43,21 +43,21 @@ function inicializarEventosListaDeseos() {
 
   document.getElementById('ldSearchInput')?.addEventListener('input', (e) => {
     ldFiltroTexto = e.target.value.trim().toLowerCase();
-    renderTablaDeseosRH();
+    renderTablaDeseosEncargado();
   });
   document.getElementById('ldFilterEstado')?.addEventListener('change', (e) => {
     ldFiltroEstado = e.target.value;
-    renderTablaDeseosRH();
+    renderTablaDeseosEncargado();
   });
   document.getElementById('ldNuevaSolicitudBtn')?.addEventListener('click', abrirModalNuevaSolicitudDeseos);
 
   document.getElementById('resSearchInput')?.addEventListener('input', (e) => {
     resFiltroTexto = e.target.value.trim().toLowerCase();
-    renderTablaResurtidoRH();
+    renderTablaResurtidoEncargado();
   });
   document.getElementById('resFilterEstado')?.addEventListener('change', (e) => {
     resFiltroEstado = e.target.value;
-    renderTablaResurtidoRH();
+    renderTablaResurtidoEncargado();
   });
   document.getElementById('resNuevaSolicitudBtn')?.addEventListener('click', abrirModalNuevaResurtido);
 
@@ -99,12 +99,12 @@ function escapeHTML(texto) {
 // TABLA: LISTA DE DESEOS
 // ============================================================
 
-function renderTablaDeseosRH() {
+function renderTablaDeseosEncargado() {
 
   const tbody = document.getElementById('ldTableBody');
   if (!tbody) return;
 
-  let solicitudes = obtenerListaDeseos().filter(s => s.creadoPorRol === 'rh');
+  let solicitudes = obtenerListaDeseos().filter(s => s.creadoPorRol === 'encargado');
 
   if (ldFiltroTexto) {
     solicitudes = solicitudes.filter(s =>
@@ -232,7 +232,7 @@ function abrirModalNuevaSolicitudDeseos() {
 
     const resumenPersona = destinatario === 'emprendedora' ? personaSeleccionadaForm.nombre : 'Público en general';
 
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: 'Crear solicitud de lista de deseos',
       mensaje: `Vas a crear una solicitud para <strong>${escapeHTML(resumenPersona)}</strong> con ${piezasValidas.length} pieza${piezasValidas.length === 1 ? '' : 's'}.`,
       onConfirmar: () => {
@@ -240,12 +240,12 @@ function abrirModalNuevaSolicitudDeseos() {
           destinatario,
           personaId: destinatario === 'emprendedora' ? personaSeleccionadaForm.id : null,
           piezas: piezasValidas,
-          creadoPorId: RH_IDENTIDAD.usuarioId,
-          creadoPorNombre: RH_IDENTIDAD.usuarioNombre,
-          creadoPorRol: 'rh'
+          creadoPorId: ENCARGADO_IDENTIDAD.usuarioId,
+          creadoPorNombre: ENCARGADO_IDENTIDAD.usuarioNombre,
+          creadoPorRol: 'encargado'
         });
         if (!resultado.ok) { mostrarToast(resultado.error); return; }
-        renderTablaDeseosRH();
+        renderTablaDeseosEncargado();
         mostrarToast('Solicitud creada.');
       }
     });
@@ -343,15 +343,15 @@ function abrirDetalleSolicitudDeseos(id) {
   document.getElementById('ldGuardarEstadoBtn')?.addEventListener('click', () => {
     const nuevoEstado = document.getElementById('ldNuevoEstado').value;
     const comentario = document.getElementById('ldComentarioEstado').value.trim();
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: 'Actualizar estado',
       mensaje: `Vas a cambiar el estado de esta solicitud a <strong>${ESTADOS_LISTA_DESEOS[nuevoEstado]}</strong>.`,
       onConfirmar: () => {
         const resultado = actualizarEstadoListaDeseos(s.id, nuevoEstado, {
-          usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre, usuarioRol: 'rh', comentario
+          usuarioId: ENCARGADO_IDENTIDAD.usuarioId, usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre, usuarioRol: 'encargado', comentario
         });
         if (!resultado.ok) { mostrarToast(resultado.error); return; }
-        renderTablaDeseosRH();
+        renderTablaDeseosEncargado();
         mostrarToast('Estado actualizado.');
       }
     });
@@ -363,12 +363,12 @@ function abrirDetalleSolicitudDeseos(id) {
 // TABLA: SOLICITUDES DE RESURTIDO
 // ============================================================
 
-function renderTablaResurtidoRH() {
+function renderTablaResurtidoEncargado() {
 
   const tbody = document.getElementById('resTableBody');
   if (!tbody) return;
 
-  let solicitudes = obtenerSolicitudesResurtido().filter(s => s.solicitadoPorRol === 'rh');
+  let solicitudes = obtenerSolicitudesResurtido().filter(s => s.solicitadoPorRol === 'encargado');
 
   if (resFiltroTexto) solicitudes = solicitudes.filter(s => s.producto.toLowerCase().includes(resFiltroTexto));
   if (resFiltroEstado) solicitudes = solicitudes.filter(s => s.estado === resFiltroEstado);
@@ -448,18 +448,18 @@ function abrirModalNuevaResurtido() {
       comentario: document.getElementById('resComentario').value.trim()
     };
 
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: 'Solicitar resurtido',
       mensaje: `Vas a avisar a Administración que hace falta resurtir <strong>${escapeHTML(producto)}</strong>.`,
       onConfirmar: () => {
         const resultado = crearSolicitudResurtido({
           ...datos,
-          solicitadoPorId: RH_IDENTIDAD.usuarioId,
-          solicitadoPorNombre: RH_IDENTIDAD.usuarioNombre,
-          solicitadoPorRol: 'rh'
+          solicitadoPorId: ENCARGADO_IDENTIDAD.usuarioId,
+          solicitadoPorNombre: ENCARGADO_IDENTIDAD.usuarioNombre,
+          solicitadoPorRol: 'encargado'
         });
         if (!resultado.ok) { mostrarToast(resultado.error); return; }
-        renderTablaResurtidoRH();
+        renderTablaResurtidoEncargado();
         mostrarToast('Solicitud de resurtido enviada — se notificó a Administración.');
       }
     });

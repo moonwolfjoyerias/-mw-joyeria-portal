@@ -4,7 +4,7 @@ Fecha de revisión: 2026-09-09
 
 ## Alcance y conclusión ejecutiva
 
-Se revisaron las 44 páginas HTML y los 73 módulos JavaScript del portal, incluyendo páginas públicas, login y los portales de Emprendedora, Líder, Staff, RH y Administración. No se conectó Firebase ni se modificó la interfaz visual.
+Se revisaron las 44 páginas HTML y los 73 módulos JavaScript del portal, incluyendo páginas públicas, login y los portales de Emprendedora, Líder, Staff, Encargado y Administración. No se conectó Firebase ni se modificó la interfaz visual.
 
 **Conclusión:** el portal tiene una interfaz reutilizable y varios modelos de dominio con funciones de lectura, validación, escritura e historial, pero **no está listo para conectar Firebase de forma segura**. La razón principal no es visual: la fuente de datos está distribuida entre constantes `*_EJEMPLO`, semillas dentro de modelos y claves independientes de `localStorage`. Al reemplazar una de ellas por Firestore, otras seguirían sembrando o leyendo datos demo.
 
@@ -17,9 +17,9 @@ Actualmente no existe Firebase SDK, configuración de Firebase, Firebase Auth, l
 | Dominio | Archivos demo/modelo principales | Datos encontrados |
 |---|---|---|
 | Catálogo público | [js/catalogo-productos-ejemplo.js](js/catalogo-productos-ejemplo.js#L1), [js/productos-ejemplo.js](js/productos-ejemplo.js#L1), [js/catalogo-modelo.js](js/catalogo-modelo.js#L1) | Productos, categorías, materiales, colores y descuentos |
-| Catálogo Staff/RH/Admin | [js/staff-catalogo-ejemplo.js](js/staff-catalogo-ejemplo.js#L1), `staff-catalogo.js`, `rh-catalogo.js`, `admin-catalogo.js` | Usuarios, productos y filtros; comparten `mw_staff_catalogo_demo` |
+| Catálogo Staff/Encargado/Admin | [js/staff-catalogo-ejemplo.js](js/staff-catalogo-ejemplo.js#L1), `staff-catalogo.js`, `encargado-catalogo.js`, `admin-catalogo.js` | Usuarios, productos y filtros; comparten `mw_staff_catalogo_demo` |
 | Personas | [js/personas-ejemplo.js](js/personas-ejemplo.js#L1) | Emprendedoras, líderes, perfiles, rangos, estadísticas y relaciones |
-| Cuentas internas | [js/cuentas-internas-modelo.js](js/cuentas-internas-modelo.js#L1) | Staff, RH y Admin con usuario y contraseña de prueba |
+| Cuentas internas | [js/cuentas-internas-modelo.js](js/cuentas-internas-modelo.js#L1) | Staff, Encargado y Admin con usuario y contraseña de prueba |
 | Nómina | [js/nomina-modelo.js](js/nomina-modelo.js#L1) | Empleados, conceptos, periodos, filas, ajustes, solicitudes y estados |
 | Apartados | [js/apartados-ejemplo.js](js/apartados-ejemplo.js#L1), [js/staff-apartados-ejemplo.js](js/staff-apartados-ejemplo.js#L1), [js/apartados-modelo.js](js/apartados-modelo.js#L1) | Ventana de depósito, piezas, créditos, clientes y datos bancarios |
 | Actividades Staff | [js/actividades-staff-modelo.js](js/actividades-staff-modelo.js#L1) | Catálogo, asignaciones, sorteo y bitácora de estados |
@@ -79,7 +79,7 @@ La fuente demo debe estar aislada en un módulo y solo el selector debe conocer 
 
 El login actual permite navegar por URL sin autenticación. No se encontró listener `onAuthStateChanged`, validación de rol en entrada ni control de acceso real. Ocultar botones no protege datos ni escrituras.
 
-Debe haber una guardia común que espere la sesión, cargue el perfil por `uid`, verifique `rol` y redirija si no coincide. Las acciones sensibles también deben validar permisos en la capa de datos y en reglas de Firestore. Roles mínimos: `staff`, `rh`, `admin`, `emprendedora`, `lider`.
+Debe haber una guardia común que espere la sesión, cargue el perfil por `uid`, verifique `rol` y redirija si no coincide. Las acciones sensibles también deben validar permisos en la capa de datos y en reglas de Firestore. Roles mínimos: `staff`, `encargado`, `admin`, `emprendedora`, `lider`.
 
 ### 4. IDs y relaciones
 
@@ -114,7 +114,7 @@ Riesgo **crítico** si se conecta Firestore sin refactor:
 1. `notificaciones-modelo.js`, `lista-deseos-modelo.js`, `personas-ejemplo.js`, `nomina-modelo.js`, `actividades-staff-modelo.js` y otros modelos reconstruyen semillas cuando la clave local está vacía.
 2. [js/portal-common.js](js/portal-common.js#L63) cae a `NOTIFICACIONES_EJEMPLO` si el modelo compartido no existe y [js/portal-common.js](js/portal-common.js#L222) renderiza `EVENTOS_EJEMPLO` directamente.
 3. Varias páginas cargan simultáneamente `notificaciones-ejemplo.js` y `notificaciones-modelo.js`; cargar el modelo no impide que el fallback estático exista.
-4. `staff-catalogo.js`, `rh-catalogo.js`, `admin-catalogo.js` comparten una clave demo y leen el array inicial si no hay almacenamiento, por lo que un catálogo real no sustituiría automáticamente todos los consumidores.
+4. `staff-catalogo.js`, `encargado-catalogo.js`, `admin-catalogo.js` comparten una clave demo y leen el array inicial si no hay almacenamiento, por lo que un catálogo real no sustituiría automáticamente todos los consumidores.
 5. `apartados.js` inicializa el estado desde `APARTADOS_EJEMPLO` y `VENTANA_EJEMPLO`; no espera una consulta externa.
 6. Cuenta, líder, equipo y paneles de roles usan constantes `*_EJEMPLO` sin una capa de fuente real.
 7. La ruta login no autentica y permite acceder a vistas con datos demo directamente.
@@ -139,12 +139,12 @@ Los controladores suelen decidir qué botones mostrar y algunos modelos validan 
 
 | Operación | Roles esperados | Protección requerida |
 |---|---|---|
-| Catálogo y precios | Staff/RH/Admin según escritura | Lectura pública solo si corresponde; escritura por rol y auditoría |
-| Apartados y confirmaciones de pago | Emprendedora/Líder, Staff, RH, Admin según transición | Transición de estado en backend; comprobar propietario y documento relacionado |
-| Nómina | RH prepara; Admin valida/paga | Reglas por rol y transacciones; salarios nunca públicos |
+| Catálogo y precios | Staff/Encargado/Admin según escritura | Lectura pública solo si corresponde; escritura por rol y auditoría |
+| Apartados y confirmaciones de pago | Emprendedora/Líder, Staff, Encargado, Admin según transición | Transición de estado en backend; comprobar propietario y documento relacionado |
+| Nómina | Encargado prepara; Admin valida/paga | Reglas por rol y transacciones; salarios nunca públicos |
 | Comisiones/bonos | Líder consulta; Admin calcula/ajusta/paga | Cálculo y montos confiables solo en backend o callable protegido |
-| Alta/baja e inscripción | Staff/RH solicita; Admin aprueba | Auth + perfil + historial; no crear acceso solo con un objeto cliente |
-| INE/documentos | Usuario dueño, RH/Admin autorizado | Storage protegido, no campos públicos ni URLs abiertas |
+| Alta/baja e inscripción | Staff/Encargado solicita; Admin aprueba | Auth + perfil + historial; no crear acceso solo con un objeto cliente |
+| INE/documentos | Usuario dueño, Encargado/Admin autorizado | Storage protegido, no campos públicos ni URLs abiertas |
 | Configuración/usuarios | Admin | Custom claims o perfil verificado más reglas; nunca solo botones ocultos |
 | Auditoría | Escritura automática; lectura Admin | Append-only; el cliente no debe poder borrar ni falsear autor |
 

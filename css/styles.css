@@ -2223,7 +2223,7 @@ a:hover { color: var(--mw-gold); }
 .placeholder-en-construccion h2 { font-size: 1.4rem; margin-bottom: 0.6rem; }
 .placeholder-en-construccion p { color: var(--mw-text-muted); font-size: 0.95rem; margin: 0; }
 
-/* ---------- Actividad (bitácora compartida Staff/RH/Admin) ---------- */
+/* ---------- Actividad (bitácora compartida Staff/Encargado/Admin) ---------- */
 .activity-person {
   display: flex;
   align-items: center;
@@ -2837,7 +2837,7 @@ a:hover { color: var(--mw-gold); }
 }
 
 /* Repetidor de variantes (color/talla/existencia) — modal "Agregar
-   producto", compartido por Staff/RH/Admin (misma plantilla en los 3
+   producto", compartido por Staff/Encargado/Admin (misma plantilla en los 3
    controladores). Cada variante es su propia tarjeta separada, con
    labels visibles por campo — antes todo iba en una sola fila
    amontonada sin etiquetas. */
@@ -3048,7 +3048,7 @@ a:hover { color: var(--mw-gold); }
 }
 
 /* =========================================================
-   MW JOYERÍA — CALENDARIO (Staff / RH / Admin)
+   MW JOYERÍA — CALENDARIO (Staff / Encargado / Admin)
    Reutiliza los estilos de Catálogo (.catalog-*, .action-btn,
    .stat-cards, .btn, .form-grid, etc.) — solo se agrega lo
    específico de esta tabla: la insignia de tipo de evento y el
@@ -4097,7 +4097,7 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   .staff-id-card { margin: 28px auto; padding: 1.8rem 1.4rem; }
 }
 
-/* Modal "¿Qué tipo de reporte deseas generar?" — RH → Actividades Staff */
+/* Modal "¿Qué tipo de reporte deseas generar?" — Encargado → Actividades Staff */
 .report-choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 6px; }
 .report-choice-card {
   display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
@@ -4262,6 +4262,10 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   color: var(--mw-text-muted);
 }
 .cfg-form-grid .cfg-span-2 { grid-column: 1 / -1; }
+
+.cfg-permisos-lista { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.cfg-permiso-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--mw-text); padding: 6px 2px; }
+.cfg-permiso-item input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; }
 .cfg-form-grid input,
 .cfg-form-grid select,
 .cfg-form-grid textarea {

@@ -1,4 +1,4 @@
-// MW JOYERÍA — Pestaña "Actividad" (Staff / RH / Admin)
+// MW JOYERÍA — Pestaña "Actividad" (Staff / Encargado / Admin)
 // Muestra la bitácora compartida (js/auditoria-modelo.js): quién hizo
 // qué y cuándo, en los 3 portales internos.
 
@@ -15,13 +15,13 @@ const MODULOS_ACTIVIDAD = {
 
 const ROLES_ACTIVIDAD = {
   staff: 'Staff',
-  rh: 'RH',
+  encargado: 'Encargado',
   admin: 'Admin'
 };
 
 // Staff solo debe ver actividad de estas áreas operativas (catálogo,
 // apartados, calendario, lista de deseos) — nunca nómina, comisiones,
-// personas, solicitudes o configuración, que son asuntos de RH/Admin
+// personas, solicitudes o configuración, que son asuntos de Encargado/Admin
 // sin relación con el trabajo diario de Staff.
 const MODULOS_ACTIVIDAD_VISIBLES_STAFF = ['catalogo', 'apartados', 'calendario', 'lista_deseos'];
 
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ACTIVIDAD_ROL_VISOR lo declara cada portal en su propio <script>
   // inline (admin/rh/staff-actividad.html). Solo Admin puede ver las
-  // acciones de Admin — Staff y RH nunca las ven, aunque las suyas
+  // acciones de Admin — Staff y Encargado nunca las ven, aunque las suyas
   // propias sí quedan visibles entre ellos.
   if (typeof ACTIVIDAD_ROL_VISOR !== 'undefined' && ACTIVIDAD_ROL_VISOR !== 'admin') {
     document.querySelector('#filtroRolActividad option[value="admin"]')?.remove();
@@ -65,7 +65,7 @@ function renderActividad() {
       <tr>
         <td colspan="3" class="catalog-empty-cell">
           <strong>Todavía no hay acciones registradas</strong>
-          <span>Las acciones de Staff, RH y Admin aparecerán aquí en cuanto ocurran.</span>
+          <span>Las acciones de Staff, Encargado y Admin aparecerán aquí en cuanto ocurran.</span>
         </td>
       </tr>
     `;

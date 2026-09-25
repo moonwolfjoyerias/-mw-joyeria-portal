@@ -6,7 +6,7 @@
 // obtenerSesionActiva() (nunca de un nombre escrito a mano en el HTML),
 // así que migrar a Firebase Auth real consiste en cambiar CÓMO se llena
 // la sesión (aquí y en js/auth-login.js), no en tocar cada página del
-// portal — ver js/admin-comun.js, js/rh-comun.js y
+// portal — ver js/admin-comun.js, js/encargado-comun.js y
 // obtenerNombrePersonaActualPortal() en js/portal-common.js.
 //
 // ⚠️ LÍMITE DE SEGURIDAD CONOCIDO: este archivo es SOLO una puerta de
@@ -50,7 +50,7 @@ function cerrarSesion() {
   }
 }
 
-// A qué carpeta de portal (admin/rh/staff/emprendedora/lider) pertenece
+// A qué carpeta de portal (admin/encargado/staff/emprendedora/lider) pertenece
 // la página actual — así ninguna página necesita declarar "quién puede
 // entrar", ya lo dice su propia carpeta.
 function obtenerCarpetaPortalActual() {

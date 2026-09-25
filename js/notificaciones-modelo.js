@@ -12,8 +12,8 @@
 // estático de siempre — cero cambio de comportamiento para ellas.
 //
 // rolDestino: a qué bandeja pertenece la notificación —
-// 'emprendedora_lider' | 'staff' | 'rh' | 'admin'. Los portales de
-// Emprendedora/Líder, Staff y RH solo ven las de su propio rol (se
+// 'emprendedora_lider' | 'staff' | 'encargado' | 'admin'. Los portales de
+// Emprendedora/Líder, Staff y Encargado solo ven las de su propio rol (se
 // detecta automáticamente por la URL, ver portal-common.js). Admin ve
 // las tres bandejas divididas (ver admin-comun.js →
 // renderNotificacionesAdminAgrupadas). No reemplaza a "paraId" (a
@@ -24,9 +24,9 @@
 // Firestore en Fase 3.
 
 const NOTIFICACIONES_STORAGE_KEY = 'mw-notificaciones-v1';
-const ROLES_NOTIF_VALIDOS = ['emprendedora_lider', 'staff', 'rh', 'admin'];
+const ROLES_NOTIF_VALIDOS = ['emprendedora_lider', 'staff', 'encargado', 'admin'];
 
-function esNotificacionRHExclusiva(notificacion) {
+function esNotificacionEncargadoExclusiva(notificacion) {
   return notificacion.tipo === 'nomina';
 }
 
@@ -35,7 +35,7 @@ function normalizarNotificacion(notificacion) {
 
   // Catálogo, apartados, deseos, calendario y actividades generales son
   // funciones compartidas: Admin las clasifica una sola vez como Staff.
-  if (normalizada.rolDestino === 'rh' && !esNotificacionRHExclusiva(normalizada)) {
+  if (normalizada.rolDestino === 'encargado' && !esNotificacionEncargadoExclusiva(normalizada)) {
     normalizada.rolDestino = 'staff';
   }
 
@@ -71,7 +71,7 @@ function purgarNotificacionesDeDiasAnteriores(lista) {
 }
 
 function claveUnicaNotificacion(notificacion) {
-  const link = String(notificacion.link || '').replace(/rh-/g, 'staff-');
+  const link = String(notificacion.link || '').replace(/encargado-/g, 'staff-');
   return [notificacion.paraId || '', notificacion.texto || '', link].join('|');
 }
 
@@ -119,7 +119,7 @@ function guardarNotificacionesCompartidas(lista) {
 // asume 'emprendedora_lider' (era el único rol con notificaciones
 // antes de dividirlas).
 // origen: SOLO tiene sentido dentro de la bandeja 'admin' — de dónde
-// viene el aviso ('emprendedora_lider' o 'rh'), para que Admin la vea
+// viene el aviso ('emprendedora_lider' o 'encargado'), para que Admin la vea
 // dividida en dos grupos separados (ver admin-comun.js →
 // renderNotificacionesAdminAgrupadas). Si se omite, se asume
 // 'emprendedora_lider' (era el único origen antes de dividirlos).
@@ -169,18 +169,18 @@ document.addEventListener('click', (e) => {
 function obtenerRolPortalActual() {
   const ruta = window.location.pathname;
   if (ruta.includes('/portal/staff/')) return 'staff';
-  if (ruta.includes('/portal/rh/')) return 'rh';
+  if (ruta.includes('/portal/encargado/')) return 'encargado';
   if (ruta.includes('/portal/admin/')) return 'admin';
   if (ruta.includes('/portal/emprendedora/') || ruta.includes('/portal/lider/')) return 'emprendedora_lider';
   return null;
 }
 
 // Notificaciones que le tocan a la bandeja de un rol específico —
-// usada por la campana de Emprendedora/Líder, Staff y RH. Admin no la
-// usa (ve las tres bandejas divididas, no una sola filtrada).
+// usada por la campana de Emprendedora/Líder, Staff y Encargado. Admin
+// no la usa (ve las tres bandejas divididas, no una sola filtrada).
 //
 // La bandeja 'emprendedora_lider' es personal, no de equipo (a
-// diferencia de 'staff'/'rh', que sí son bandejas compartidas a
+// diferencia de 'staff'/'encargado', que sí son bandejas compartidas a
 // propósito): cada aviso que se genera ahí ya trae paraId puesto por
 // quien lo crea (ver todos los agregarNotificacion({ rolDestino:
 // 'emprendedora_lider', ... }) del portal), así que además de la

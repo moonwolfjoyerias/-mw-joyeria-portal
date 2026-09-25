@@ -1,11 +1,11 @@
-// MW JOYERÍA — RH: Actividades del Staff
+// MW JOYERÍA — Encargado: Actividades del Staff
 //
-// RH organiza la semana (las actividades base ya están precargadas —
+// Encargado organiza la semana (las actividades base ya están precargadas —
 // ver asegurarAsignacionesBaseSemana en el modelo —, crea actividades
 // nuevas a mano, sortea zonas completas entre el Staff, anuncia),
 // revisa lo que Staff ya confirmó y firma que sí se realizó. Mismo
-// patrón de autorización sin credenciales que el resto de RH (ver
-// js/rh-comun.js → abrirAutorizacionRH / registrarAuditoriaRH).
+// patrón de autorización sin credenciales que el resto de Encargado (ver
+// js/encargado-comun.js → abrirAutorizacionEncargado / registrarAuditoriaEncargado).
 //
 // ⚠️ TEMPORAL: localStorage simula la base de datos compartida.
 
@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   asegurarAsignacionesBaseSemana(actSemanaKey);
   actualizarEtiquetaSemanaAct();
-  renderTablaActividadesRH();
-  inicializarEventosActividadStaffRH();
+  renderTablaActividadesEncargado();
+  inicializarEventosActividadStaffEncargado();
 
 });
 
@@ -31,23 +31,23 @@ document.addEventListener('DOMContentLoaded', () => {
 // EVENTOS GENERALES
 // ============================================================
 
-function inicializarEventosActividadStaffRH() {
+function inicializarEventosActividadStaffEncargado() {
 
   document.getElementById('actSemanaInput')?.addEventListener('change', (e) => {
     actSemanaKey = semanaKeyDesdeFechaActividadStaff(e.target.value);
     asegurarAsignacionesBaseSemana(actSemanaKey);
     actualizarEtiquetaSemanaAct();
-    renderTablaActividadesRH();
+    renderTablaActividadesEncargado();
   });
 
   document.getElementById('actSearchInput')?.addEventListener('input', (e) => {
     actFiltroTexto = e.target.value.trim().toLowerCase();
-    renderTablaActividadesRH();
+    renderTablaActividadesEncargado();
   });
 
   document.getElementById('actFilterEstado')?.addEventListener('change', (e) => {
     actFiltroEstado = e.target.value;
-    renderTablaActividadesRH();
+    renderTablaActividadesEncargado();
   });
 
   document.getElementById('actCrearBtn')?.addEventListener('click', abrirModalCrearActividad);
@@ -172,7 +172,7 @@ function leerCamposPeriodicidadAct(prefix) {
 // TABLA PRINCIPAL
 // ============================================================
 
-function renderTablaActividadesRH() {
+function renderTablaActividadesEncargado() {
 
   const tbody = document.getElementById('actTableBody');
   if (!tbody) return;
@@ -199,12 +199,12 @@ function renderTablaActividadesRH() {
 
     tbody.innerHTML = grupos.map(g => `
       <tr class="act-zona-row"><td colspan="7" style="background:#faf7fb;font-weight:700;color:var(--mw-purple);font-size:0.8rem;">${escapeHTMLAct(g.zona)}</td></tr>
-      ${g.items.map(filaActividadRH).join('')}
+      ${g.items.map(filaActividadEncargado).join('')}
     `).join('');
 
     tbody.querySelectorAll('[data-act-editar]').forEach(btn => btn.addEventListener('click', () => abrirModalEditarActividad(btn.getAttribute('data-act-editar'))));
     tbody.querySelectorAll('[data-act-detalle]').forEach(btn => btn.addEventListener('click', () => abrirDetalleActividad(btn.getAttribute('data-act-detalle'))));
-    tbody.querySelectorAll('[data-act-firmar]').forEach(btn => btn.addEventListener('click', () => confirmarFirmarRH(btn.getAttribute('data-act-firmar'))));
+    tbody.querySelectorAll('[data-act-firmar]').forEach(btn => btn.addEventListener('click', () => confirmarFirmarEncargado(btn.getAttribute('data-act-firmar'))));
     tbody.querySelectorAll('[data-act-eliminar]').forEach(btn => btn.addEventListener('click', () => confirmarEliminarActividad(btn.getAttribute('data-act-eliminar'))));
 
   }
@@ -217,7 +217,7 @@ function nombresResponsablesAct(a) {
   return (a.encargados || []).map(e => escapeHTMLAct(e.nombre)).join(', ') || 'Sin asignar';
 }
 
-function filaActividadRH(a) {
+function filaActividadEncargado(a) {
   const vigencia = vigenciaTemporalActividadStaff(a);
   const etiquetaTemporal = a.tipo === 'temporal'
     ? `<br><span class="badge ${vigencia.vencida ? 'badge-pendiente' : 'badge-revision'}" style="margin-top:4px;">Temporal · ${escapeHTMLAct(formatearFechaCortaActividadStaff(a.fechaInicioTemporal))} – ${escapeHTMLAct(formatearFechaCortaActividadStaff(a.fechaFinTemporal))}${vigencia.vencida ? ' · Vencida' : ''}</span>`
@@ -233,7 +233,7 @@ function filaActividadRH(a) {
       <td style="white-space:nowrap;">
         <button type="button" class="comm-icon-btn" data-act-editar="${a.id}" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></button>
         <button type="button" class="comm-icon-btn" data-act-detalle="${a.id}" title="Ver detalle e historial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="6"/><path d="M20 20l-5.5-5.5"/></svg></button>
-        ${a.estado === 'enterado' ? `<button type="button" class="comm-icon-btn" data-act-firmar="${a.id}" title="Firmar por RH"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></button>` : ''}
+        ${a.estado === 'enterado' ? `<button type="button" class="comm-icon-btn" data-act-firmar="${a.id}" title="Firmar por Encargado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></button>` : ''}
         <button type="button" class="comm-icon-btn" data-act-eliminar="${a.id}" title="Eliminar actividad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 6h14"/><path d="M9 6V4h6v2"/><path d="M7 6l1 14h8l1-14"/></svg></button>
       </td>
     </tr>
@@ -241,7 +241,7 @@ function filaActividadRH(a) {
 }
 
 // ============================================================
-// ELIMINAR ACTIVIDAD (sección 2 — RH puede borrar cualquier actividad,
+// ELIMINAR ACTIVIDAD (sección 2 — Encargado puede borrar cualquier actividad,
 // permanente o temporal, anunciada o no. Eliminación lógica: nunca se
 // pierde el historial ni la auditoría, ver eliminarAsignacionActividadStaff).
 // ============================================================
@@ -278,11 +278,11 @@ function confirmarEliminarActividad(id) {
   overlay.classList.add('open');
 
   document.getElementById('actConfirmarEliminarBtn').addEventListener('click', () => {
-    const resultado = eliminarAsignacionActividadStaff(id, { usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre, usuarioRol: 'rh' });
+    const resultado = eliminarAsignacionActividadStaff(id, { usuarioId: ENCARGADO_IDENTIDAD.usuarioId, usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre, usuarioRol: 'encargado' });
     cerrarModalAct();
     if (!resultado.ok) { mostrarToast(resultado.error); return; }
-    registrarAuditoriaRH({ modulo: 'actividades_staff', accion: 'eliminar_actividad', descripcion: `Actividad eliminada: ${a.nombre} (${a.zona}) — actividadId ${a.id}.` });
-    renderTablaActividadesRH();
+    registrarAuditoriaEncargado({ modulo: 'actividades_staff', accion: 'eliminar_actividad', descripcion: `Actividad eliminada: ${a.nombre} (${a.zona}) — actividadId ${a.id}.` });
+    renderTablaActividadesEncargado();
     mostrarToast('Actividad eliminada.');
   });
 
@@ -297,32 +297,32 @@ function actualizarBotonAnunciarAct() {
 }
 
 function confirmarAnunciarActividadesAct(pendientes) {
-  abrirAutorizacionRH({
+  abrirAutorizacionEncargado({
     titulo: 'Anunciar actividades',
     mensaje: `Vas a anunciar ${pendientes.length} actividad${pendientes.length === 1 ? '' : 'es'} para la semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}. Aparecerán de inmediato en "Mis actividades" de cada encargado.`,
     onConfirmar: () => {
       const ids = pendientes.map(a => a.id);
-      const resultado = anunciarAsignacionesActividadStaff(ids, { usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre, usuarioRol: 'rh' });
+      const resultado = anunciarAsignacionesActividadStaff(ids, { usuarioId: ENCARGADO_IDENTIDAD.usuarioId, usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre, usuarioRol: 'encargado' });
       if (!resultado.ok) { mostrarToast(resultado.error); return; }
-      registrarAuditoriaRH({ modulo: 'actividades_staff', accion: 'anunciar_actividades', descripcion: `${resultado.cantidad} actividad(es) anunciadas para la semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}.` });
-      renderTablaActividadesRH();
+      registrarAuditoriaEncargado({ modulo: 'actividades_staff', accion: 'anunciar_actividades', descripcion: `${resultado.cantidad} actividad(es) anunciadas para la semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}.` });
+      renderTablaActividadesEncargado();
       mostrarToast('Actividades anunciadas.');
     }
   });
 }
 
-function confirmarFirmarRH(id) {
+function confirmarFirmarEncargado(id) {
   const a = obtenerAsignacionActividadStaffPorId(id);
   if (!a) return;
-  abrirAutorizacionRH({
-    titulo: 'Firmar por RH',
+  abrirAutorizacionEncargado({
+    titulo: 'Firmar por Encargado',
     mensaje: `Confirmas que revisaste físicamente que "${escapeHTMLAct(a.nombre)}" (${escapeHTMLAct(a.zona)}) fue realizada por ${escapeHTMLAct(a.encargadoNombre)}.`,
     onConfirmar: () => {
-      const resultado = firmarRHAsignacionActividadStaff(id, { usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre, usuarioRol: 'rh' });
+      const resultado = firmarEncargadoAsignacionActividadStaff(id, { usuarioId: ENCARGADO_IDENTIDAD.usuarioId, usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre, usuarioRol: 'encargado' });
       if (!resultado.ok) { mostrarToast(resultado.error); return; }
-      registrarAuditoriaRH({ modulo: 'actividades_staff', accion: 'firmar_actividad', descripcion: `Actividad verificada y firmada: ${a.nombre} (${a.zona}) — encargado ${a.encargadoNombre}.` });
-      renderTablaActividadesRH();
-      mostrarToast('Actividad firmada por RH.');
+      registrarAuditoriaEncargado({ modulo: 'actividades_staff', accion: 'firmar_actividad', descripcion: `Actividad verificada y firmada: ${a.nombre} (${a.zona}) — encargado ${a.encargadoNombre}.` });
+      renderTablaActividadesEncargado();
+      mostrarToast('Actividad firmada por Encargado.');
     }
   });
 }
@@ -457,19 +457,19 @@ function abrirModalCrearActividad() {
       observaciones
     };
 
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: 'Crear actividad',
       mensaje: `Vas a crear "${escapeHTMLAct(nombre)}" para la semana del ${formatearRangoSemanaActividadStaff(datos.semanaKey)}.`,
       onConfirmar: () => {
         const resultado = crearAsignacionActividadStaff({
           ...datos,
-          creadoPorId: RH_IDENTIDAD.usuarioId,
-          creadoPorNombre: RH_IDENTIDAD.usuarioNombre,
-          creadoPorRol: 'rh'
+          creadoPorId: ENCARGADO_IDENTIDAD.usuarioId,
+          creadoPorNombre: ENCARGADO_IDENTIDAD.usuarioNombre,
+          creadoPorRol: 'encargado'
         });
         if (!resultado.ok) { mostrarToast(resultado.error); return; }
-        registrarAuditoriaRH({ modulo: 'actividades_staff', accion: 'crear_actividad', descripcion: `Actividad creada: ${resultado.asignacion.nombre} (${resultado.asignacion.zona}) — semana del ${formatearRangoSemanaActividadStaff(resultado.asignacion.semanaKey)}.` });
-        if (resultado.asignacion.semanaKey === actSemanaKey) renderTablaActividadesRH();
+        registrarAuditoriaEncargado({ modulo: 'actividades_staff', accion: 'crear_actividad', descripcion: `Actividad creada: ${resultado.asignacion.nombre} (${resultado.asignacion.zona}) — semana del ${formatearRangoSemanaActividadStaff(resultado.asignacion.semanaKey)}.` });
+        if (resultado.asignacion.semanaKey === actSemanaKey) renderTablaActividadesEncargado();
         mostrarToast('Actividad creada.');
       }
     });
@@ -579,14 +579,14 @@ function abrirModalEditarActividad(id) {
       observaciones: document.getElementById('actEditObservaciones').value.trim()
     };
 
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: 'Guardar cambios',
       mensaje: `Vas a actualizar "${escapeHTMLAct(a.nombre)}".`,
       onConfirmar: () => {
-        const resultado = actualizarAsignacionActividadStaff(a.id, cambios, { usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre, usuarioRol: 'rh' });
+        const resultado = actualizarAsignacionActividadStaff(a.id, cambios, { usuarioId: ENCARGADO_IDENTIDAD.usuarioId, usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre, usuarioRol: 'encargado' });
         if (!resultado.ok) { mostrarToast(resultado.error); return; }
-        registrarAuditoriaRH({ modulo: 'actividades_staff', accion: 'editar_actividad', descripcion: `Actividad editada: ${a.nombre} (${a.zona}).` });
-        renderTablaActividadesRH();
+        registrarAuditoriaEncargado({ modulo: 'actividades_staff', accion: 'editar_actividad', descripcion: `Actividad editada: ${a.nombre} (${a.zona}).` });
+        renderTablaActividadesEncargado();
         mostrarToast('Actividad actualizada.');
       }
     });
@@ -628,7 +628,7 @@ function abrirDetalleActividad(id) {
       <span>Semana</span><strong>${formatearRangoSemanaActividadStaff(a.semanaKey)}</strong>
       <span>Estado</span><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span>
       ${a.observaciones ? `<span>Observaciones</span><strong>${escapeHTMLAct(a.observaciones)}</strong>` : ''}
-      ${a.fechaFirmaRH ? `<span>Firmado por RH</span><strong>${escapeHTMLAct(a.firmadoPorNombre)} · ${formatearFechaHoraAct(a.fechaFirmaRH)}</strong>` : ''}
+      ${a.fechaFirmaEncargado ? `<span>Firmado por Encargado</span><strong>${escapeHTMLAct(a.firmadoPorNombre)} · ${formatearFechaHoraAct(a.fechaFirmaEncargado)}</strong>` : ''}
     </div>
 
     <div class="eyebrow" style="margin-top:14px;">Responsables</div>
@@ -770,11 +770,11 @@ function renderPasoPreviewSorteo() {
   document.getElementById('actGuardarRepartoBtn').addEventListener('click', () => {
     const cantidadZonas = sorteoResultadoPreview.length;
     const resultado = aplicarResultadoSorteoZonasActividadStaff(sorteoResultadoPreview, {
-      usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre, usuarioRol: 'rh'
+      usuarioId: ENCARGADO_IDENTIDAD.usuarioId, usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre, usuarioRol: 'encargado'
     });
-    registrarAuditoriaRH({ modulo: 'actividades_staff', accion: 'sorteo_actividades', descripcion: `Reparto de ${cantidadZonas} zona(s) (${resultado.cantidad} actividad(es)) guardado para la semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}.` });
+    registrarAuditoriaEncargado({ modulo: 'actividades_staff', accion: 'sorteo_actividades', descripcion: `Reparto de ${cantidadZonas} zona(s) (${resultado.cantidad} actividad(es)) guardado para la semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}.` });
     cerrarModalAct();
-    renderTablaActividadesRH();
+    renderTablaActividadesEncargado();
     mostrarToast('Reparto guardado. Actividades listas para anunciar.');
   });
 
@@ -841,8 +841,8 @@ async function generarReporteSemanalAct() {
     agregarCanvasPaginadoAct(pdf, canvas);
     pdf.save(`MW_Actividades_Staff_${sanitizarNombreArchivoAct(actSemanaKey)}.pdf`);
 
-    if (typeof registrarAuditoriaRH === 'function') {
-      registrarAuditoriaRH({ modulo: 'actividades_staff', accion: 'generar_reporte', descripcion: `Reporte semanal generado — semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}.` });
+    if (typeof registrarAuditoriaEncargado === 'function') {
+      registrarAuditoriaEncargado({ modulo: 'actividades_staff', accion: 'generar_reporte', descripcion: `Reporte semanal generado — semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}.` });
     }
 
     mostrarToast('Reporte generado.');
@@ -860,7 +860,7 @@ async function generarReporteSemanalAct() {
 // organizadas las actividades ANTES de anunciar. Reutiliza EXACTAMENTE
 // el mismo motor de PDF que el reporte semanal (html2canvas + jsPDF +
 // agregarCanvasPaginadoAct) — nunca inventa un segundo formato. Nunca
-// cambia ningún estado ni notifica a nadie: es solo lectura, RH puede
+// cambia ningún estado ni notifica a nadie: es solo lectura, Encargado puede
 // generarlo las veces que quiera y seguir modificando responsables
 // después.
 // ============================================================
@@ -886,8 +886,8 @@ async function generarReporteOrganizacionAct() {
     agregarCanvasPaginadoAct(pdf, canvas);
     pdf.save(`MW_Organizacion_Actividades_${sanitizarNombreArchivoAct(actSemanaKey)}.pdf`);
 
-    if (typeof registrarAuditoriaRH === 'function') {
-      registrarAuditoriaRH({ modulo: 'actividades_staff', accion: 'generar_reporte_organizacion', descripcion: `Vista previa de organización generada — semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}. Este reporte NO anuncia las actividades.` });
+    if (typeof registrarAuditoriaEncargado === 'function') {
+      registrarAuditoriaEncargado({ modulo: 'actividades_staff', accion: 'generar_reporte_organizacion', descripcion: `Vista previa de organización generada — semana del ${formatearRangoSemanaActividadStaff(actSemanaKey)}. Este reporte NO anuncia las actividades.` });
     }
 
     mostrarToast('Reporte de organización generado. Las actividades todavía NO se han anunciado.');
@@ -1030,7 +1030,7 @@ function construirHTMLReporteSemanalAct(filas, semanaKey) {
             <th style="border:1px solid #000;padding:5px;text-align:left;">Encargado</th>
             <th style="border:1px solid #000;padding:5px;text-align:left;">Estado final</th>
             <th style="border:1px solid #000;padding:5px;text-align:left;">Fecha de confirmación</th>
-            <th style="border:1px solid #000;padding:5px;text-align:left;">RH que verificó</th>
+            <th style="border:1px solid #000;padding:5px;text-align:left;">Encargado que verificó</th>
           </tr>
         </thead>
         <tbody>
@@ -1042,7 +1042,7 @@ function construirHTMLReporteSemanalAct(filas, semanaKey) {
       </table>
 
       <div style="margin-top:14px;font-size:9px;color:#555;line-height:1.5;">
-        <strong>Enterado</strong> = el empleado confirmó que conocía la actividad. <strong>Firmado por RH</strong> = RH confirmó que la actividad fue realizada. <strong>No se realizó</strong> = al cierre de la semana no existía confirmación de cumplimiento por RH.
+        <strong>Enterado</strong> = el empleado confirmó que conocía la actividad. <strong>Firmado por Encargado</strong> = Encargado confirmó que la actividad fue realizada. <strong>No se realizó</strong> = al cierre de la semana no existía confirmación de cumplimiento por Encargado.
       </div>
     </div>
   `;

@@ -1,11 +1,11 @@
 // MW JOYERÍA — Lista de deseos y Solicitudes de resurtido
 //
 // Reemplaza al prototipo anterior (js/staff-deseos-ejemplo.js +
-// js/staff-lista-deseos.js / rh-lista-deseos.js / admin-lista-deseos.js
+// js/staff-lista-deseos.js / encargado-lista-deseos.js / admin-lista-deseos.js
 // en su forma vieja): antes era una sola pieza por solicitud, "hecha"
 // por una emprendedora identificada solo por nombre suelto, con un
 // pipeline fijo de 4 estados. Este archivo es el modelo nuevo,
-// compartido por Staff/RH/Admin — dos colecciones separadas
+// compartido por Staff/Encargado/Admin — dos colecciones separadas
 // conceptualmente, igual que pide el sistema real:
 //
 //   listaDeseos          — "una persona quiere esta pieza"
@@ -37,7 +37,7 @@ const ESTADOS_RESURTIDO = {
   atendida: 'Atendida'
 };
 
-const ROLES_CREADOR_DESEOS = { staff: 'Staff', rh: 'RH', admin: 'Admin' };
+const ROLES_CREADOR_DESEOS = { staff: 'Staff', encargado: 'Encargado', admin: 'Admin' };
 
 // Mapeo compartido a las clases de badge ya existentes en el portal
 // (ver css/styles.css) — ninguna es nueva, se reutilizan tal cual.
@@ -140,7 +140,7 @@ function crearSolicitudListaDeseos({ destinatario, personaId, piezas, creadoPorI
 
 }
 
-// "los roles autorizados" (sección 3) son: quien la creó (Staff/RH
+// "los roles autorizados" (sección 3) son: quien la creó (Staff/Encargado
 // sobre lo suyo) o Administración (sobre cualquiera) — ver
 // puedeGestionarListaDeseos() en cada controlador de página.
 function actualizarEstadoListaDeseos(id, nuevoEstado, { usuarioId, usuarioNombre, usuarioRol, comentario } = {}) {
@@ -243,13 +243,13 @@ function obtenerSolicitudResurtidoPorId(id) {
   return obtenerSolicitudesResurtido().find(s => s.id === id) || null;
 }
 
-// Solo Staff/RH pueden crear (sección 4) — el controlador de cada
+// Solo Staff/Encargado pueden crear (sección 4) — el controlador de cada
 // página ya restringe qué botones se muestran, pero también se valida
 // aquí para no depender únicamente de la UI.
 function crearSolicitudResurtido({ producto, variante, cantidadSugerida, comentario, solicitadoPorId, solicitadoPorNombre, solicitadoPorRol }) {
 
-  if (solicitadoPorRol !== 'staff' && solicitadoPorRol !== 'rh') {
-    return { ok: false, error: 'Solo Staff o RH pueden solicitar un resurtido.' };
+  if (solicitadoPorRol !== 'staff' && solicitadoPorRol !== 'encargado') {
+    return { ok: false, error: 'Solo Staff o Encargado pueden solicitar un resurtido.' };
   }
 
   producto = String(producto || '').trim();
@@ -430,7 +430,7 @@ function construirListaDeseosEjemplo() {
         { id: 'pz-ej-3', producto: 'Dije corazón minimalista', variante: '', cantidad: 2, observaciones: 'Uno para ella y uno para regalo.' }
       ],
       estado: 'disponible',
-      creadoPorId: 'rh01', creadoPorNombre: 'Recursos Humanos', creadoPorRol: 'rh',
+      creadoPorId: 'encargado01', creadoPorNombre: 'Valentina Cruz', creadoPorRol: 'encargado',
       fechaCreacion: new Date(ahora - 6 * dia).toISOString(),
       comentarioEstado: null
     },
@@ -487,7 +487,7 @@ function construirResurtidoEjemplo() {
       cantidadSugerida: 12,
       comentario: 'Es de las piezas más pedidas del mes y ya no queda en el local.',
       estado: 'revisada',
-      solicitadoPorId: 'rh01', solicitadoPorNombre: 'Recursos Humanos', solicitadoPorRol: 'rh',
+      solicitadoPorId: 'encargado01', solicitadoPorNombre: 'Valentina Cruz', solicitadoPorRol: 'encargado',
       fechaSolicitud: new Date(ahora - 5 * dia).toISOString(),
       observaciones: [{ texto: 'Ya se apartaron con el proveedor, llegan la próxima semana.', usuarioId: 'admin01', usuarioNombre: 'Claudia', fecha: new Date(ahora - 4 * dia).toISOString() }],
       revisadoPorId: 'admin01', revisadoPorNombre: 'Claudia', fechaRevisado: new Date(ahora - 4 * dia).toISOString(),

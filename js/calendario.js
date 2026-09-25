@@ -1,7 +1,7 @@
 // MW JOYERÍA — Calendario (solo lectura: Emprendedora / Líder)
 // Depende de EVENTOS_EJEMPLO (eventos-ejemplo.js) y de formatearFechaCorta
 // (definida en portal-common.js). Si eventos-modelo.js está cargado, lee
-// el calendario compartido (editado por Staff/RH/Admin) en vez de la
+// el calendario compartido (editado por Staff/Encargado/Admin) en vez de la
 // semilla de ejemplo.
 
 const DIAS_SEMANA_LARGO = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];

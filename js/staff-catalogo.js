@@ -593,7 +593,7 @@ function abrirModalProducto(producto = null) {
         <button type="button" class="btn btn-outline" id="agregarVarianteBtn" style="width:100%;margin-top:8px;">+ Agregar variante</button>
 
         <small class="field-help">
-          Una fila por cada combinación real de color y talla en inventario. Si el artículo no tiene color o talla, deja esos campos vacíos — solo captura la existencia. Esta cantidad solo es visible para Staff, RH y Admin.
+          Una fila por cada combinación real de color y talla en inventario. Si el artículo no tiene color o talla, deja esos campos vacíos — solo captura la existencia. Esta cantidad solo es visible para Staff, Encargado y Admin.
         </small>
 
       </div>
@@ -1521,7 +1521,7 @@ function abrirModalStock(producto, empleado) {
 
 
     <p class="demo-note">
-      Esta información es privada para Staff, RH y Admin.
+      Esta información es privada para Staff, Encargado y Admin.
     </p>
 
 

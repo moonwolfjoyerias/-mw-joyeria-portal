@@ -1,4 +1,4 @@
-// MW JOYERÍA — Catálogo RH
+// MW JOYERÍA — Catálogo Encargado
 //
 // Mismas capacidades que el catálogo de Staff (ver reglas y datos en
 // staff-catalogo-ejemplo.js, reutilizado tal cual): ver, buscar,
@@ -6,12 +6,12 @@
 //
 // Única diferencia respecto a Staff: las acciones sensibles NO piden
 // usuario/contraseña de nuevo — muestran un modal de Autorización con
-// mensaje dinámico (ver js/rh-comun.js) y quedan en la auditoría de RH.
+// mensaje dinámico (ver js/encargado-comun.js) y quedan en la auditoría de Encargado.
 //
 // ⚠️ TEMPORAL: localStorage simula la base de datos (misma clave que
 // usa Staff, para representar el mismo catálogo — ver Fase 3/Firestore).
 
-let catalogoRH = [];
+let catalogoEncargado = [];
 
 const STORAGE_KEY = 'mw_staff_catalogo_demo';
 
@@ -35,19 +35,19 @@ function cargarCatalogo() {
 
   if (guardado) {
     try {
-      catalogoRH = JSON.parse(guardado).map(migrarProductoAVariantes);
+      catalogoEncargado = JSON.parse(guardado).map(migrarProductoAVariantes);
     } catch (error) {
-      catalogoRH = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
+      catalogoEncargado = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
     }
   } else {
-    catalogoRH = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
+    catalogoEncargado = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
     guardarCatalogo();
   }
 
 }
 
 function guardarCatalogo() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(catalogoRH));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(catalogoEncargado));
 }
 
 
@@ -107,7 +107,7 @@ function renderCatalogo() {
   const categoria = document.getElementById('filterCategoria')?.value || '';
   const estado = document.getElementById('filterEstado')?.value || '';
 
-  const productos = catalogoRH.filter(p => {
+  const productos = catalogoEncargado.filter(p => {
 
     if (
       search &&
@@ -144,7 +144,7 @@ function renderCatalogo() {
   grid.innerHTML = productos.map(renderProducto).join('');
 
   grid.querySelectorAll('[data-editar]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalProducto(catalogoRH.find(p => p.id === btn.dataset.editar)));
+    btn.addEventListener('click', () => abrirModalProducto(catalogoEncargado.find(p => p.id === btn.dataset.editar)));
   });
 
   grid.querySelectorAll('[data-eliminar]').forEach(btn => {
@@ -152,17 +152,17 @@ function renderCatalogo() {
   });
 
   grid.querySelectorAll('[data-stock]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalStock(catalogoRH.find(p => p.id === btn.dataset.stock)));
+    btn.addEventListener('click', () => abrirModalStock(catalogoEncargado.find(p => p.id === btn.dataset.stock)));
   });
 
 }
 
 function actualizarResumenCatalogo() {
 
-  const total = catalogoRH.length;
-  const disponibles = catalogoRH.filter(productoDisponible).length;
-  const oro = catalogoRH.filter(p => p.material === 'oro-laminado').length;
-  const promedio = total ? catalogoRH.reduce((suma, p) => suma + Number(p.precioEtiqueta || 0), 0) / total : 0;
+  const total = catalogoEncargado.length;
+  const disponibles = catalogoEncargado.filter(productoDisponible).length;
+  const oro = catalogoEncargado.filter(p => p.material === 'oro-laminado').length;
+  const promedio = total ? catalogoEncargado.reduce((suma, p) => suma + Number(p.precioEtiqueta || 0), 0) / total : 0;
 
   const valores = {
     totalProductos: total,
@@ -242,8 +242,8 @@ function renderProducto(p) {
 // de guardar sí la pide, con el nombre real del producto.
 // ============================================================
 
-let imagenTemporalRH = '';
-let variantesTemporalRH = [];
+let imagenTemporalEncargado = '';
+let variantesTemporalEncargado = [];
 
 function abrirModalProducto(producto = null) {
 
@@ -257,8 +257,8 @@ function abrirModalProducto(producto = null) {
   box.classList.add('modal-box-wide');
 
   const editando = !!producto;
-  imagenTemporalRH = normalizarImagenProducto(producto?.imagen);
-  variantesTemporalRH = producto?.variantes?.length
+  imagenTemporalEncargado = normalizarImagenProducto(producto?.imagen);
+  variantesTemporalEncargado = producto?.variantes?.length
     ? producto.variantes.map(v => ({ ...v }))
     : [crearVarianteProducto()];
 
@@ -274,7 +274,7 @@ function abrirModalProducto(producto = null) {
 
     <div class="product-image-upload">
       <div class="image-preview" id="imagePreview">
-        <img src="${imagenTemporalRH}" id="previewImage" alt="">
+        <img src="${imagenTemporalEncargado}" id="previewImage" alt="">
       </div>
       <div class="image-upload-info">
         <strong>Foto del artículo</strong>
@@ -323,7 +323,7 @@ function abrirModalProducto(producto = null) {
         <label>Variantes (color / talla y existencia) *</label>
         <div id="variantesLista"></div>
         <button type="button" class="btn btn-outline" id="agregarVarianteBtn" style="width:100%;margin-top:8px;">+ Agregar variante</button>
-        <small class="field-help">Una fila por cada combinación real de color y talla en inventario. Si el artículo no tiene color o talla, deja esos campos vacíos — solo captura la existencia. Esta cantidad solo es visible para Staff, RH y Admin.</small>
+        <small class="field-help">Una fila por cada combinación real de color y talla en inventario. Si el artículo no tiene color o talla, deja esos campos vacíos — solo captura la existencia. Esta cantidad solo es visible para Staff, Encargado y Admin.</small>
       </div>
 
       <div class="form-field">
@@ -357,11 +357,11 @@ function abrirModalProducto(producto = null) {
 
   overlay.classList.add('open');
 
-  renderVariantesTemporalRH();
+  renderVariantesTemporalEncargado();
 
   document.getElementById('agregarVarianteBtn')?.addEventListener('click', () => {
-    variantesTemporalRH.push(crearVarianteProducto());
-    renderVariantesTemporalRH();
+    variantesTemporalEncargado.push(crearVarianteProducto());
+    renderVariantesTemporalEncargado();
   });
 
   document.getElementById('productoImagen')?.addEventListener('change', manejarImagen);
@@ -390,7 +390,7 @@ function abrirModalProducto(producto = null) {
       ? `Estás a punto de guardar los cambios de "${datos.nombre}".`
       : `Estás a punto de agregar "${datos.nombre}" al catálogo.`;
 
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: editando ? 'Autorizar cambios' : 'Autorizar nuevo producto',
       mensaje,
       onConfirmar: () => editando ? guardarEdicionProducto(producto.id, datos) : agregarProducto(datos)
@@ -407,12 +407,12 @@ function abrirModalProducto(producto = null) {
 // REPETIDOR DE VARIANTES (color / talla / existencia)
 // ============================================================
 
-function renderVariantesTemporalRH() {
+function renderVariantesTemporalEncargado() {
 
   const cont = document.getElementById('variantesLista');
   if (!cont) return;
 
-  cont.innerHTML = variantesTemporalRH.map((v, i) => `
+  cont.innerHTML = variantesTemporalEncargado.map((v, i) => `
     <div class="variante-row" data-variante-row="${v.id}">
       <span class="variante-numero">Variante ${i + 1}</span>
       <div class="variante-campos">
@@ -438,7 +438,7 @@ function renderVariantesTemporalRH() {
 
   cont.querySelectorAll('[data-campo]').forEach(input => {
     input.addEventListener('input', (e) => {
-      const variante = variantesTemporalRH.find(v => v.id === e.target.dataset.id);
+      const variante = variantesTemporalEncargado.find(v => v.id === e.target.dataset.id);
       if (!variante) return;
       const campo = e.target.dataset.campo;
       variante[campo] = campo === 'stock' ? e.target.value : e.target.value.trim();
@@ -447,12 +447,12 @@ function renderVariantesTemporalRH() {
 
   cont.querySelectorAll('[data-quitar-variante]').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (variantesTemporalRH.length <= 1) {
+      if (variantesTemporalEncargado.length <= 1) {
         mostrarToast('El producto debe tener al menos una variante.');
         return;
       }
-      variantesTemporalRH = variantesTemporalRH.filter(v => v.id !== btn.dataset.quitarVariante);
-      renderVariantesTemporalRH();
+      variantesTemporalEncargado = variantesTemporalEncargado.filter(v => v.id !== btn.dataset.quitarVariante);
+      renderVariantesTemporalEncargado();
     });
   });
 
@@ -476,9 +476,9 @@ function manejarImagen(e) {
   const reader = new FileReader();
 
   reader.onload = function (event) {
-    imagenTemporalRH = event.target.result;
+    imagenTemporalEncargado = event.target.result;
     const preview = document.getElementById('previewImage');
-    if (preview) preview.src = imagenTemporalRH;
+    if (preview) preview.src = imagenTemporalEncargado;
   };
 
   reader.readAsDataURL(archivo);
@@ -505,20 +505,20 @@ function obtenerDatosProducto() {
 
   if (!nombre) { mostrarToast('Escribe el nombre del producto.'); return null; }
   if (!descripcion) { mostrarToast('Agrega una descripción.'); return null; }
-  if (!variantesTemporalRH.length || variantesTemporalRH.some(v => Number.isNaN(Number(v.stock)) || Number(v.stock) < 0)) {
+  if (!variantesTemporalEncargado.length || variantesTemporalEncargado.some(v => Number.isNaN(Number(v.stock)) || Number(v.stock) < 0)) {
     mostrarToast('La existencia de alguna variante no es válida.');
     return null;
   }
   if (Number.isNaN(precioEtiqueta) || precioEtiqueta < 0) { mostrarToast('El precio etiqueta no es válido.'); return null; }
   if (Number.isNaN(descuento) || descuento < 0 || descuento > 100) { mostrarToast('El descuento no es válido (0 a 100).'); return null; }
 
-  const variantes = variantesTemporalRH.map(v => crearVarianteProducto(v));
+  const variantes = variantesTemporalEncargado.map(v => crearVarianteProducto(v));
 
   return {
     nombre, descripcion, material, categoria, calidad,
     variantes, precioEtiqueta, descuento,
     disponible: variantes.some(v => v.stock > 0),
-    imagen: imagenTemporalRH
+    imagen: imagenTemporalEncargado
   };
 
 }
@@ -533,42 +533,42 @@ function agregarProducto(datos) {
   const nuevoProducto = {
     id: 'prod-' + Date.now(),
     ...datos,
-    ultimaAccion: { tipo: 'Agregado', empleado: RH_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() }
+    ultimaAccion: { tipo: 'Agregado', empleado: ENCARGADO_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() }
   };
 
-  catalogoRH.unshift(nuevoProducto);
+  catalogoEncargado.unshift(nuevoProducto);
   guardarCatalogo();
   cerrarModal();
   renderCatalogo();
 
-  registrarAuditoriaRH({ modulo: 'catalogo', accion: 'agregar_producto', descripcion: `Producto agregado: ${datos.nombre}` });
-  mostrarToast(`Producto agregado por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: 'catalogo', accion: 'agregar_producto', descripcion: `Producto agregado: ${datos.nombre}` });
+  mostrarToast(`Producto agregado por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }
 
 function guardarEdicionProducto(id, datos) {
 
-  const producto = catalogoRH.find(p => p.id === id);
+  const producto = catalogoEncargado.find(p => p.id === id);
   if (!producto) return;
 
   Object.assign(producto, datos);
-  producto.ultimaAccion = { tipo: 'Editado', empleado: RH_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() };
+  producto.ultimaAccion = { tipo: 'Editado', empleado: ENCARGADO_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() };
 
   guardarCatalogo();
   cerrarModal();
   renderCatalogo();
 
-  registrarAuditoriaRH({ modulo: 'catalogo', accion: 'editar_producto', descripcion: `Producto editado: ${datos.nombre}` });
-  mostrarToast(`Cambios guardados por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: 'catalogo', accion: 'editar_producto', descripcion: `Producto editado: ${datos.nombre}` });
+  mostrarToast(`Cambios guardados por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }
 
 function confirmarEliminar(id) {
 
-  const producto = catalogoRH.find(p => p.id === id);
+  const producto = catalogoEncargado.find(p => p.id === id);
   if (!producto) return;
 
-  abrirAutorizacionRH({
+  abrirAutorizacionEncargado({
     titulo: 'Autorizar eliminación',
     mensaje: `Estás a punto de eliminar "${producto.nombre}" del catálogo. Esta acción no se puede deshacer.`,
     peligrosa: true,
@@ -579,15 +579,15 @@ function confirmarEliminar(id) {
 
 function eliminarProducto(id) {
 
-  const producto = catalogoRH.find(p => p.id === id);
+  const producto = catalogoEncargado.find(p => p.id === id);
   if (!producto) return;
 
-  catalogoRH = catalogoRH.filter(p => p.id !== id);
+  catalogoEncargado = catalogoEncargado.filter(p => p.id !== id);
   guardarCatalogo();
   renderCatalogo();
 
-  registrarAuditoriaRH({ modulo: 'catalogo', accion: 'eliminar_producto', descripcion: `Producto eliminado: ${producto.nombre}` });
-  mostrarToast(`"${producto.nombre}" fue eliminado por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: 'catalogo', accion: 'eliminar_producto', descripcion: `Producto eliminado: ${producto.nombre}` });
+  mostrarToast(`"${producto.nombre}" fue eliminado por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }
 
@@ -626,7 +626,7 @@ function abrirModalStock(producto) {
       `).join('')}
     </div>
 
-    <p class="demo-note">Esta información es privada para Staff, RH y Admin.</p>
+    <p class="demo-note">Esta información es privada para Staff, Encargado y Admin.</p>
 
     <button class="btn btn-primary" id="guardarStockBtn" style="width:100%;">Guardar existencia</button>
   `;
@@ -654,7 +654,7 @@ function abrirModalStock(producto) {
 
     const totalNuevo = Array.from(nuevosValores.values()).reduce((suma, v) => suma + v, 0);
 
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: 'Autorizar existencia',
       mensaje: `Estás a punto de cambiar la existencia de "${producto.nombre}" a ${totalNuevo} piezas en total.`,
       onConfirmar: () => guardarStock(producto.id, nuevosValores)
@@ -666,21 +666,21 @@ function abrirModalStock(producto) {
 
 function guardarStock(id, nuevosValores) {
 
-  const producto = catalogoRH.find(p => p.id === id);
+  const producto = catalogoEncargado.find(p => p.id === id);
   if (!producto) return;
 
   producto.variantes.forEach(v => {
     if (nuevosValores.has(v.id)) v.stock = nuevosValores.get(v.id);
   });
   producto.disponible = productoDisponible(producto);
-  producto.ultimaAccion = { tipo: 'Existencia modificada', empleado: RH_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() };
+  producto.ultimaAccion = { tipo: 'Existencia modificada', empleado: ENCARGADO_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() };
 
   guardarCatalogo();
   cerrarModal();
   renderCatalogo();
 
-  registrarAuditoriaRH({ modulo: 'catalogo', accion: 'modificar_existencia', descripcion: `Existencia de "${producto.nombre}" cambiada a ${stockTotalProducto(producto)} piezas` });
-  mostrarToast(`Existencia actualizada por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: 'catalogo', accion: 'modificar_existencia', descripcion: `Existencia de "${producto.nombre}" cambiada a ${stockTotalProducto(producto)} piezas` });
+  mostrarToast(`Existencia actualizada por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }
 

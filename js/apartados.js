@@ -1,7 +1,7 @@
 // MW JOYERÍA — Mis apartados (Emprendedora / Líder)
 //
 // Las piezas y el estado del depósito que se muestran aquí vienen de
-// apartados-modelo.js — la MISMA fuente de datos que usan Staff/RH/Admin
+// apartados-modelo.js — la MISMA fuente de datos que usan Staff/Encargado/Admin
 // para crear, liquidar y cancelar ventanas de apartado — filtrados a las
 // ventanas de la persona con sesión abierta (usuarioId = el id REAL de
 // personas-ejemplo.js, vía obtenerIdPersonaActualPortal(); antes usaba
@@ -146,10 +146,10 @@ function setText(id, val) {
   if (el) el.textContent = val;
 }
 
-// Avisa a Staff y RH de una acción que ellos deben revisar/confirmar
+// Avisa a Staff y Encargado de una acción que ellos deben revisar/confirmar
 // (quitar pieza, cambiar variante, avisar transferencia). El link lleva
-// directo a la fila de esa persona en la tabla operativa de Staff/RH
-// (?buscar=NOMBRE — ver js/staff-apartados.js / js/rh-apartados.js).
+// directo a la fila de esa persona en la tabla operativa de Staff/Encargado
+// (?buscar=NOMBRE — ver js/staff-apartados.js / js/encargado-apartados.js).
 function notificarEquipoOperativo(texto, nombrePersona) {
   if (typeof agregarNotificacion !== 'function') return;
   const query = nombrePersona ? `?buscar=${encodeURIComponent(nombrePersona)}` : '';
@@ -364,7 +364,7 @@ function mostrarModalPagoConMonto(ventana, piezas, totalFinal, notaExtra, decisi
         ? ' — decidió guardar su depósito como crédito'
         : '';
     // Se guarda la hora en que la persona declaró haber pagado — es una
-    // señal informativa para Staff/RH/Admin (por ejemplo, si dos
+    // señal informativa para Staff/Encargado/Admin (por ejemplo, si dos
     // personas reclaman la misma pieza, quién avisó primero), pero
     // nunca sustituye la confirmación manual de Staff con la hora real
     // en que se recibió el depósito (eso se registra aparte al liquidar).

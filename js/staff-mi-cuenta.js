@@ -188,8 +188,8 @@ function validarAutorizacionNomina() {
 // patrón que empleadoNominaDeCuentaActividadStaff() en
 // actividades-staff-modelo.js. Antes esta función mostraba un objeto
 // de ejemplo (NOMINA_SEMANA_ACTUAL) genérico, igual para las 8 personas
-// de Staff — ahora sí es el periodo real que RH capturó (o el borrador
-// prellenado con su sueldo base si RH todavía no ha capturado nada
+// de Staff — ahora sí es el periodo real que Encargado capturó (o el borrador
+// prellenado con su sueldo base si Encargado todavía no ha capturado nada
 // esta semana).
 function abrirReciboNomina(empleado) {
 
@@ -207,7 +207,7 @@ function abrirReciboNomina(empleado) {
       <button class="modal-close" data-close>×</button>
       <span class="eyebrow">Recibo de nómina</span>
       <h3 style="margin-top:5px;">${escapeHTML(empleado.nombre)}</h3>
-      <p class="modal-sub">No encontramos tu registro en Nómina todavía — pide a RH que verifique tu alta.</p>
+      <p class="modal-sub">No encontramos tu registro en Nómina todavía — pide a Encargado que verifique tu alta.</p>
       <button class="btn btn-outline" style="width:100%;" data-close>Cerrar</button>
     `;
     overlay.classList.add('open');
@@ -231,7 +231,7 @@ function abrirReciboNomina(empleado) {
 
     <h3 style="margin-top:5px;">${escapeHTML(empleado.nombre)}</h3>
 
-    <p class="modal-sub">Semana del ${escapeHTML(formatearRangoSemanaNomina(periodoKey))}${!periodo.guardado ? ' — RH todavía no ha capturado esta semana' : ''}</p>
+    <p class="modal-sub">Semana del ${escapeHTML(formatearRangoSemanaNomina(periodoKey))}${!periodo.guardado ? ' — Encargado todavía no ha capturado esta semana' : ''}</p>
 
     <div class="detail-grid">
       ${percepciones.map(c => `<div><span>${escapeHTML(c.nombre)}</span><strong>$${c.total.toLocaleString('es-MX')} MXN</strong></div>`).join('')}

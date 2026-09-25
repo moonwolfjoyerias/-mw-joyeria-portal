@@ -27,7 +27,7 @@ function setTextDash(id, valor) {
 
 async function renderResumenGeneral() {
 
-  // Catálogo — misma clave de localStorage que usan Staff/RH/Admin.
+  // Catálogo — misma clave de localStorage que usan Staff/Encargado/Admin.
   let catalogo = [];
   try {
     catalogo = JSON.parse(localStorage.getItem('mw_staff_catalogo_demo')) || [];
@@ -37,7 +37,7 @@ async function renderResumenGeneral() {
   if (!catalogo.length && typeof CATALOGO_EJEMPLO !== 'undefined') catalogo = CATALOGO_EJEMPLO;
   setTextDash('dashCatalogoDisponibles', catalogo.filter(p => p.disponible).length);
 
-  // Apartados — misma fuente que el resumen de Staff/RH.
+  // Apartados — misma fuente que el resumen de Staff/Encargado.
   const ventanas = typeof calcularVentanasStaffActuales === 'function' ? calcularVentanasStaffActuales() : [];
   setTextDash('dashApartadosVencidos', ventanas.filter(v => v.estado === 'activa' && ventanaEstaVencida(v)).length);
 
@@ -66,7 +66,7 @@ async function renderResumenGeneral() {
   const solicitudes = typeof obtenerSolicitudes === 'function' ? await obtenerSolicitudes() : [];
   setTextDash('dashSolicitudesPendientes', solicitudes.filter(s => s.estado === 'pendiente').length);
 
-  // Lista de deseos — misma fuente que Staff/RH/Admin.
+  // Lista de deseos — misma fuente que Staff/Encargado/Admin.
   const deseos = typeof obtenerListaDeseos === 'function' ? obtenerListaDeseos() : [];
   setTextDash('dashDeseosActivos', deseos.filter(d => d.estado === 'pendiente' || d.estado === 'en_seguimiento').length);
 
@@ -77,7 +77,7 @@ async function renderResumenGeneral() {
 }
 
 // ============================================================
-// PRÓXIMO PERIODO DE PAGO (mismo cálculo que usa RH → Inicio)
+// PRÓXIMO PERIODO DE PAGO (mismo cálculo que usa Encargado → Inicio)
 // ============================================================
 
 function renderProximoPagoDash() {
@@ -111,7 +111,7 @@ function obtenerProximoPeriodoPagoDash() {
 }
 
 // ============================================================
-// EVENTOS DE ESTA SEMANA (mismo calendario compartido que Staff/RH)
+// EVENTOS DE ESTA SEMANA (mismo calendario compartido que Staff/Encargado)
 // ============================================================
 
 function renderEventosSemanaDash() {

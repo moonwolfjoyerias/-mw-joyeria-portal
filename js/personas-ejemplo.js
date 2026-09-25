@@ -9,7 +9,7 @@
 // la sección "Apartados"/"Compras" del perfil muestra datos reales, no
 // inventados. El resto de módulos del sistema (Mi equipo, Mi cuenta de
 // líder) seguirán usando sus propios datos de ejemplo por separado; no
-// se modificaron para no romper Staff/RH ni las vistas de Líder.
+// se modificaron para no romper Staff/Encargado ni las vistas de Líder.
 //
 // ⚠️ TEMPORAL: localStorage simula la base de datos. Se reemplaza por
 // Firestore en Fase 3 sin cambiar la forma de este objeto.
@@ -462,7 +462,7 @@ function obtenerPersonaPorId(id) {
 }
 
 // Usado por "Mi cuenta" de Emprendedora/Líder para guardar su propia
-// foto de perfil (misma idea que editarCuentaInterna() para Staff/RH/
+// foto de perfil (misma idea que editarCuentaInterna() para Staff/Encargado/
 // Admin en cuentas-internas-modelo.js, pero sobre el registro de
 // personas).
 function actualizarFotoPersona(id, fotoUrl) {

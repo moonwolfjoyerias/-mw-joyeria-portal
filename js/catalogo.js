@@ -4,10 +4,10 @@
 // catalogo-productos-ejemplo.js) y "Apartar" era una vista de prueba
 // que no reservaba nada de verdad. Ahora lee el MISMO catálogo real
 // con variantes (Modelo→Color→Talla, stock por variante) que usan
-// Staff/RH/Admin — obtenerCatalogoStaffStorage() de
+// Staff/Encargado/Admin — obtenerCatalogoStaffStorage() de
 // catalogo-variantes-modelo.js — y "Apartar" crea/agrega una pieza real
 // en apartados-modelo.js (la misma fuente que ya usa "Mis apartados" y
-// las páginas de Staff/RH/Admin), descontando existencia real de la
+// las páginas de Staff/Encargado/Admin), descontando existencia real de la
 // variante elegida.
 
 const MATERIALES = [
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (clearBtn) clearBtn.addEventListener('click', limpiarFiltros);
 });
 
-// ---------- Catálogo real (mismo que Staff/RH/Admin) ----------
+// ---------- Catálogo real (mismo que Staff/Encargado/Admin) ----------
 function obtenerCatalogoReal() {
   return typeof obtenerCatalogoStaffStorage === 'function' ? obtenerCatalogoStaffStorage() : [];
 }

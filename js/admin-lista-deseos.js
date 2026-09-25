@@ -2,10 +2,10 @@
 //
 // Dos secciones (ver js/lista-deseos-modelo.js):
 // - "💜 Listas de deseos": TODAS las solicitudes creadas por
-//   Staff/RH/Admin, filtrables por Emprendedora/público, producto,
+//   Staff/Encargado/Admin, filtrables por Emprendedora/público, producto,
 //   estado, fecha y usuario que la creó — Administración puede crear
 //   solicitudes y cambiar el estado de cualquiera (no solo las suyas).
-// - "📦 Solicitudes de resurtido": TODAS las solicitudes de Staff/RH
+// - "📦 Solicitudes de resurtido": TODAS las solicitudes de Staff/Encargado
 //   — Administración es el único rol que las administra (ver detalle,
 //   marcar revisada/atendida, agregar observaciones).
 
@@ -413,7 +413,7 @@ function renderTablaResurtidoAdmin() {
   if (count) count.textContent = `${solicitudes.length} solicitud${solicitudes.length === 1 ? '' : 'es'}`;
 
   if (!solicitudes.length) {
-    tbody.innerHTML = `<tr><td colspan="7" class="catalog-empty-cell"><strong>No hay solicitudes de resurtido</strong><span>Aquí aparecerán las que envíen Staff y RH.</span></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="catalog-empty-cell"><strong>No hay solicitudes de resurtido</strong><span>Aquí aparecerán las que envíen Staff y Encargado.</span></td></tr>`;
     return;
   }
 

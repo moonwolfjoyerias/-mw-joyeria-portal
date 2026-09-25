@@ -1,8 +1,8 @@
-// MW JOYERÍA — RH: Nómina
+// MW JOYERÍA — Encargado: Nómina
 //
 // Copia adaptada de js/admin-nomina.js (mismo patrón que ya usa el
 // resto del portal: cada rol tiene su propio controlador aunque haya
-// duplicación — ver admin-apartados.js / rh-apartados.js). RH captura,
+// duplicación — ver admin-apartados.js / encargado-apartados.js). Encargado captura,
 // edita y calcula la nómina igual que Administración, pero:
 //   - No puede registrar el pago (eso es exclusivo de Administración,
 //     y solo después de "Validado por Administración").
@@ -13,7 +13,7 @@
 //     conceptos de nómina libremente (igual que Administración), pero
 //     NUNCA puede dar de alta un empleado nuevo ni darlo de baja
 //     directamente — "Dar de baja" desde aquí abre la misma solicitud
-//     de baja de "Mis solicitudes de empleados" (RH solicita →
+//     de baja de "Mis solicitudes de empleados" (Encargado solicita →
 //     Administración aprueba/deniega → el sistema ejecuta la acción).
 
 let nomVista = 'lista';
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderVistaActualNomina() {
   if (nomVista === 'lista') renderTablaPrincipalNomina();
   else if (nomVista === 'datos') renderVistaDatosNomina();
-  else if (nomVista === 'solicitudes') renderVistaSolicitudesEmpleadosRH();
+  else if (nomVista === 'solicitudes') renderVistaSolicitudesEmpleadosEncargado();
 }
 
 // ============================================================
@@ -101,8 +101,8 @@ function recuperarBorradorNomina() {
       campo: c.campo,
       valorAnterior: c.valorAnterior,
       valorNuevo: c.valorNuevo,
-      usuarioAdminId: RH_IDENTIDAD.usuarioId,
-      usuarioAdminNombre: RH_IDENTIDAD.usuarioNombre,
+      usuarioAdminId: ENCARGADO_IDENTIDAD.usuarioId,
+      usuarioAdminNombre: ENCARGADO_IDENTIDAD.usuarioNombre,
       motivo: 'Recuperado de un borrador local sin sincronizar'
     });
   });
@@ -147,8 +147,8 @@ function sincronizarNomina() {
       campo: c.campo,
       valorAnterior: c.valorAnterior,
       valorNuevo: c.valorNuevo,
-      usuarioAdminId: RH_IDENTIDAD.usuarioId,
-      usuarioAdminNombre: RH_IDENTIDAD.usuarioNombre
+      usuarioAdminId: ENCARGADO_IDENTIDAD.usuarioId,
+      usuarioAdminNombre: ENCARGADO_IDENTIDAD.usuarioNombre
     });
   });
   nomPendienteCambios = [];
@@ -355,7 +355,7 @@ function renderVistaDetalleNomina() {
         <div>
           <h3 class="cfg-card-title" style="margin-bottom:4px;">Estado de la nómina — ${formatearRangoSemanaNomina(nomPeriodoActual)}</h3>
           ${badgeEstadoNominaHTML(estadoNomina)}
-          ${nomPeriodoEnEdicion.validacionRH ? `<p class="cfg-card-sub" style="margin-top:8px;">Enviada a validación el ${formatearFechaHoraNomina(nomPeriodoEnEdicion.validacionRH.fecha)}.</p>` : ''}
+          ${nomPeriodoEnEdicion.validacionEncargado ? `<p class="cfg-card-sub" style="margin-top:8px;">Enviada a validación el ${formatearFechaHoraNomina(nomPeriodoEnEdicion.validacionEncargado.fecha)}.</p>` : ''}
           ${nomPeriodoEnEdicion.validacionAdmin ? `<p class="cfg-card-sub" style="margin-top:4px;">Validada por ${escapeHTMLNomina(nomPeriodoEnEdicion.validacionAdmin.usuarioNombre)} el ${formatearFechaHoraNomina(nomPeriodoEnEdicion.validacionAdmin.fecha)}.</p>` : ''}
           ${estadoNomina === 'correccion_solicitada' && nomPeriodoEnEdicion.comentarioCorreccion ? `<p class="cfg-card-sub" style="margin-top:4px;"><strong>Comentario de Administración:</strong> ${escapeHTMLNomina(nomPeriodoEnEdicion.comentarioCorreccion)}</p>` : ''}
           ${estadoNomina === 'necesita_validacion_admin' ? `<p class="cfg-card-sub" style="margin-top:4px;">Esperando revisión de Administración. Puedes consultar esta nómina, pero no puedes marcarla como validada.</p>` : ''}
@@ -458,19 +458,19 @@ function renderVistaDetalleNomina() {
   document.getElementById('nomEnviarValidacionBtn')?.addEventListener('click', () => confirmarEnviarNominaAValidacion(empleado));
 
   document.getElementById('nomFechaPagoInput')?.addEventListener('change', (e) => {
-    const resultado = actualizarFechaPagoNomina(empleado.id, nomPeriodoActual, e.target.value, { usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre, usuarioRol: 'rh' });
+    const resultado = actualizarFechaPagoNomina(empleado.id, nomPeriodoActual, e.target.value, { usuarioId: ENCARGADO_IDENTIDAD.usuarioId, usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre, usuarioRol: 'encargado' });
     if (!resultado.ok) { mostrarToast(resultado.error); return; }
     nomPeriodoEnEdicion.fechaPagoProgramada = resultado.periodo.fechaPagoProgramada;
-    registrarAuditoriaRH({ modulo: 'nomina', accion: 'modificar_fecha_pago', descripcion: `Fecha de pago de ${empleado.nombre} (${formatearRangoSemanaNomina(nomPeriodoActual)}) cambiada a ${formatearFechaNomina(resultado.periodo.fechaPagoProgramada)}.` });
+    registrarAuditoriaEncargado({ modulo: 'nomina', accion: 'modificar_fecha_pago', descripcion: `Fecha de pago de ${empleado.nombre} (${formatearRangoSemanaNomina(nomPeriodoActual)}) cambiada a ${formatearFechaNomina(resultado.periodo.fechaPagoProgramada)}.` });
     renderResumenTotalesNomina();
     mostrarToast('Fecha de pago actualizada.');
   });
 
   document.getElementById('nomMetodoPagoInput')?.addEventListener('change', (e) => {
-    const resultado = actualizarMetodoPagoNomina(empleado.id, nomPeriodoActual, e.target.value, { usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre, usuarioRol: 'rh' });
+    const resultado = actualizarMetodoPagoNomina(empleado.id, nomPeriodoActual, e.target.value, { usuarioId: ENCARGADO_IDENTIDAD.usuarioId, usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre, usuarioRol: 'encargado' });
     if (!resultado.ok) { mostrarToast(resultado.error); return; }
     nomPeriodoEnEdicion.metodoPago = resultado.periodo.metodoPago;
-    registrarAuditoriaRH({ modulo: 'nomina', accion: 'modificar_metodo_pago', descripcion: `Método de pago de ${empleado.nombre} (${formatearRangoSemanaNomina(nomPeriodoActual)}) cambiado a ${resultado.periodo.metodoPago}.` });
+    registrarAuditoriaEncargado({ modulo: 'nomina', accion: 'modificar_metodo_pago', descripcion: `Método de pago de ${empleado.nombre} (${formatearRangoSemanaNomina(nomPeriodoActual)}) cambiado a ${resultado.periodo.metodoPago}.` });
     renderResumenTotalesNomina();
     mostrarToast('Método de pago actualizado.');
   });
@@ -481,15 +481,15 @@ function renderVistaDetalleNomina() {
 }
 
 // ============================================================
-// VALIDACIÓN: RH ENVÍA A ADMINISTRACIÓN
+// VALIDACIÓN: Encargado ENVÍA A ADMINISTRACIÓN
 // ============================================================
 
 function confirmarEnviarNominaAValidacion(empleado) {
-  abrirAutorizacionRH({
+  abrirAutorizacionEncargado({
     titulo: 'Validar nómina',
     mensaje: `Vas a enviar la nómina de <strong>${escapeHTMLNomina(empleado.nombre)}</strong> (${escapeHTMLNomina(formatearRangoSemanaNomina(nomPeriodoActual))}) a validación de Administración.`,
     onConfirmar: () => {
-      const resultado = enviarNominaAValidacion(empleado.id, nomPeriodoActual, { usuarioId: RH_IDENTIDAD.usuarioId, usuarioNombre: RH_IDENTIDAD.usuarioNombre });
+      const resultado = enviarNominaAValidacion(empleado.id, nomPeriodoActual, { usuarioId: ENCARGADO_IDENTIDAD.usuarioId, usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre });
       if (!resultado.ok) { mostrarToast(resultado.error); return; }
       mostrarToast('Nómina enviada a validación de Administración.');
       renderVistaDetalleNomina();
@@ -669,7 +669,7 @@ function eliminarFilaConceptoNomina(filaId) {
   const fila = nomPeriodoEnEdicion.conceptos.find(f => f.filaId === filaId);
   if (!fila) return;
 
-  abrirAutorizacionRH({
+  abrirAutorizacionEncargado({
     titulo: 'Eliminar concepto',
     mensaje: `Vas a eliminar "${escapeHTMLNomina(fila.nombre)}" (${fmtMoneyNomina(fila.total)}) de esta semana.`,
     onConfirmar: () => {
@@ -757,7 +757,7 @@ function abrirModalAgregarConceptoFila() {
 // ============================================================
 // DESFASE DE HORAS — "De inicio" (una sola vez, calculado desde la
 // fecha de inicio) o "Normal" (cambio de turno, horas de más/menos
-// que RH captura a mano y decide si se pagan como horas normales o
+// que Encargado captura a mano y decide si se pagan como horas normales o
 // como horas extra). Se elige al capturar la nómina, no en Datos.
 // ============================================================
 
@@ -876,8 +876,8 @@ function abrirModalDesfaseHoras(empleado) {
       const resultado = aplicarDesfaseInicioNomina(empleado.id, modo);
       if (!resultado.ok) { error.style.display = 'block'; error.textContent = resultado.error; return; }
 
-      if (typeof registrarAuditoriaRH === 'function') {
-        registrarAuditoriaRH({
+      if (typeof registrarAuditoriaEncargado === 'function') {
+        registrarAuditoriaEncargado({
           modulo: 'nomina',
           accion: 'aplicar_desfase_inicio',
           descripcion: `Desfase de inicio aplicado a ${empleado.nombre} (${formatearRangoSemanaNomina(resultado.periodoQuePaga)}).`
@@ -1016,7 +1016,7 @@ function generarComprobanteNomina() {
   if (!empleado) return;
 
   if (nomPendienteCambios.length) {
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: 'Hay cambios sin sincronizar',
       mensaje: 'Este comprobante se generará antes de que algunos ajustes terminen de sincronizarse. Se recomienda esperar unos segundos. ¿Generar de todas formas?',
       peligrosa: true,
@@ -1082,7 +1082,7 @@ function obtenerDireccionMWNomina() {
   return 'Ignacio Aldama #400 Local 21, Centro Histórico, San Luis Potosí, San Luis Potosí, CP 78000';
 }
 
-// Réplica visual literal del machote real de RH (PRUEBA_CAMI.xlsx, hoja
+// Réplica visual literal del machote real de Encargado (PRUEBA_CAMI.xlsx, hoja
 // "Cam") — mismo grid, mismo lila, mismo bloque de TOTAL. Igual que el
 // que genera Administración: los datos cambian, el diseño no.
 const NOM_RECIBO_COL_WIDTHS = ['16.98%', '12.52%', '15.46%', '12.52%', '13.47%', '10.54%', '6.91%', '11.60%'];
@@ -1219,7 +1219,7 @@ function construirHTMLComprobanteNomina(empleado, periodo) {
 // ============================================================
 // VISTA: DATOS (Empleados / Conceptos de nómina)
 //
-// RH ve y edita los mismos catálogos que Administración, con una sola
+// Encargado ve y edita los mismos catálogos que Administración, con una sola
 // diferencia: nunca puede dar de alta ni dar de baja un empleado
 // directamente. "Solicitar baja" desde aquí abre el mismo modal de
 // "Mis solicitudes de empleados" (pre-cargado con este empleado) en
@@ -1241,14 +1241,14 @@ function renderVistaDatosNomina() {
   document.getElementById('nomDatosEmpleados').hidden = nomDatosTab !== 'empleados';
   document.getElementById('nomDatosConceptos').hidden = nomDatosTab !== 'conceptos';
 
-  if (nomDatosTab === 'empleados') renderDatosEmpleadosRH();
-  else renderDatosConceptosRH();
+  if (nomDatosTab === 'empleados') renderDatosEmpleadosEncargado();
+  else renderDatosConceptosEncargado();
 
 }
 
 // ---------- Empleados ----------
 
-function renderDatosEmpleadosRH() {
+function renderDatosEmpleadosEncargado() {
 
   const cont = document.getElementById('nomDatosEmpleados');
   const empleados = obtenerEmpleadosNomina();
@@ -1287,7 +1287,7 @@ function renderDatosEmpleadosRH() {
   cont.querySelectorAll('[data-nom-editar-empleado]').forEach(btn => btn.addEventListener('click', () => abrirModalEmpleadoNomina(btn.getAttribute('data-nom-editar-empleado'))));
   cont.querySelectorAll('[data-nom-solicitar-baja]').forEach(btn => btn.addEventListener('click', () => {
     const empleado = obtenerEmpleadoNominaPorId(btn.getAttribute('data-nom-solicitar-baja'));
-    if (empleado) abrirModalSolicitudBajaRH([empleado]);
+    if (empleado) abrirModalSolicitudBajaEncargado([empleado]);
   }));
 
 }
@@ -1316,7 +1316,7 @@ function abrirModalEmpleadoNomina(id) {
       <label>Cargo
         <select id="nomEmpCargo">
           <option value="staff" ${empleado?.cargo === 'staff' ? 'selected' : ''}>Staff</option>
-          <option value="rh" ${empleado?.cargo === 'rh' ? 'selected' : ''}>RH</option>
+          <option value="encargado" ${empleado?.cargo === 'encargado' ? 'selected' : ''}>Encargado</option>
           <option value="admin" ${empleado?.cargo === 'admin' ? 'selected' : ''}>Administrativo</option>
         </select>
       </label>
@@ -1400,7 +1400,7 @@ function abrirModalEmpleadoNomina(id) {
 
   document.getElementById('nomEmpGuardarBtn')?.addEventListener('click', () => {
 
-    if (!empleado) return; // RH nunca da de alta directamente
+    if (!empleado) return; // Encargado nunca da de alta directamente
 
     const datos = {
       nombre: document.getElementById('nomEmpNombre').value.trim(),
@@ -1423,8 +1423,8 @@ function abrirModalEmpleadoNomina(id) {
       return;
     }
 
-    if (typeof registrarAuditoriaRH === 'function') {
-      registrarAuditoriaRH({
+    if (typeof registrarAuditoriaEncargado === 'function') {
+      registrarAuditoriaEncargado({
         modulo: 'nomina',
         accion: 'editar_empleado',
         descripcion: `Empleado editado: ${datos.nombre} (${datos.numeroEmpleado})`
@@ -1433,7 +1433,7 @@ function abrirModalEmpleadoNomina(id) {
 
     cerrar();
     mostrarToast('Empleado actualizado.');
-    renderDatosEmpleadosRH();
+    renderDatosEmpleadosEncargado();
 
   });
 
@@ -1441,7 +1441,7 @@ function abrirModalEmpleadoNomina(id) {
 
 // ---------- Conceptos ----------
 
-function renderDatosConceptosRH() {
+function renderDatosConceptosEncargado() {
 
   const cont = document.getElementById('nomDatosConceptos');
   const conceptos = obtenerConceptosNomina();
@@ -1484,14 +1484,14 @@ function renderDatosConceptosRH() {
   cont.querySelectorAll('[data-nom-desactivar-concepto]').forEach(btn => btn.addEventListener('click', () => {
     desactivarConceptoNomina(btn.getAttribute('data-nom-desactivar-concepto'));
     mostrarToast('Concepto desactivado.');
-    renderDatosConceptosRH();
+    renderDatosConceptosEncargado();
   }));
   cont.querySelectorAll('[data-nom-activar-concepto]').forEach(btn => btn.addEventListener('click', () => {
     activarConceptoNomina(btn.getAttribute('data-nom-activar-concepto'));
     mostrarToast('Concepto activado.');
-    renderDatosConceptosRH();
+    renderDatosConceptosEncargado();
   }));
-  cont.querySelectorAll('[data-nom-eliminar-concepto]').forEach(btn => btn.addEventListener('click', () => confirmarEliminarConceptoNomina(btn.getAttribute('data-nom-eliminar-concepto'), renderDatosConceptosRH)));
+  cont.querySelectorAll('[data-nom-eliminar-concepto]').forEach(btn => btn.addEventListener('click', () => confirmarEliminarConceptoNomina(btn.getAttribute('data-nom-eliminar-concepto'), renderDatosConceptosEncargado)));
 
 }
 
@@ -1582,7 +1582,7 @@ function abrirModalConceptoNomina(id) {
 
     cerrar();
     mostrarToast(concepto ? 'Concepto actualizado.' : 'Concepto agregado.');
-    renderDatosConceptosRH();
+    renderDatosConceptosEncargado();
   });
 
 }
@@ -1590,18 +1590,18 @@ function abrirModalConceptoNomina(id) {
 // ============================================================
 // MIS SOLICITUDES DE EMPLEADOS (alta/baja)
 //
-// RH solo solicita y consulta — nunca aprueba/deniega, eso es
+// Encargado solo solicita y consulta — nunca aprueba/deniega, eso es
 // exclusivo de Administración (ver js/admin-nomina.js). Este módulo es
 // independiente del de solicitudes de inscripción de
 // Emprendedoras/Líderes (js/solicitudes-modelo.js).
 // ============================================================
 
-function renderVistaSolicitudesEmpleadosRH() {
+function renderVistaSolicitudesEmpleadosEncargado() {
 
   const cont = document.getElementById('nomVistaSolicitudes');
   if (!cont) return;
 
-  const solicitudes = obtenerSolicitudesNomina().filter(s => s.solicitadoPorId === RH_IDENTIDAD.usuarioId || s.solicitadoPorRol === 'rh');
+  const solicitudes = obtenerSolicitudesNomina().filter(s => s.solicitadoPorId === ENCARGADO_IDENTIDAD.usuarioId || s.solicitadoPorRol === 'encargado');
   const altas = solicitudes.filter(s => s.tipo === 'alta');
   const bajas = solicitudes.filter(s => s.tipo === 'baja');
   const empleadosActivos = obtenerEmpleadosNomina().filter(e => e.estado === 'activo');
@@ -1625,7 +1625,7 @@ function renderVistaSolicitudesEmpleadosRH() {
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
         <div>
           <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Altas de empleados</h3>
-          <p class="cfg-card-sub" style="margin-bottom:0;">Toda alta requiere aprobación de Administración — RH no puede aprobar ni denegar.</p>
+          <p class="cfg-card-sub" style="margin-bottom:0;">Toda alta requiere aprobación de Administración — Encargado no puede aprobar ni denegar.</p>
         </div>
         <button class="btn btn-primary" id="nomSolicitarAltaBtn" style="width:auto;" type="button">+ Solicitar alta</button>
       </div>
@@ -1658,12 +1658,12 @@ function renderVistaSolicitudesEmpleadosRH() {
     </div>
   `;
 
-  document.getElementById('nomSolicitarAltaBtn').addEventListener('click', abrirModalSolicitudAltaRH);
-  document.getElementById('nomSolicitarBajaBtn').addEventListener('click', () => abrirModalSolicitudBajaRH(empleadosActivos));
+  document.getElementById('nomSolicitarAltaBtn').addEventListener('click', abrirModalSolicitudAltaEncargado);
+  document.getElementById('nomSolicitarBajaBtn').addEventListener('click', () => abrirModalSolicitudBajaEncargado(empleadosActivos));
 
 }
 
-function abrirModalSolicitudAltaRH() {
+function abrirModalSolicitudAltaEncargado() {
 
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
@@ -1683,7 +1683,7 @@ function abrirModalSolicitudAltaRH() {
       <label>Puesto / rol
         <select id="nomSolAltaCargo">
           <option value="staff">Staff</option>
-          <option value="rh">RH</option>
+          <option value="encargado">Encargado</option>
           <option value="admin">Administrativo</option>
         </select>
       </label>
@@ -1725,8 +1725,8 @@ function abrirModalSolicitudAltaRH() {
       correo: document.getElementById('nomSolAltaCorreo').value.trim(),
       celular: document.getElementById('nomSolAltaCelular').value.trim(),
       fotoUrl: fotoAltaData,
-      solicitadoPor: RH_IDENTIDAD.usuarioNombre,
-      solicitadoPorId: RH_IDENTIDAD.usuarioId
+      solicitadoPor: ENCARGADO_IDENTIDAD.usuarioNombre,
+      solicitadoPorId: ENCARGADO_IDENTIDAD.usuarioId
     };
     const error = document.getElementById('nomSolAltaError');
     const resultado = crearSolicitudAltaNomina(datos);
@@ -1737,12 +1737,12 @@ function abrirModalSolicitudAltaRH() {
     }
     cerrar();
     mostrarToast('Solicitud de alta enviada — pendiente de revisión de Administración.');
-    renderVistaSolicitudesEmpleadosRH();
+    renderVistaSolicitudesEmpleadosEncargado();
   });
 
 }
 
-function abrirModalSolicitudBajaRH(empleadosActivos) {
+function abrirModalSolicitudBajaEncargado(empleadosActivos) {
 
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
@@ -1782,8 +1782,8 @@ function abrirModalSolicitudBajaRH(empleadosActivos) {
       motivoBaja: document.getElementById('nomSolBajaMotivo').value.trim(),
       fechaEfectivaBaja: document.getElementById('nomSolBajaFecha').value,
       observaciones: document.getElementById('nomSolBajaObservaciones').value.trim(),
-      solicitadoPor: RH_IDENTIDAD.usuarioNombre,
-      solicitadoPorId: RH_IDENTIDAD.usuarioId
+      solicitadoPor: ENCARGADO_IDENTIDAD.usuarioNombre,
+      solicitadoPorId: ENCARGADO_IDENTIDAD.usuarioId
     };
     const error = document.getElementById('nomSolBajaError');
     const resultado = crearSolicitudBajaNomina(datos);
@@ -1794,7 +1794,7 @@ function abrirModalSolicitudBajaRH(empleadosActivos) {
     }
     cerrar();
     mostrarToast('Solicitud de baja enviada — pendiente de revisión de Administración.');
-    renderVistaSolicitudesEmpleadosRH();
+    renderVistaSolicitudesEmpleadosEncargado();
   });
 
 }

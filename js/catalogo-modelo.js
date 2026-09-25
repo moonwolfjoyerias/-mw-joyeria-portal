@@ -1,7 +1,7 @@
 // MW JOYERÍA — Modelo de precios del catálogo
 //
 // El "precio etiqueta" es el precio que aparece en todos los
-// catálogos (Staff, RH, Admin, líderes y emprendedoras). Sobre ese
+// catálogos (Staff, Encargado, Admin, líderes y emprendedoras). Sobre ese
 // precio se aplica un % de descuento para calcular el "precio
 // emprendedora". El descuento sugerido depende del material, pero
 // siempre queda editable pieza por pieza.

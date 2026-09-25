@@ -1,12 +1,12 @@
 // MW JOYERÍA — Apartados Admin
-// Mismas capacidades y reglas de negocio que Apartados de Staff/RH
+// Mismas capacidades y reglas de negocio que Apartados de Staff/Encargado
 // (ver js/apartados-modelo.js, fuente única de verdad, y
 // js/staff-apartados-ejemplo.js, reutilizado tal cual para los datos
 // de ejemplo — misma clave de localStorage, mismo "sistema"). El
 // renderizado de tabla/modales común a los 3 roles vive en
 // js/apartados-panel-comun.js.
 //
-// Igual que RH: las acciones sensibles NO piden usuario/contraseña de
+// Igual que Encargado: las acciones sensibles NO piden usuario/contraseña de
 // nuevo — muestran un modal de Autorización con mensaje dinámico (ver
 // js/admin-comun.js) y quedan en la auditoría (rol "admin").
 

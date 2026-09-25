@@ -1,5 +1,5 @@
 // MW JOYERÍA — Apartados: renderizado y utilidades comunes a los 3
-// controladores por rol (Staff/RH/Admin).
+// controladores por rol (Staff/Encargado/Admin).
 //
 // Se carga como <script> global igual que los tres, así que las
 // funciones de aquí abajo referencian variables declaradas en el
@@ -12,7 +12,7 @@
 // entre <script> clásicos, no en tiempo de declaración.
 //
 // La diferencia real entre roles es solo el flujo de autorización
-// (Staff pide usuario/contraseña de nuevo; RH/Admin muestran un
+// (Staff pide usuario/contraseña de nuevo; Encargado/Admin muestran un
 // modal de confirmación con mensaje dinámico) — eso permanece en
 // cada controlador.
 

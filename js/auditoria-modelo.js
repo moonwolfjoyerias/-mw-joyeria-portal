@@ -1,4 +1,4 @@
-// MW JOYERÍA — Bitácora de actividad compartida (Staff / RH / Admin)
+// MW JOYERÍA — Bitácora de actividad compartida (Staff / Encargado / Admin)
 //
 // Los 3 portales internos escriben en la misma llave de localStorage para
 // que cualquiera de los 3 roles pueda ver, desde su pestaña "Actividad",
