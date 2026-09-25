@@ -45,13 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  document.getElementById('descargarTodosBoletosBtn')?.addEventListener('click', () => {
-    const mesKey = obtenerMesKeyActualRifaMensual();
-    const boletos = obtenerBoletosRifaMes(mesKey);
-    if (!boletos.length) { mostrarToast('Todavía no hay boletos este mes.'); return; }
-    boletos.forEach((b, i) => setTimeout(() => descargarSVGBoletoRifa(b), i * 150));
-    mostrarToast(`Descargando ${boletos.length} boleto(s)...`);
-  });
+  document.getElementById('descargarTodosBoletosBtn')?.addEventListener('click', generarPDFBoletosRifa);
 
   document.getElementById('exportarHistorialRangosBtn')?.addEventListener('click', () => {
     const { periodos, filas } = calcularHistorialRangosTodas(6);
@@ -631,13 +625,19 @@ function abrirModalOpcionRifa(mesKey, opcionId) {
 }
 
 // ============================================================
-// BOLETOS DE LA RIFA (folio + fecha de sorteo + SVG imprimible)
+// BOLETOS DE LA RIFA (mes ya cerrado, listo para imprimir) — folio +
+// fecha de sorteo + PDF compactado de 10 por hoja.
 // Lista A, fusión con mi-equipo — ver js/rifa-boletos-modelo.js
+//
+// A diferencia del resto de la pestaña "Rifa del mes" (que trabaja
+// sobre el mes EN CURSO, todavía acumulando compras), este bloque
+// siempre muestra el mes que YA CERRÓ — el que se sortea el día 15 de
+// este mes — porque es el que hay que imprimir para el sorteo.
 // ============================================================
 
 function renderBoletosRifaMes() {
 
-  const mesKey = obtenerMesKeyActualRifaMensual();
+  const mesKey = mesKeyAnteriorRifaBoletos(obtenerMesKeyActualRifaMensual());
   setTextPlanMW('boletosSorteoFecha', `Sorteo oficial: ${formatearFechaSorteoRifaMes(mesKey)}`);
 
   const resumen = obtenerResumenBoletosPorPersonaRifaMes(mesKey);
@@ -645,21 +645,19 @@ function renderBoletosRifaMes() {
   if (!bloque) return;
 
   if (!resumen.length) {
-    bloque.innerHTML = '<p class="bp-sub">Todavía nadie tiene boletos este mes.</p>';
+    bloque.innerHTML = '<p class="bp-sub">Nadie ganó boletos el mes pasado.</p>';
     return;
   }
 
   bloque.innerHTML = `
     <div class="catalog-table-wrap">
       <table class="catalog-table">
-        <thead><tr><th>Persona</th><th>Boletos</th><th>Folios</th><th></th></tr></thead>
+        <thead><tr><th>Persona</th><th>Boletos</th></tr></thead>
         <tbody>
           ${resumen.map(r => `
             <tr>
               <td>${escapeHTMLPersonas(r.personaNombre)}</td>
               <td>${r.boletos.length}</td>
-              <td>${r.boletos.map(b => formatearFolioBoleto(b.folio)).join(', ')}</td>
-              <td><button class="btn btn-outline" type="button" data-ver-boletos="${r.personaId}">Ver boletos</button></td>
             </tr>
           `).join('')}
         </tbody>
@@ -667,48 +665,66 @@ function renderBoletosRifaMes() {
     </div>
   `;
 
-  bloque.querySelectorAll('[data-ver-boletos]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalBoletosPersona(btn.getAttribute('data-ver-boletos'), mesKey));
-  });
-
 }
 
-function abrirModalBoletosPersona(personaId, mesKey) {
+function sanitizarNombreArchivoPlanMW(t) {
+  return String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
 
-  const resumen = obtenerResumenBoletosPorPersonaRifaMes(mesKey).find(r => r.personaId === personaId);
-  if (!resumen) return;
+// PDF imprimible con todos los boletos del mes ya cerrado, 10 por hoja
+// Carta (2 columnas × 5 filas) — reemplaza la descarga individual de
+// SVGs de uno en uno.
+async function generarPDFBoletosRifa() {
 
-  const overlay = document.getElementById('modalOverlay');
-  const box = document.getElementById('modalBox');
-  if (!overlay || !box) return;
+  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+    mostrarToast('No se pudo generar el PDF — intenta de nuevo en un momento.');
+    return;
+  }
 
-  box.innerHTML = `
-    <button class="modal-close" data-close>&times;</button>
-    <h3>Boletos de ${escapeHTMLPersonas(resumen.personaNombre)}</h3>
-    <p class="modal-sub">${formatearFechaSorteoRifaMes(mesKey)}</p>
-    <div class="boletos-lista">
-      ${resumen.boletos.map(b => `
-        <div class="boleto-preview-row">
-          <div class="boleto-preview-svg">${construirSVGBoletoRifa(b)}</div>
-          <button class="btn btn-outline" type="button" data-descargar-boleto="${b.folio}">Descargar SVG</button>
-        </div>
-      `).join('')}
-    </div>
-  `;
-  box.classList.add('modal-box-wide');
-  overlay.classList.add('open');
+  const mesKey = mesKeyAnteriorRifaBoletos(obtenerMesKeyActualRifaMensual());
+  const boletos = obtenerBoletosRifaMes(mesKey);
 
-  const cerrar = () => { overlay.classList.remove('open'); box.classList.remove('modal-box-wide'); };
-  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); }, { once: true });
+  if (!boletos.length) {
+    mostrarToast('Nadie ganó boletos el mes pasado — no hay nada que imprimir.');
+    return;
+  }
 
-  box.querySelectorAll('[data-descargar-boleto]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const folio = Number(btn.getAttribute('data-descargar-boleto'));
-      const boleto = resumen.boletos.find(b => b.folio === folio);
-      if (boleto) descargarSVGBoletoRifa(boleto);
-    });
+  // Folio "local": posición de cada boleto dentro de los boletos de SU
+  // MISMA persona (1, 2, 3...) — boletos ya viene ordenado por folio
+  // general ascendente, así que este conteo respeta ese mismo orden.
+  const folioLocalPorFolio = new Map();
+  const contadorPorPersona = {};
+  boletos.forEach(b => {
+    contadorPorPersona[b.personaId] = (contadorPorPersona[b.personaId] || 0) + 1;
+    folioLocalPorFolio.set(b.folio, contadorPorPersona[b.personaId]);
   });
+
+  const contenedor = document.getElementById('boletosPdfTemplate');
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'letter' });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  try {
+
+    if (document.fonts?.ready) await document.fonts.ready;
+
+    for (let i = 0; i < boletos.length; i += 10) {
+      const hoja = boletos.slice(i, i + 10);
+      contenedor.innerHTML = construirHTMLHojaBoletosRifa(hoja, folioLocalPorFolio);
+      const canvas = await html2canvas(contenedor, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
+      if (i > 0) pdf.addPage();
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pageWidth, pageHeight);
+    }
+
+    pdf.save(`MW_Boletos_Rifa_${sanitizarNombreArchivoPlanMW(formatearPeriodoLabel(mesKey))}.pdf`);
+    mostrarToast(`${boletos.length} boleto(s) listos para imprimir.`);
+
+  } catch (error) {
+    mostrarToast('No se pudo generar el PDF — intenta de nuevo en un momento.');
+  } finally {
+    contenedor.innerHTML = '';
+  }
 
 }
 
