@@ -1752,6 +1752,67 @@ a:hover { color: var(--mw-gold); }
 .equipo-modal-row .em-puntos { color: var(--mw-purple); font-weight: 600; font-family: var(--font-heading); }
 .equipo-modal-empty { text-align: center; color: var(--mw-text-muted); font-size: 0.88rem; padding: 1.5rem 0; }
 
+/* ---------- Mi equipo (Líder): cuenta regresiva al cierre del periodo ---------- */
+.countdown-card { text-align: center; }
+.countdown-card h3 { margin-bottom: 0.3rem; }
+.countdown-card .hint { color: var(--mw-text-muted); font-size: 0.82rem; margin-bottom: 1rem; }
+.countdown-row { display: flex; justify-content: center; gap: 14px; margin-bottom: 0.8rem; flex-wrap: wrap; }
+.countdown-unit { background: var(--mw-lilac-soft); border-radius: var(--radius-sm); padding: 0.8rem 1.1rem; min-width: 64px; }
+.countdown-unit .num { font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--mw-purple); line-height: 1; }
+.countdown-unit .lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--mw-text-muted); margin-top: 0.3rem; }
+.period-label { font-size: 0.85rem; color: var(--mw-text-muted); }
+
+/* ---------- Toolbar del árbol: mes / buscador / zoom ---------- */
+.tree-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; margin: 1rem 0; }
+.month-picker-row { display: flex; flex-direction: column; gap: 0.3rem; }
+.month-picker-row label { font-size: 0.75rem; color: var(--mw-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.month-picker-row select { height: 38px; border: 1px solid var(--mw-border); border-radius: var(--radius-sm); padding: 0 10px; font-size: 0.85rem; color: var(--mw-text); background: #fff; }
+
+.search-box { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px; }
+.search-input-wrap { position: relative; flex: 1; }
+.search-input-wrap input { width: 100%; height: 38px; border: 1px solid var(--mw-border); border-radius: var(--radius-sm); padding: 0 34px 0 12px; font-size: 0.85rem; box-sizing: border-box; }
+.search-input-wrap button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--mw-text-muted); padding: 4px; }
+.search-nav { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--mw-text-muted); }
+.search-nav button { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--mw-border); background: #fff; cursor: pointer; }
+
+.zoom-controls { display: flex; align-items: center; gap: 6px; }
+.zoom-controls button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--mw-border); background: #fff; cursor: pointer; font-size: 1rem; line-height: 1; }
+.zoom-controls span { font-size: 0.8rem; color: var(--mw-text-muted); min-width: 40px; text-align: center; }
+
+.icon-tight { width: 15px; height: 15px; }
+
+.org-tree-wrap { position: relative; }
+.org-node.match { box-shadow: 0 0 0 2px var(--mw-gold); }
+.org-node.match-active { box-shadow: 0 0 0 3px var(--mw-purple); }
+
+/* ---------- Resumen por línea ---------- */
+.level-summary-wrap { margin-top: 0.6rem; }
+.level-block { border: 1px solid var(--mw-border); border-radius: var(--radius-sm); margin-bottom: 10px; overflow: hidden; }
+.level-block summary { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 1rem; cursor: pointer; list-style: none; font-size: 0.85rem; color: #fff; }
+.level-block summary::-webkit-details-marker { display: none; }
+.level-block[open] .lb-arrow { transform: rotate(90deg); }
+.lb-arrow { display: inline-block; transition: transform 0.15s ease; margin-right: 6px; }
+.lb-title { font-weight: 600; }
+.lb-stats { display: flex; gap: 12px; font-size: 0.78rem; }
+.lb-stats b { font-family: var(--font-heading); }
+.lb-body { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px; background: #fff; }
+.person-card { background: var(--mw-lilac-soft); border-radius: var(--radius-sm); padding: 0.7rem 0.9rem; min-width: 150px; flex: 1; }
+.pc-name { font-size: 0.83rem; font-weight: 600; color: var(--mw-text); margin-bottom: 0.4rem; }
+.pc-points { display: flex; gap: 10px; font-size: 0.72rem; color: var(--mw-text-muted); }
+.pc-points b { display: block; color: var(--mw-purple); font-family: var(--font-heading); font-size: 0.85rem; }
+.pc-total b { color: var(--mw-gold); }
+
+.level-color-1 { background: var(--mw-lilac); }
+.level-color-2 { background: var(--mw-gold); }
+.level-color-3 { background: #6FAE86; }
+.level-color-4 { background: #C98C8C; }
+.level-color-5 { background: #8FAEE0; }
+
+@media (max-width: 640px) {
+  .tree-toolbar { flex-direction: column; align-items: stretch; }
+  .search-box { min-width: 0; }
+}
+
 /* ---------- Ticket de comisiones (Mi cuenta Líder) ---------- */
 .commission-ticket {
   background: #fff;

@@ -93,12 +93,53 @@
 
       <div class="team-levels-grid" id="nivelesGrid"></div>
 
+      <div class="org-tree-card countdown-card" id="equipoCountdownCard">
+        <h3>Siguiente periodo</h3>
+        <div class="hint" id="equipoPeriodHint">Cada periodo dura 15 días naturales del mes en curso.</div>
+        <div class="countdown-row">
+          <div class="countdown-unit"><div class="num" id="equipoCdDays">00</div><div class="lbl">días</div></div>
+          <div class="countdown-unit"><div class="num" id="equipoCdHours">00</div><div class="lbl">horas</div></div>
+          <div class="countdown-unit"><div class="num" id="equipoCdMinutes">00</div><div class="lbl">min</div></div>
+          <div class="countdown-unit"><div class="num" id="equipoCdSeconds">00</div><div class="lbl">seg</div></div>
+        </div>
+        <div class="period-label" id="equipoPeriodLabel"></div>
+      </div>
+
       <div class="org-tree-card">
         <div class="org-tree-card-header">
           <h3>Árbol de tu equipo</h3>
-          <button class="btn btn-primary" id="descargarArbolBtn"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h4l1.5 2.5h5L16 12h4"/><path d="M4 12v6a1.5 1.5 0 001.5 1.5h13A1.5 1.5 0 0020 18v-6"/><path d="M12 3v9"/><path d="M8.5 8.5L12 12l3.5-3.5"/></svg></span> Descargar mi árbol (Excel)</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-outline" id="verResumenLineaBtn" type="button">Ver resumen por línea</button>
+            <button class="btn btn-primary" id="descargarArbolBtn"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h4l1.5 2.5h5L16 12h4"/><path d="M4 12v6a1.5 1.5 0 001.5 1.5h13A1.5 1.5 0 0020 18v-6"/><path d="M12 3v9"/><path d="M8.5 8.5L12 12l3.5-3.5"/></svg></span> Descargar mi árbol (Excel)</button>
+          </div>
         </div>
-        <div class="org-tree-wrap">
+
+        <div class="tree-toolbar no-print">
+          <div class="month-picker-row">
+            <label for="equipoMesSelect">Mes a consultar</label>
+            <select id="equipoMesSelect"></select>
+          </div>
+          <div class="search-box">
+            <div class="search-input-wrap">
+              <input type="text" id="equipoBuscarInput" placeholder="Buscar por nombre...">
+              <button type="button" id="equipoClearSearchBtn" aria-label="Borrar búsqueda" style="display:none;"><svg class="icon icon-tight" viewBox="0 0 24 24"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>
+            </div>
+            <div class="search-nav" id="equipoSearchNav" style="display:none;">
+              <button type="button" id="equipoPrevMatchBtn" class="secondary" aria-label="Resultado anterior">‹</button>
+              <span id="equipoMatchCounter">1 / 1</span>
+              <button type="button" id="equipoNextMatchBtn" class="secondary" aria-label="Siguiente resultado">›</button>
+            </div>
+          </div>
+          <div class="zoom-controls">
+            <button type="button" id="equipoZoomOutBtn" class="secondary" aria-label="Reducir">－</button>
+            <span id="equipoZoomLabel">100%</span>
+            <button type="button" id="equipoZoomInBtn" class="secondary" aria-label="Ampliar">＋</button>
+            <button type="button" id="equipoZoomResetBtn" class="secondary">Restablecer</button>
+          </div>
+        </div>
+        <div class="status" id="equipoSearchStatus"></div>
+
+        <div class="org-tree-wrap" id="equipoTreeViewport">
           <div id="orgTreeContainer"></div>
         </div>
       </div>
