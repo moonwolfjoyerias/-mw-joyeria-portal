@@ -1612,6 +1612,12 @@ a:hover { color: var(--mw-gold); }
 .rifa-solicitud-foto { width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-sm); flex-shrink: 0; }
 .rifa-solicitud-foto-propia { width: 100%; max-width: 220px; border-radius: var(--radius-sm); margin-top: 0.4rem; display: block; }
 
+/* Boletos de la rifa (folio + SVG imprimible) */
+.boletos-lista { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; }
+.boleto-preview-row { display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--mw-border); border-radius: var(--radius-sm); padding: 12px; }
+.boleto-preview-svg { width: 100%; max-width: 420px; }
+.boleto-preview-svg svg { width: 100%; height: auto; display: block; }
+
 @media (max-width: 900px) { .account-layout { grid-template-columns: minmax(0, 1fr); max-width: 560px; margin: 0 auto; } }
 @media (max-width: 480px) { .profile-card, .benefit-panel { padding: 1.3rem 1.1rem; } }
 @media (max-width: 640px) {

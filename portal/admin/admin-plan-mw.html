@@ -112,6 +112,7 @@
       <nav class="cfg-nav" id="planmwNavPrincipal">
         <button type="button" class="cfg-nav-item active" data-planmw-vista="seguimiento">Seguimiento</button>
         <button type="button" class="cfg-nav-item" data-planmw-vista="rifa">Rifa del mes</button>
+        <button type="button" class="cfg-nav-item" data-planmw-vista="rangos">Historial de rangos</button>
       </nav>
 
       <div id="planmwVistaSeguimiento">
@@ -207,6 +208,22 @@
           <h3 id="rifaResultadosTitulo">Resultados</h3>
         </div>
         <div id="rifaResultadosBloque"></div>
+
+        <div class="section-head" style="margin-top:26px;">
+          <h3>Boletos de la rifa — <span id="boletosSorteoFecha">—</span></h3>
+          <button class="btn btn-outline" type="button" id="descargarTodosBoletosBtn">Descargar todos (SVG)</button>
+        </div>
+        <p class="portal-sub" style="margin-top:-8px;">Cada boleto ya ganado tiene folio consecutivo (nunca cambia) y se puede imprimir individualmente.</p>
+        <div id="boletosRifaBloque"></div>
+      </div>
+
+      <div id="planmwVistaRangos" hidden>
+        <div class="section-head">
+          <h2><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7L2 9.2l7.1-.6z"/></svg></span> Historial de rangos — todas las líderes</h2>
+        </div>
+        <p class="portal-sub" style="margin-top:-6px;">Rango aplicado mes a mes, con flechas de subida/bajada respecto al mes anterior.</p>
+        <button class="btn btn-outline" type="button" id="exportarHistorialRangosBtn" style="margin-bottom:14px;">Exportar Excel</button>
+        <div id="historialRangosBloque"></div>
       </div>
 
     </main>
@@ -229,6 +246,9 @@
   <script src="../../js/plan-mw-admin.js"></script>
   <script src="../../js/alertas-inactividad-modelo.js"></script>
   <script src="../../js/rifa-mensual-modelo.js"></script>
+  <script src="../../js/rifa-boletos-modelo.js"></script>
+  <script src="../../js/comisiones-modelo.js"></script>
+  <script src="../../js/importar-arbol-modelo.js"></script>
   <script src="../../js/admin-plan-mw.js"></script>
 </body>
 </html>
