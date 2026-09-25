@@ -1,9 +1,9 @@
-// MW JOYERÍA — Calendario editable (Staff / RH / Admin)
+// MW JOYERÍA — Calendario editable (Staff / Encargado / Admin)
 // DATOS DE EJEMPLO
 // ⚠️ TEMPORAL: se reemplazará por Firestore en Fase 3.
 //
 // Según el documento de requisitos (Sección 9), el calendario de
-// actividades es editable por Staff, RH y Administrativos.
+// actividades es editable por Staff, Encargado y Administrativos.
 //
 // IMPORTANTE:
 // Las credenciales de abajo son únicamente para simulación.
@@ -16,8 +16,8 @@ const CALENDARIO_USUARIOS_EJEMPLO = [
     password: '1234'
   },
   {
-    usuario: 'rh01',
-    nombre: 'Recursos Humanos',
+    usuario: 'encargado01',
+    nombre: 'Valentina Cruz',
     password: '1234'
   },
   {

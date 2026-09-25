@@ -72,7 +72,7 @@ function identificarStaffActual() {
     return;
   }
 
-  // Solo Staff puede identificarse aquí — admin01/rh01 también existen
+  // Solo Staff puede identificarse aquí — admin01/encargado01 también existen
   // en las mismas listas de ejemplo, pero no son personal de Staff.
   if (personal.rol && personal.rol !== 'staff') {
     if (error) { error.style.display = 'block'; error.textContent = 'Esta cuenta no pertenece al personal de Staff.'; }
@@ -129,7 +129,7 @@ function agruparPorZonaMisAct(asignaciones) {
 // no el estado general (que solo llega a "Enterado" cuando TODOS ya
 // confirmaron — ver marcarEnteradoAsignacionActividadStaff).
 function estadoIndividualMisAct(a) {
-  if (a.estado === 'firmado_rh') return 'firmado_rh';
+  if (a.estado === 'firmado_encargado') return 'firmado_encargado';
   const propio = a.estadosPorEncargado?.[identidadStaffActual.usuarioId]?.estado;
   return propio === 'enterado' ? 'enterado' : 'anunciado';
 }
@@ -147,14 +147,14 @@ function renderMisActividades() {
   document.getElementById('actStatTotal').textContent = lista.length;
   document.getElementById('actStatPendientes').textContent = lista.filter(a => estadoIndividualMisAct(a) === 'anunciado').length;
   document.getElementById('actStatEnterado').textContent = lista.filter(a => estadoIndividualMisAct(a) === 'enterado').length;
-  document.getElementById('actStatCompletadas').textContent = lista.filter(a => a.estado === 'firmado_rh').length;
+  document.getElementById('actStatCompletadas').textContent = lista.filter(a => a.estado === 'firmado_encargado').length;
 
   if (!lista.length) {
     cont.innerHTML = `
       <section class="catalog-table-card">
         <div class="catalog-empty-cell" style="padding:30px;">
           <strong>Todavía no tienes actividades anunciadas para esta semana</strong>
-          <span>RH avisará aquí en cuanto te asignen alguna.</span>
+          <span>Encargado avisará aquí en cuanto te asignen alguna.</span>
         </div>
       </section>
     `;
@@ -217,7 +217,7 @@ function confirmarEnteradoMisAct(id) {
     <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
     <h3>Confirmar actividad</h3>
     <p class="modal-sub">Confirmas que te enteraste de "${escapeHTMLMisAct(a.nombre)}" (${escapeHTMLMisAct(a.zona)}) para la semana del ${formatearRangoSemanaActividadStaff(a.semanaKey)}.</p>
-    <div class="modal-note">Se registrará tu nombre, fecha y hora. RH revisará después que la actividad se haya realizado.</div>
+    <div class="modal-note">Se registrará tu nombre, fecha y hora. Encargado revisará después que la actividad se haya realizado.</div>
     <div style="display:flex;gap:10px;margin-top:6px;">
       <button class="btn btn-outline" style="flex:1;" onclick="cerrarModalMisAct()" type="button">Cancelar</button>
       <button class="btn btn-primary" style="flex:1;" id="actConfirmarEnteradoBtn" type="button">Confirmar</button>

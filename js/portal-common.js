@@ -26,7 +26,7 @@ function obtenerInicialesPerfil(nombre) {
 // registros de ejemplo de js/personas-ejemplo.js), sin importar quién
 // hubiera iniciado sesión de verdad. Ahora usa la sesión real que crea
 // js/auth-login.js (ver js/auth-guard.js) — se usa para que las
-// notificaciones a Staff/RH digan explícitamente de quién se trata en
+// notificaciones a Staff/Encargado digan explícitamente de quién se trata en
 // vez de un genérico "una emprendedora" (ver js/catalogo.js, js/apartados.js).
 function obtenerNombrePersonaActualPortal() {
   const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
@@ -65,7 +65,7 @@ function initResumenDatePill() {
 }
 
 // ---------- Campana de notificaciones ----------
-// Cada rol solo ve su propia bandeja (Emprendedora/Líder, Staff o RH),
+// Cada rol solo ve su propia bandeja (Emprendedora/Líder, Staff o Encargado),
 // detectada automáticamente por la URL — ver obtenerRolPortalActual()
 // en notificaciones-modelo.js. Admin es la única excepción: en vez de
 // una bandeja filtrada, ve las tres divididas (renderNotificacionesAdminAgrupadas

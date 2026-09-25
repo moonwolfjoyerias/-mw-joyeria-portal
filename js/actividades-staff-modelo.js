@@ -1,8 +1,8 @@
 // MW JOYERÍA — Actividades del Staff (motor de datos)
 //
-// RH organiza las actividades semanales de limpieza/orden del Staff
+// Encargado organiza las actividades semanales de limpieza/orden del Staff
 // (barrer, vitrinas, refrigerador, etc.), Staff confirma que se enteró,
-// RH revisa físicamente y firma que se realizó, y Administración
+// Encargado revisa físicamente y firma que se realizó, y Administración
 // supervisa todo el proceso. Ver PROMPT "Actividades del Staff".
 //
 // Dos colecciones, igual que el resto del portal (nunca un sistema
@@ -35,9 +35,9 @@ const PERIODICIDADES_ACTIVIDAD_STAFF = {
   semanal: 'Semanalmente'
 };
 
-// Toda actividad es "permanente" salvo que RH la marque "temporal" al
+// Toda actividad es "permanente" salvo que Encargado la marque "temporal" al
 // crearla: existe solo dentro de [fechaInicioTemporal, fechaFinTemporal]
-// y, después de realizarse, RH la elimina a mano (ver
+// y, después de realizarse, Encargado la elimina a mano (ver
 // eliminarAsignacionActividadStaff) — nunca se borra sola.
 const TIPOS_ACTIVIDAD_STAFF = {
   permanente: 'Permanente',
@@ -82,21 +82,21 @@ function formatearDiasAsignacionActividadStaff(a) {
 }
 
 // "borrador" es un estado interno de organización (todavía no existe
-// para Staff/RH/Admin como tal) — el flujo público que pide el prompt
-// es exactamente Anunciado → Enterado → Firmado por RH; borrador es lo
-// que hay ANTES de anunciar, mientras RH/Admin todavía arman la semana.
+// para Staff/Encargado/Admin como tal) — el flujo público que pide el prompt
+// es exactamente Anunciado → Enterado → Firmado por Encargado; borrador es lo
+// que hay ANTES de anunciar, mientras Encargado/Admin todavía arman la semana.
 const ESTADOS_ACTIVIDAD_STAFF = {
   borrador: 'En organización',
   anunciado: 'Anunciado',
   enterado: 'Enterado',
-  firmado_rh: 'Firmado por RH'
+  firmado_encargado: 'Firmado por Encargado'
 };
 
 const BADGE_ESTADOS_ACTIVIDAD_STAFF = {
   borrador: 'badge-pendiente',
   anunciado: 'badge-revision',
   enterado: 'badge-validado',
-  firmado_rh: 'badge-pagada'
+  firmado_encargado: 'badge-pagada'
 };
 
 // ============================================================
@@ -168,7 +168,7 @@ function obtenerActividadCatalogoStaffPorId(id) {
   return obtenerCatalogoActividadesStaff().find(a => a.id === id) || null;
 }
 
-// Preparado para que RH/Admin agreguen actividades nuevas sin tocar
+// Preparado para que Encargado/Admin agreguen actividades nuevas sin tocar
 // código: si ya existe una con el mismo nombre+zona, la reutiliza en
 // vez de duplicarla.
 function agregarActividadCatalogoStaff({ nombre, zona }) {
@@ -326,7 +326,7 @@ function obtenerAsignacionActividadStaffPorId(id) {
 }
 
 // Solo las activas (no eliminadas) — es la lista que debe verse en la
-// tabla de organización de RH/Admin y en "Mis actividades" de Staff.
+// tabla de organización de Encargado/Admin y en "Mis actividades" de Staff.
 // Las funciones que leen-modifican-guardan la lista COMPLETA (crear,
 // actualizar, sorteo, eliminar) usan obtenerAsignacionesActividadStaff()
 // directamente, nunca esta, para no perder al guardar las que sí están
@@ -355,7 +355,7 @@ function validarPeriodicidadYDiasActividadStaff(periodicidad, dias) {
 // true (solo lo usa asegurarAsignacionesBaseSemana, para que las
 // actividades base aparezcan desde el inicio sin que nadie tenga que
 // definir todavía cada cuánto se hacen).
-// encargadoIds (arreglo, RH) o encargadoId (singular, todavía usado por
+// encargadoIds (arreglo, Encargado) o encargadoId (singular, todavía usado por
 // Admin) — se acepta cualquiera de los dos; si mandan ambos gana el
 // arreglo. tipo/fechaInicioTemporal/fechaFinTemporal son opcionales
 // (por default toda actividad es "permanente").
@@ -412,7 +412,7 @@ function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaN
     fechaEnterado: null,
     enteradoPorId: null,
     enteradoPorNombre: null,
-    fechaFirmaRH: null,
+    fechaFirmaEncargado: null,
     firmadoPorId: null,
     firmadoPorNombre: null,
     creadoPorId: creadoPorId || null,
@@ -447,7 +447,7 @@ function crearAsignacionActividadStaff({ actividadCatalogoId, nombreNuevo, zonaN
 // forma perezosa la primera vez que se pide una semana: por cada
 // actividad del catálogo que todavía no tenga una asignación en esa
 // semana, se crea una en "borrador" sin periodicidad ni encargado
-// (RH/Admin los definen después) — nunca se asume la periodicidad.
+// (Encargado/Admin los definen después) — nunca se asume la periodicidad.
 // Es idempotente: nunca duplica una actividad que ya exista para esa
 // semana, sea porque ya se sembró antes o porque alguien la creó a
 // mano.
@@ -458,7 +458,7 @@ function asegurarAsignacionesBaseSemana(semanaKey) {
   const catalogo = obtenerCatalogoActividadesStaff();
   const asignaciones = obtenerAsignacionesActividadStaff();
   // Se consideran TODAS las asignaciones de esa semana, incluidas las
-  // eliminadas: una actividad que RH eliminó para esta semana ya está
+  // eliminadas: una actividad que Encargado eliminó para esta semana ya está
   // "resuelta" y no debe volver a sembrarse como borrador nuevo.
   const existentes = asignaciones.filter(a => a.semanaKey === semanaKey);
   const catalogoIdsExistentes = new Set(existentes.map(a => a.actividadCatalogoId));
@@ -490,7 +490,7 @@ function asegurarAsignacionesBaseSemana(semanaKey) {
       fechaEnterado: null,
       enteradoPorId: null,
       enteradoPorNombre: null,
-      fechaFirmaRH: null,
+      fechaFirmaEncargado: null,
       firmadoPorId: null,
       firmadoPorNombre: null,
       creadoPorId: null,
@@ -520,7 +520,7 @@ function actualizarAsignacionActividadStaff(id, cambios, { usuarioId, usuarioNom
   const yaAnunciada = asignacion.estado !== 'borrador';
   const cambiosTexto = [];
 
-  // encargadoIds (arreglo, RH) reemplaza la lista completa de
+  // encargadoIds (arreglo, Encargado) reemplaza la lista completa de
   // responsables. encargadoId (singular, todavía usado por Admin) se
   // sigue aceptando — equivale a "deja un único responsable".
   if (cambios.encargadoIds !== undefined || cambios.encargadoId !== undefined) {
@@ -713,7 +713,7 @@ function aplicarResultadoSorteoZonasActividadStaff(resultado, { usuarioId, usuar
 }
 
 // ============================================================
-// TRANSICIONES DE ESTADO (Anunciado → Enterado → Firmado por RH)
+// TRANSICIONES DE ESTADO (Anunciado → Enterado → Firmado por Encargado)
 // ============================================================
 
 // Solo actividades en borrador CON al menos un responsable asignado
@@ -787,7 +787,7 @@ function marcarEnteradoAsignacionActividadStaff(id, { usuarioId, usuarioNombre, 
   a.enteradoPorNombre = usuarioNombre;
 
   // El estado general de la actividad solo pasa a "enterado" (y con
-  // eso queda lista para que RH firme) cuando TODOS los responsables ya
+  // eso queda lista para que Encargado firme) cuando TODOS los responsables ya
   // confirmaron — nunca con que uno solo lo haga.
   const todosConfirmaron = a.encargados.every(e => a.estadosPorEncargado[e.id]?.estado === 'enterado');
   if (todosConfirmaron) a.estado = 'enterado';
@@ -804,26 +804,26 @@ function marcarEnteradoAsignacionActividadStaff(id, { usuarioId, usuarioNombre, 
 
 }
 
-// Solo RH/Admin, y solo después de que Staff ya confirmó ("enterado") —
+// Solo Encargado/Admin, y solo después de que Staff ya confirmó ("enterado") —
 // es la verificación física de que la actividad sí se realizó.
-function firmarRHAsignacionActividadStaff(id, { usuarioId, usuarioNombre, usuarioRol }) {
+function firmarEncargadoAsignacionActividadStaff(id, { usuarioId, usuarioNombre, usuarioRol }) {
 
   const asignaciones = obtenerAsignacionesActividadStaff();
   const a = asignaciones.find(x => x.id === id);
   if (!a) return { ok: false, error: 'La actividad no existe.' };
   if (a.estado !== 'enterado') return { ok: false, error: 'Solo se puede firmar una actividad que el Staff ya confirmó ("Enterado").' };
 
-  a.estado = 'firmado_rh';
-  a.fechaFirmaRH = new Date().toISOString();
+  a.estado = 'firmado_encargado';
+  a.fechaFirmaEncargado = new Date().toISOString();
   a.firmadoPorId = usuarioId;
   a.firmadoPorNombre = usuarioNombre;
 
   guardarAsignacionesActividadStaff(asignaciones);
 
   registrarHistorialActividadStaff({
-    actividadId: a.id, estadoAnterior: 'enterado', estadoNuevo: 'firmado_rh',
+    actividadId: a.id, estadoAnterior: 'enterado', estadoNuevo: 'firmado_encargado',
     usuarioId, usuarioNombre, usuarioRol,
-    comentario: `${usuarioNombre} (${usuarioRol === 'admin' ? 'Administración' : 'RH'}) verificó y firmó que la actividad se realizó.`
+    comentario: `${usuarioNombre} (${usuarioRol === 'admin' ? 'Administración' : 'Encargado'}) verificó y firmó que la actividad se realizó.`
   });
 
   return { ok: true, asignacion: a };
@@ -834,7 +834,7 @@ function firmarRHAsignacionActividadStaff(id, { usuarioId, usuarioNombre, usuari
 // ELIMINAR (lógico — nunca borra historial/auditoría)
 // ============================================================
 //
-// RH puede eliminar CUALQUIER actividad, permanente o temporal,
+// Encargado puede eliminar CUALQUIER actividad, permanente o temporal,
 // anunciada o no (sección 2). Nunca se borra físicamente: se marca
 // eliminada + quién + cuándo, y deja de aparecer en las vistas activas
 // (obtenerAsignacionesPorSemanaActividadStaff ya filtra eliminada:true),
@@ -858,7 +858,7 @@ function eliminarAsignacionActividadStaff(id, { usuarioId, usuarioNombre, usuari
   registrarHistorialActividadStaff({
     actividadId: a.id, estadoAnterior: a.estado, estadoNuevo: a.estado,
     usuarioId, usuarioNombre, usuarioRol,
-    comentario: `Actividad eliminada por ${usuarioNombre} (${usuarioRol === 'admin' ? 'Administración' : 'RH'}). El historial se conserva para auditoría.`
+    comentario: `Actividad eliminada por ${usuarioNombre} (${usuarioRol === 'admin' ? 'Administración' : 'Encargado'}). El historial se conserva para auditoría.`
   });
 
   return { ok: true, asignacion: a };
@@ -910,10 +910,10 @@ function obtenerHistorialPorActividadStaff(actividadId) {
 //
 // El reporte NUNCA modifica el estado real guardado de la actividad —
 // solo calcula, al momento de generar el PDF, cómo debe LEERSE cada
-// estado que no llegó a "firmado_rh": tanto "anunciado" (nunca se
-// enteró) como "enterado" (se enteró pero RH nunca verificó que se
+// estado que no llegó a "firmado_encargado": tanto "anunciado" (nunca se
+// enteró) como "enterado" (se enteró pero Encargado nunca verificó que se
 // hizo) se reportan como "No se realizó", porque ninguno de los dos
-// tiene la confirmación de RH que exige la sección 11. Las actividades
+// tiene la confirmación de Encargado que exige la sección 11. Las actividades
 // que seguían en "borrador" (nunca se llegaron a anunciar) no forman
 // parte de la semana pública y no aparecen en el reporte.
 
@@ -922,7 +922,7 @@ function obtenerFilasReporteSemanalActividadStaff(semanaKey) {
     .filter(a => a.estado !== 'borrador')
     .map(a => ({
       ...a,
-      estadoReporteLabel: a.estado === 'firmado_rh' ? 'Firmado por RH' : 'No se realizó'
+      estadoReporteLabel: a.estado === 'firmado_encargado' ? 'Firmado por Encargado' : 'No se realizó'
     }));
 }
 
@@ -933,7 +933,7 @@ function obtenerFilasReporteSemanalActividadStaff(semanaKey) {
 // A diferencia del reporte semanal de arriba (que resume lo YA
 // anunciado, para auditoría), este es exclusivamente de las
 // actividades todavía en "borrador" — es decir, exactamente lo que
-// pasaría si RH presionara "Anunciar actividades" ahora mismo. Nunca
+// pasaría si Encargado presionara "Anunciar actividades" ahora mismo. Nunca
 // cambia ningún estado ni genera notificaciones: es solo lectura.
 function obtenerFilasReporteOrganizacionActividadStaff(semanaKey) {
   return obtenerAsignacionesPorSemanaActividadStaff(semanaKey)

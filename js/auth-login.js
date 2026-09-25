@@ -1,7 +1,7 @@
 // MW JOYERÍA — Formulario de inicio de sesión (login.html)
 //
 // Valida contra los DOS registros de cuentas reales que ya existen en el
-// portal: cuentas-internas-modelo.js (Staff/RH/Admin) y
+// portal: cuentas-internas-modelo.js (Staff/Encargado/Admin) y
 // personas-ejemplo.js (Emprendedora/Líder) — ver js/auth-guard.js para
 // las funciones de sesión (guardarSesionActiva/obtenerSesionActiva).
 //
@@ -12,7 +12,7 @@
 
 const RUTA_PORTAL_POR_ROL = {
   admin: 'portal/admin/admin-portal.html',
-  rh: 'portal/rh/rh-portal.html',
+  encargado: 'portal/encargado/encargado-portal.html',
   staff: 'portal/staff/staff-portal.html',
   emprendedora: 'portal/emprendedora/emprendedora-portal.html',
   lider: 'portal/lider/lider-portal.html',
@@ -36,7 +36,7 @@ function iniciarSesion(usuario, password) {
         personaId: null,
         usuario: cuenta.usuario,
         nombre: cuenta.nombre,
-        rol: cuenta.rol, // 'staff' | 'rh' | 'admin'
+        rol: cuenta.rol, // 'staff' | 'encargado' | 'admin'
         iniciadaEn: new Date().toISOString(),
       };
       guardarSesionActiva(sesion);

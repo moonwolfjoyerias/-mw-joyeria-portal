@@ -1,15 +1,15 @@
 // MW JOYERÍA — Catálogo Admin
 //
-// Mismas capacidades que el catálogo de Staff/RH (ver reglas y datos
+// Mismas capacidades que el catálogo de Staff/Encargado (ver reglas y datos
 // en staff-catalogo-ejemplo.js, reutilizado tal cual): ver, buscar,
 // filtrar, agregar, editar, modificar existencia y eliminar productos.
 //
-// Igual que RH: las acciones sensibles NO piden usuario/contraseña de
+// Igual que Encargado: las acciones sensibles NO piden usuario/contraseña de
 // nuevo — muestran un modal de Autorización con mensaje dinámico (ver
 // js/admin-comun.js) y quedan en la auditoría (rol "admin").
 //
 // ⚠️ TEMPORAL: localStorage simula la base de datos (misma clave que
-// usa Staff/RH, para representar el mismo catálogo — ver Fase 3/Firestore).
+// usa Staff/Encargado, para representar el mismo catálogo — ver Fase 3/Firestore).
 
 let catalogoRH = [];
 
@@ -323,7 +323,7 @@ function abrirModalProducto(producto = null) {
         <label>Variantes (color / talla y existencia) *</label>
         <div id="variantesLista"></div>
         <button type="button" class="btn btn-outline" id="agregarVarianteBtn" style="width:100%;margin-top:8px;">+ Agregar variante</button>
-        <small class="field-help">Una fila por cada combinación real de color y talla en inventario. Si el artículo no tiene color o talla, deja esos campos vacíos — solo captura la existencia. Esta cantidad solo es visible para Staff, RH y Admin.</small>
+        <small class="field-help">Una fila por cada combinación real de color y talla en inventario. Si el artículo no tiene color o talla, deja esos campos vacíos — solo captura la existencia. Esta cantidad solo es visible para Staff, Encargado y Admin.</small>
       </div>
 
       <div class="form-field">
@@ -626,7 +626,7 @@ function abrirModalStock(producto) {
       `).join('')}
     </div>
 
-    <p class="demo-note">Esta información es privada para Staff, RH y Admin.</p>
+    <p class="demo-note">Esta información es privada para Staff, Encargado y Admin.</p>
 
     <button class="btn btn-primary" id="guardarStockBtn" style="width:100%;">Guardar existencia</button>
   `;

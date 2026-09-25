@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nómina — RH MW</title>
+  <title>Nómina — Encargado MW</title>
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="../../css/styles.css?v=31">
   <link rel="icon" type="image/png" href="../../assets/images/favicon.png">
@@ -21,39 +21,39 @@
         </span>
       </a>
       <nav>
-        <a href="../rh/rh-portal.html">
+        <a href="../encargado/encargado-portal.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
           Inicio
         </a>
-        <a href="../rh/rh-catalogo.html">
+        <a href="../encargado/encargado-catalogo.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg>
           Catálogo
         </a>
-        <a href="../rh/rh-apartados.html">
+        <a href="../encargado/encargado-apartados.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
           Apartados
         </a>
-        <a href="../rh/rh-calendario.html">
+        <a href="../encargado/encargado-calendario.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
           Calendario
         </a>
-        <a href="../rh/rh-lista-deseos.html">
+        <a href="../encargado/encargado-lista-deseos.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
           Lista de deseos
         </a>
-        <a href="../rh/rh-actividad-staff.html">
+        <a href="../encargado/encargado-actividad-staff.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           Actividades del Staff
         </a>
-        <a href="../rh/rh-actividad.html">
+        <a href="../encargado/encargado-actividad.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
           Actividad
         </a>
-        <a href="../rh/rh-nomina.html" class="active">
+        <a href="../encargado/encargado-nomina.html" class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>
           Nómina
         </a>
-        <a href="../rh/rh-mi-cuenta.html">
+        <a href="../encargado/encargado-mi-cuenta.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
           Mi cuenta
         </a>
@@ -64,7 +64,7 @@
       <header class="portal-header">
         <div>
           <h1>Nómina</h1>
-          <p class="portal-sub">Portal de Recursos Humanos MW.</p>
+          <p class="portal-sub">Portal de Encargado MW.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -77,19 +77,19 @@
           <button class="profile-btn" id="profileBtn">
             <span class="profile-avatar">R</span>
             <span class="profile-info">
-              <strong>Recursos Humanos</strong>
-              <span class="profile-role">RH MW</span>
+              <strong>Encargado</strong>
+              <span class="profile-role">Encargado MW</span>
             </span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="profile-menu" id="profileMenu">
-            <a href="rh-mi-cuenta.html">Cambiar foto de perfil</a>
+            <a href="encargado-mi-cuenta.html">Cambiar foto de perfil</a>
             <a href="../../login.html" class="danger">Cerrar sesión</a>
           </div>
         </div>
       </header>
 
-      <p class="portal-sub" style="margin-top:-0.8rem;margin-bottom:1.1rem;">Solo aplica a empleados con sueldo (Staff, RH, Administrativo). RH captura y envía la nómina a validación de Administración — Administración es quien la valida y solo entonces puede registrarse el pago.</p>
+      <p class="portal-sub" style="margin-top:-0.8rem;margin-bottom:1.1rem;">Solo aplica a empleados con sueldo (Staff, Encargado, Administrativo). Encargado captura y envía la nómina a validación de Administración — Administración es quien la valida y solo entonces puede registrarse el pago.</p>
 
       <div class="cfg-recuperar-banner" id="nomRecuperarBanner" hidden>
         <div>
@@ -131,7 +131,7 @@
             <select id="nomFiltroCargo">
               <option value="todos">Todos</option>
               <option value="staff">Staff</option>
-              <option value="rh">RH</option>
+              <option value="encargado">Encargado</option>
               <option value="admin">Administrativo</option>
             </select>
           </div>
@@ -183,22 +183,22 @@
 
   <script>
   const PORTAL_LINKS = {
-    inicio: '../rh/rh-portal.html',
-    catalogo: '../rh/rh-catalogo.html',
-    apartados: '../rh/rh-apartados.html',
-    deseos: '../rh/rh-lista-deseos.html',
-    misActividades: '../rh/rh-actividad-staff.html',
-    calendario: '../rh/rh-calendario.html',
-    notificaciones: '../rh/rh-mi-cuenta.html',
+    inicio: '../encargado/encargado-portal.html',
+    catalogo: '../encargado/encargado-catalogo.html',
+    apartados: '../encargado/encargado-apartados.html',
+    deseos: '../encargado/encargado-lista-deseos.html',
+    misActividades: '../encargado/encargado-actividad-staff.html',
+    calendario: '../encargado/encargado-calendario.html',
+    notificaciones: '../encargado/encargado-mi-cuenta.html',
   };
   </script>
   <script src="../../js/portal-common.js"></script>
-  <script src="../../js/rh-comun.js"></script>
+  <script src="../../js/encargado-comun.js"></script>
   <script src="../../js/auditoria-modelo.js"></script>
   <script src="../../js/notificaciones-ejemplo.js"></script>
   <script src="../../js/notificaciones-modelo.js"></script>
   <script src="../../js/cuentas-internas-modelo.js"></script>
   <script src="../../js/nomina-modelo.js"></script>
-  <script src="../../js/rh-nomina.js"></script>
+  <script src="../../js/encargado-nomina.js"></script>
 </body>
 </html>

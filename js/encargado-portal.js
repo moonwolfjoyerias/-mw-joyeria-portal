@@ -1,16 +1,16 @@
-// MW JOYERÍA — RH: Inicio
+// MW JOYERÍA — Encargado: Inicio
 //
 // Mismo resumen operativo que Staff (misma fuente de datos: Apartados
 // y Lista de deseos) y los mismos eventos de la semana del calendario
-// compartido. La diferencia propia de RH es el bloque de Nómina y
+// compartido. La diferencia propia de Encargado es el bloque de Nómina y
 // recordatorios — informativo por ahora, ya que Nómina todavía no
-// está construida (ver PROMPT MAESTRO PORTAL RH, sección 30).
+// está construida (ver PROMPT MAESTRO PORTAL Encargado, sección 30).
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  actualizarResumenInicioRH();
+  actualizarResumenInicioEncargado();
   renderRecordatoriosNomina();
-  renderEventosSemanaRH();
+  renderEventosSemanaEncargado();
 
 });
 
@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // RESUMEN OPERATIVO (mismos datos que Apartados y Lista de deseos)
 // ============================================================
 
-function actualizarResumenInicioRH() {
+function actualizarResumenInicioEncargado() {
 
   const ventanas = typeof calcularVentanasStaffActuales === 'function'
     ? calcularVentanasStaffActuales()
@@ -90,7 +90,7 @@ function obtenerProximoPeriodoPago() {
 // EVENTOS DE ESTA SEMANA (mismo calendario compartido que Staff)
 // ============================================================
 
-function renderEventosSemanaRH() {
+function renderEventosSemanaEncargado() {
 
   const wrap = document.getElementById('weekEventsRow');
   if (!wrap) return;
@@ -132,7 +132,7 @@ function renderEventosSemanaRH() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-7.58 7-12a7 7 0 10-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
             ${escapeHTML(ev.lugarTexto || '')}
           </div>
-          <a class="event-link" href="../rh/rh-calendario.html">Ver calendario →</a>
+          <a class="event-link" href="../encargado/encargado-calendario.html">Ver calendario →</a>
         </div>
       </div>
     `;

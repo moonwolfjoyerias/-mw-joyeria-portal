@@ -1,4 +1,4 @@
-// MW JOYERÍA — Calendario RH
+// MW JOYERÍA — Calendario Encargado
 //
 // Mismo calendario que Staff: mismos eventos, misma estructura, misma
 // tabla (ver, buscar, filtrar, agregar, editar, eliminar), usando el
@@ -8,8 +8,8 @@
 //
 // Única diferencia respecto a Staff: las acciones sensibles NO piden
 // usuario/contraseña de nuevo — muestran el modal de Autorización de
-// RH con mensaje dinámico (ver js/rh-comun.js) y quedan en la
-// auditoría de RH.
+// Encargado con mensaje dinámico (ver js/encargado-comun.js) y quedan en la
+// auditoría de Encargado.
 
 let eventosCalendario = [];
 
@@ -291,7 +291,7 @@ function abrirModalEventoCalendario(evento = null) {
       ? `Estás a punto de guardar los cambios del evento "${datos.titulo}".`
       : `Estás a punto de agregar el evento "${datos.titulo}" al calendario.`;
 
-    abrirAutorizacionRH({
+    abrirAutorizacionEncargado({
       titulo: editando ? 'Autorizar cambios' : 'Autorizar nuevo evento',
       mensaje,
       onConfirmar: () => editando ? guardarEdicionEvento(evento.id, datos) : agregarEvento(datos)
@@ -335,7 +335,7 @@ function agregarEvento(datos) {
   const nuevoEvento = {
     id: 'ev-' + Date.now(),
     ...datos,
-    ultimaAccion: { tipo: 'Agregado', empleado: RH_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() }
+    ultimaAccion: { tipo: 'Agregado', empleado: ENCARGADO_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() }
   };
 
   eventosCalendario.unshift(nuevoEvento);
@@ -343,8 +343,8 @@ function agregarEvento(datos) {
   cerrarModalCalendario();
   renderTablaCalendario();
 
-  registrarAuditoriaRH({ modulo: 'calendario', accion: 'agregar_evento', descripcion: `Evento agregado: ${datos.titulo}` });
-  mostrarToast(`Evento agregado por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: 'calendario', accion: 'agregar_evento', descripcion: `Evento agregado: ${datos.titulo}` });
+  mostrarToast(`Evento agregado por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }
 
@@ -354,14 +354,14 @@ function guardarEdicionEvento(id, datos) {
   if (!evento) return;
 
   Object.assign(evento, datos);
-  evento.ultimaAccion = { tipo: 'Editado', empleado: RH_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() };
+  evento.ultimaAccion = { tipo: 'Editado', empleado: ENCARGADO_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() };
 
   persistirEventosCalendario();
   cerrarModalCalendario();
   renderTablaCalendario();
 
-  registrarAuditoriaRH({ modulo: 'calendario', accion: 'editar_evento', descripcion: `Evento editado: ${datos.titulo}` });
-  mostrarToast(`Cambios guardados por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: 'calendario', accion: 'editar_evento', descripcion: `Evento editado: ${datos.titulo}` });
+  mostrarToast(`Cambios guardados por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }
 
@@ -370,7 +370,7 @@ function confirmarEliminarEvento(id) {
   const evento = eventosCalendario.find(ev => ev.id === id);
   if (!evento) return;
 
-  abrirAutorizacionRH({
+  abrirAutorizacionEncargado({
     titulo: 'Autorizar eliminación',
     mensaje: `Estás a punto de eliminar el evento "${evento.titulo}" del calendario. Esta acción no se puede deshacer.`,
     peligrosa: true,
@@ -389,8 +389,8 @@ function eliminarEvento(id) {
   cerrarModalCalendario();
   renderTablaCalendario();
 
-  registrarAuditoriaRH({ modulo: 'calendario', accion: 'eliminar_evento', descripcion: `Evento eliminado: ${evento.titulo}` });
-  mostrarToast(`"${evento.titulo}" fue eliminado por ${RH_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaEncargado({ modulo: 'calendario', accion: 'eliminar_evento', descripcion: `Evento eliminado: ${evento.titulo}` });
+  mostrarToast(`"${evento.titulo}" fue eliminado por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
 
 }
 

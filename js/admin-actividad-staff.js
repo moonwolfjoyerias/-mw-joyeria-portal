@@ -1,10 +1,10 @@
 // MW JOYERÍA — Admin: Actividades del Staff
 //
-// Dos vistas (ver js/rh-actividad-staff.js para la versión de RH, con
+// Dos vistas (ver js/encargado-actividad-staff.js para la versión de Encargado, con
 // las mismas capacidades de organizar/sortear/anunciar/firmar — las
 // actividades base ya están precargadas, ver asegurarAsignacionesBaseSemana
 // en el modelo):
-// - "Semana en organización": mismo flujo operativo que ya tiene RH.
+// - "Semana en organización": mismo flujo operativo que ya tiene Encargado.
 // - "Todas las actividades": supervisión — historial completo de TODAS
 //   las semanas, filtrable por semana/empleado/zona/estado (sección 9
 //   del prompt), con acceso al detalle e historial de cada actividad.
@@ -349,7 +349,7 @@ function filaActividadAdmin(a) {
       <td style="white-space:nowrap;">
         <button type="button" class="comm-icon-btn" data-act-editar="${a.id}" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></button>
         <button type="button" class="comm-icon-btn" data-act-detalle="${a.id}" title="Ver detalle e historial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="6"/><path d="M20 20l-5.5-5.5"/></svg></button>
-        ${a.estado === 'enterado' ? `<button type="button" class="comm-icon-btn" data-act-firmar="${a.id}" title="Firmar por RH"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></button>` : ''}
+        ${a.estado === 'enterado' ? `<button type="button" class="comm-icon-btn" data-act-firmar="${a.id}" title="Firmar por Encargado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></button>` : ''}
       </td>
     </tr>
   `;
@@ -382,14 +382,14 @@ function confirmarFirmarAdmin(id) {
   const a = obtenerAsignacionActividadStaffPorId(id);
   if (!a) return;
   abrirAutorizacionAdmin({
-    titulo: 'Firmar por RH',
+    titulo: 'Firmar por Encargado',
     mensaje: `Confirmas que revisaste físicamente que "${escapeHTMLAct(a.nombre)}" (${escapeHTMLAct(a.zona)}) fue realizada por ${nombresResponsablesAct(a)}.`,
     onConfirmar: () => {
-      const resultado = firmarRHAsignacionActividadStaff(id, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre, usuarioRol: 'admin' });
+      const resultado = firmarEncargadoAsignacionActividadStaff(id, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre, usuarioRol: 'admin' });
       if (!resultado.ok) { mostrarToast(resultado.error); return; }
       registrarAuditoriaAdmin({ modulo: 'actividades_staff', accion: 'firmar_actividad', descripcion: `Actividad verificada y firmada: ${a.nombre} (${a.zona}) — responsable(s) ${nombresResponsablesAct(a)}.` });
       renderTablaActividadesAdmin();
-      mostrarToast('Actividad firmada por RH.');
+      mostrarToast('Actividad firmada por Encargado.');
     }
   });
 }
@@ -529,7 +529,7 @@ function abrirModalEditarActividad(id) {
 
     ${(a.encargados || []).length > 1 ? `
       <label style="margin-top:10px;">Responsables</label>
-      <p class="modal-sub" style="margin:0 0 10px;">${a.encargados.map(e => escapeHTMLAct(e.nombre)).join(', ')} — esta actividad tiene varios responsables; edítalos desde el portal de RH.</p>
+      <p class="modal-sub" style="margin:0 0 10px;">${a.encargados.map(e => escapeHTMLAct(e.nombre)).join(', ')} — esta actividad tiene varios responsables; edítalos desde el portal de Encargado.</p>
     ` : `
       <label for="actEditEncargado" style="margin-top:10px;">Encargado</label>
       <select id="actEditEncargado">
@@ -623,7 +623,7 @@ function abrirDetalleActividad(id) {
       <span>Estado</span><span class="badge ${BADGE_ESTADOS_ACTIVIDAD_STAFF[a.estado]}">${ESTADOS_ACTIVIDAD_STAFF[a.estado]}</span>
       ${a.observaciones ? `<span>Observaciones</span><strong>${escapeHTMLAct(a.observaciones)}</strong>` : ''}
       ${a.fechaEnterado ? `<span>Se enteró</span><strong>${escapeHTMLAct(a.enteradoPorNombre)} · ${formatearFechaHoraAct(a.fechaEnterado)}</strong>` : ''}
-      ${a.fechaFirmaRH ? `<span>Firmado por RH</span><strong>${escapeHTMLAct(a.firmadoPorNombre)} · ${formatearFechaHoraAct(a.fechaFirmaRH)}</strong>` : ''}
+      ${a.fechaFirmaEncargado ? `<span>Firmado por Encargado</span><strong>${escapeHTMLAct(a.firmadoPorNombre)} · ${formatearFechaHoraAct(a.fechaFirmaEncargado)}</strong>` : ''}
     </div>
 
     <div class="eyebrow" style="margin-top:14px;">Historial</div>
@@ -888,7 +888,7 @@ function construirHTMLReporteSemanalAct(filas, semanaKey) {
             <th style="border:1px solid #000;padding:5px;text-align:left;">Encargado</th>
             <th style="border:1px solid #000;padding:5px;text-align:left;">Estado final</th>
             <th style="border:1px solid #000;padding:5px;text-align:left;">Fecha de confirmación</th>
-            <th style="border:1px solid #000;padding:5px;text-align:left;">RH que verificó</th>
+            <th style="border:1px solid #000;padding:5px;text-align:left;">Encargado que verificó</th>
           </tr>
         </thead>
         <tbody>
@@ -900,7 +900,7 @@ function construirHTMLReporteSemanalAct(filas, semanaKey) {
       </table>
 
       <div style="margin-top:14px;font-size:9px;color:#555;line-height:1.5;">
-        <strong>Enterado</strong> = el empleado confirmó que conocía la actividad. <strong>Firmado por RH</strong> = RH confirmó que la actividad fue realizada. <strong>No se realizó</strong> = al cierre de la semana no existía confirmación de cumplimiento por RH.
+        <strong>Enterado</strong> = el empleado confirmó que conocía la actividad. <strong>Firmado por Encargado</strong> = Encargado confirmó que la actividad fue realizada. <strong>No se realizó</strong> = al cierre de la semana no existía confirmación de cumplimiento por Encargado.
       </div>
     </div>
   `;

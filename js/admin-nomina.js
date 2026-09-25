@@ -1,6 +1,6 @@
 // MW JOYERÍA — Admin: Nómina
 //
-// Solo aplica a empleados con sueldo (Staff, RH, Administrativo) — no
+// Solo aplica a empleados con sueldo (Staff, Encargado, Administrativo) — no
 // toca Emprendedoras/Líderes (Comisiones/Plan MW). Reutiliza el mismo
 // patrón de edición estilo Excel, autoguardado y trazabilidad que ya
 // se construyó para Comisiones (js/admin-comisiones.js) y
@@ -213,7 +213,7 @@ function obtenerInicialesNomina(nombre) {
   return String(nombre || '').trim().split(/\s+/).slice(0, 2).map(p => p.charAt(0).toUpperCase()).join('');
 }
 
-// Mapea cada estado del flujo RH↔Administración (js/nomina-modelo.js →
+// Mapea cada estado del flujo Encargado↔Administración (js/nomina-modelo.js →
 // ESTADOS_NOMINA_PERIODO) a la clase de badge y texto que se muestran
 // en la tabla principal y en el detalle — un solo lugar para no
 // repetir el mapeo cada vez que se pinta un estado.
@@ -289,7 +289,7 @@ function renderTablaPrincipalNomina() {
   }
 
   // El estado que se filtra/muestra es el de la nómina del periodo
-  // seleccionado (flujo RH↔Administración), no el activo/inactivo del
+  // seleccionado (flujo Encargado↔Administración), no el activo/inactivo del
   // empleado — obtenerPeriodoNomina no guarda nada, solo lee/calcula
   // el periodo por defecto si todavía no se ha capturado.
   let filas = empleados.map(e => ({ empleado: e, periodo: obtenerPeriodoNomina(e.id, nomPeriodoActual) }));
@@ -353,9 +353,9 @@ function renderVistaDetalleNomina() {
         <div>
           <h3 class="cfg-card-title" style="margin-bottom:4px;">Estado de la nómina — ${formatearRangoSemanaNomina(nomPeriodoActual)}</h3>
           ${badgeEstadoNominaHTML(estadoNomina)}
-          ${nomPeriodoEnEdicion.validacionRH ? `<p class="cfg-card-sub" style="margin-top:8px;">RH (${escapeHTMLNomina(nomPeriodoEnEdicion.validacionRH.usuarioNombre)}) envió esta nómina a validación el ${formatearFechaHoraNomina(nomPeriodoEnEdicion.validacionRH.fecha)}.</p>` : ''}
+          ${nomPeriodoEnEdicion.validacionEncargado ? `<p class="cfg-card-sub" style="margin-top:8px;">Encargado (${escapeHTMLNomina(nomPeriodoEnEdicion.validacionEncargado.usuarioNombre)}) envió esta nómina a validación el ${formatearFechaHoraNomina(nomPeriodoEnEdicion.validacionEncargado.fecha)}.</p>` : ''}
           ${nomPeriodoEnEdicion.validacionAdmin ? `<p class="cfg-card-sub" style="margin-top:4px;">Validada por ${escapeHTMLNomina(nomPeriodoEnEdicion.validacionAdmin.usuarioNombre)} el ${formatearFechaHoraNomina(nomPeriodoEnEdicion.validacionAdmin.fecha)}.</p>` : ''}
-          ${estadoNomina === 'correccion_solicitada' && nomPeriodoEnEdicion.comentarioCorreccion ? `<p class="cfg-card-sub" style="margin-top:4px;"><strong>Comentario enviado a RH:</strong> ${escapeHTMLNomina(nomPeriodoEnEdicion.comentarioCorreccion)}</p>` : ''}
+          ${estadoNomina === 'correccion_solicitada' && nomPeriodoEnEdicion.comentarioCorreccion ? `<p class="cfg-card-sub" style="margin-top:4px;"><strong>Comentario enviado a Encargado:</strong> ${escapeHTMLNomina(nomPeriodoEnEdicion.comentarioCorreccion)}</p>` : ''}
         </div>
         ${puedeValidar ? `
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -484,13 +484,13 @@ function renderVistaDetalleNomina() {
 }
 
 // ============================================================
-// VALIDACIÓN RH ↔ ADMINISTRACIÓN
+// VALIDACIÓN Encargado ↔ ADMINISTRACIÓN
 // ============================================================
 
 function confirmarValidarNomina(empleado) {
   abrirAutorizacionAdmin({
     titulo: 'Validar nómina',
-    mensaje: `Vas a validar la nómina de <strong>${escapeHTMLNomina(empleado.nombre)}</strong> (${escapeHTMLNomina(formatearRangoSemanaNomina(nomPeriodoActual))}). RH será notificado y podrá registrarse el pago.`,
+    mensaje: `Vas a validar la nómina de <strong>${escapeHTMLNomina(empleado.nombre)}</strong> (${escapeHTMLNomina(formatearRangoSemanaNomina(nomPeriodoActual))}). Encargado será notificado y podrá registrarse el pago.`,
     onConfirmar: () => {
       const resultado = validarNominaAdmin(empleado.id, nomPeriodoActual, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre });
       if (!resultado.ok) { mostrarToast(resultado.error); return; }
@@ -512,12 +512,12 @@ function abrirModalSolicitarCorreccionNomina(empleado) {
     <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12a8 8 0 0114-5.3"/><path d="M20 12a8 8 0 01-14 5.3"/><path d="M17 4v4h-4"/><path d="M7 20v-4h4"/></svg></div>
     <h3>Solicitar revisión nuevamente</h3>
     <p class="modal-sub">${escapeHTMLNomina(empleado.nombre)} · ${escapeHTMLNomina(formatearRangoSemanaNomina(nomPeriodoActual))}</p>
-    <label class="cfg-field-label">¿Qué debe corregir RH?</label>
+    <label class="cfg-field-label">¿Qué debe corregir Encargado?</label>
     <textarea id="nomCorreccionComentario" rows="4" style="width:100%;border:1px solid var(--mw-border);border-radius:8px;padding:0.6em 0.8em;font-family:inherit;"></textarea>
     <div id="nomCorreccionError" class="auth-error" style="display:none;"></div>
     <div style="display:flex;gap:10px;margin-top:14px;">
       <button class="btn btn-outline" style="flex:1;" id="nomCorreccionCancelarBtn" type="button">Cancelar</button>
-      <button class="btn btn-primary" style="flex:1;" id="nomCorreccionConfirmarBtn" type="button">Enviar a RH</button>
+      <button class="btn btn-primary" style="flex:1;" id="nomCorreccionConfirmarBtn" type="button">Enviar a Encargado</button>
     </div>
   `;
 
@@ -536,7 +536,7 @@ function abrirModalSolicitarCorreccionNomina(empleado) {
       return;
     }
     cerrar();
-    mostrarToast('Se solicitó la corrección a RH.');
+    mostrarToast('Se solicitó la corrección a Encargado.');
     renderVistaDetalleNomina();
   });
 
@@ -1176,7 +1176,7 @@ async function ejecutarGeneracionComprobanteNomina(empleado) {
 
 }
 
-// Formato d/m/yyyy (igual al recibo de RH en Excel), sin ceros a la izquierda.
+// Formato d/m/yyyy (igual al recibo de Encargado en Excel), sin ceros a la izquierda.
 function formatearFechaDMYNomina(fechaISO) {
   if (!fechaISO) return '—';
   const fecha = new Date(fechaISO.length <= 10 ? `${fechaISO}T00:00:00` : fechaISO);
@@ -1192,7 +1192,7 @@ function obtenerDireccionMWNomina() {
   return 'Ignacio Aldama #400 Local 21, Centro Histórico, San Luis Potosí, San Luis Potosí, CP 78000';
 }
 
-// Réplica visual literal del machote real de RH (PRUEBA_CAMI.xlsx, hoja
+// Réplica visual literal del machote real de Encargado (PRUEBA_CAMI.xlsx, hoja
 // "Cam"): mismo grid de 8 columnas A:H con las mismas proporciones,
 // mismo lila #DAC2EC en las franjas, mismo bloque de TOTAL combinado
 // verticalmente (G:H) junto a PERCEPCIONES/DEDUCCIONES, mismos tres
@@ -1458,7 +1458,7 @@ function abrirModalEmpleadoNomina(id) {
       <label>Cargo
         <select id="nomEmpCargo">
           <option value="staff" ${empleado?.cargo === 'staff' ? 'selected' : ''}>Staff</option>
-          <option value="rh" ${empleado?.cargo === 'rh' ? 'selected' : ''}>RH</option>
+          <option value="encargado" ${empleado?.cargo === 'encargado' ? 'selected' : ''}>Encargado</option>
           <option value="admin" ${empleado?.cargo === 'admin' ? 'selected' : ''}>Administrativo</option>
         </select>
       </label>
@@ -1729,7 +1729,7 @@ function abrirModalConceptoNomina(id) {
 
 // ---------- Solicitudes de alta/baja ----------
 //
-// RH es el único rol que solicita (ver js/rh-nomina.js); Administración
+// Encargado es el único rol que solicita (ver js/encargado-nomina.js); Administración
 // solo revisa, aprueba o deniega — nunca crea solicitudes desde aquí.
 
 let nomSolFiltro = 'pendientes';
@@ -1786,7 +1786,7 @@ function renderDatosSolicitudes() {
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
         <div>
           <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Todas las solicitudes</h3>
-          <p class="cfg-card-sub" style="margin-bottom:0;">RH solicita el alta/baja; Administración es quien aprueba o deniega. Ninguna solicitud se elimina del historial.</p>
+          <p class="cfg-card-sub" style="margin-bottom:0;">Encargado solicita el alta/baja; Administración es quien aprueba o deniega. Ninguna solicitud se elimina del historial.</p>
         </div>
         <select id="nomSolFiltroSelect" style="width:auto;">
           <option value="pendientes" ${nomSolFiltro === 'pendientes' ? 'selected' : ''}>Pendientes</option>

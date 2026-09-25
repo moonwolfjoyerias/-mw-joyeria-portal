@@ -1,12 +1,12 @@
 // MW JOYERÍA — Calendario Admin
 //
-// Mismo calendario que Staff/RH: mismos eventos, misma estructura,
+// Mismo calendario que Staff/Encargado: mismos eventos, misma estructura,
 // misma tabla (ver, buscar, filtrar, agregar, editar, eliminar),
 // usando el mismo modelo compartido (js/eventos-modelo.js — clave de
 // localStorage mw-eventos-v1, el mismo calendario para todos los
 // roles).
 //
-// Igual que RH: las acciones sensibles NO piden usuario/contraseña de
+// Igual que Encargado: las acciones sensibles NO piden usuario/contraseña de
 // nuevo — muestran el modal de Autorización (ver js/admin-comun.js) y
 // quedan en la auditoría (rol "admin").
 

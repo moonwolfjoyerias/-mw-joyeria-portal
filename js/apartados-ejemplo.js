@@ -2,7 +2,7 @@
 // ⚠️ TEMPORAL: se reemplaza por Firestore en Fase 3.
 //
 // Las piezas y ventanas de apartado ya no viven aquí — vienen de
-// apartados-modelo.js (fuente real, compartida con Staff/RH/Admin). Este
+// apartados-modelo.js (fuente real, compartida con Staff/Encargado/Admin). Este
 // archivo solo aporta los datos bancarios a mostrar en el modal de pago.
 
 // Datos bancarios de ejemplo — reemplazar por los reales de MW Joyería

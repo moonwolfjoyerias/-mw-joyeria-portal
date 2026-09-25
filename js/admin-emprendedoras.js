@@ -7,7 +7,7 @@
 // Reutiliza:
 // - js/personas-ejemplo.js — registro de personas (nuevo, ver ese archivo).
 // - js/apartados-modelo.js + js/staff-apartados-ejemplo.js — MISMAS
-//   ventanas de apartado que usan Staff/RH/Admin, sin datos paralelos.
+//   ventanas de apartado que usan Staff/Encargado/Admin, sin datos paralelos.
 // - js/lider-ejemplo.js (RANGOS_MW) — MISMOS umbrales de rango reales.
 // - js/admin-comun.js — abrirAutorizacionAdmin / registrarAuditoriaAdmin.
 //
@@ -760,7 +760,7 @@ function renderSeccionComprasPersona(persona) {
 }
 
 // ============================================================
-// SECCIÓN: APARTADOS (misma estructura/lógica que Staff/RH/Admin)
+// SECCIÓN: APARTADOS (misma estructura/lógica que Staff/Encargado/Admin)
 // ============================================================
 
 function renderSeccionApartadosPersona(persona) {

@@ -3,7 +3,7 @@
 // ⚠️ TEMPORAL: se reemplazará por Firestore en Fase 3.
 //
 // Este archivo contiene productos de demostración.
-// La existencia (stock) SOLO se muestra en Staff/RH/Admin.
+// La existencia (stock) SOLO se muestra en Staff/Encargado/Admin.
 //
 // IMPORTANTE:
 // Las credenciales de abajo son únicamente para simulación.
@@ -16,8 +16,8 @@ const STAFF_USUARIOS_EJEMPLO = [
     password: '1234'
   },
   {
-    usuario: 'rh01',
-    nombre: 'Recursos Humanos',
+    usuario: 'encargado01',
+    nombre: 'Valentina Cruz',
     password: '1234'
   }
 ];

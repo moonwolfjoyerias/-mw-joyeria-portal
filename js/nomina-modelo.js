@@ -1,13 +1,13 @@
 // MW JOYERÍA — Admin: Nómina (motor de datos)
 //
-// La nómina aplica SOLO a empleados con sueldo: Staff, RH y
+// La nómina aplica SOLO a empleados con sueldo: Staff, Encargado y
 // Administrativo. Emprendedoras/Líderes NO forman parte de Nómina —
 // su compensación es Comisiones + Plan MW (no se toca nada de eso
 // aquí, ver js/comisiones-modelo.js y js/plan-mw-admin.js).
 //
 // ⚠️ Nota de arquitectura: este roster de "empleados de nómina" es
 // DISTINTO del registro de cuentas de login (js/cuentas-internas-modelo.js)
-// aunque representan a las mismas 9 personas (Staff01-07, RH, Admin) —
+// aunque representan a las mismas 9 personas (Staff01-07, Encargado, Admin) —
 // no se inventaron personas nuevas. Se mantienen separados a propósito
 // porque Nómina necesita su propio número de empleado, salario, fecha
 // de inicio y un flujo de alta/baja CON APROBACIÓN que no existe (ni
@@ -36,11 +36,11 @@ const NOMINA_HISTORIAL_KEY = 'mw-nomina-historial-ajustes-v1';
 const NOMINA_SOLICITUDES_KEY = 'mw-nomina-solicitudes-v1';
 const NOMINA_BORRADOR_KEY = 'mw-nomina-borrador-v1';
 
-const CARGOS_NOMINA = { staff: 'Staff', rh: 'RH', admin: 'Administrativo' };
+const CARGOS_NOMINA = { staff: 'Staff', encargado: 'Encargado', admin: 'Administrativo' };
 const ESTADOS_EMPLEADO_NOMINA = { activo: 'Activo', inactivo: 'Inactivo' };
 
-// Flujo de revisión RH ↔ Administración de cada nómina semanal.
-// RH prepara y envía a validación; Administración valida o pide
+// Flujo de revisión Encargado ↔ Administración de cada nómina semanal.
+// Encargado prepara y envía a validación; Administración valida o pide
 // corrección; el pago solo se registra una vez validada. Nunca se
 // salta un paso ni se sobrescribe el historial (ver
 // registrarCambioEstadoNomina más abajo).
@@ -58,7 +58,7 @@ const NOMINA_HISTORIAL_ESTADOS_KEY = 'mw-nomina-historial-estados-v1';
 // ============================================================
 
 // Mismas 9 personas que ya existen como cuentas internas (Staff01-07,
-// Recursos Humanos, Claudia) — ver nota de arquitectura arriba. Los
+// Valentina Cruz, Claudia) — ver nota de arquitectura arriba. Los
 // salarios son valores de ejemplo razonables (no existía ningún dato
 // salarial real en el sistema antes de esta página).
 function construirEmpleadosNominaEjemplo() {
@@ -70,7 +70,7 @@ function construirEmpleadosNominaEjemplo() {
     { id: 'emp-staff05', numeroEmpleado: 'EMP005', nombre: 'Jorge Salinas', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
     { id: 'emp-staff06', numeroEmpleado: 'EMP006', nombre: 'Paulina Gómez', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
     { id: 'emp-staff07', numeroEmpleado: 'EMP007', nombre: 'Luis Medina', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-rh01', numeroEmpleado: 'EMP008', nombre: 'Recursos Humanos', cargo: 'rh', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 2600, pagoHoraExtra: 140, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
+    { id: 'emp-encargado01', numeroEmpleado: 'EMP008', nombre: 'Valentina Cruz', cargo: 'encargado', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 2600, pagoHoraExtra: 140, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
     { id: 'emp-admin01', numeroEmpleado: 'EMP009', nombre: 'Claudia', cargo: 'admin', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 3200, pagoHoraExtra: 170, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' }
   ];
 }
@@ -79,7 +79,7 @@ function construirEmpleadosNominaEjemplo() {
 // SALARIO DIARIO Y HORA EXTRA — cálculo automático
 // ============================================================
 //
-// RH ya no captura "pago por hora extra" a mano: se calcula solo a
+// Encargado ya no captura "pago por hora extra" a mano: se calcula solo a
 // partir del salario SEMANAL (salarioBase) y el horario del empleado
 // (diasPorSemana/horasPorDia), igual que marca el Art. 68 de la Ley
 // Federal del Trabajo — el tiempo extra se paga al DOBLE de la
@@ -120,8 +120,8 @@ function calcularDiasDesfaseInicio(fechaInicioISO) {
 }
 
 // El desfase de inicio ya NO es una preferencia fija del empleado —
-// es una acción de una sola vez que RH/Admin dispara directamente al
-// capturar la nómina (ver abrirModalDesfaseHoras en rh-nomina.js /
+// es una acción de una sola vez que Encargado/Admin dispara directamente al
+// capturar la nómina (ver abrirModalDesfaseHoras en encargado-nomina.js /
 // admin-nomina.js). Se aplica una única vez por empleado
 // (empleado.desfaseInicioEstado queda en null hasta que se usa) y, en
 // cuanto se paga la semana que le corresponde, queda bloqueada para
@@ -512,7 +512,7 @@ function periodoKeyDeLunes(lunes) {
 }
 
 // Viernes de esa misma semana (lunes + 4 días) — el día normal de pago
-// (sección 6.1). Es solo la PROPUESTA inicial: RH puede cambiarla con
+// (sección 6.1). Es solo la PROPUESTA inicial: Encargado puede cambiarla con
 // actualizarFechaPagoNomina, y ese cambio nunca afecta otros periodos.
 function fechaPagoSugeridaNomina(periodoKey) {
   const lunes = new Date(`${periodoKey}T00:00:00`);
@@ -614,7 +614,7 @@ function obtenerPeriodoNomina(empleadoId, periodoKey) {
     conceptos,
     ...totales,
     estadoNomina: 'pendiente',
-    validacionRH: null,
+    validacionEncargado: null,
     validacionAdmin: null,
     comentarioCorreccion: null,
     estadoPago: { estado: 'pendiente' },
@@ -645,9 +645,9 @@ function guardarPeriodoNomina(periodo) {
 }
 
 // El empleado firma de recibido su propio recibo (Staff → Mi cuenta) —
-// aparte de estadoNomina (que es la validación RH/Admin del CONTENIDO
+// aparte de estadoNomina (que es la validación Encargado/Admin del CONTENIDO
 // de la nómina, un proceso distinto) para no interferir con esa
-// máquina de estados. Solo aplica a un periodo que RH ya capturó
+// máquina de estados. Solo aplica a un periodo que Encargado ya capturó
 // (periodo.guardado), y es de una sola vez: firmar de nuevo no cambia
 // la fecha ya registrada.
 function firmarReciboNomina(empleadoId, periodoKey, { usuarioId, usuarioNombre }) {
@@ -668,7 +668,7 @@ function firmarReciboNomina(empleadoId, periodoKey, { usuarioId, usuarioNombre }
 
 }
 
-// RH puede modificar la fecha de pago propuesta (sección 6.1) — nunca
+// Encargado puede modificar la fecha de pago propuesta (sección 6.1) — nunca
 // modifica otros periodos ni el dato permanente del empleado.
 function actualizarFechaPagoNomina(empleadoId, periodoKey, nuevaFecha, { usuarioId, usuarioNombre, usuarioRol }) {
   if (!nuevaFecha) return { ok: false, error: 'Indica la fecha de pago.' };
@@ -689,7 +689,7 @@ function actualizarFechaPagoNomina(empleadoId, periodoKey, nuevaFecha, { usuario
   return { ok: true, periodo: periodos[clave] };
 }
 
-// RH puede cambiar el método de pago DIRECTAMENTE desde la nómina de
+// Encargado puede cambiar el método de pago DIRECTAMENTE desde la nómina de
 // ese periodo (sección 6.5) — no toca el dato permanente del empleado,
 // así que la misma persona puede recibir efectivo una semana y
 // transferencia la siguiente.
@@ -770,7 +770,7 @@ function obtenerHistorialAjustesPeriodo(empleadoId, periodoKey) {
 }
 
 // ============================================================
-// FLUJO DE VALIDACIÓN RH ↔ ADMINISTRACIÓN
+// FLUJO DE VALIDACIÓN Encargado ↔ ADMINISTRACIÓN
 // ============================================================
 
 function obtenerHistorialEstadosNomina() {
@@ -822,7 +822,7 @@ function registrarCambioEstadoNomina({ empleadoId, periodoKey, estadoAnterior, e
 
 }
 
-// RH envía la nómina a revisión de Administración. Válido desde
+// Encargado envía la nómina a revisión de Administración. Válido desde
 // "pendiente" o desde "corrección solicitada" (ciclo de revisión las
 // veces que hagan falta — sección 5).
 function enviarNominaAValidacion(empleadoId, periodoKey, { usuarioId, usuarioNombre }) {
@@ -837,12 +837,12 @@ function enviarNominaAValidacion(empleadoId, periodoKey, { usuarioId, usuarioNom
   const clave = construirClavePeriodo(empleadoId, periodoKey);
   const periodos = obtenerPeriodosNomina();
   periodos[clave].estadoNomina = 'necesita_validacion_admin';
-  periodos[clave].validacionRH = { usuarioId, usuarioNombre, fecha: new Date().toISOString() };
+  periodos[clave].validacionEncargado = { usuarioId, usuarioNombre, fecha: new Date().toISOString() };
   guardarPeriodosNomina(periodos);
 
   registrarCambioEstadoNomina({
     empleadoId, periodoKey, estadoAnterior, estadoNuevo: 'necesita_validacion_admin',
-    usuarioId, usuarioNombre, usuarioRol: 'rh'
+    usuarioId, usuarioNombre, usuarioRol: 'encargado'
   });
 
   const empleado = obtenerEmpleadoNominaPorId(empleadoId);
@@ -852,7 +852,7 @@ function enviarNominaAValidacion(empleadoId, periodoKey, { usuarioId, usuarioNom
       link: `admin-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
       rolDestino: 'admin',
       tipo: 'nomina',
-      origen: 'rh'
+      origen: 'encargado'
     });
   }
 
@@ -886,8 +886,8 @@ function validarNominaAdmin(empleadoId, periodoKey, { usuarioId, usuarioNombre }
   if (typeof agregarNotificacion === 'function' && empleado) {
     agregarNotificacion({
       texto: `La nómina de ${empleado.nombre} (${formatearRangoSemanaNomina(periodoKey)}) fue validada por Administración.`,
-      link: `rh-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
-      rolDestino: 'rh',
+      link: `encargado-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
+      rolDestino: 'encargado',
       tipo: 'nomina'
     });
   }
@@ -896,11 +896,11 @@ function validarNominaAdmin(empleadoId, periodoKey, { usuarioId, usuarioNombre }
 
 }
 
-// Administración regresa la nómina a RH con un comentario obligatorio.
+// Administración regresa la nómina a Encargado con un comentario obligatorio.
 function solicitarCorreccionNomina(empleadoId, periodoKey, { usuarioId, usuarioNombre, comentario }) {
 
   comentario = String(comentario || '').trim();
-  if (!comentario) return { ok: false, error: 'Escribe qué debe corregir RH.' };
+  if (!comentario) return { ok: false, error: 'Escribe qué debe corregir Encargado.' };
 
   const clave = construirClavePeriodo(empleadoId, periodoKey);
   const periodos = obtenerPeriodosNomina();
@@ -925,8 +925,8 @@ function solicitarCorreccionNomina(empleadoId, periodoKey, { usuarioId, usuarioN
   if (typeof agregarNotificacion === 'function' && empleado) {
     agregarNotificacion({
       texto: `La nómina de ${empleado.nombre} (${formatearRangoSemanaNomina(periodoKey)}) requiere correcciones. Revisa el comentario de Administración.`,
-      link: `rh-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
-      rolDestino: 'rh',
+      link: `encargado-nomina.html?empleado=${empleadoId}&periodo=${periodoKey}`,
+      rolDestino: 'encargado',
       tipo: 'nomina'
     });
   }
@@ -1049,7 +1049,7 @@ function crearSolicitudAltaNomina({ nombre, fechaInicio, salarioBase, pagoHoraEx
     estado: 'pendiente',
     solicitadoPor,
     solicitadoPorId: solicitadoPorId || null,
-    solicitadoPorRol: 'rh',
+    solicitadoPorRol: 'encargado',
     fechaSolicitud: new Date().toISOString(),
     revisadoPor: null,
     revisadoPorId: null,
@@ -1065,10 +1065,10 @@ function crearSolicitudAltaNomina({ nombre, fechaInicio, salarioBase, pagoHoraEx
   }
   if (typeof agregarNotificacion === 'function') {
     agregarNotificacion({
-      texto: `Nueva solicitud de alta: RH solicitó el alta de ${nombre}. Requiere revisión de Administración.`,
+      texto: `Nueva solicitud de alta: Encargado solicitó el alta de ${nombre}. Requiere revisión de Administración.`,
       link: `admin-nomina.html?solicitud=${nueva.id}`,
       rolDestino: 'admin',
-      origen: 'rh'
+      origen: 'encargado'
     });
   }
 
@@ -1095,7 +1095,7 @@ function crearSolicitudBajaNomina({ empleadoId, motivoBaja, fechaEfectivaBaja, o
     estado: 'pendiente',
     solicitadoPor,
     solicitadoPorId: solicitadoPorId || null,
-    solicitadoPorRol: 'rh',
+    solicitadoPorRol: 'encargado',
     fechaSolicitud: new Date().toISOString(),
     revisadoPor: null,
     revisadoPorId: null,
@@ -1111,10 +1111,10 @@ function crearSolicitudBajaNomina({ empleadoId, motivoBaja, fechaEfectivaBaja, o
   }
   if (typeof agregarNotificacion === 'function') {
     agregarNotificacion({
-      texto: `Nueva solicitud de baja: RH solicitó la baja de ${nombreCompletoEmpleadoNomina(empleado)}. Requiere revisión de Administración.`,
+      texto: `Nueva solicitud de baja: Encargado solicitó la baja de ${nombreCompletoEmpleadoNomina(empleado)}. Requiere revisión de Administración.`,
       link: `admin-nomina.html?solicitud=${nueva.id}`,
       rolDestino: 'admin',
-      origen: 'rh'
+      origen: 'encargado'
     });
   }
 
@@ -1139,8 +1139,8 @@ function generarCredencialesEmpleadoNomina(numeroEmpleado, nombre) {
 // Único rol que puede aprobar/denegar — Administración. Al aprobar un
 // alta, además de crear el registro de nómina, crea automáticamente
 // la cuenta de acceso correspondiente (sección 4): Staff → subcuenta
-// de Staff (mismo sistema de cuentas internas que ya existe), RH/Admin
-// → cuenta normal — nunca deja que RH cree cuentas directamente.
+// de Staff (mismo sistema de cuentas internas que ya existe), Encargado/Admin
+// → cuenta normal — nunca deja que Encargado cree cuentas directamente.
 function aprobarSolicitudNomina(id, { usuarioAdminId, usuarioAdminNombre }) {
 
   const solicitudes = obtenerSolicitudesNomina();
@@ -1162,7 +1162,7 @@ function aprobarSolicitudNomina(id, { usuarioAdminId, usuarioAdminNombre }) {
       const cuenta = crearCuentaInterna({
         usuario, password,
         nombre: resultado.empleado.nombre,
-        rol: resultado.empleado.cargo, // 'staff' | 'rh' | 'admin' — mismos valores en ambos catálogos
+        rol: resultado.empleado.cargo, // 'staff' | 'encargado' | 'admin' — mismos valores en ambos catálogos
         empleadoNominaId: resultado.empleado.id
       });
       if (cuenta.ok) solicitud.cuentaInternaId = cuenta.cuenta.id;
@@ -1201,8 +1201,8 @@ function aprobarSolicitudNomina(id, { usuarioAdminId, usuarioAdminNombre }) {
     const nombreEmpleado = solicitud.tipo === 'alta' ? solicitud.datosAlta.nombre : nombreCompletoEmpleadoNomina(empleadoResultante);
     agregarNotificacion({
       texto: solicitud.tipo === 'alta' ? `Alta aprobada: la solicitud de alta de ${nombreEmpleado} fue aprobada y su cuenta ya está creada.` : `Baja aprobada: la solicitud de baja de ${nombreEmpleado} fue aprobada.`,
-      link: `rh-nomina.html?solicitud=${solicitud.id}`,
-      rolDestino: 'rh',
+      link: `encargado-nomina.html?solicitud=${solicitud.id}`,
+      rolDestino: 'encargado',
       tipo: 'nomina'
     });
   }
@@ -1237,8 +1237,8 @@ function rechazarSolicitudNomina(id, { motivo, usuarioAdminId, usuarioAdminNombr
     const nombreEmpleado = solicitud.tipo === 'alta' ? solicitud.datosAlta.nombre : nombreCompletoEmpleadoNomina(obtenerEmpleadoNominaPorId(solicitud.empleadoId));
     agregarNotificacion({
       texto: solicitud.tipo === 'alta' ? `Alta denegada: la solicitud de alta de ${nombreEmpleado} fue denegada. Motivo: ${motivo}` : `Baja denegada: la solicitud de baja de ${nombreEmpleado} fue denegada. Motivo: ${motivo}`,
-      link: `rh-nomina.html?solicitud=${solicitud.id}`,
-      rolDestino: 'rh',
+      link: `encargado-nomina.html?solicitud=${solicitud.id}`,
+      rolDestino: 'encargado',
       tipo: 'nomina'
     });
   }
