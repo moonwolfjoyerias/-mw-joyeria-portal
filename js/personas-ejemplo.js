@@ -387,6 +387,68 @@ function ejecutarCambioRama(personaId, { ejecutadoPorId, ejecutadoPorNombre }) {
 
 }
 
+// ============================================================
+// CAMBIAR LÍDER — DIRECTO POR ADMIN (Lista A, fusión con mi-equipo)
+// ============================================================
+//
+// A diferencia del flujo de arriba (solicitud, solo emprendedoras
+// dentro de sus primeros 5 días, alguien tiene que aprobarla), esto es
+// exclusivo de Admin: cambia de líder a cualquier emprendedora en el
+// momento, sin solicitud ni aprobación — es un botón adicional, no
+// reemplaza ni modifica el flujo de solicitud existente. Como el árbol
+// se guarda por liderId (cada persona apunta a su líder, no al revés),
+// cambiar SOLO el liderId de esta persona ya mueve automáticamente todo
+// su subárbol con ella — sus descendientes siguen apuntándole a ELLA,
+// no a la raíz.
+function cambiarLiderDirectoAdmin(personaId, { liderNuevoId, ejecutadoPorId, ejecutadoPorNombre }) {
+
+  const personas = obtenerPersonas();
+  const persona = personas.find(p => p.id === personaId);
+  if (!persona) return { ok: false, error: 'La persona no existe.' };
+
+  const liderNuevo = personas.find(p => p.id === liderNuevoId && p.tipo === 'lider' && p.estado !== 'baja');
+  if (!liderNuevo) return { ok: false, error: 'Elige a la líder a la que debería pasar.' };
+  if (liderNuevo.id === persona.id) return { ok: false, error: 'No puede ser su propia líder.' };
+  if (liderNuevo.id === persona.liderId) return { ok: false, error: 'Ya está bajo esa líder.' };
+
+  // No permitir moverla bajo alguien de su propio equipo (evita un
+  // ciclo: quedaría siendo líder de su propia líder).
+  if (typeof calcularDescendenciaPersona === 'function') {
+    const { conNivel } = calcularDescendenciaPersona(personaId);
+    if (conNivel.some(n => n.persona.id === liderNuevo.id)) {
+      return { ok: false, error: 'No puede pasar a la rama de alguien que está dentro de su propio equipo.' };
+    }
+  }
+
+  const liderAnteriorId = persona.liderId || null;
+  persona.liderId = liderNuevo.id;
+  // Si tenía una solicitud de cambio de rama pendiente, esta acción de
+  // Admin la vuelve obsoleta — se descarta en vez de dejarla colgada
+  // apuntando a una líder que ya no aplica.
+  delete persona.solicitudCambioRamaPendiente;
+  guardarPersonas(personas);
+
+  if (typeof agregarNotificacion === 'function') {
+    agregarNotificacion({
+      texto: `Administración cambió tu equipo — ahora perteneces a la rama de ${nombreCompletoPersona(liderNuevo)}.`,
+      link: 'cuenta',
+      paraId: persona.id,
+      rolDestino: 'emprendedora_lider'
+    });
+  }
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({
+      modulo: 'personas',
+      accion: 'cambiar_lider_directo',
+      descripcion: `${nombreCompletoPersona(persona)} pasó de ${liderAnteriorId ? nombreCompletoPersona(obtenerPersonaPorId(liderAnteriorId) || {}) : 'sin líder'} a ${nombreCompletoPersona(liderNuevo)}`
+    });
+  }
+
+  return { ok: true, persona, liderAnteriorId, liderNuevoId: liderNuevo.id };
+
+}
+
 function restablecerPasswordPersona(id, nuevoPassword) {
   const persona = obtenerPersonaPorId(id);
   if (!persona) return { ok: false, error: 'La cuenta no existe.' };
