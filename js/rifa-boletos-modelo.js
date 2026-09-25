@@ -45,8 +45,15 @@ function formatearFechaSorteoRifaMes(mesKey) {
   return `15 de ${MESES_RIFA_BOLETOS[fecha.getMonth()]} ${fecha.getFullYear()}`;
 }
 
-function formatearFolioBoleto(numero) {
-  return `MW-${String(numero).padStart(5, '0')}`;
+// Mes calendario anterior a `mesKey` — el mes que ya cerró y cuyo sorteo
+// cae el día 15 de `mesKey` (ver fechaSorteoRifaMes). Los boletos
+// imprimibles siempre son de este mes anterior, nunca del mes en curso
+// (que todavía se sigue acumulando y no está listo para imprimir).
+function mesKeyAnteriorRifaBoletos(mesKey) {
+  const [anio, mes] = mesKey.split('-').map(Number);
+  const mesAnterior = mes === 1 ? 12 : mes - 1;
+  const anioAnterior = mes === 1 ? anio - 1 : anio;
+  return `${anioAnterior}-${String(mesAnterior).padStart(2, '0')}`;
 }
 
 // Genera/actualiza los boletos numerados de un mes a partir de los
@@ -126,51 +133,45 @@ function obtenerResumenBoletosPorPersonaRifaMes(mesKey) {
 }
 
 // ============================================================
-// BOLETO IMPRIMIBLE (SVG tipo boleto físico) — Lista A, fusión con mi-equipo
+// BOLETO IMPRIMIBLE (ficha HTML, para el PDF compactado de "Descargar
+// todos") — Lista A, fusión con mi-equipo. Rectangular, esquinas poco
+// redondeadas, colores MW Joyería. Trae DOS folios:
+//  - "Local": posición del boleto dentro de los boletos de ESA persona
+//    (1, 2, 3...) — se calcula al armar el PDF, no se guarda.
+//  - "General": el folio consecutivo de siempre (boleto.folio), en la
+//    esquina inferior derecha — el número del boleto entre TODOS los
+//    de ese mes.
 // ============================================================
 
-function escapeXMLBoletoRifa(texto) {
-  return String(texto ?? '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function construirHTMLBoletoRifaImprimible(boleto, folioLocal) {
+  const mesLabelCrudo = `${MESES_RIFA_BOLETOS[Number(boleto.mesKey.split('-')[1]) - 1]} ${boleto.mesKey.split('-')[0]}`;
+  const mesLabel = mesLabelCrudo.charAt(0).toUpperCase() + mesLabelCrudo.slice(1);
+  const nombre = escapeHTMLPersonas(boleto.personaNombre);
+
+  return `
+    <div style="position:relative;width:100%;height:100%;box-sizing:border-box;border:2px solid #5E1A8A;border-radius:14px;background:#ffffff;padding:14px 16px;font-family:Georgia,'Times New Roman',serif;overflow:hidden;">
+      <div style="font-size:9px;letter-spacing:1.6px;color:#C9A227;font-weight:700;">MOONWOLF JOYERÍA</div>
+      <div style="font-size:16px;color:#5E1A8A;font-weight:700;margin-top:3px;">Rifa Mensual</div>
+      <div style="font-size:10.5px;color:#6B6270;margin-top:5px;">${escapeHTMLPersonas(mesLabel)}</div>
+      <div style="font-size:14px;color:#312044;font-weight:700;margin-top:9px;max-width:78%;">${nombre}</div>
+      <div style="font-size:10px;color:#8a7f93;margin-top:2px;">${nombre} ${folioLocal}</div>
+      <div style="position:absolute;right:14px;bottom:10px;font-size:19px;font-weight:700;color:#5E1A8A;">${boleto.folio}</div>
+    </div>
+  `;
 }
 
-function construirSVGBoletoRifa(boleto) {
-  const folioLabel = formatearFolioBoleto(boleto.folio);
-  const mesLabel = `${MESES_RIFA_BOLETOS[Number(boleto.mesKey.split('-')[1]) - 1]} ${boleto.mesKey.split('-')[0]}`;
-  const fechaSorteo = formatearFechaSorteoRifaMes(boleto.mesKey);
-  const nombre = escapeXMLBoletoRifa(boleto.personaNombre);
+// Una hoja tamaño Carta con hasta 10 boletos (2 columnas × 5 filas).
+// `folioLocalPorFolio` es un Map<folioGeneral, folioLocal> ya calculado
+// por quien arma el PDF completo (ver generarPDFBoletosRifa en
+// js/admin-plan-mw.js).
+function construirHTMLHojaBoletosRifa(boletosHoja, folioLocalPorFolio) {
+  const celdas = boletosHoja
+    .map(b => construirHTMLBoletoRifaImprimible(b, folioLocalPorFolio.get(b.folio)))
+    .join('');
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="220" viewBox="0 0 600 220" font-family="Georgia, serif">
-  <rect x="1" y="1" width="598" height="218" rx="12" fill="#ffffff" stroke="#5E1A8A" stroke-width="2"/>
-  <rect x="1" y="1" width="420" height="218" rx="12" fill="#ffffff"/>
-  <line x1="420" y1="1" x2="420" y2="219" stroke="#5E1A8A" stroke-width="1.5" stroke-dasharray="6,5"/>
-  <circle cx="420" cy="1" r="10" fill="#f6f3f8" stroke="#5E1A8A" stroke-width="1.5"/>
-  <circle cx="420" cy="219" r="10" fill="#f6f3f8" stroke="#5E1A8A" stroke-width="1.5"/>
-
-  <text x="28" y="38" font-size="13" letter-spacing="2" fill="#C9A227" font-weight="bold">MOONWOLF JOYERÍA</text>
-  <text x="28" y="62" font-size="20" fill="#5E1A8A" font-weight="bold">Boleto de la Rifa del mes</text>
-  <text x="28" y="90" font-size="14" fill="#312044">Participante:</text>
-  <text x="28" y="112" font-size="17" fill="#312044" font-weight="bold">${nombre}</text>
-  <text x="28" y="140" font-size="13" fill="#6B6270">Mes de compra: ${escapeXMLBoletoRifa(mesLabel)}</text>
-  <text x="28" y="160" font-size="13" fill="#6B6270">Sorteo oficial: ${escapeXMLBoletoRifa(fechaSorteo)}</text>
-  <text x="28" y="196" font-size="11" fill="#a79bb0">Vale por una participación en la rifa mensual de MW Joyería.</text>
-
-  <text x="510" y="70" font-size="11" fill="#6B6270" text-anchor="middle">FOLIO</text>
-  <text x="510" y="112" font-size="22" fill="#5E1A8A" font-weight="bold" text-anchor="middle">${escapeXMLBoletoRifa(folioLabel)}</text>
-  <text x="510" y="160" font-size="11" fill="#6B6270" text-anchor="middle">${escapeXMLBoletoRifa(mesLabel)}</text>
-  <path d="M470 90 h80 M470 96 h80 M470 102 h80 M470 108 h80 M470 114 h80 M470 120 h80" stroke="#C9A227" stroke-width="1.4" opacity="0.45"/>
-</svg>`;
-}
-
-function descargarSVGBoletoRifa(boleto) {
-  const svg = construirSVGBoletoRifa(boleto);
-  const blob = new Blob([svg], { type: 'image/svg+xml' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `boleto-${formatearFolioBoleto(boleto.folio)}.svg`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  return `
+    <div style="width:850px;height:1100px;box-sizing:border-box;padding:40px;background:#ffffff;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(5,1fr);gap:18px 22px;">
+      ${celdas}
+    </div>
+  `;
 }

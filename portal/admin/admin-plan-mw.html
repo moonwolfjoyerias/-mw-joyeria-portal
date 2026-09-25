@@ -211,9 +211,9 @@
 
         <div class="section-head" style="margin-top:26px;">
           <h3>Boletos de la rifa — <span id="boletosSorteoFecha">—</span></h3>
-          <button class="btn btn-outline" type="button" id="descargarTodosBoletosBtn">Descargar todos (SVG)</button>
+          <button class="btn btn-outline" type="button" id="descargarTodosBoletosBtn">Descargar todos (PDF)</button>
         </div>
-        <p class="portal-sub" style="margin-top:-8px;">Cada boleto ya ganado tiene folio consecutivo (nunca cambia) y se puede imprimir individualmente.</p>
+        <p class="portal-sub" style="margin-top:-8px;">Boletos del mes ya cerrado, listos para imprimir antes del sorteo — 10 por hoja tamaño Carta.</p>
         <div id="boletosRifaBloque"></div>
       </div>
 
@@ -232,6 +232,11 @@
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal-box" id="modalBox"></div>
   </div>
+
+  <div id="boletosPdfTemplate" class="boletos-pdf-template"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script src="../../js/portal-common.js"></script>
   <script src="../../js/apartados-modelo.js"></script>
