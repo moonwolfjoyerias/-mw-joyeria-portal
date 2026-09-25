@@ -124,7 +124,36 @@ function obtenerInfoSubPeriodo(periodoKey, subPeriodo) {
 // RANGO APLICADO AL PERIODO (cierre del mes anterior)
 // ============================================================
 
+const COMISIONES_RANGO_MANUAL_KEY = 'mw-comisiones-rango-manual-v1';
+
+// Override de Admin: "rango manual solo para ESE mes de pago" (Lista A,
+// fusión con mi-equipo) — cambia únicamente qué % se paga ese periodo,
+// nunca toca historialLogros ni historialRangoEfectivo (el rango
+// histórico/real de la persona sigue intacto en Plan MW).
+function obtenerRangosManualesComisiones() {
+  try {
+    const datos = JSON.parse(localStorage.getItem(COMISIONES_RANGO_MANUAL_KEY));
+    return (datos && typeof datos === 'object' && !Array.isArray(datos)) ? datos : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function guardarRangoManualComision(personaId, periodoKey, rangoKey) {
+  const mapa = obtenerRangosManualesComisiones();
+  const clave = `${personaId}__${periodoKey}`;
+  if (rangoKey) mapa[clave] = rangoKey; else delete mapa[clave];
+  localStorage.setItem(COMISIONES_RANGO_MANUAL_KEY, JSON.stringify(mapa));
+}
+
+function obtenerRangoManualComision(personaId, periodoKey) {
+  return obtenerRangosManualesComisiones()[`${personaId}__${periodoKey}`] || null;
+}
+
 function calcularRangoAplicadoPeriodo(persona, periodoKey) {
+
+  const rangoManual = obtenerRangoManualComision(persona.id, periodoKey);
+  if (rangoManual) return { rangoKey: rangoManual, origen: 'ajuste manual de Admin (solo este mes de pago)' };
 
   // Rango EFECTIVO del último mes ya cerrado antes de este periodo (ver
   // js/plan-mw-admin.js → calcularRangoEfectivoMes/procesarRangoEfectivoMensual)

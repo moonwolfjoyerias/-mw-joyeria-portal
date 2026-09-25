@@ -1172,6 +1172,7 @@ a:hover { color: var(--mw-gold); }
    formulario de producto con variantes en fila) — se agrega/quita con
    JS solo mientras ese modal específico está abierto. */
 .modal-box.modal-box-wide { max-width: min(720px, 100%); }
+.modal-box.modal-box-xwide { max-width: min(980px, 100%); }
 .modal-box h3 { font-size: 1.25rem; margin-bottom: 0.3rem; }
 .modal-box .modal-sub { color: var(--mw-text-muted); font-size: 0.85rem; margin-bottom: 1.2rem; }
 .modal-box label { display: block; font-size: 0.82rem; color: var(--mw-purple); font-family: var(--font-heading); margin-bottom: 0.4rem; }
@@ -3979,6 +3980,12 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 .badge-revision { background: #e8eefd; color: #2952a3; }
 .badge-validado { background: #e6f6f4; color: #12766a; }
 .badge-correccion { background: #fbe7e9; color: #a3272f; }
+.badge-fuera-importacion { background: #fdeee0; color: #9a4e10; }
+
+/* Botón tipo texto (sin fondo/borde) para acciones secundarias dentro
+   de una fila de metadatos, ej. "Ajustar rango manual de este mes". */
+.btn-link-ajuste { background: none; border: none; padding: 0; color: var(--mw-purple); font-size: 0.8rem; text-decoration: underline; cursor: pointer; font-family: inherit; }
+.btn-link-ajuste:hover { color: var(--mw-gold); }
 
 /* Lista de deseos — buscador de Emprendedora + filas de piezas */
 .ld-search-results { max-height: 180px; overflow-y: auto; border: 1px solid var(--mw-border); border-radius: 8px; margin-top: 6px; }
