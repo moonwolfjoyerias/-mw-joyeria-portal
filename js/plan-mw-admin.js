@@ -385,7 +385,7 @@ const MONTO_POR_BOLETO_EXTRA_RIFA = 1000;
 // una inactivación automática de gente que en realidad sí compra hoy.
 // Solo aplica a personas cuya fechaAlta es anterior a este mes — quien
 // se dé de alta después arranca su conteo real desde su propia fechaAlta.
-const MES_INICIO_CIERRE_AUTOMATICO = mesKeyActualComprasModelo();
+const MES_INICIO_CIERRE_AUTOMATICO = '2026-08';
 
 function _siguienteMesKey(mesKey) {
   const [anio, mes] = mesKey.split('-').map(Number);
