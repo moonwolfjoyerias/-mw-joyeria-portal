@@ -6,6 +6,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   initNotifPanel();
   initProfileMenu();
+  initTemaMenu();
   initModal();
   renderEventos();
   initEventsScroll();
@@ -150,6 +151,45 @@ function initProfileMenu() {
   });
   document.addEventListener('click', (e) => {
     if (!menu.contains(e.target) && e.target !== btn) menu.classList.remove('open');
+  });
+}
+
+// ---------- Tema (claro/oscuro) en la burbuja de perfil ----------
+// El botón/opciones se inyectan aquí (no se escriben a mano en las 46
+// páginas del portal) porque todas comparten el mismo #profileMenu —
+// aplicar el tema en sí (antes de pintar la página) vive en
+// js/auth-guard.js, que se carga primero.
+function initTemaMenu() {
+  const menu = document.getElementById('profileMenu');
+  if (!menu || typeof establecerTema !== 'function') return;
+
+  const bloque = document.createElement('div');
+  bloque.className = 'profile-menu-tema';
+  bloque.innerHTML = `
+    <span class="profile-menu-tema-label">Tema</span>
+    <div class="profile-menu-tema-opciones">
+      <button type="button" data-tema-opcion="claro">Claro</button>
+      <button type="button" data-tema-opcion="oscuro">Oscuro</button>
+    </div>
+  `;
+
+  const cerrarSesionLink = menu.querySelector('a.danger');
+  if (cerrarSesionLink) menu.insertBefore(bloque, cerrarSesionLink);
+  else menu.appendChild(bloque);
+
+  const marcarOpcionActiva = () => {
+    const actual = obtenerTemaGuardado();
+    bloque.querySelectorAll('[data-tema-opcion]').forEach(btn => {
+      btn.classList.toggle('activo', btn.getAttribute('data-tema-opcion') === actual);
+    });
+  };
+  marcarOpcionActiva();
+
+  bloque.querySelectorAll('[data-tema-opcion]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      establecerTema(btn.getAttribute('data-tema-opcion'));
+      marcarOpcionActiva();
+    });
   });
 }
 
