@@ -78,9 +78,12 @@ function renderCalendario() {
     const fechaStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     celdas.push({ dia: d, otroMes: false, fechaStr, esHoy: fechaStr === hoyStr, eventos: eventosPorFecha[fechaStr] || [] });
   }
-  // Relleno final hasta completar semanas de 7
+  // Relleno final hasta completar semanas de 7 — días 1, 2, 3... del mes
+  // siguiente (antes usaba celdas.length % 7, que no es un contador real
+  // y mostraba números repetidos/salteados en vez de 1, 2, 3...).
+  let diaMesSiguiente = 1;
   while (celdas.length % 7 !== 0) {
-    celdas.push({ dia: celdas.length % 7, otroMes: true });
+    celdas.push({ dia: diaMesSiguiente++, otroMes: true });
   }
 
   const MAX_CHIPS_VISIBLES = 2;
