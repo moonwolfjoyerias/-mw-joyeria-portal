@@ -116,9 +116,47 @@ function wireCerrarSesionLinks() {
   });
 }
 
+// ============================================================
+// TEMA (claro/oscuro) — botón "Tema" en la burbuja de perfil
+// (ver js/portal-common.js). Se aplica aquí, ANTES de que el <body> se
+// pinte, para que la página nunca haga un destello en claro antes de
+// cambiar a oscuro. Solo vive en el portal — el sitio público nunca
+// carga este archivo, así que nunca hereda un tema oscuro elegido aquí.
+// ============================================================
+
+const TEMA_STORAGE_KEY = 'mw-tema-v1';
+
+function obtenerTemaGuardado() {
+  try {
+    const tema = localStorage.getItem(TEMA_STORAGE_KEY);
+    return tema === 'oscuro' ? 'oscuro' : 'claro';
+  } catch (error) {
+    return 'claro';
+  }
+}
+
+function aplicarTemaAlDocumento(tema) {
+  if (tema === 'oscuro') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
+
+function establecerTema(tema) {
+  aplicarTemaAlDocumento(tema);
+  try {
+    localStorage.setItem(TEMA_STORAGE_KEY, tema);
+  } catch (error) {
+    // La demo sigue funcionando aunque el navegador bloquee localStorage —
+    // el tema simplemente no persiste entre recargas.
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   aplicarIdentidadSesionEnHeader();
   wireCerrarSesionLinks();
 });
 
 exigirSesionPortal();
+aplicarTemaAlDocumento(obtenerTemaGuardado());
