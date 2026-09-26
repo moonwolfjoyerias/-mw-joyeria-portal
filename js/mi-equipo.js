@@ -40,8 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderArbolVisual();
   });
 
-  document.getElementById('verResumenLineaBtn')?.addEventListener('click', abrirModalResumenLinea);
-
   document.getElementById('equipoZoomInBtn')?.addEventListener('click', () => ajustarZoomEquipo(0.1));
   document.getElementById('equipoZoomOutBtn')?.addEventListener('click', () => ajustarZoomEquipo(-0.1));
   document.getElementById('equipoZoomResetBtn')?.addEventListener('click', () => { equipoZoomActual = 1; aplicarZoomEquipo(); });
@@ -376,16 +374,19 @@ function renderNivelCards() {
   });
 
   const grid = document.getElementById('nivelesGrid');
-  grid.innerHTML = [1, 2, 3, 4, 5].map((nivel) => `
+  grid.innerHTML = [1, 2, 3, 4, 5].map((nivel) => {
+    const totalNivel = porNivel[nivel].reduce((suma, p) => suma + puntosSubPeriodoEquipo(p.id, 'p1') + puntosSubPeriodoEquipo(p.id, 'p2'), 0);
+    return `
     <button class="team-level-card" style="text-align:left; cursor:pointer; width:100%;" data-nivel="${nivel}">
       <div class="icon-circle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
       </div>
       <h4>Nivel ${nivel}</h4>
       <span class="tl-count">${porNivel[nivel].length}</span>
-      <span class="tl-sub">Personas · toca para ver</span>
+      <span class="tl-sub">Personas · ${totalNivel.toLocaleString('es-MX')} pts · toca para ver</span>
     </button>
-  `).join('');
+  `;
+  }).join('');
 
   grid.querySelectorAll('[data-nivel]').forEach((btn) => {
     const nivel = Number(btn.getAttribute('data-nivel'));
@@ -397,23 +398,29 @@ function abrirModalNivel(nivel, personas) {
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
 
-  const filas = personas.length > 0
-    ? personas.map(p => {
-      const total = puntosSubPeriodoEquipo(p.id, 'p1') + puntosSubPeriodoEquipo(p.id, 'p2');
+  const personasOrdenadas = personas.slice().sort((a, b) => nombreCompletoPersona(a).localeCompare(nombreCompletoPersona(b)));
+
+  const tarjetas = personasOrdenadas.length > 0
+    ? personasOrdenadas.map(p => {
+      const p1 = puntosSubPeriodoEquipo(p.id, 'p1');
+      const p2 = puntosSubPeriodoEquipo(p.id, 'p2');
       return `
-        <div class="equipo-modal-row">
-          <span>${escapeHTMLMiEquipo(nombreCompletoPersona(p))}</span>
-          <span class="em-puntos">${total > 0 ? total.toLocaleString('es-MX') + ' pts' : 'Sin datos'}</span>
-        </div>
-      `;
+        <div class="person-card">
+          <div class="pc-name">${escapeHTMLMiEquipo(nombreCompletoPersona(p))}</div>
+          <div class="pc-points">
+            <div>P1<b>${p1.toLocaleString('es-MX')}</b></div>
+            <div>P2<b>${p2.toLocaleString('es-MX')}</b></div>
+            <div class="pc-total">Total<b>${(p1 + p2).toLocaleString('es-MX')}</b></div>
+          </div>
+        </div>`;
     }).join('')
     : '<div class="equipo-modal-empty">Todavía no hay integrantes en este nivel.</div>';
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     <h3>Nivel ${nivel}</h3>
-    <p class="modal-sub">Nombre y puntos de ${formatearMesLabelEquipo(equipoMesSeleccionado)}.</p>
-    <div class="equipo-modal-list">${filas}</div>
+    <p class="modal-sub">Puntos de ${formatearMesLabelEquipo(equipoMesSeleccionado)}.</p>
+    <div class="lb-body">${tarjetas}</div>
   `;
   overlay.classList.add('open');
 }
@@ -564,66 +571,6 @@ function actualizarCuentaRegresivaEquipo() {
 function iniciarCuentaRegresivaEquipo() {
   actualizarCuentaRegresivaEquipo();
   setInterval(actualizarCuentaRegresivaEquipo, 1000);
-}
-
-// ---------- Resumen por línea ----------
-function abrirModalResumenLinea() {
-  const liderId = obtenerLiderActualId();
-  if (typeof calcularDescendenciaPersona !== 'function') return;
-
-  const { conNivel } = calcularDescendenciaPersona(liderId);
-  const overlay = document.getElementById('modalOverlay');
-  const box = document.getElementById('modalBox');
-  if (!overlay || !box) return;
-
-  if (!conNivel.length) {
-    box.innerHTML = `
-      <button class="modal-close" data-close>&times;</button>
-      <h3>Resumen por línea</h3>
-      <p class="modal-sub">Todavía no hay nadie en líneas debajo de ti.</p>
-    `;
-    overlay.classList.add('open');
-    return;
-  }
-
-  const porNivel = {};
-  conNivel.forEach(({ persona, nivel }) => { (porNivel[nivel] = porNivel[nivel] || []).push(persona); });
-  const niveles = Object.keys(porNivel).map(Number).sort((a, b) => a - b);
-
-  const bloques = niveles.map(nivel => {
-    const personas = porNivel[nivel].slice().sort((a, b) => nombreCompletoPersona(a).localeCompare(nombreCompletoPersona(b)));
-    let totalLinea = 0;
-    const tarjetas = personas.map(p => {
-      const p1 = puntosSubPeriodoEquipo(p.id, 'p1');
-      const p2 = puntosSubPeriodoEquipo(p.id, 'p2');
-      totalLinea += p1 + p2;
-      return `
-        <div class="person-card">
-          <div class="pc-name">${escapeHTMLMiEquipo(nombreCompletoPersona(p))}</div>
-          <div class="pc-points">
-            <div>P1<b>${p1.toLocaleString('es-MX')}</b></div>
-            <div>P2<b>${p2.toLocaleString('es-MX')}</b></div>
-            <div class="pc-total">Total<b>${(p1 + p2).toLocaleString('es-MX')}</b></div>
-          </div>
-        </div>`;
-    }).join('');
-    return `
-      <details class="level-block" ${nivel === 1 ? 'open' : ''}>
-        <summary class="level-color-${((nivel - 1) % 5) + 1}">
-          <span class="lb-title"><span class="lb-arrow">▶</span> Línea ${nivel}</span>
-          <span class="lb-stats"><span><b>${personas.length}</b> persona(s)</span><span><b>${totalLinea.toLocaleString('es-MX')}</b> pts total</span></span>
-        </summary>
-        <div class="lb-body">${tarjetas}</div>
-      </details>`;
-  }).join('');
-
-  box.innerHTML = `
-    <button class="modal-close" data-close>&times;</button>
-    <h3>Resumen por línea</h3>
-    <p class="modal-sub">${formatearMesLabelEquipo(equipoMesSeleccionado)}</p>
-    <div class="level-summary-wrap">${bloques}</div>
-  `;
-  overlay.classList.add('open');
 }
 
 // ---------- Descargar árbol en Excel ----------
