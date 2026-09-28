@@ -61,6 +61,15 @@ service cloud.firestore {
       allow write: if esInterno();
     }
 
+    // catalogoMeta/estado — marca si el Catálogo ya se sembró alguna vez
+    // en este proyecto, para no confundir "recién conectado" con
+    // "alguien borró todos los productos a propósito" (ver
+    // js/catalogo-firestore-sync.js). Mismos permisos que productos.
+    match /catalogoMeta/{id} {
+      allow read: if estaAutenticado();
+      allow write: if esInterno();
+    }
+
     // solicitudesInscripcion/{id} — migrado en una fase anterior (ver
     // js/solicitudes-modelo.js), pero sus IDs de solicitante todavía son
     // los IDs de personas-ejemplo.js (localStorage), no uid de Firebase

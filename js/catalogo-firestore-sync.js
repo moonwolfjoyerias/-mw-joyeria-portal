@@ -34,6 +34,8 @@
 
 const CATALOGO_STORAGE_KEY = 'mw_staff_catalogo_demo';
 const CATALOGO_COLECCION_FIRESTORE = 'productos';
+const CATALOGO_META_COLECCION = 'catalogoMeta';
+const CATALOGO_META_DOC_ID = 'estado';
 
 let CATALOGO_CACHE = [];
 
@@ -57,11 +59,17 @@ async function cargarCatalogoRepo() {
     if (!snap.empty) {
       CATALOGO_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
     } else {
-      // Colección vacía = primera vez que este proyecto de Firestore
-      // recibe catálogo — se siembra una sola vez para que la beta no
-      // arranque en blanco.
-      CATALOGO_CACHE = catalogoSemillaLocal();
-      await guardarCatalogoRepo(CATALOGO_CACHE);
+      // Colección vacía: puede ser la primera vez que este proyecto de
+      // Firestore recibe catálogo, O alguien borró todo a propósito.
+      // catalogoMeta/estado distingue los dos casos — solo se siembra
+      // si ese marcador nunca se ha creado.
+      const meta = await dbFirestore.collection(CATALOGO_META_COLECCION).doc(CATALOGO_META_DOC_ID).get();
+      if (meta.exists) {
+        CATALOGO_CACHE = [];
+      } else {
+        CATALOGO_CACHE = catalogoSemillaLocal();
+        await guardarCatalogoRepo(CATALOGO_CACHE);
+      }
     }
   } else {
     CATALOGO_CACHE = catalogoDesdeLocalStorage();
@@ -108,6 +116,9 @@ async function sincronizarCatalogoConFirestore(catalogo) {
   catalogo.forEach(producto => {
     batch.set(coleccion.doc(String(producto.id)), producto);
   });
+  // Sella que este proyecto ya tuvo catálogo real — así una colección
+  // vacía después de esto se sabe que es a propósito, no "sin sembrar".
+  batch.set(dbFirestore.collection(CATALOGO_META_COLECCION).doc(CATALOGO_META_DOC_ID), { inicializado: true }, { merge: true });
   await batch.commit();
 }
 
