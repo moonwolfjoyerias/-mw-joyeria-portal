@@ -38,17 +38,21 @@ if (password.length < 6) {
   process.exit(1);
 }
 
-let admin;
+let initializeApp, cert, getAuth, getFirestore;
 try {
-  admin = require('firebase-admin');
+  ({ initializeApp, cert } = require('firebase-admin/app'));
+  ({ getAuth } = require('firebase-admin/auth'));
+  ({ getFirestore } = require('firebase-admin/firestore'));
 } catch (error) {
   console.error('Falta la dependencia "firebase-admin". Instálala primero:\n  npm install firebase-admin');
   process.exit(1);
 }
 
-admin.initializeApp({
-  credential: admin.credential.cert(require(path.resolve(serviceAccountPath))),
+const app = initializeApp({
+  credential: cert(require(path.resolve(serviceAccountPath))),
 });
+const auth = getAuth(app);
+const firestore = getFirestore(app);
 
 const AUTH_EMAIL_SUFFIX = '@mw-joyeria-demo.app'; // debe coincidir con AUTH_EMAIL_SUFFIX en js/auth-service.js
 
@@ -57,16 +61,16 @@ async function main() {
 
   let user;
   try {
-    user = await admin.auth().getUserByEmail(email);
-    await admin.auth().updateUser(user.uid, { password, displayName: nombre });
+    user = await auth.getUserByEmail(email);
+    await auth.updateUser(user.uid, { password, displayName: nombre });
     console.log(`↻ Cuenta actualizada: ${usuario}`);
   } catch (error) {
     if (error.code !== 'auth/user-not-found') throw error;
-    user = await admin.auth().createUser({ email, password, displayName: nombre });
+    user = await auth.createUser({ email, password, displayName: nombre });
     console.log(`✓ Cuenta creada: ${usuario}`);
   }
 
-  await admin.firestore().collection('users').doc(user.uid).set({
+  await firestore.collection('users').doc(user.uid).set({
     usuario,
     nombre,
     rol: 'admin',
