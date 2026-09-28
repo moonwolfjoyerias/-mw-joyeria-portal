@@ -75,12 +75,29 @@ async function cargarCatalogoRepo() {
 // caché/respaldo, y si hay Firestore real, sincroniza la colección
 // completa — agrega/actualiza lo que sigue en `catalogo` y borra los
 // documentos cuyo producto ya no está en el arreglo (eliminado).
+//
+// Cada controlador llama esto sin esperar (varios clics seguidos —
+// borrar, agregar — disparan varias llamadas casi al mismo tiempo). Si
+// cada una leyera Firestore y escribiera por su cuenta, podrían
+// terminar en cualquier orden y la más lenta pisaría el resultado de
+// una más reciente. `_colaGuardadoCatalogo` fuerza a que se ejecuten
+// una a la vez, en el mismo orden en que se llamaron.
+let _colaGuardadoCatalogo = Promise.resolve();
+
 async function guardarCatalogoRepo(catalogo) {
   CATALOGO_CACHE = catalogo;
   try { localStorage.setItem(CATALOGO_STORAGE_KEY, JSON.stringify(catalogo)); } catch (error) { /* noop */ }
 
   if (!dbFirestore) return;
 
+  const tarea = _colaGuardadoCatalogo
+    .catch(() => {}) // un guardado previo fallido no debe bloquear los siguientes
+    .then(() => sincronizarCatalogoConFirestore(catalogo));
+  _colaGuardadoCatalogo = tarea;
+  return tarea;
+}
+
+async function sincronizarCatalogoConFirestore(catalogo) {
   const coleccion = dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE);
   const snap = await coleccion.get();
   const idsNuevos = new Set(catalogo.map(p => String(p.id)));
