@@ -44,10 +44,29 @@ function obtenerCuentaPropiaAdmin() {
   return obtenerCuentasInternas().find(c => c.usuario === ADMIN_IDENTIDAD.usuarioId) || null;
 }
 
+// Cuentas creadas directamente en Firebase (ver scripts/crear-admin-firebase.js)
+// no tienen un registro espejo en cuentas-internas-modelo.js (ese store
+// todavía es solo local — Personas/cuentas no se ha migrado). En ese caso
+// mostramos lo que sí sabemos por la sesión y ocultamos lo que depende del
+// registro local (foto, teléfono, correo editables).
 function renderMiCuentaAdmin() {
 
   const cuenta = obtenerCuentaPropiaAdmin();
-  if (!cuenta) return;
+
+  if (!cuenta) {
+    setTextMiCuentaAdmin('miCuentaNombre', ADMIN_IDENTIDAD.usuarioNombre || '');
+    setTextMiCuentaAdmin('miCuentaUsuario', ADMIN_IDENTIDAD.usuarioId || '');
+    setTextMiCuentaAdmin('miCuentaTelefonoValor', 'Sin registrar');
+    setTextMiCuentaAdmin('miCuentaCorreoValor', 'Sin registrar');
+    const fotoPreview = document.getElementById('miCuentaFotoPreview');
+    if (fotoPreview) {
+      fotoPreview.innerHTML = escapeHTMLMiCuentaAdmin((ADMIN_IDENTIDAD.usuarioNombre || 'A').trim().charAt(0).toUpperCase() || 'A');
+    }
+    document.getElementById('miCuentaFotoInput')?.setAttribute('disabled', 'disabled');
+    document.getElementById('miCuentaTelefonoBtn')?.setAttribute('disabled', 'disabled');
+    document.getElementById('miCuentaCorreoBtn')?.setAttribute('disabled', 'disabled');
+    return;
+  }
 
   const inicial = escapeHTMLMiCuentaAdmin(cuenta.nombre.trim().charAt(0).toUpperCase() || 'A');
   const fotoPreview = document.getElementById('miCuentaFotoPreview');
