@@ -1,0 +1,82 @@
+rules_version = '2';
+
+// MW JOYERÍA — Reglas de seguridad de Firestore (Fase 2)
+//
+// Cubre SOLO lo que ya está migrado a Firestore en esta fase: el perfil
+// de cada cuenta real (colección "users", usada por js/auth-service.js
+// para saber el rol de quien inició sesión) y el Catálogo (colección
+// "productos", ver js/catalogo-firestore-sync.js). Todo lo demás
+// (Personas, Apartados, Nómina, Comisiones, etc.) sigue funcionando en
+// localStorage — la regla final del archivo lo deniega explícitamente
+// para que nadie intente leer/escribir esas colecciones desde el
+// cliente antes de que tengan su propia migración y sus propias reglas
+// (ver AUDITORIA-FIREBASE.md).
+//
+// Despliega estas reglas desde Firebase Console → Firestore Database →
+// Reglas (pega este archivo completo y publica), o con la CLI:
+//   firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function estaAutenticado() {
+      return request.auth != null;
+    }
+
+    // Perfil de quien inició sesión — solo existe si Admin (o el script
+    // de siembra inicial) lo creó. Nunca contiene contraseñas: esas
+    // viven únicamente en Firebase Auth.
+    function miPerfil() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function miRol() {
+      return estaAutenticado() ? miPerfil().rol : null;
+    }
+
+    function esInterno() {
+      return miRol() in ['staff', 'encargado', 'admin'];
+    }
+
+    function esAdmin() {
+      return miRol() == 'admin';
+    }
+
+    // users/{uid} — cada quien lee su propio perfil (lo necesita al
+    // iniciar sesión); Admin puede leer cualquiera. Crear/editar
+    // perfiles es exclusivo de Admin (alta/baja de cuentas) — nunca
+    // desde el propio cliente de la persona. Nadie borra perfiles.
+    match /users/{uid} {
+      allow read: if estaAutenticado() && (request.auth.uid == uid || esAdmin());
+      allow create, update: if estaAutenticado() && esAdmin();
+      allow delete: if false;
+    }
+
+    // productos/{id} — Catálogo. Cualquier cuenta autenticada puede
+    // leer (Emprendedora/Líder necesitan ver precio y existencia al
+    // apartar); solo Staff/Encargado/Admin pueden crear, editar,
+    // eliminar o modificar existencia.
+    match /productos/{id} {
+      allow read: if estaAutenticado();
+      allow write: if esInterno();
+    }
+
+    // solicitudesInscripcion/{id} — migrado en una fase anterior (ver
+    // js/solicitudes-modelo.js), pero sus IDs de solicitante todavía son
+    // los IDs de personas-ejemplo.js (localStorage), no uid de Firebase
+    // Auth — Personas aún no está migrado. Por eso esta regla es
+    // intencionalmente amplia (cualquier cuenta autenticada puede leer y
+    // escribir) en vez de comparar solicitanteId == request.auth.uid,
+    // que hoy nunca coincidiría. Ajustar cuando Personas tenga su propio
+    // uid real.
+    match /solicitudesInscripcion/{id} {
+      allow read, write: if estaAutenticado();
+    }
+
+    // Todo lo que no esté arriba sigue en localStorage — se deniega por
+    // defecto hasta que tenga su propia migración y sus propias reglas.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

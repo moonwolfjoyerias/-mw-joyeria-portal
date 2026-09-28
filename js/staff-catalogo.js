@@ -18,12 +18,11 @@ let accionPendiente = null;
 let imagenTemporal = '';
 let variantesTemporal = [];
 
-const STORAGE_KEY = 'mw_staff_catalogo_demo';
 const LOG_KEY = 'mw_staff_catalogo_logs';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
-  cargarCatalogo();
+  await cargarCatalogo();
 
   renderFiltros();
 
@@ -35,34 +34,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ============================================================
-// CARGAR / GUARDAR
+// CARGAR / GUARDAR — FASE 2 (Firebase): delega en
+// js/catalogo-firestore-sync.js (catalogoRepoListo/guardarCatalogoRepo),
+// que ya resuelve Firestore vs. localStorage.
 // ============================================================
 
-function cargarCatalogo() {
-
-  const guardado = localStorage.getItem(STORAGE_KEY);
-
-  if (guardado) {
-    try {
-      catalogoStaff = JSON.parse(guardado).map(migrarProductoAVariantes);
-    } catch (error) {
-      catalogoStaff = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
-    }
-  } else {
-    catalogoStaff = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
-    guardarCatalogo();
-  }
-
+async function cargarCatalogo() {
+  await catalogoRepoListo;
+  catalogoStaff = CATALOGO_CACHE.map(migrarProductoAVariantes);
 }
 
 
 function guardarCatalogo() {
-
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(catalogoStaff)
-  );
-
+  guardarCatalogoRepo(catalogoStaff); // async, sin esperar — la UI ya refleja el cambio en memoria
 }
 
 

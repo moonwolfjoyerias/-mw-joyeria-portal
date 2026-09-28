@@ -81,7 +81,7 @@ function renderSolicitudes() {
   grid.innerHTML = solicitudesActuales.map((s) => {
     const cfg = ESTADOS_DESEOS[s.estado];
     return `
-      <div class="solicitud-card" data-id="${s.id}">
+      <div class="ld-solicitud-card" data-id="${s.id}">
         <div class="sc-top">
           <span class="status-badge ${s.estado}">${cfg.label}</span>
           <button class="sc-menu-btn" data-menu-btn="${s.id}" aria-label="Más opciones">

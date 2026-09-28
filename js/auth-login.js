@@ -1,14 +1,19 @@
 // MW JOYERÍA — Formulario de inicio de sesión (login.html)
 //
-// Valida contra los DOS registros de cuentas reales que ya existen en el
-// portal: cuentas-internas-modelo.js (Staff/Encargado/Admin) y
-// personas-ejemplo.js (Emprendedora/Líder) — ver js/auth-guard.js para
-// las funciones de sesión (guardarSesionActiva/obtenerSesionActiva).
+// FASE 2 (Firebase): si js/firebase-init.js dejó `authFirebase` con
+// valor (MODO_DEMO=false + config real), el login intenta primero
+// Firebase Auth (ver js/auth-service.js) — usuario/contraseña reales,
+// nunca comparados en el navegador. Si no hay Firebase configurado,
+// sigue funcionando exactamente igual que antes: valida contra los DOS
+// registros demo que ya existen en el portal — cuentas-internas-modelo.js
+// (Staff/Encargado/Admin) y personas-ejemplo.js (Emprendedora/Líder) —
+// ver js/auth-guard.js para las funciones de sesión
+// (guardarSesionActiva/obtenerSesionActiva).
 //
-// ⚠️ TEMPORAL: las contraseñas viajan y se comparan en texto plano en el
-// navegador porque no existe todavía un backend real. Esto se reemplaza
-// por signInWithEmailAndPassword de Firebase Auth en Fase 3 (ver
-// auditoría de preparación para Firebase, sección E).
+// ⚠️ TEMPORAL (solo en modo demo): las contraseñas viajan y se comparan
+// en texto plano en el navegador porque no existe todavía un backend
+// real para esos módulos. Esto desaparece por completo en cuanto
+// MODO_DEMO es false — Firebase Auth nunca expone contraseñas.
 
 const RUTA_PORTAL_POR_ROL = {
   admin: 'portal/admin/admin-portal.html',
@@ -18,13 +23,17 @@ const RUTA_PORTAL_POR_ROL = {
   lider: 'portal/lider/lider-portal.html',
 };
 
-function iniciarSesion(usuario, password) {
+async function iniciarSesion(usuario, password) {
 
   usuario = String(usuario || '').trim();
   password = String(password || '');
 
   if (!usuario || !password) {
     return { ok: false, error: 'Escribe tu usuario y tu contraseña.' };
+  }
+
+  if (typeof authFirebase !== 'undefined' && authFirebase) {
+    return iniciarSesionFirebase(usuario, password);
   }
 
   if (typeof verificarCredencialInterna === 'function') {
@@ -77,12 +86,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const errorBox = document.getElementById('loginError');
   if (!form) return;
 
-  form.addEventListener('submit', evento => {
+  form.addEventListener('submit', async evento => {
     evento.preventDefault();
 
     const usuario = document.getElementById('loginUsuario').value;
     const password = document.getElementById('loginPassword').value;
-    const resultado = iniciarSesion(usuario, password);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    const resultado = await iniciarSesion(usuario, password);
+
+    if (submitBtn) submitBtn.disabled = false;
 
     if (!resultado.ok) {
       errorBox.textContent = resultado.error;

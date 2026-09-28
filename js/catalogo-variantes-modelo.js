@@ -20,12 +20,11 @@
 // vez de texto libre, y descuentan/restauran el stock de la variante
 // exacta al apartar/cancelar.
 //
-// ⚠️ TEMPORAL: localStorage simula la base de datos. En Fase 2 se
-// reemplaza por Firestore (colección productos/{productoId}) sin
-// cambiar la forma de `variantes` — cada elemento ya tiene su propio id
-// estable, listo para ser un subdocumento o un campo de mapa.
-
-const CATALOGO_STAFF_STORAGE_KEY = 'mw_staff_catalogo_demo';
+// FASE 2 (Firebase): el almacenamiento real (Firestore o localStorage,
+// colección/clave "productos"/"mw_staff_catalogo_demo") ya no vive
+// aquí — ver js/catalogo-firestore-sync.js. La forma de `variantes` no
+// cambió: cada elemento ya tiene su propio id estable, listo para ser
+// un subdocumento o un campo de mapa en Firestore.
 
 // ============================================================
 // VARIANTES — crear / consultar
@@ -94,18 +93,16 @@ function precioConDescuento(producto) {
 // controlador de Catálogo (pueden ser páginas distintas).
 // ============================================================
 
+// FASE 2 (Firebase): delega en js/catalogo-firestore-sync.js — mismo
+// contrato síncrono de siempre (lee/escribe un arreglo en memoria), pero
+// ese arreglo ahora puede venir de Firestore en vez de localStorage. Ver
+// el comentario de cabecera de ese archivo para el porqué del caché.
 function obtenerCatalogoStaffStorage() {
-  try {
-    const guardado = JSON.parse(localStorage.getItem(CATALOGO_STAFF_STORAGE_KEY));
-    if (Array.isArray(guardado)) return guardado.map(migrarProductoAVariantes);
-  } catch (error) {
-    // sigue abajo
-  }
-  return (typeof CATALOGO_EJEMPLO !== 'undefined' ? CATALOGO_EJEMPLO : []).map(migrarProductoAVariantes);
+  return CATALOGO_CACHE.map(migrarProductoAVariantes);
 }
 
 function guardarCatalogoStaffStorage(catalogo) {
-  localStorage.setItem(CATALOGO_STAFF_STORAGE_KEY, JSON.stringify(catalogo));
+  guardarCatalogoRepo(catalogo); // async, sin esperar — mismo patrón "fire and forget" que ya tenía este guardado
 }
 
 // Descuenta 1 pieza de una variante exacta. Falla explícitamente (sin

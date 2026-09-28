@@ -323,7 +323,7 @@ function renderTablaActividadesAdmin() {
     const grupos = agruparPorZonaAct(lista);
 
     tbody.innerHTML = grupos.map(g => `
-      <tr class="act-zona-row"><td colspan="7" style="background:#faf7fb;font-weight:700;color:var(--mw-purple);font-size:0.8rem;">${escapeHTMLAct(g.zona)}</td></tr>
+      <tr class="act-zona-row"><td colspan="7" style="background:var(--mw-surface-soft);font-weight:700;color:var(--mw-accent-text-strong);font-size:0.8rem;">${escapeHTMLAct(g.zona)}</td></tr>
       ${g.items.map(filaActividadAdmin).join('')}
     `).join('');
 
