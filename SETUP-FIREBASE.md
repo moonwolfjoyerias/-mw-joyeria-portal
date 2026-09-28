@@ -12,7 +12,7 @@ Todo lo demás (Personas/cuentas, Apartados, Comisiones, Plan MW, Nómina, Activ
 1. Ve a [Firebase Console](https://console.firebase.google.com/) → **Agregar proyecto** → dale un nombre (ej. `mw-joyeria`) → puedes desactivar Google Analytics si no lo necesitas.
 2. Dentro del proyecto, ve a **Authentication** → pestaña **Sign-in method** → habilita el proveedor **Correo electrónico/contraseña**.
 3. Ve a **Firestore Database** → **Crear base de datos** → elige **modo producción** → selecciona la región más cercana (ej. `us-central` o `southamerica-east1`).
-4. Si vas a usar fotos de productos u otros archivos, ve a **Storage** → **Comenzar** (opcional para esta fase; el Catálogo funciona sin esto si las imágenes son URLs externas).
+4. **Storage — puedes omitir este paso.** El Catálogo no lo necesita: las fotos de producto se guardan embebidas directamente en cada producto (igual que ya funcionaba en localStorage), nunca se suben a Storage. Si Firebase te pide activar el plan de pago (Blaze) para habilitar Storage, sáltate este paso sin problema — Auth y Catálogo funcionan igual sin él. (Storage solo lo usaría una función aparte — fotos de INE y comprobantes de nómina — que no forma parte de esta fase.)
 5. Ve a **Configuración del proyecto** (ícono de engrane) → pestaña general → sección **Tus apps** → **Agregar app** → ícono `</>` (Web) → dale un nombre → **Registrar app**. Copia el objeto `firebaseConfig` que te muestra (se ve así):
 
    ```js
@@ -73,6 +73,7 @@ Con `MODO_DEMO = false` y tu configuración pegada:
 - **No puedo iniciar sesión / "Usuario o contraseña incorrectos"**: confirma que corriste el script de siembra (paso 4) y que el usuario/contraseña son exactamente los de siempre — el script usa el mismo usuario/contraseña que ya existían en los datos de ejemplo.
 - **Catálogo aparece vacío**: la primera vez que alguien con rol Staff/Encargado/Admin entra en modo Firebase, el Catálogo se guarda desde lo que tenga en pantalla. Si ves vacío, revisa la consola del navegador (F12) por errores de permisos — normalmente significa que las reglas del paso 3 no se publicaron o el usuario no tiene un perfil (`users/{uid}`) con `rol` correcto.
 - **Quiero volver a modo demo temporalmente**: pon `MODO_DEMO = true` de nuevo en `js/firebase-config.js` — no borra nada de Firebase, solo hace que el portal ignore la configuración real y vuelva a usar localStorage.
+- **Storage me pide pagar (plan Blaze)**: ignóralo, no lo necesitas para esta fase. Auth y Catálogo funcionan sin Storage habilitado — el portal detecta que no está disponible y sigue de largo sin romper nada.
 
 ## Qué queda pendiente para después de la beta
 

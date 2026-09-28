@@ -19,5 +19,11 @@ if (typeof firebaseConfigListo === 'function' && firebaseConfigListo() && typeof
   firebase.initializeApp(FIREBASE_CONFIG);
   dbFirestore = firebase.firestore();
   authFirebase = firebase.auth();
-  storageFirebase = firebase.storage();
+  try {
+    // Storage es opcional: si el proyecto no lo tiene habilitado (requiere
+    // plan Blaze), esto no debe tumbar Auth/Firestore en el resto del portal.
+    storageFirebase = firebase.storage();
+  } catch (error) {
+    storageFirebase = null;
+  }
 }
