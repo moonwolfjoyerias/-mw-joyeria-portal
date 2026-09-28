@@ -9,13 +9,14 @@
 // Ver AUDITORIA-FIREBASE.md para el detalle completo de por qué la
 // migración es obligatoriamente incremental (módulo por módulo) y no un
 // simple cambio de bandera.
-const FIREBASE_CONFIG = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: ''
+const firebaseConfig = {
+  apiKey: "AIzaSyBLHJwoZlplK8keaf0vtwNjr9k_ziF1PpM",
+  authDomain: "moonwolf-portal.firebaseapp.com",
+  projectId: "moonwolf-portal",
+  storageBucket: "moonwolf-portal.firebasestorage.app",
+  messagingSenderId: "363198695967",
+  appId: "1:363198695967:web:4a908de0bc23822b05632a",
+  measurementId: "G-3CKHR15E5D"
 };
 
 // Interruptor único de todo el portal (AUDITORIA-FIREBASE.md, secciones
@@ -28,7 +29,7 @@ const FIREBASE_CONFIG = {
 // cabecera de cada *-modelo.js) leerán/escribirán en Firestore/Storage;
 // el resto sigue funcionando en localStorage hasta que se migre, sin que
 // esto rompa nada — son fuentes de datos independientes por dominio.
-const MODO_DEMO = true;
+const MODO_DEMO = false;
 
 // Solo se considera "listo" si además de MODO_DEMO=false hay credenciales
 // reales cargadas — evita que un despiste (MODO_DEMO=false con config
