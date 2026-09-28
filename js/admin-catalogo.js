@@ -8,16 +8,15 @@
 // nuevo — muestran un modal de Autorización con mensaje dinámico (ver
 // js/admin-comun.js) y quedan en la auditoría (rol "admin").
 //
-// ⚠️ TEMPORAL: localStorage simula la base de datos (misma clave que
-// usa Staff/Encargado, para representar el mismo catálogo — ver Fase 3/Firestore).
+// FASE 2 (Firebase): el almacenamiento real (Firestore o localStorage,
+// misma colección/clave que usa Staff/Encargado para representar el
+// mismo catálogo) ya no vive aquí — ver js/catalogo-firestore-sync.js.
 
 let catalogoRH = [];
 
-const STORAGE_KEY = 'mw_staff_catalogo_demo';
+document.addEventListener('DOMContentLoaded', async () => {
 
-document.addEventListener('DOMContentLoaded', () => {
-
-  cargarCatalogo();
+  await cargarCatalogo();
   renderFiltros();
   renderCatalogo();
   inicializarEventos();
@@ -26,28 +25,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ============================================================
-// CARGAR / GUARDAR
+// CARGAR / GUARDAR — delega en js/catalogo-firestore-sync.js
 // ============================================================
 
-function cargarCatalogo() {
-
-  const guardado = localStorage.getItem(STORAGE_KEY);
-
-  if (guardado) {
-    try {
-      catalogoRH = JSON.parse(guardado).map(migrarProductoAVariantes);
-    } catch (error) {
-      catalogoRH = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
-    }
-  } else {
-    catalogoRH = CATALOGO_EJEMPLO.map(p => migrarProductoAVariantes({ ...p }));
-    guardarCatalogo();
-  }
-
+async function cargarCatalogo() {
+  await catalogoRepoListo;
+  catalogoRH = CATALOGO_CACHE.map(migrarProductoAVariantes);
 }
 
 function guardarCatalogo() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(catalogoRH));
+  guardarCatalogoRepo(catalogoRH);
 }
 
 

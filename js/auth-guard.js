@@ -1,26 +1,33 @@
-// MW JOYERÍA — Sesión de acceso (simula el estado de Firebase Auth)
+// MW JOYERÍA — Sesión de acceso
 //
-// ⚠️ TEMPORAL: sessionStorage simula lo que en Fase 3 sería el listener
-// onAuthStateChanged de Firebase Auth. El resto del portal SOLO lee la
-// identidad de la persona con sesión abierta a través de
+// FASE 2 (Firebase): cuando js/firebase-init.js deja `authFirebase` con
+// valor (MODO_DEMO=false + config real), este archivo escucha
+// onAuthStateChanged y construye la misma `sesion` de siempre (ver
+// js/auth-service.js) a partir del usuario real de Firebase Auth + su
+// perfil en Firestore (colección "users") — sessionStorage sigue siendo
+// el caché de lectura rápida que ya usa el resto del portal a través de
 // obtenerSesionActiva() (nunca de un nombre escrito a mano en el HTML),
-// así que migrar a Firebase Auth real consiste en cambiar CÓMO se llena
-// la sesión (aquí y en js/auth-login.js), no en tocar cada página del
-// portal — ver js/admin-comun.js, js/encargado-comun.js y
-// obtenerNombrePersonaActualPortal() en js/portal-common.js.
+// así que ninguna otra página necesita tocarse — ver js/admin-comun.js,
+// js/encargado-comun.js y obtenerNombrePersonaActualPortal() en
+// js/portal-common.js.
 //
-// ⚠️ LÍMITE DE SEGURIDAD CONOCIDO: este archivo es SOLO una puerta de
-// interfaz — evita que alguien sin sesión vea las páginas por accidente
-// y decide a qué nombre/rol atribuir sus acciones. NO es una barrera de
-// seguridad real: no hay ningún servidor detrás que la haga cumplir, así
-// que cualquiera con conocimientos técnicos puede saltarla desde la
-// consola del navegador. La barrera real llega junto con Firebase Auth +
-// Firestore Security Rules (ver auditoría de preparación para Firebase,
-// sección E — "Riesgo de permisos").
+// Si no hay Firebase configurado (MODO_DEMO=true, el caso de hoy),
+// sessionStorage sigue siendo la única fuente de sesión, exactamente
+// como antes — cero cambio de comportamiento.
+//
+// ⚠️ LÍMITE DE SEGURIDAD EN MODO DEMO: mientras MODO_DEMO sea true, este
+// archivo es SOLO una puerta de interfaz — evita que alguien sin sesión
+// vea las páginas por accidente, pero no hay ningún servidor detrás que
+// lo haga cumplir. La barrera real llega con Firebase Auth + Firestore
+// Security Rules, activa en cuanto MODO_DEMO es false (ver auditoría de
+// preparación para Firebase, sección E — "Riesgo de permisos").
 //
 // Se carga como PRIMER script en el <head> de cada página del portal
 // (antes de que el <body> se pinte) para poder mandar a login.html de
-// inmediato si no hay sesión válida para esa carpeta de portal.
+// inmediato si no hay sesión válida para esa carpeta de portal. En modo
+// Firebase, el SDK + firebase-config.js + firebase-init.js se cargan
+// justo ANTES de este archivo (ver el bloque "Fase 2" al inicio del
+// <head>) para que `authFirebase` ya exista cuando este script corre.
 
 const SESION_ACTIVA_STORAGE_KEY = 'mw-sesion-activa-v1';
 
@@ -43,6 +50,9 @@ function obtenerSesionActiva() {
 }
 
 function cerrarSesion() {
+  if (typeof authFirebase !== 'undefined' && authFirebase) {
+    cerrarSesionFirebase(); // async, no se espera — la navegación a login.html ya está en curso
+  }
   try {
     sessionStorage.removeItem(SESION_ACTIVA_STORAGE_KEY);
   } catch (error) {
@@ -154,9 +164,41 @@ function establecerTema(tema) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  aplicarIdentidadSesionEnHeader();
   wireCerrarSesionLinks();
+  // En modo Firebase, aplicarIdentidadSesionEnHeader() se llama desde el
+  // listener de onAuthStateChanged (abajo) en cuanto la sesión esté
+  // lista — puede resolver antes o después de DOMContentLoaded según
+  // qué tan rápido responda Firebase, así que se intenta aquí también
+  // por si ya estaba lista (no hace daño llamarla dos veces).
+  aplicarIdentidadSesionEnHeader();
 });
 
-exigirSesionPortal();
+// FASE 2 (Firebase): onAuthStateChanged resuelve de forma asíncrona
+// incluso para una sesión ya persistida (a diferencia de sessionStorage,
+// que es síncrono) — por eso exigirSesionPortal() debe esperar a la
+// PRIMERA respuesta de Firebase antes de decidir si redirige a
+// login.html, o cerraría la sesión de alguien que sí tiene una válida.
+// En modo demo (el caso de hoy) nada de esto corre: exigirSesionPortal()
+// se llama de inmediato, igual que siempre.
+if (typeof authFirebase !== 'undefined' && authFirebase) {
+  authFirebase.onAuthStateChanged(async (user) => {
+    if (user) {
+      const sesion = await construirSesionDesdeUsuarioFirebase(user);
+      if (sesion) {
+        guardarSesionActiva(sesion);
+      } else {
+        cerrarSesion();
+      }
+    } else {
+      cerrarSesion();
+    }
+    exigirSesionPortal();
+    if (document.readyState !== 'loading') {
+      aplicarIdentidadSesionEnHeader();
+    }
+  });
+} else {
+  exigirSesionPortal();
+}
+
 aplicarTemaAlDocumento(obtenerTemaGuardado());

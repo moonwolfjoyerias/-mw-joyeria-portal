@@ -41,9 +41,11 @@ const filtro = {
 let usuarioIdActual = '';
 let usuarioNombreActual = '';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   usuarioIdActual = (typeof obtenerIdPersonaActualPortal === 'function' && obtenerIdPersonaActualPortal()) || '';
   usuarioNombreActual = (typeof obtenerNombrePersonaActualPortal === 'function' && obtenerNombrePersonaActualPortal()) || '';
+
+  await catalogoRepoListo; // FASE 2 (Firebase): espera a que obtenerCatalogoReal() tenga datos reales, no un caché vacío
 
   renderFiltroMateriales();
   renderFiltroCategorias();
