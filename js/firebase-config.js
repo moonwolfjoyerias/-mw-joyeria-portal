@@ -9,7 +9,7 @@
 // Ver AUDITORIA-FIREBASE.md para el detalle completo de por qué la
 // migración es obligatoriamente incremental (módulo por módulo) y no un
 // simple cambio de bandera.
-const firebaseConfig = {
+const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBLHJwoZlplK8keaf0vtwNjr9k_ziF1PpM",
   authDomain: "moonwolf-portal.firebaseapp.com",
   projectId: "moonwolf-portal",
