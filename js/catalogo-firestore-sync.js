@@ -98,9 +98,12 @@ async function guardarCatalogoRepo(catalogo) {
 
   if (!dbFirestore) return;
 
-  const tarea = _colaGuardadoCatalogo
-    .catch(() => {}) // un guardado previo fallido no debe bloquear los siguientes
-    .then(() => sincronizarCatalogoConFirestore(catalogo));
+  // Nunca queda en estado "rechazada": si un guardado falla, ya se avisó
+  // dentro de sincronizarCatalogoConFirestore (mostrarToast) — que quede
+  // rechazada aquí solo bloquearía en silencio los guardados siguientes
+  // de la cola y generaría un error sin manejar en la consola, ya que
+  // ningún controlador espera ni atrapa el resultado de esta llamada.
+  const tarea = _colaGuardadoCatalogo.then(() => sincronizarCatalogoConFirestore(catalogo).catch(() => {}));
   _colaGuardadoCatalogo = tarea;
   return tarea;
 }
@@ -119,7 +122,58 @@ async function sincronizarCatalogoConFirestore(catalogo) {
   // Sella que este proyecto ya tuvo catálogo real — así una colección
   // vacía después de esto se sabe que es a propósito, no "sin sembrar".
   batch.set(dbFirestore.collection(CATALOGO_META_COLECCION).doc(CATALOGO_META_DOC_ID), { inicializado: true }, { merge: true });
-  await batch.commit();
+  try {
+    await batch.commit();
+  } catch (error) {
+    // Firestore aplica el batch completo o nada: si un solo producto
+    // falla (ej. una foto demasiado pesada), NINGÚN cambio de este
+    // guardado se aplica. Antes esto quedaba como una promesa rechazada
+    // sin manejar — visible solo en la consola del navegador — y parecía
+    // que "no pasó nada". Avisamos con un mensaje que sí se ve en pantalla.
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('No se pudo guardar el catálogo: ' + (error && error.message ? error.message : 'error desconocido') + '. Ningún cambio de este guardado se aplicó.');
+    }
+    throw error;
+  }
+}
+
+// Reduce cualquier foto de producto a un tamaño que quepa cómodo en un
+// documento de Firestore (límite de ~1 MB por campo). Las fotos de
+// Catálogo van embebidas directo en el producto (nunca se suben a
+// Storage — ver js/firebase-init.js), así que una foto de cámara/
+// celular sin comprimir (varios MB) puede tumbar el guardado COMPLETO
+// del catálogo, no solo ese producto (Firestore aplica cada lote de
+// escritura completo o nada). Usar SIEMPRE esto al leer un <input
+// type="file"> de foto de producto, en vez de FileReader directo.
+const CATALOGO_IMAGEN_LADO_MAX = 900; // px del lado más largo
+const CATALOGO_IMAGEN_CALIDAD = 0.72;
+
+function comprimirImagenAProductoDataURL(archivo) {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onerror = () => reject(lector.error || new Error('No se pudo leer el archivo'));
+    lector.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('No se pudo leer la imagen'));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width >= height && width > CATALOGO_IMAGEN_LADO_MAX) {
+          height = Math.round(height * (CATALOGO_IMAGEN_LADO_MAX / width));
+          width = CATALOGO_IMAGEN_LADO_MAX;
+        } else if (height > width && height > CATALOGO_IMAGEN_LADO_MAX) {
+          width = Math.round(width * (CATALOGO_IMAGEN_LADO_MAX / height));
+          height = CATALOGO_IMAGEN_LADO_MAX;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', CATALOGO_IMAGEN_CALIDAD));
+      };
+      img.src = lector.result;
+    };
+    lector.readAsDataURL(archivo);
+  });
 }
 
 // Cada página espera esto UNA vez antes de su primer render.

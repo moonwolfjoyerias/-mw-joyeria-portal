@@ -450,7 +450,7 @@ function renderVariantesTemporalEncargado() {
 // IMAGEN
 // ============================================================
 
-function manejarImagen(e) {
+async function manejarImagen(e) {
 
   const archivo = e.target.files?.[0];
   if (!archivo) return;
@@ -460,15 +460,15 @@ function manejarImagen(e) {
     return;
   }
 
-  const reader = new FileReader();
+  try {
+    imagenTemporalEncargado = await comprimirImagenAProductoDataURL(archivo);
+  } catch (error) {
+    mostrarToast('No se pudo procesar esa imagen. Intenta con otra.');
+    return;
+  }
 
-  reader.onload = function (event) {
-    imagenTemporalEncargado = event.target.result;
-    const preview = document.getElementById('previewImage');
-    if (preview) preview.src = imagenTemporalEncargado;
-  };
-
-  reader.readAsDataURL(archivo);
+  const preview = document.getElementById('previewImage');
+  if (preview) preview.src = imagenTemporalEncargado;
 
 }
 

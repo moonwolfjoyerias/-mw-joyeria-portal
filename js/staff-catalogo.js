@@ -793,7 +793,7 @@ function renderVariantesTemporal() {
 // IMAGEN
 // ============================================================
 
-function manejarImagen(e) {
+async function manejarImagen(e) {
 
   const archivo = e.target.files?.[0];
 
@@ -809,25 +809,19 @@ function manejarImagen(e) {
   }
 
 
-  const reader = new FileReader();
+  try {
+    imagenTemporal = await comprimirImagenAProductoDataURL(archivo);
+  } catch (error) {
+    mostrarToast('No se pudo procesar esa imagen. Intenta con otra.');
+    return;
+  }
 
+  const preview =
+    document.getElementById('previewImage');
 
-  reader.onload = function(event) {
-
-    imagenTemporal = event.target.result;
-
-
-    const preview =
-      document.getElementById('previewImage');
-
-    if (preview) {
-      preview.src = imagenTemporal;
-    }
-
-  };
-
-
-  reader.readAsDataURL(archivo);
+  if (preview) {
+    preview.src = imagenTemporal;
+  }
 
 }
 
