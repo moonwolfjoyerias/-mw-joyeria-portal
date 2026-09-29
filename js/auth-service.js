@@ -42,7 +42,7 @@ async function obtenerPerfilUsuarioFirebase(uid) {
 // — una cuenta de Auth sin perfil en Firestore no debe poder "entrar".
 async function construirSesionDesdeUsuarioFirebase(user) {
   const perfil = await obtenerPerfilUsuarioFirebase(user.uid);
-  if (!perfil || !perfil.rol) return null;
+  if (!perfil || !perfil.rol || perfil.activa === false) return null;
 
   const esInterna = perfil.rol === 'staff' || perfil.rol === 'encargado' || perfil.rol === 'admin';
 
@@ -65,6 +65,11 @@ async function construirSesionDesdeUsuarioFirebase(user) {
 async function iniciarSesionFirebase(usuario, password) {
   try {
     const credencial = await authFirebase.signInWithEmailAndPassword(usuarioAEmailAuth(usuario), password);
+    const perfil = await obtenerPerfilUsuarioFirebase(credencial.user.uid);
+    if (perfil && perfil.activa === false) {
+      await authFirebase.signOut();
+      return { ok: false, error: 'Esta cuenta fue desactivada. Contacta a Administración.' };
+    }
     const sesion = await construirSesionDesdeUsuarioFirebase(credencial.user);
     if (!sesion) {
       await authFirebase.signOut();
@@ -73,6 +78,27 @@ async function iniciarSesionFirebase(usuario, password) {
     return { ok: true, sesion };
   } catch (error) {
     return { ok: false, error: 'Usuario o contraseña incorrectos.' };
+  }
+}
+
+// Crea una cuenta NUEVA de Firebase Auth sin cerrar la sesión de quien
+// la está creando (Admin). firebase.initializeApp() con un nombre
+// aparte abre una instancia de la app totalmente independiente — con
+// su propio Auth — así createUserWithEmailAndPassword() no toca ni
+// reemplaza la sesión real de authFirebase (la del Admin). Se cierra y
+// se destruye la instancia aparte apenas termina.
+async function crearUsuarioFirebaseSinPerderSesion(usuario, password, nombre) {
+  const nombreAppTemporal = 'crear-cuenta-' + Date.now();
+  const appTemporal = firebase.initializeApp(FIREBASE_CONFIG, nombreAppTemporal);
+  try {
+    const credencial = await appTemporal.auth().createUserWithEmailAndPassword(usuarioAEmailAuth(usuario), password);
+    if (nombre) {
+      await credencial.user.updateProfile({ displayName: nombre });
+    }
+    return credencial.user.uid;
+  } finally {
+    await appTemporal.auth().signOut().catch(() => {});
+    await appTemporal.delete().catch(() => {});
   }
 }
 

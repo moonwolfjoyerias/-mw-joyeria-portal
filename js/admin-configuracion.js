@@ -1425,11 +1425,13 @@ function wireCuentasInternas(cont) {
         titulo: 'Eliminar cuenta interna',
         peligrosa: true,
         mensaje: `Vas a eliminar la cuenta de <strong>${escapeHTMLPersonas(cuenta.nombre)}</strong> (${escapeHTMLPersonas(cuenta.usuario)} — ${escapeHTMLPersonas(ROLES_CUENTA_INTERNA[cuenta.rol] || cuenta.rol)}). Ya no podrá usarla para reautorizar acciones.`,
-        onConfirmar: () => {
-          const resultado = eliminarCuentaInterna(id);
+        onConfirmar: async () => {
+          const resultado = await eliminarCuentaInterna(id);
           if (resultado.ok) {
             mostrarToast('Cuenta eliminada.');
             renderSeccionUsuarios();
+          } else {
+            mostrarToast(resultado.error);
           }
         }
       });
@@ -1527,15 +1529,22 @@ function abrirModalCrearCuentaInterna() {
   box.querySelector('[data-close]')?.addEventListener('click', cerrar);
   document.getElementById('cfgCancelarCrearInternaBtn')?.addEventListener('click', cerrar);
 
-  document.getElementById('cfgConfirmarCrearInternaBtn')?.addEventListener('click', () => {
+  document.getElementById('cfgConfirmarCrearInternaBtn')?.addEventListener('click', async () => {
 
     const nombre = document.getElementById('cfgNuevoNombreInterno').value.trim();
     const usuario = document.getElementById('cfgNuevoUsuarioInterno').value.trim();
     const rol = document.getElementById('cfgNuevoRolInterno').value;
     const password = document.getElementById('cfgNuevaPasswordInterna').value.trim();
     const error = document.getElementById('cfgCrearInternaError');
+    const btnConfirmar = document.getElementById('cfgConfirmarCrearInternaBtn');
 
-    const resultado = crearCuentaInterna({ usuario, nombre, rol, password });
+    error.style.display = 'none';
+    if (btnConfirmar) btnConfirmar.disabled = true;
+
+    const resultado = await crearCuentaInterna({ usuario, nombre, rol, password });
+
+    if (btnConfirmar) btnConfirmar.disabled = false;
+
     if (!resultado.ok) {
       error.style.display = 'block';
       error.textContent = resultado.error;

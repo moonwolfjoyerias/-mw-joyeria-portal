@@ -43,13 +43,16 @@ service cloud.firestore {
     }
 
     // users/{uid} — cada quien lee su propio perfil (lo necesita al
-    // iniciar sesión); Admin puede leer cualquiera. Crear/editar
-    // perfiles es exclusivo de Admin (alta/baja de cuentas) — nunca
-    // desde el propio cliente de la persona. Nadie borra perfiles.
+    // iniciar sesión); Admin puede leer cualquiera. Crear/editar/
+    // eliminar perfiles es exclusivo de Admin (alta/baja de cuentas) —
+    // nunca desde el propio cliente de la persona. Eliminar el perfil
+    // es el equivalente real a "eliminar la cuenta": el registro de
+    // Firebase Auth en sí no se puede borrar desde el navegador (eso
+    // requiere el SDK de administración), pero sin perfil aquí,
+    // js/auth-service.js ya no deja iniciar sesión con esa cuenta.
     match /users/{uid} {
       allow read: if estaAutenticado() && (request.auth.uid == uid || esAdmin());
-      allow create, update: if estaAutenticado() && esAdmin();
-      allow delete: if false;
+      allow create, update, delete: if estaAutenticado() && esAdmin();
     }
 
     // productos/{id} — Catálogo. Cualquier cuenta autenticada puede

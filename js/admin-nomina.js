@@ -1907,8 +1907,8 @@ function confirmarAprobarSolicitud(id) {
   abrirAutorizacionAdmin({
     titulo: `Aprobar ${solicitud.tipo === 'alta' ? 'alta' : 'baja'}`,
     mensaje: `¿Confirmas la ${solicitud.tipo} de <strong>${escapeHTMLNomina(nombre)}</strong>?`,
-    onConfirmar: () => {
-      const resultado = aprobarSolicitudNomina(id, { usuarioAdminId: ADMIN_IDENTIDAD.usuarioId, usuarioAdminNombre: ADMIN_IDENTIDAD.usuarioNombre });
+    onConfirmar: async () => {
+      const resultado = await aprobarSolicitudNomina(id, { usuarioAdminId: ADMIN_IDENTIDAD.usuarioId, usuarioAdminNombre: ADMIN_IDENTIDAD.usuarioNombre });
       if (!resultado.ok) { mostrarToast(resultado.error); return; }
       mostrarToast(`Solicitud de ${solicitud.tipo} aprobada.`);
       renderDatosSolicitudes();

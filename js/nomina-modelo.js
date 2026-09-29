@@ -1141,7 +1141,7 @@ function generarCredencialesEmpleadoNomina(numeroEmpleado, nombre) {
 // la cuenta de acceso correspondiente (sección 4): Staff → subcuenta
 // de Staff (mismo sistema de cuentas internas que ya existe), Encargado/Admin
 // → cuenta normal — nunca deja que Encargado cree cuentas directamente.
-function aprobarSolicitudNomina(id, { usuarioAdminId, usuarioAdminNombre }) {
+async function aprobarSolicitudNomina(id, { usuarioAdminId, usuarioAdminNombre }) {
 
   const solicitudes = obtenerSolicitudesNomina();
   const solicitud = solicitudes.find(s => s.id === id);
@@ -1159,7 +1159,7 @@ function aprobarSolicitudNomina(id, { usuarioAdminId, usuarioAdminNombre }) {
 
     if (typeof crearCuentaInterna === 'function') {
       const { usuario, password } = generarCredencialesEmpleadoNomina(resultado.empleado.numeroEmpleado, resultado.empleado.nombre);
-      const cuenta = crearCuentaInterna({
+      const cuenta = await crearCuentaInterna({
         usuario, password,
         nombre: resultado.empleado.nombre,
         rol: resultado.empleado.cargo, // 'staff' | 'encargado' | 'admin' — mismos valores en ambos catálogos
@@ -1177,7 +1177,7 @@ function aprobarSolicitudNomina(id, { usuarioAdminId, usuarioAdminNombre }) {
     if (typeof obtenerCuentaInternaPorEmpleadoNomina === 'function' && typeof desactivarCuentaInterna === 'function') {
       const cuenta = obtenerCuentaInternaPorEmpleadoNomina(solicitud.empleadoId);
       if (cuenta) {
-        desactivarCuentaInterna(cuenta.id);
+        await desactivarCuentaInterna(cuenta.id);
         solicitud.cuentaInternaId = cuenta.id;
       }
     }

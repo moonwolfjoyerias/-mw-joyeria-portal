@@ -24,6 +24,22 @@
 // reemplaza por un flujo de "restablecer contraseña" (nunca "ver la
 // contraseña actual"), y las contraseñas nunca deberían quedar en
 // texto plano en ningún almacenamiento persistente real.
+//
+// FASE 2 (Firebase): si hay Firebase real conectado (dbFirestore +
+// authFirebase), crearCuentaInterna/desactivarCuentaInterna/
+// activarCuentaInterna/eliminarCuentaInterna TAMBIÉN crean/actualizan
+// el acceso real en Firebase Auth + el perfil en Firestore
+// (users/{uid}) — ver crearUsuarioFirebaseSinPerderSesion en
+// js/auth-service.js. El campo `firebaseUid` en el registro local
+// enlaza ambos lados. Si no hay Firebase configurado, todo sigue
+// funcionando 100% en localStorage como hasta ahora.
+//
+// ⚠️ LÍMITE CONOCIDO: restablecerPasswordCuentaInterna NO puede
+// cambiar la contraseña real de una cuenta ya creada en Firebase Auth
+// — eso requiere el SDK de administración (server-side), que este
+// portal no tiene sin pagar Cloud Functions. Para esas cuentas, la
+// función devuelve un error explicando que hay que pedirlo aparte
+// (por ahora, un script que corre quien tenga la llave de servicio).
 
 const CUENTAS_INTERNAS_STORAGE_KEY = 'mw-cuentas-internas-v1';
 
@@ -140,7 +156,7 @@ function verificarCredencialInterna(usuario, password) {
   return obtenerCuentasInternas().find(c => c.usuario === usuario && c.password === password && c.activa !== false) || null;
 }
 
-function crearCuentaInterna({ usuario, nombre, rol, password, empleadoNominaId, permisos }) {
+async function crearCuentaInterna({ usuario, nombre, rol, password, empleadoNominaId, permisos }) {
 
   usuario = String(usuario || '').trim();
   nombre = String(nombre || '').trim();
@@ -169,6 +185,21 @@ function crearCuentaInterna({ usuario, nombre, rol, password, empleadoNominaId, 
     ...(rol === 'encargado' ? { permisos: permisosEncargadoPorDefecto(permisos) } : {})
   };
 
+  if (typeof dbFirestore !== 'undefined' && dbFirestore && typeof crearUsuarioFirebaseSinPerderSesion === 'function') {
+    try {
+      const uid = await crearUsuarioFirebaseSinPerderSesion(usuario, password, nombre);
+      nueva.firebaseUid = uid;
+      await dbFirestore.collection('users').doc(uid).set({
+        usuario, nombre, rol,
+        personaId: null,
+        cuentaId: nueva.id,
+        activa: true,
+      });
+    } catch (error) {
+      return { ok: false, error: 'No se pudo crear el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
+    }
+  }
+
   cuentas.push(nueva);
   guardarCuentasInternas(cuentas);
 
@@ -186,11 +217,19 @@ function crearCuentaInterna({ usuario, nombre, rol, password, empleadoNominaId, 
 
 // Baja de empleado (sección 6 del flujo de alta/baja): nunca se borra
 // la cuenta, solo se le quita el acceso — conserva su historial.
-function desactivarCuentaInterna(id) {
+async function desactivarCuentaInterna(id) {
 
   const cuentas = obtenerCuentasInternas();
   const cuenta = cuentas.find(c => c.id === id);
   if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
+
+  if (cuenta.firebaseUid && typeof dbFirestore !== 'undefined' && dbFirestore) {
+    try {
+      await dbFirestore.collection('users').doc(cuenta.firebaseUid).set({ activa: false }, { merge: true });
+    } catch (error) {
+      return { ok: false, error: 'No se pudo desactivar el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
+    }
+  }
 
   cuenta.activa = false;
   guardarCuentasInternas(cuentas);
@@ -207,11 +246,19 @@ function desactivarCuentaInterna(id) {
 
 }
 
-function activarCuentaInterna(id) {
+async function activarCuentaInterna(id) {
 
   const cuentas = obtenerCuentasInternas();
   const cuenta = cuentas.find(c => c.id === id);
   if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
+
+  if (cuenta.firebaseUid && typeof dbFirestore !== 'undefined' && dbFirestore) {
+    try {
+      await dbFirestore.collection('users').doc(cuenta.firebaseUid).set({ activa: true }, { merge: true });
+    } catch (error) {
+      return { ok: false, error: 'No se pudo reactivar el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
+    }
+  }
 
   cuenta.activa = true;
   guardarCuentasInternas(cuentas);
@@ -232,11 +279,25 @@ function obtenerCuentaInternaPorEmpleadoNomina(empleadoNominaId) {
   return obtenerCuentasInternas().find(c => c.empleadoNominaId === empleadoNominaId) || null;
 }
 
-function eliminarCuentaInterna(id) {
+// El acceso real en Firebase Auth (el registro en sí) no se puede
+// borrar desde el navegador — eso requiere el SDK de administración,
+// que este portal no tiene. En su lugar, se borra su perfil en
+// Firestore (users/{uid}): sin perfil, iniciarSesionFirebase() ya no
+// deja entrar a esa cuenta aunque conozca la contraseña — el efecto
+// práctico es el mismo que "eliminar" el acceso.
+async function eliminarCuentaInterna(id) {
 
   const cuentas = obtenerCuentasInternas();
   const cuenta = cuentas.find(c => c.id === id);
   if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
+
+  if (cuenta.firebaseUid && typeof dbFirestore !== 'undefined' && dbFirestore) {
+    try {
+      await dbFirestore.collection('users').doc(cuenta.firebaseUid).delete();
+    } catch (error) {
+      return { ok: false, error: 'No se pudo eliminar el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
+    }
+  }
 
   guardarCuentasInternas(cuentas.filter(c => c.id !== id));
 
@@ -285,6 +346,9 @@ function restablecerPasswordCuentaInterna(id, nuevoPassword) {
   const cuenta = cuentas.find(c => c.id === id);
   if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
   if (!nuevoPassword) return { ok: false, error: 'La nueva contraseña no puede estar vacía.' };
+  if (cuenta.firebaseUid) {
+    return { ok: false, error: 'Esta cuenta ya tiene acceso real — su contraseña no se puede cambiar desde aquí. Pide el cambio directamente a quien administra Firebase.' };
+  }
 
   cuenta.password = nuevoPassword;
   guardarCuentasInternas(cuentas);
