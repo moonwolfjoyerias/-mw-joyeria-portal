@@ -11,8 +11,8 @@
 // - js/lider-ejemplo.js (RANGOS_MW) — MISMOS umbrales de rango reales.
 // - js/admin-comun.js — abrirAutorizacionAdmin / registrarAuditoriaAdmin.
 //
-// ⚠️ TEMPORAL: localStorage simula la base de datos. Se reemplaza por
-// Firestore en Fase 3.
+// Fase 2 (Firebase): el registro de personas ya sincroniza con
+// Firestore — ver js/personas-firestore-sync.js.
 
 let personaSeleccionadaId = null;
 let modoEdicionPersona = false;
@@ -22,6 +22,7 @@ let equipoAutocompleteSeleccionado = null;
 document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+  if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
 
   if (typeof procesarCierresMensualesPlanMWTodas === 'function') procesarCierresMensualesPlanMWTodas();
   verificarAscensosPendientes();

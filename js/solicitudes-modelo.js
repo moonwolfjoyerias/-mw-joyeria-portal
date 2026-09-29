@@ -22,11 +22,11 @@
 // siguen funcionando exactamente igual que antes sobre localStorage —
 // mismo comportamiento en modo demo, cero regresión.
 //
-// personas-ejemplo.js, auditoria-modelo.js y notificaciones-modelo.js
-// TODAVÍA no están migrados — por eso aprobarSolicitud() sigue creando
-// la persona nueva vía crearPersonaEjemplo() (localStorage) aunque esta
-// solicitud ya viva en Firestore. Eso es intencional: la migración es
-// incremental por módulo, no todo o nada (ver AUDITORIA-FIREBASE.md).
+// auditoria-modelo.js y notificaciones-modelo.js TODAVÍA no están
+// migrados. Personas (crearPersonaEjemplo/obtenerPersonas/guardarPersonas)
+// sí — ver js/personas-firestore-sync.js — así que aprobarSolicitud()
+// también crea el acceso real de Firebase Auth de la nueva Emprendedora
+// (crearAccesoFirebaseParaPersona) antes de agregarla al registro.
 
 const SOLICITUDES_STORAGE_KEY = 'mw-solicitudes-inscripcion-v1';
 const SOLICITUDES_COLECCION_FIRESTORE = 'solicitudesInscripcion';
@@ -309,6 +309,20 @@ async function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
     liderId: solicitud.solicitanteId,   // el solicitante queda como su líder directa
     invitadaPor: solicitud.solicitanteId
   });
+
+  // Sin esto, la cuenta solo quedaba en el localStorage de este
+  // dispositivo (ver js/personas-firestore-sync.js). Si falla, no se
+  // crea nada local a medias — igual que ya hace crearCuentaInterna.
+  if (typeof crearAccesoFirebaseParaPersona === 'function') {
+    try {
+      await crearAccesoFirebaseParaPersona(nuevaPersona, credenciales.passwordTemporal);
+    } catch (error) {
+      if (error && error.code === 'auth/email-already-in-use') {
+        return { ok: false, error: `El usuario "${credenciales.usuario}" ya se usó antes para una cuenta real y no se puede reutilizar todavía. Vuelve a intentar la aprobación (se generará otro usuario).` };
+      }
+      return { ok: false, error: 'No se pudo crear el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
+    }
+  }
 
   const personas = (typeof obtenerPersonas === 'function') ? obtenerPersonas() : [];
   personas.push(nuevaPersona);

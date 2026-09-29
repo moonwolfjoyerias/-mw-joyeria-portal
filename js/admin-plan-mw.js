@@ -14,6 +14,7 @@ let planmwVista = 'seguimiento';
 document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+  if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
 
   if (typeof procesarCierresMensualesPlanMWTodas === 'function') procesarCierresMensualesPlanMWTodas();
   verificarAscensosPendientes();

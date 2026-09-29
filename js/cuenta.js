@@ -7,6 +7,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+  if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
 
   renderPerfil();
   renderRifa();

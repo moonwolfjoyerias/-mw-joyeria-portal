@@ -15,6 +15,7 @@ let equipoIndiceResultado = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+  if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
 
   // No hay ningún otro "tick" que corra en el portal de Líder (a
   // diferencia de Admin, donde admin-comun.js ya lo hace al abrir la

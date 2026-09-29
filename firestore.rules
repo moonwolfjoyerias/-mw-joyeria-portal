@@ -4,9 +4,11 @@ rules_version = '2';
 //
 // Cubre SOLO lo que ya está migrado a Firestore en esta fase: el perfil
 // de cada cuenta real (colección "users", usada por js/auth-service.js
-// para saber el rol de quien inició sesión) y el Catálogo (colección
-// "productos", ver js/catalogo-firestore-sync.js). Todo lo demás
-// (Personas, Apartados, Nómina, Comisiones, etc.) sigue funcionando en
+// para saber el rol de quien inició sesión), el Catálogo (colección
+// "productos", ver js/catalogo-firestore-sync.js), Apartados, Solicitudes
+// de inscripción y Personas — Emprendedoras/Líderes (colección
+// "personas", ver js/personas-firestore-sync.js). Todo lo demás (Nómina,
+// Comisiones como registro propio, etc.) sigue funcionando en
 // localStorage — la regla final del archivo lo deniega explícitamente
 // para que nadie intente leer/escribir esas colecciones desde el
 // cliente antes de que tengan su propia migración y sus propias reglas
@@ -76,12 +78,12 @@ service cloud.firestore {
     // ventanasApartado/{id} — Apartados. Cualquier cuenta autenticada
     // puede leer y escribir. Idealmente Emprendedora/Líder solo debería
     // poder tocar sus propias ventanas (comparando usuarioId == su
-    // propio uid), pero Personas todavía no está migrado a Firebase
-    // Auth — su usuarioId hoy es un id de personas-ejemplo.js
-    // (localStorage) o un slug de texto libre que Staff escribe a
-    // mano, nunca un uid real — esa comparación nunca coincidiría hoy
-    // (mismo motivo documentado abajo en solicitudesInscripcion).
-    // Ajustar cuando Personas tenga su propio uid real.
+    // propio uid), pero usuarioId guarda el id de personas-ejemplo.js
+    // (ej. "persona-1234"), no el uid real de Firebase Auth que ya
+    // tiene su cuenta desde esta fase — esa comparación nunca
+    // coincidiría todavía (mismo motivo documentado abajo en
+    // solicitudesInscripcion). Ajustar cuando Apartados también guarde
+    // el uid real, no solo el id de personas.
     match /ventanasApartado/{id} {
       allow read, write: if estaAutenticado();
     }
@@ -97,13 +99,38 @@ service cloud.firestore {
 
     // solicitudesInscripcion/{id} — migrado en una fase anterior (ver
     // js/solicitudes-modelo.js), pero sus IDs de solicitante todavía son
-    // los IDs de personas-ejemplo.js (localStorage), no uid de Firebase
-    // Auth — Personas aún no está migrado. Por eso esta regla es
-    // intencionalmente amplia (cualquier cuenta autenticada puede leer y
-    // escribir) en vez de comparar solicitanteId == request.auth.uid,
-    // que hoy nunca coincidiría. Ajustar cuando Personas tenga su propio
-    // uid real.
+    // los IDs de personas-ejemplo.js, no el uid real de Firebase Auth.
+    // Por eso esta regla es intencionalmente amplia (cualquier cuenta
+    // autenticada puede leer y escribir) en vez de comparar
+    // solicitanteId == request.auth.uid, que hoy nunca coincidiría.
     match /solicitudesInscripcion/{id} {
+      allow read, write: if estaAutenticado();
+    }
+
+    // personas/{id} — Emprendedoras/Líderes (ver
+    // js/personas-firestore-sync.js). Cualquier cuenta autenticada
+    // puede leer (Staff/Encargado la necesitan para Apartados/Lista de
+    // deseos; una persona necesita ver su propio perfil y, si es Líder,
+    // el de todo su equipo para Mi equipo/Comisiones/Plan MW — calcular
+    // "todo mi equipo" recorre el árbol completo, así que no se puede
+    // restringir a "solo mi propio documento" sin romper esas
+    // pantallas). Escribir queda limitado a Staff/Encargado/Admin
+    // (mismo criterio que productos) o a la propia persona sobre SU
+    // documento (edita su foto/teléfono/correo/datos bancarios desde su
+    // Mi cuenta) — el id del documento es el id de personas-ejemplo.js,
+    // no el uid, por eso se compara contra personaId de su perfil.
+    // Restringir además qué CAMPOS puede tocar cada quien (para que una
+    // persona no pueda editarse su propio rango/stats/comisiones) queda
+    // pendiente, igual que ya se documentó arriba para ventanasApartado
+    // y solicitudesInscripcion.
+    match /personas/{id} {
+      allow read: if estaAutenticado();
+      allow write: if estaAutenticado() && (esInterno() || miPerfil().personaId == id);
+    }
+
+    // personasMeta/estado — igual que catalogoMeta/apartadosMeta: solo
+    // trackea si Personas ya se sembró antes en este proyecto.
+    match /personasMeta/{id} {
       allow read, write: if estaAutenticado();
     }
 

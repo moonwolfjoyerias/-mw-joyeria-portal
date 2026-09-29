@@ -11,8 +11,12 @@
 // líder) seguirán usando sus propios datos de ejemplo por separado; no
 // se modificaron para no romper Staff/Encargado ni las vistas de Líder.
 //
-// ⚠️ TEMPORAL: localStorage simula la base de datos. Se reemplaza por
-// Firestore en Fase 3 sin cambiar la forma de este objeto.
+// Fase 2 (Firebase): el registro completo ya sincroniza con Firestore
+// (colección "personas") vía js/personas-firestore-sync.js — ver ese
+// archivo para la caché/carga asíncrona. La contraseña sigue sin
+// guardarse ahí (solo vive en Firebase Auth o en el localStorage del
+// dispositivo que la creó/vio — ver PERSONAS_CREDENCIALES_STORAGE_KEY
+// abajo), igual que ya se decidió para Cuentas internas.
 
 const CATEGORIAS_PERSONA = { normal: 'Normal', vip: 'VIP', foranea: 'Foránea' };
 const ESTADOS_CUENTA_PERSONA = { activa: 'Activa', inactiva: 'Inactiva', baja: 'Baja' };
@@ -255,25 +259,18 @@ function construirPersonasEjemplo() {
 
 }
 
-// Igual que el catálogo de Staff: localStorage simula la base de datos.
-// La primera vez que se pida el registro, se siembra con el ejemplo.
+// Ya NO lee/escribe localStorage directo — ver js/personas-firestore-sync.js
+// (cargado antes que este archivo), que llena PERSONAS_CACHE de forma
+// asíncrona una sola vez (desde Firestore si hay config real, si no
+// desde localStorage igual que antes) y expone guardarPersonasRepo() para
+// escribir. Cualquier página que renderice personas en su primer render
+// debe esperar `personasRepoListo` antes de llamar a obtenerPersonas().
 function obtenerPersonas() {
-
-  try {
-    const guardado = JSON.parse(localStorage.getItem(PERSONAS_STORAGE_KEY));
-    if (Array.isArray(guardado) && guardado.length) return guardado;
-  } catch (error) {
-    // sigue abajo y reconstruye el ejemplo
-  }
-
-  const personas = construirPersonasEjemplo();
-  guardarPersonas(personas);
-  return personas;
-
+  return PERSONAS_CACHE;
 }
 
 function guardarPersonas(personas) {
-  localStorage.setItem(PERSONAS_STORAGE_KEY, JSON.stringify(personas));
+  guardarPersonasRepo(personas);
 }
 
 // Elimina la cuenta por completo (no es lo mismo que "estado: baja",
@@ -281,10 +278,26 @@ function guardarPersonas(personas) {
 // Usuarios y permisos → Cuentas. Quien llame a esta función es
 // responsable de mostrar la advertencia y registrar la auditoría —
 // este archivo no depende de admin-comun.js.
-function eliminarPersona(id) {
+async function eliminarPersona(id) {
   const personas = obtenerPersonas();
   const persona = personas.find(p => p.id === id);
   if (!persona) return { ok: false, error: 'La cuenta no existe.' };
+
+  // Sin esto, el perfil de login (users/{uid}) se quedaría huérfano y
+  // esta persona podría seguir iniciando sesión aunque "ya no exista"
+  // — mismo motivo por el que eliminarCuentaInterna hace lo mismo. El
+  // acceso de Firebase Auth en sí no se puede borrar desde el
+  // navegador (hace falta el SDK de administración); por eso, si se
+  // vuelve a crear una cuenta con el mismo usuario, seguirá chocando
+  // con "auth/email-already-in-use" hasta que se libere con ese script.
+  if (persona.firebaseUid && typeof dbFirestore !== 'undefined' && dbFirestore) {
+    try {
+      await dbFirestore.collection('users').doc(persona.firebaseUid).delete();
+    } catch (error) {
+      return { ok: false, error: 'No se pudo eliminar el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
+    }
+  }
+
   guardarPersonas(personas.filter(p => p.id !== id));
   const cred = obtenerCredencialesPersonas();
   if (id in cred) {
@@ -588,3 +601,9 @@ function existePersonaConCorreoOTelefono(correo, telefono, excluirId) {
     return mismoCorreo || mismoTelefono;
   });
 }
+
+// Arranca la carga de personas-firestore-sync.js — tiene que ser AQUÍ
+// (no en ese archivo, que se carga primero) porque cargarPersonasRepo()
+// necesita construirPersonasEjemplo(), definida arriba en este mismo
+// archivo, para la semilla.
+const personasRepoListo = cargarPersonasRepo();

@@ -1130,6 +1130,7 @@ function abrirModalSubirFotoSitio(espacio) {
 async function renderSeccionUsuarios() {
 
   if (typeof cuentasInternasRepoListo !== 'undefined') await cuentasInternasRepoListo;
+  if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
 
   const cont = document.getElementById('seccion-usuarios');
   const filas = [
@@ -1280,8 +1281,8 @@ function wireCuentasPersonas(cont, lideresParaSelect) {
         titulo: 'Eliminar cuenta',
         peligrosa: true,
         mensaje: `Vas a eliminar por completo la cuenta de <strong>${escapeHTMLPersonas(nombreCompletoPersona(persona))}</strong> (${escapeHTMLPersonas(persona.usuario)}). Esta acción no se puede deshacer y puede dejar huérfanas referencias históricas (comisiones, actividad) que la mencionan por id. Si solo quieres desactivarla temporalmente, usa "Estado de cuenta: Baja" en Emprendedoras/Líderes en vez de eliminarla.`,
-        onConfirmar: () => {
-          const resultado = eliminarPersona(id);
+        onConfirmar: async () => {
+          const resultado = await eliminarPersona(id);
           if (resultado.ok) {
             if (typeof registrarAuditoriaAdmin === 'function') {
               registrarAuditoriaAdmin({
@@ -1292,6 +1293,8 @@ function wireCuentasPersonas(cont, lideresParaSelect) {
             }
             mostrarToast('Cuenta eliminada.');
             renderSeccionUsuarios();
+          } else {
+            mostrarToast(resultado.error || 'No se pudo eliminar la cuenta.');
           }
         }
       });
@@ -1379,6 +1382,23 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
       numeroCuenta: credenciales.numeroCuenta,
       liderId, invitadaPor: liderId
     });
+
+    // Sin esto, la cuenta solo quedaba en el localStorage de este
+    // dispositivo: no aparecía en otro y tampoco podía iniciar sesión
+    // ahí (ver js/personas-firestore-sync.js). Si falla, no se crea
+    // nada local a medias — igual que ya hace crearCuentaInterna.
+    if (typeof crearAccesoFirebaseParaPersona === 'function') {
+      try {
+        await crearAccesoFirebaseParaPersona(nuevaPersona, credenciales.passwordTemporal);
+      } catch (err) {
+        error.style.display = 'block';
+        error.textContent = (err && err.code === 'auth/email-already-in-use')
+          ? `El usuario "${credenciales.usuario}" ya se usó antes para una cuenta real y no se puede reutilizar todavía. Vuelve a intentarlo (se generará otro usuario).`
+          : 'No se pudo crear el acceso real: ' + (err && err.message ? err.message : 'error desconocido');
+        if (btnConfirmar) btnConfirmar.disabled = false;
+        return;
+      }
+    }
 
     const personas = obtenerPersonas();
     personas.push(nuevaPersona);

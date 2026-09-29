@@ -28,6 +28,7 @@ function setTextDash(id, valor) {
 async function renderResumenGeneral() {
 
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+  if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
 
   // Catálogo — misma clave de localStorage que usan Staff/Encargado/Admin.
   let catalogo = [];

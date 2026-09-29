@@ -28,6 +28,7 @@ let expandedNiveles = new Set(); // claves "liderId-nivel"
 document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+  if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
 
   renderSelectorPeriodoComisiones();
 
