@@ -7,7 +7,9 @@
 // El usuario y la contraseña NO se editan aquí (eso vive en
 // Configuración); esta página es solo datos de contacto + foto.
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof cuentasInternasRepoListo !== 'undefined') await cuentasInternasRepoListo;
+
   renderMiCuentaAdmin();
 
   document.getElementById('miCuentaFotoInput')?.addEventListener('change', (e) => {

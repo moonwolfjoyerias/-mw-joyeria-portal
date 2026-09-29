@@ -6,7 +6,9 @@
 // notifica a Administración, nunca genera un restablecimiento
 // automático.
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof cuentasInternasRepoListo !== 'undefined') await cuentasInternasRepoListo;
 
   setText('perfilNombre', ENCARGADO_IDENTIDAD.usuarioNombre);
   setText('perfilUsuario', ENCARGADO_IDENTIDAD.usuarioId);

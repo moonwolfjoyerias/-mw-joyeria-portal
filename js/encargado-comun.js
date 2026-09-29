@@ -135,7 +135,9 @@ function obtenerCuentaEncargadoActual() {
     : null;
 }
 
-function aplicarPermisosEncargadoEnPagina() {
+async function aplicarPermisosEncargadoEnPagina() {
+
+  if (typeof cuentasInternasRepoListo !== 'undefined') await cuentasInternasRepoListo;
 
   const cuenta = obtenerCuentaEncargadoActual();
   if (!cuenta || typeof tienePermisoEncargado !== 'function') return;

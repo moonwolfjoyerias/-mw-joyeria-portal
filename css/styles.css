@@ -4438,6 +4438,12 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   font-weight: 400;
   resize: vertical;
 }
+/* input[type=email] no hereda el font-family como los demás campos
+   (comportamiento propio del navegador para ese tipo de campo) —
+   se fuerza aquí para que se vea igual que el resto. */
+.cfg-form-grid input[type="email"] {
+  font-family: var(--font-body);
+}
 
 .cfg-toggle-row {
   display: flex;

@@ -1127,7 +1127,9 @@ function abrirModalSubirFotoSitio(espacio) {
 // SECCIÓN: USUARIOS Y PERMISOS (solo lectura + aviso honesto)
 // ============================================================
 
-function renderSeccionUsuarios() {
+async function renderSeccionUsuarios() {
+
+  if (typeof cuentasInternasRepoListo !== 'undefined') await cuentasInternasRepoListo;
 
   const cont = document.getElementById('seccion-usuarios');
   const filas = [
@@ -1340,7 +1342,7 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
   box.querySelector('[data-close]')?.addEventListener('click', cerrar);
   document.getElementById('cfgCancelarCrearPersonaBtn')?.addEventListener('click', cerrar);
 
-  document.getElementById('cfgConfirmarCrearPersonaBtn')?.addEventListener('click', () => {
+  document.getElementById('cfgConfirmarCrearPersonaBtn')?.addEventListener('click', async () => {
 
     const nombre = document.getElementById('cfgNuevoNombre').value.trim();
     const apellidos = document.getElementById('cfgNuevoApellidos').value.trim();
@@ -1349,6 +1351,7 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
     const tipo = document.getElementById('cfgNuevoTipo').value;
     const liderId = document.getElementById('cfgNuevoLiderId').value || null;
     const error = document.getElementById('cfgCrearPersonaError');
+    const btnConfirmar = document.getElementById('cfgConfirmarCrearPersonaBtn');
 
     if (!nombre || !telefono) {
       error.style.display = 'block';
@@ -1361,8 +1364,11 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
       return;
     }
 
+    error.style.display = 'none';
+    if (btnConfirmar) btnConfirmar.disabled = true;
+
     const nombreCompleto = [nombre, apellidos].filter(Boolean).join(' ');
-    const credenciales = generarCredenciales(nombreCompleto);
+    const credenciales = await generarCredenciales(nombreCompleto);
 
     const nuevaPersona = crearPersonaEjemplo({
       id: `persona-${Date.now()}`,
@@ -1386,9 +1392,25 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
       });
     }
 
-    cerrar();
-    mostrarToast(`Cuenta creada: ${credenciales.usuario} — contraseña temporal ${credenciales.passwordTemporal}`);
     renderSeccionUsuarios();
+
+    // Un toast de 3 segundos no basta para un usuario/contraseña que
+    // hay que anotar — se deja fijo en el propio modal hasta que el
+    // Admin lo cierre.
+    box.innerHTML = `
+      <button class="modal-close" data-close>&times;</button>
+      <div class="auth-icon">✓</div>
+      <h3>Cuenta creada</h3>
+      <p class="modal-sub">${escapeHTMLPersonas(nombreCompleto)} — ${tipo === 'lider' ? 'Líder' : 'Emprendedora'}</p>
+      <div class="cfg-form-grid" style="margin-top:10px;">
+        <label class="cfg-span-2">Usuario<input type="text" readonly value="${escapeAttributePersonas(credenciales.usuario)}"></label>
+        <label class="cfg-span-2">Contraseña temporal<input type="text" readonly value="${escapeAttributePersonas(credenciales.passwordTemporal)}"></label>
+      </div>
+      <div class="modal-note">Anótalo o compártelo ahora — puedes volver a consultarlo/restablecerlo después desde su perfil en Emprendedoras/Líderes.</div>
+      <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="cfgCerrarCredencialesPersonaBtn" type="button">Listo</button>
+    `;
+    box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+    document.getElementById('cfgCerrarCredencialesPersonaBtn')?.addEventListener('click', cerrar);
 
   });
 

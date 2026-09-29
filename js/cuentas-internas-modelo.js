@@ -85,7 +85,7 @@ function tienePermisoEncargado(cuenta, modulo) {
   return !!(cuenta.permisos && cuenta.permisos[modulo]);
 }
 
-function actualizarPermisosCuentaInterna(id, permisos) {
+async function actualizarPermisosCuentaInterna(id, permisos) {
 
   const cuentas = obtenerCuentasInternas();
   const cuenta = cuentas.find(c => c.id === id);
@@ -93,6 +93,13 @@ function actualizarPermisosCuentaInterna(id, permisos) {
   if (cuenta.rol !== 'encargado') return { ok: false, error: 'Los permisos por módulo solo aplican a cuentas de Encargado.' };
 
   cuenta.permisos = permisosEncargadoPorDefecto(permisos);
+
+  try {
+    await sincronizarPerfilCuentaInterna(cuenta);
+  } catch (error) {
+    return { ok: false, error: 'No se pudieron guardar los permisos en el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
+  }
+
   guardarCuentasInternas(cuentas);
 
   if (typeof registrarAuditoriaAdmin === 'function') {
@@ -129,19 +136,12 @@ function construirCuentasInternasEjemplo() {
 }
 
 function obtenerCuentasInternas() {
-  try {
-    const guardadas = JSON.parse(localStorage.getItem(CUENTAS_INTERNAS_STORAGE_KEY));
-    if (Array.isArray(guardadas) && guardadas.length) return guardadas;
-  } catch (error) {
-    // sigue abajo y reconstruye el ejemplo
-  }
-  const cuentas = construirCuentasInternasEjemplo();
-  guardarCuentasInternas(cuentas);
-  return cuentas;
+  return CUENTAS_INTERNAS_CACHE;
 }
 
 function guardarCuentasInternas(cuentas) {
-  localStorage.setItem(CUENTAS_INTERNAS_STORAGE_KEY, JSON.stringify(cuentas));
+  CUENTAS_INTERNAS_CACHE = cuentas;
+  try { localStorage.setItem(CUENTAS_INTERNAS_STORAGE_KEY, JSON.stringify(cuentas)); } catch (error) { /* noop */ }
 }
 
 // Usado por los puntos de reautorización existentes (Apartados,
@@ -187,15 +187,19 @@ async function crearCuentaInterna({ usuario, nombre, rol, password, empleadoNomi
 
   if (typeof dbFirestore !== 'undefined' && dbFirestore && typeof crearUsuarioFirebaseSinPerderSesion === 'function') {
     try {
-      const uid = await crearUsuarioFirebaseSinPerderSesion(usuario, password, nombre);
-      nueva.firebaseUid = uid;
-      await dbFirestore.collection('users').doc(uid).set({
-        usuario, nombre, rol,
-        personaId: null,
-        cuentaId: nueva.id,
-        activa: true,
-      });
+      nueva.firebaseUid = await crearUsuarioFirebaseSinPerderSesion(usuario, password, nombre);
+      await sincronizarPerfilCuentaInterna(nueva);
     } catch (error) {
+      if (error && error.code === 'auth/email-already-in-use') {
+        // El usuario ya se usó ANTES para una cuenta real de Firebase —
+        // aunque esa cuenta se haya "eliminado" (eso solo borra su
+        // perfil, ver eliminarCuentaInterna), el acceso de Firebase Auth
+        // en sí sigue existiendo y no se puede borrar desde aquí (hace
+        // falta el SDK de administración, server-side). Ese usuario ya
+        // no se puede volver a usar sin borrar antes esa cuenta desde un
+        // script — mientras tanto hay que elegir otro usuario.
+        return { ok: false, error: `El usuario "${usuario}" ya se usó antes para una cuenta real y no se puede reutilizar todavía (su acceso anterior no se pudo borrar por completo). Usa un usuario distinto, o pide que se borre ese acceso desde el script de administración.` };
+      }
       return { ok: false, error: 'No se pudo crear el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
     }
   }
@@ -223,15 +227,14 @@ async function desactivarCuentaInterna(id) {
   const cuenta = cuentas.find(c => c.id === id);
   if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
 
-  if (cuenta.firebaseUid && typeof dbFirestore !== 'undefined' && dbFirestore) {
-    try {
-      await dbFirestore.collection('users').doc(cuenta.firebaseUid).set({ activa: false }, { merge: true });
-    } catch (error) {
-      return { ok: false, error: 'No se pudo desactivar el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
-    }
+  cuenta.activa = false;
+
+  try {
+    await sincronizarPerfilCuentaInterna(cuenta);
+  } catch (error) {
+    return { ok: false, error: 'No se pudo desactivar el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
   }
 
-  cuenta.activa = false;
   guardarCuentasInternas(cuentas);
 
   if (typeof registrarAuditoriaAdmin === 'function') {
@@ -252,15 +255,14 @@ async function activarCuentaInterna(id) {
   const cuenta = cuentas.find(c => c.id === id);
   if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
 
-  if (cuenta.firebaseUid && typeof dbFirestore !== 'undefined' && dbFirestore) {
-    try {
-      await dbFirestore.collection('users').doc(cuenta.firebaseUid).set({ activa: true }, { merge: true });
-    } catch (error) {
-      return { ok: false, error: 'No se pudo reactivar el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
-    }
+  cuenta.activa = true;
+
+  try {
+    await sincronizarPerfilCuentaInterna(cuenta);
+  } catch (error) {
+    return { ok: false, error: 'No se pudo reactivar el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
   }
 
-  cuenta.activa = true;
   guardarCuentasInternas(cuentas);
 
   if (typeof registrarAuditoriaAdmin === 'function') {
@@ -316,7 +318,7 @@ async function eliminarCuentaInterna(id) {
 // Edición de datos de perfil propios (teléfono, correo, foto) desde
 // "Mi cuenta" — nunca toca usuario/password/rol, eso solo se cambia
 // desde Configuración → Usuarios y permisos.
-function editarCuentaInterna(id, { telefono, correo, fotoUrl } = {}) {
+async function editarCuentaInterna(id, { telefono, correo, fotoUrl } = {}) {
 
   const cuentas = obtenerCuentasInternas();
   const cuenta = cuentas.find(c => c.id === id);
@@ -325,6 +327,12 @@ function editarCuentaInterna(id, { telefono, correo, fotoUrl } = {}) {
   if (telefono !== undefined) cuenta.telefono = telefono;
   if (correo !== undefined) cuenta.correo = correo;
   if (fotoUrl !== undefined) cuenta.fotoUrl = fotoUrl;
+
+  try {
+    await sincronizarPerfilCuentaInterna(cuenta);
+  } catch (error) {
+    return { ok: false, error: 'No se pudieron guardar los datos en el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
+  }
 
   guardarCuentasInternas(cuentas);
 
@@ -364,3 +372,10 @@ function restablecerPasswordCuentaInterna(id, nuevoPassword) {
   return { ok: true, cuenta };
 
 }
+
+// Arranca la carga real (Firestore + local combinados, o solo local si
+// no hay Firebase conectado) — al final del archivo porque necesita
+// construirCuentasInternasEjemplo/permisosEncargadoPorDefecto, definidas
+// arriba. Cada página que use la lista de cuentas internas debe esperar
+// esto una vez antes de su primer render.
+const cuentasInternasRepoListo = cargarCuentasInternasRepo();
