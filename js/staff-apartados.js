@@ -22,7 +22,9 @@ const MENSAJE_WHATSAPP_VENCIDO = "Tu apartado venció. Por favor contáctanos pa
 // INICIO
 // ============================================================
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+
+  await apartadosRepoListo; // FASE 2 (Firebase): espera a que obtenerVentanasApartado() tenga datos reales, no un caché vacío
 
   ventanas = calcularVentanasStaffActuales();
 

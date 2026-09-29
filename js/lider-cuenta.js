@@ -6,7 +6,9 @@
 // (personas-ejemplo.js + plan-mw-admin.js), no RIFA_LIDER_EJEMPLO ni
 // CONSTANCIA_LIDER_EJEMPLO.
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+
   renderPerfilLider();
   renderRifaLider();
   renderConstanciaLider();

@@ -11,7 +11,9 @@ let periodoActual = '';
 let filtroPlanMW = 'todos';
 let planmwVista = 'seguimiento';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
 
   if (typeof procesarCierresMensualesPlanMWTodas === 'function') procesarCierresMensualesPlanMWTodas();
   verificarAscensosPendientes();

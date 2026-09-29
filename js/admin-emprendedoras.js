@@ -19,7 +19,9 @@ let modoEdicionPersona = false;
 let liderSeleccionadoEdicion = null; // { id, nombre } mientras se edita
 let equipoAutocompleteSeleccionado = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
 
   if (typeof procesarCierresMensualesPlanMWTodas === 'function') procesarCierresMensualesPlanMWTodas();
   verificarAscensosPendientes();

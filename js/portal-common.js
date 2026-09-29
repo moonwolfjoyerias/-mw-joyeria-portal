@@ -3,7 +3,11 @@
 // en la página) los elementos con estos IDs/clases, y de los arrays de
 // datos de ejemplo (NOTIFICACIONES_EJEMPLO, EVENTOS_EJEMPLO).
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // FASE 2 (Firebase): el badge de notificaciones de Admin (dentro de
+  // initNotifPanel → admin-comun.js) revisa apartados vencidos — espera
+  // a que la caché tenga datos reales antes de calcular ese conteo.
+  if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
   initNotifPanel();
   initProfileMenu();
   initTemaMenu();

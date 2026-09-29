@@ -5,7 +5,9 @@
 // con sesión abierta (personas-ejemplo.js + plan-mw-admin.js, vía
 // obtenerIdPersonaActualPortal()), no RIFA_EJEMPLO/CONSTANCIA_EJEMPLO.
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+
   renderPerfil();
   renderRifa();
   renderConstancia();

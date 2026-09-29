@@ -4,7 +4,9 @@
 // misma fuente que usa la página "Mis apartados") y de deseos-ejemplo.js
 // (conteo de lista de deseos, misma fuente que usa esa página).
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+
   renderResumenApartados();
   renderResumenListaDeseos();
 });

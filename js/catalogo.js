@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   usuarioNombreActual = (typeof obtenerNombrePersonaActualPortal === 'function' && obtenerNombrePersonaActualPortal()) || '';
 
   await catalogoRepoListo; // FASE 2 (Firebase): espera a que obtenerCatalogoReal() tenga datos reales, no un caché vacío
+  await apartadosRepoListo; // ídem para obtenerVentanasApartado() — el botón "Apartar" lo necesita listo
 
   renderFiltroMateriales();
   renderFiltroCategorias();

@@ -13,7 +13,9 @@ let equipoZoomActual = 1;
 let equipoResultadosBusqueda = [];
 let equipoIndiceResultado = 0;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+
   // No hay ningún otro "tick" que corra en el portal de Líder (a
   // diferencia de Admin, donde admin-comun.js ya lo hace al abrir la
   // campana) — se corre aquí para que la alerta de inactividad esté al

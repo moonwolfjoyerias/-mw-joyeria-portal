@@ -73,6 +73,28 @@ service cloud.firestore {
       allow write: if esInterno();
     }
 
+    // ventanasApartado/{id} — Apartados. Cualquier cuenta autenticada
+    // puede leer y escribir. Idealmente Emprendedora/Líder solo debería
+    // poder tocar sus propias ventanas (comparando usuarioId == su
+    // propio uid), pero Personas todavía no está migrado a Firebase
+    // Auth — su usuarioId hoy es un id de personas-ejemplo.js
+    // (localStorage) o un slug de texto libre que Staff escribe a
+    // mano, nunca un uid real — esa comparación nunca coincidiría hoy
+    // (mismo motivo documentado abajo en solicitudesInscripcion).
+    // Ajustar cuando Personas tenga su propio uid real.
+    match /ventanasApartado/{id} {
+      allow read, write: if estaAutenticado();
+    }
+
+    // apartadosMeta/{id} — igual que catalogoMeta: solo trackea si
+    // Apartados ya se sembró antes en este proyecto (documento
+    // "estado") y guarda el objeto completo de créditos por depósitos
+    // anteriores (documento "creditos"). Mismos permisos que
+    // ventanasApartado.
+    match /apartadosMeta/{id} {
+      allow read, write: if estaAutenticado();
+    }
+
     // solicitudesInscripcion/{id} — migrado en una fase anterior (ver
     // js/solicitudes-modelo.js), pero sus IDs de solicitante todavía son
     // los IDs de personas-ejemplo.js (localStorage), no uid de Firebase

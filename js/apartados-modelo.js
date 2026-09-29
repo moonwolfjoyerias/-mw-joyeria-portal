@@ -1,5 +1,10 @@
 // MW JOYERIA - Modelo compartido de ventanas de apartado
-// TEMPORAL: localStorage simula la persistencia hasta integrar Firestore.
+//
+// FASE 2 (Firebase): la persistencia real (Firestore si hay config, si
+// no localStorage) vive en js/apartados-firestore-sync.js, cargado
+// justo antes que este archivo — ver la sección PERSISTENCIA más abajo.
+// Todo lo demás en este archivo (reglas de negocio, ciclo de vida) es
+// exactamente igual que antes, síncrono.
 //
 // LÓGICA DEL DEPÓSITO (ventana de apartado):
 // El depósito de $50+ respalda TODA la ventana (no una pieza
@@ -22,8 +27,6 @@
 //   de contactar por Whatsapp y no obtener respuesta — que cancela
 //   las piezas activas restantes y pierde el depósito por completo.
 
-const APARTADOS_MODELO_STORAGE_KEY = 'mw-apartados-modelo-v1';
-const CREDITOS_MODELO_STORAGE_KEY = 'mw-creditos-modelo-v1';
 let DEPOSITO_BASE = 50;
 
 const CATEGORIAS_APARTADO = {
@@ -81,41 +84,29 @@ function sumarPagos(pagos = []) {
 // ============================================================
 // PERSISTENCIA
 // ============================================================
+//
+// FASE 2 (Firebase): estas cuatro funciones son envoltorios SÍNCRONOS
+// sobre la caché en memoria de js/apartados-firestore-sync.js
+// (APARTADOS_CACHE/CREDITOS_CACHE) — ese archivo se carga ANTES que
+// este y hace la lectura/escritura real (Firestore si hay config real,
+// localStorage si no), de forma asíncrona. Por eso el resto de este
+// archivo (y todos sus callers) puede seguir llamándolas como si
+// fueran síncronas, sin ningún otro cambio.
 
 function obtenerVentanasApartado() {
-  try {
-    const guardadas = localStorage.getItem(APARTADOS_MODELO_STORAGE_KEY);
-    if (guardadas === null) {
-      // Primera vez que se pide el registro: se siembra con compras de
-      // ejemplo ya liquidadas (igual que obtenerPersonas() siembra su
-      // propio registro) para que Comisiones/Plan MW tengan datos reales
-      // que mostrar en vez de $0 en todos lados.
-      const sembradas = typeof construirVentanasApartadoEjemplo === 'function' ? construirVentanasApartadoEjemplo() : [];
-      guardarVentanasApartado(sembradas);
-      return sembradas;
-    }
-    const ventanas = JSON.parse(guardadas);
-    return Array.isArray(ventanas) ? ventanas : [];
-  } catch (error) {
-    return [];
-  }
+  return APARTADOS_CACHE;
 }
 
 function guardarVentanasApartado(ventanas) {
-  localStorage.setItem(APARTADOS_MODELO_STORAGE_KEY, JSON.stringify(ventanas));
+  guardarVentanasRepo(ventanas);
 }
 
 function obtenerCreditosApartado() {
-  try {
-    const creditos = JSON.parse(localStorage.getItem(CREDITOS_MODELO_STORAGE_KEY));
-    return (creditos && typeof creditos === 'object' && !Array.isArray(creditos)) ? creditos : {};
-  } catch (error) {
-    return {};
-  }
+  return CREDITOS_CACHE;
 }
 
 function guardarCreditosApartado(creditos) {
-  localStorage.setItem(CREDITOS_MODELO_STORAGE_KEY, JSON.stringify(creditos));
+  guardarCreditosRepo(creditos);
 }
 
 function obtenerCreditoDisponible(usuarioId) {
@@ -124,7 +115,7 @@ function obtenerCreditoDisponible(usuarioId) {
 }
 
 function establecerCredito(usuarioId, monto) {
-  const creditos = obtenerCreditosApartado();
+  const creditos = { ...obtenerCreditosApartado() };
   if (monto > 0) {
     creditos[usuarioId] = monto;
   } else {
@@ -132,57 +123,6 @@ function establecerCredito(usuarioId, monto) {
   }
   guardarCreditosApartado(creditos);
 }
-
-// Dato de ejemplo: de las dos cuentas de sesión de prueba (Emprendedora
-// y Líder — ver personas-ejemplo.js), 'me-emprendedora' ya tiene
-// crédito guardado de un depósito anterior y 'me-lider' no — para poder
-// probar con las cuentas de ejemplo los dos caminos de "Apartar" desde
-// el catálogo: quien ya tiene depósito (se apartar directo) y quien
-// tiene que pedirlo (pasa por "pendiente_deposito"). Se siembra UNA
-// sola vez, igual que obtenerPersonas() siembra su propio registro —
-// después de esto el crédito lo controla el uso real (se gasta, se
-// vuelve a guardar al liquidar/cancelar), como el de cualquier persona.
-(function sembrarCreditoDemoInicial() {
-  if (typeof localStorage === 'undefined' || localStorage.getItem(CREDITOS_MODELO_STORAGE_KEY) !== null) return;
-  guardarCreditosApartado({ 'me-emprendedora': DEPOSITO_BASE });
-})();
-
-// ⚠️ PRUEBA TEMPORAL — BÓRRAME: solo para probar en vivo "fecha real de
-// los $8,000 del mes" (Reto de Constancia) con la cuenta de ejemplo
-// 'me-emprendedora' (Claudia Ramírez). Agrega una compra normal ya
-// liquidada de $8,000 fechada HOY, sin importar qué haya ya en
-// localStorage (a diferencia de sembrarCreditoDemoInicial, no espera a
-// que el registro esté vacío — por eso corre siempre, pero solo agrega
-// la pieza una vez gracias al id fijo). Quitar este bloque completo
-// cuando ya no se necesite.
-(function sembrarCompraDePruebaOchoMil() {
-  if (typeof localStorage === 'undefined') return;
-  const ID_PRUEBA = 'VENT-PRUEBA-8000-CLAUDIA';
-  const ventanas = obtenerVentanasApartado();
-  if (ventanas.some(v => v.id === ID_PRUEBA)) return;
-  const ahoraISO = new Date().toISOString();
-  const pieza = crearApartadoPieza({
-    id: 'PIEZA-PRUEBA-8000-CLAUDIA',
-    producto: 'Pieza de prueba ($8,000)',
-    material: 'oro-laminado',
-    total: 8000,
-    estado: 'liquidada',
-    fechaSolicitud: ahoraISO,
-    pagos: [{ monto: 8000, tipo: 'liquidacion', metodo: 'transferencia', referencia: null, fecha: ahoraISO }]
-  });
-  ventanas.push(crearVentanaApartado({
-    id: ID_PRUEBA,
-    usuarioId: 'me-emprendedora',
-    usuarioNombre: 'Claudia Ramírez',
-    telefono: '444 123 4567',
-    categoria: 'normal',
-    fechaInicio: ahoraISO,
-    estado: 'cerrada',
-    resolucionDeposito: 'no_aplica',
-    apartados: [pieza]
-  }));
-  guardarVentanasApartado(ventanas);
-})();
 
 
 // ============================================================
@@ -627,3 +567,12 @@ function verificarApartadosVencidosPendientes() {
   if (huboCambios) guardarVentanasApartado(ventanas);
 
 }
+
+// Arranca la carga real (Firestore o localStorage) — se hace aquí, no
+// en apartados-firestore-sync.js, porque la semilla de ejemplo y la
+// prueba de $8,000 necesitan crearVentanaApartado/crearApartadoPieza/
+// construirVentanasApartadoEjemplo, definidas arriba en este mismo
+// archivo. Cada página que use datos de apartados debe esperar esto
+// una vez antes de su primer render — igual que ya hace
+// catalogoRepoListo para Catálogo.
+const apartadosRepoListo = cargarApartadosRepo();

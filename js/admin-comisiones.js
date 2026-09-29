@@ -25,7 +25,9 @@ let timerBusquedaEquipo = null;
 let expandedLideres = new Set();
 let expandedNiveles = new Set(); // claves "liderId-nivel"
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
 
   renderSelectorPeriodoComisiones();
 

@@ -19,8 +19,10 @@
 
 let usuarioIdActual = '';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   usuarioIdActual = (typeof obtenerIdPersonaActualPortal === 'function' && obtenerIdPersonaActualPortal()) || '';
+
+  await apartadosRepoListo; // FASE 2 (Firebase): espera a que obtenerVentanasApartado() tenga datos reales, no un caché vacío
 
   renderApartados();
   iniciarReloj();

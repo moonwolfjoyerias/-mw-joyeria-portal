@@ -6,7 +6,9 @@
 // recordatorios — informativo por ahora, ya que Nómina todavía no
 // está construida (ver PROMPT MAESTRO PORTAL Encargado, sección 30).
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
 
   actualizarResumenInicioEncargado();
   renderRecordatoriosNomina();

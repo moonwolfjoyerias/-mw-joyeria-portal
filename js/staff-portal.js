@@ -4,7 +4,9 @@
 // y Lista de deseos (misma fuente compartida, ver *-ejemplo.js), y
 // muestra los eventos del calendario que caen en la semana actual.
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
 
   actualizarResumenInicio();
   renderEventosSemana();
