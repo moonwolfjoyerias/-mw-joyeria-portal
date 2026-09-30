@@ -25,7 +25,9 @@ let piezasFormulario = [];
 let personaSeleccionadaForm = null; // { id, nombre }
 let accionPendiente = null; // { tipo, datos }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof listaDeseosRepoListo !== 'undefined') await listaDeseosRepoListo;
 
   renderTablaDeseosStaff();
   renderTablaResurtidoStaff();

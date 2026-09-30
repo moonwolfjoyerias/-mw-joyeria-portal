@@ -16,8 +16,11 @@
 // → colección "notificaciones"), tal como pide la sección 9 del
 // encargo ("no crear un sistema paralelo").
 //
-// ⚠️ TEMPORAL: localStorage simula Firestore. Se reemplaza en Fase 3
-// sin cambiar la forma de estos objetos.
+// Fase 2 (Firebase): ya sincroniza con Firestore vía
+// js/lista-deseos-firestore-sync.js — ver ese archivo para la caché/
+// carga asíncrona. Necesario porque Staff/Encargado/Admin usan cada
+// quien su propio dispositivo durante la beta: sin esto, lo que Staff
+// registraba nunca lo veía Admin, y viceversa.
 
 const LISTA_DESEOS_STORAGE_KEY = 'mw-lista-deseos-v1';
 const RESURTIDO_STORAGE_KEY = 'mw-solicitudes-resurtido-v1';
@@ -60,19 +63,11 @@ const BADGE_ESTADOS_RESURTIDO = {
 // ============================================================
 
 function obtenerListaDeseos() {
-  try {
-    const guardados = JSON.parse(localStorage.getItem(LISTA_DESEOS_STORAGE_KEY));
-    if (Array.isArray(guardados)) return guardados;
-  } catch (error) {
-    // sigue abajo y reconstruye la semilla
-  }
-  const semilla = construirListaDeseosEjemplo();
-  guardarListaDeseos(semilla);
-  return semilla;
+  return LISTA_DESEOS_CACHE;
 }
 
 function guardarListaDeseos(lista) {
-  localStorage.setItem(LISTA_DESEOS_STORAGE_KEY, JSON.stringify(lista));
+  guardarListaDeseosRepo(lista);
 }
 
 function obtenerSolicitudListaDeseosPorId(id) {
@@ -173,12 +168,7 @@ function actualizarEstadoListaDeseos(id, nuevoEstado, { usuarioId, usuarioNombre
 }
 
 function obtenerHistorialEstadosListaDeseos() {
-  try {
-    const registros = JSON.parse(localStorage.getItem(LISTA_DESEOS_HISTORIAL_KEY));
-    return Array.isArray(registros) ? registros : [];
-  } catch (error) {
-    return [];
-  }
+  return LISTA_DESEOS_HISTORIAL_CACHE;
 }
 
 function obtenerHistorialEstadosListaDeseosPorId(listaDeseosId) {
@@ -190,6 +180,11 @@ function obtenerHistorialEstadosListaDeseosPorId(listaDeseosId) {
 function registrarCambioEstadoListaDeseos({ listaDeseosId, estadoAnterior, estadoNuevo, usuarioId, usuarioNombre, usuarioRol, comentario }) {
 
   const registro = {
+    // Antes este registro nunca necesitó id propia (era solo un elemento
+    // más de un arreglo en localStorage) — con Firestore cada documento
+    // de la colección SÍ necesita uno único, o el guardado de varios
+    // registros pisaría siempre el mismo documento.
+    id: `ldh-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     listaDeseosId,
     estadoAnterior,
     estadoNuevo,
@@ -202,7 +197,7 @@ function registrarCambioEstadoListaDeseos({ listaDeseosId, estadoAnterior, estad
 
   const historial = obtenerHistorialEstadosListaDeseos();
   historial.push(registro);
-  localStorage.setItem(LISTA_DESEOS_HISTORIAL_KEY, JSON.stringify(historial));
+  guardarHistorialListaDeseosRepo(historial);
 
   if (typeof registrarAuditoria === 'function') {
     registrarAuditoria({
@@ -224,19 +219,11 @@ function registrarCambioEstadoListaDeseos({ listaDeseosId, estadoAnterior, estad
 // ============================================================
 
 function obtenerSolicitudesResurtido() {
-  try {
-    const guardadas = JSON.parse(localStorage.getItem(RESURTIDO_STORAGE_KEY));
-    if (Array.isArray(guardadas)) return guardadas;
-  } catch (error) {
-    // sigue abajo y reconstruye la semilla
-  }
-  const semilla = construirResurtidoEjemplo();
-  guardarSolicitudesResurtido(semilla);
-  return semilla;
+  return RESURTIDO_CACHE;
 }
 
 function guardarSolicitudesResurtido(lista) {
-  localStorage.setItem(RESURTIDO_STORAGE_KEY, JSON.stringify(lista));
+  guardarResurtidoRepo(lista);
 }
 
 function obtenerSolicitudResurtidoPorId(id) {
@@ -495,3 +482,10 @@ function construirResurtidoEjemplo() {
     }
   ];
 }
+
+// Arranca la carga de lista-deseos-firestore-sync.js — tiene que ser
+// AQUÍ (no en ese archivo, que se carga primero) porque
+// cargarListaDeseosRepo() necesita construirListaDeseosEjemplo()/
+// construirResurtidoEjemplo(), definidas arriba en este mismo archivo,
+// para la semilla (mismo motivo/mismo orden que personas-ejemplo.js).
+const listaDeseosRepoListo = cargarListaDeseosRepo();

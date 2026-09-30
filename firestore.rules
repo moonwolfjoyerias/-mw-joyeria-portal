@@ -150,6 +150,25 @@ service cloud.firestore {
       allow read, write: if estaAutenticado();
     }
 
+    // listaDeseos/{id}, solicitudesResurtido/{id},
+    // listaDeseosHistorialEstados/{id} — ver
+    // js/lista-deseos-firestore-sync.js. Exclusivo de Staff/Encargado/
+    // Admin (Emprendedora/Líder nunca entra a este módulo), por eso aquí
+    // sí se restringe a esInterno() en vez del "cualquier autenticado"
+    // que usan otras colecciones todavía sin terminar de acotar.
+    match /listaDeseos/{id} {
+      allow read, write: if esInterno();
+    }
+    match /solicitudesResurtido/{id} {
+      allow read, write: if esInterno();
+    }
+    match /listaDeseosHistorialEstados/{id} {
+      allow read, write: if esInterno();
+    }
+    match /listaDeseosMeta/{id} {
+      allow read, write: if esInterno();
+    }
+
     // Todo lo que no esté arriba sigue en localStorage — se deniega por
     // defecto hasta que tenga su propia migración y sus propias reglas.
     match /{document=**} {

@@ -22,7 +22,9 @@ let resFiltroEstado = '';
 let piezasFormulario = [];
 let personaSeleccionadaForm = null; // { id, nombre }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof listaDeseosRepoListo !== 'undefined') await listaDeseosRepoListo;
 
   renderTablaDeseosAdmin();
   renderTablaResurtidoAdmin();
