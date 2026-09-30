@@ -17,6 +17,7 @@ let sorteoResultadoPreview = null;
 document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof actividadesStaffRepoListo !== 'undefined') await actividadesStaffRepoListo;
+  if (typeof nominaRepoListo !== 'undefined') await nominaRepoListo;
 
   const hoy = new Date();
   const input = document.getElementById('actSemanaInput');

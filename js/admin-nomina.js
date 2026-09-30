@@ -18,7 +18,9 @@ let nomFiltroTexto = '';
 let nomFiltroEstado = 'todos';
 let nomFiltroCargo = 'todos';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof nominaRepoListo !== 'undefined') await nominaRepoListo;
 
   revisarBorradorNominaAlCargar();
   renderSelectorPeriodoNomina();

@@ -13,6 +13,7 @@ let empleadoNominaPendiente = null;
 document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof cuentasInternasRepoListo !== 'undefined') await cuentasInternasRepoListo;
+  if (typeof nominaRepoListo !== 'undefined') await nominaRepoListo;
 
   renderEmployeeGrid();
   inicializarEventosMiCuenta();

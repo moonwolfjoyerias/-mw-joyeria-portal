@@ -27,7 +27,11 @@
 // - Mismo patrón de borrador/autoguardado que ya usan
 //   js/comisiones-modelo.js y js/configuracion-modelo.js.
 //
-// ⚠️ TEMPORAL: localStorage simula Firestore.
+// Fase 2 (Firebase): ya sincroniza con Firestore vía
+// js/nomina-firestore-sync.js — ver ese archivo para la caché/carga
+// asíncrona y para qué pieza (el borrador) sigue siendo puramente
+// local a propósito. Necesario porque Encargado/Admin usan cada quien
+// su propio dispositivo durante la beta.
 
 const NOMINA_EMPLEADOS_KEY = 'mw-nomina-empleados-v1';
 const NOMINA_CONCEPTOS_KEY = 'mw-nomina-conceptos-v1';
@@ -248,19 +252,11 @@ function quitarDesfaseInicioNomina(empleadoId) {
 }
 
 function obtenerEmpleadosNomina() {
-  try {
-    const guardados = JSON.parse(localStorage.getItem(NOMINA_EMPLEADOS_KEY));
-    if (Array.isArray(guardados) && guardados.length) return guardados;
-  } catch (error) {
-    // sigue abajo y reconstruye el ejemplo
-  }
-  const empleados = construirEmpleadosNominaEjemplo();
-  guardarEmpleadosNomina(empleados);
-  return empleados;
+  return NOMINA_EMPLEADOS_CACHE;
 }
 
 function guardarEmpleadosNomina(empleados) {
-  localStorage.setItem(NOMINA_EMPLEADOS_KEY, JSON.stringify(empleados));
+  guardarNominaEmpleadosRepo(empleados);
 }
 
 function obtenerEmpleadoNominaPorId(id) {
@@ -392,19 +388,11 @@ function construirConceptosNominaEjemplo() {
 }
 
 function obtenerConceptosNomina() {
-  try {
-    const guardados = JSON.parse(localStorage.getItem(NOMINA_CONCEPTOS_KEY));
-    if (Array.isArray(guardados) && guardados.length) return guardados;
-  } catch (error) {
-    // sigue abajo
-  }
-  const conceptos = construirConceptosNominaEjemplo();
-  guardarConceptosNomina(conceptos);
-  return conceptos;
+  return NOMINA_CONCEPTOS_CACHE;
 }
 
 function guardarConceptosNomina(conceptos) {
-  localStorage.setItem(NOMINA_CONCEPTOS_KEY, JSON.stringify(conceptos));
+  guardarNominaConceptosRepo(conceptos);
 }
 
 function obtenerConceptoNominaPorId(id) {
@@ -564,16 +552,11 @@ function construirClavePeriodo(empleadoId, periodoKey) {
 }
 
 function obtenerPeriodosNomina() {
-  try {
-    const datos = JSON.parse(localStorage.getItem(NOMINA_PERIODOS_KEY));
-    return datos && typeof datos === 'object' ? datos : {};
-  } catch (error) {
-    return {};
-  }
+  return NOMINA_PERIODOS_CACHE;
 }
 
 function guardarPeriodosNomina(periodos) {
-  localStorage.setItem(NOMINA_PERIODOS_KEY, JSON.stringify(periodos));
+  guardarNominaPeriodosRepo(periodos);
 }
 
 function calcularTotalesPeriodo(conceptos) {
@@ -723,17 +706,16 @@ function formatearFechaDMYNominaModelo(fechaISO) {
 // ============================================================
 
 function obtenerHistorialAjustesNomina() {
-  try {
-    const registros = JSON.parse(localStorage.getItem(NOMINA_HISTORIAL_KEY));
-    return Array.isArray(registros) ? registros : [];
-  } catch (error) {
-    return [];
-  }
+  return NOMINA_HISTORIAL_AJUSTES_CACHE;
 }
 
 function registrarAjusteNomina({ empleadoId, periodoKey, concepto, campo, valorAnterior, valorNuevo, motivo, usuarioAdminId, usuarioAdminNombre }) {
 
   const registro = {
+    // Antes este registro nunca necesitó id propia (solo era un
+    // elemento más de un arreglo en localStorage) — con Firestore cada
+    // documento de la colección sí necesita uno único.
+    id: `ajn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     tipo: 'ajusteNomina',
     empleadoId,
     periodoKey,
@@ -749,7 +731,7 @@ function registrarAjusteNomina({ empleadoId, periodoKey, concepto, campo, valorA
 
   const historial = obtenerHistorialAjustesNomina();
   historial.push(registro);
-  localStorage.setItem(NOMINA_HISTORIAL_KEY, JSON.stringify(historial));
+  guardarNominaHistorialAjustesRepo(historial);
 
   if (typeof registrarAuditoriaAdmin === 'function') {
     registrarAuditoriaAdmin({
@@ -774,12 +756,7 @@ function obtenerHistorialAjustesPeriodo(empleadoId, periodoKey) {
 // ============================================================
 
 function obtenerHistorialEstadosNomina() {
-  try {
-    const registros = JSON.parse(localStorage.getItem(NOMINA_HISTORIAL_ESTADOS_KEY));
-    return Array.isArray(registros) ? registros : [];
-  } catch (error) {
-    return [];
-  }
+  return NOMINA_HISTORIAL_ESTADOS_CACHE;
 }
 
 function obtenerHistorialEstadosPeriodo(empleadoId, periodoKey) {
@@ -794,6 +771,9 @@ function obtenerHistorialEstadosPeriodo(empleadoId, periodoKey) {
 function registrarCambioEstadoNomina({ empleadoId, periodoKey, estadoAnterior, estadoNuevo, usuarioId, usuarioNombre, usuarioRol, comentario }) {
 
   const registro = {
+    // Mismo motivo que el id agregado en registrarAjusteNomina: antes
+    // nunca necesitó uno propio, viviendo solo en localStorage.
+    id: `hen-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     empleadoId,
     periodoKey,
     estadoAnterior,
@@ -807,7 +787,7 @@ function registrarCambioEstadoNomina({ empleadoId, periodoKey, estadoAnterior, e
 
   const historial = obtenerHistorialEstadosNomina();
   historial.push(registro);
-  localStorage.setItem(NOMINA_HISTORIAL_ESTADOS_KEY, JSON.stringify(historial));
+  guardarNominaHistorialEstadosRepo(historial);
 
   if (typeof registrarAuditoria === 'function') {
     registrarAuditoria({
@@ -1009,16 +989,11 @@ function descartarBorradorNomina() {
 // ============================================================
 
 function obtenerSolicitudesNomina() {
-  try {
-    const guardadas = JSON.parse(localStorage.getItem(NOMINA_SOLICITUDES_KEY));
-    return Array.isArray(guardadas) ? guardadas : [];
-  } catch (error) {
-    return [];
-  }
+  return NOMINA_SOLICITUDES_CACHE;
 }
 
 function guardarSolicitudesNomina(solicitudes) {
-  localStorage.setItem(NOMINA_SOLICITUDES_KEY, JSON.stringify(solicitudes));
+  guardarNominaSolicitudesRepo(solicitudes);
 }
 
 function crearSolicitudAltaNomina({ nombre, fechaInicio, salarioBase, pagoHoraExtra, numeroEmpleado, cargo, fotoUrl, correo, celular, solicitadoPor, solicitadoPorId }) {
@@ -1246,3 +1221,10 @@ function rechazarSolicitudNomina(id, { motivo, usuarioAdminId, usuarioAdminNombr
   return { ok: true, solicitud };
 
 }
+
+// Arranca la carga de nomina-firestore-sync.js — tiene que ser AQUÍ (no
+// en ese archivo, que se carga primero) porque cargarNominaRepo()
+// necesita construirEmpleadosNominaEjemplo()/construirConceptosNominaEjemplo(),
+// definidas arriba en este mismo archivo, para la semilla (mismo
+// motivo/mismo orden que personas-ejemplo.js).
+const nominaRepoListo = cargarNominaRepo();

@@ -186,6 +186,37 @@ service cloud.firestore {
       allow read, write: if esInterno();
     }
 
+    // nominaEmpleados/{id}, nominaConceptos/{id},
+    // nominaHistorialAjustes/{id}, nominaHistorialEstados/{id},
+    // nominaSolicitudes/{id} y nominaMeta/{id} (incluye el documento
+    // "periodos", el mapa completo de nóminas por semana) — ver
+    // js/nomina-firestore-sync.js. Exclusivo de Staff/Encargado/Admin,
+    // mismo criterio que Lista de deseos/Actividades del Staff. La
+    // misma limitación ya documentada arriba para esas dos aplica
+    // aquí: cualquier cuenta interna puede leer el salario de
+    // cualquier otra (antes de Firestore, el mismo dato ya vivía sin
+    // más barrera que un reingreso de contraseña en el navegador — ver
+    // js/staff-mi-cuenta.js → validarAutorizacionNomina — así que esto
+    // no empeora la protección que ya existía, solo la iguala).
+    match /nominaEmpleados/{id} {
+      allow read, write: if esInterno();
+    }
+    match /nominaConceptos/{id} {
+      allow read, write: if esInterno();
+    }
+    match /nominaHistorialAjustes/{id} {
+      allow read, write: if esInterno();
+    }
+    match /nominaHistorialEstados/{id} {
+      allow read, write: if esInterno();
+    }
+    match /nominaSolicitudes/{id} {
+      allow read, write: if esInterno();
+    }
+    match /nominaMeta/{id} {
+      allow read, write: if esInterno();
+    }
+
     // Todo lo que no esté arriba sigue en localStorage — se deniega por
     // defecto hasta que tenga su propia migración y sus propias reglas.
     match /{document=**} {
