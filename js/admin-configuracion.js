@@ -876,6 +876,8 @@ async function renderSeccionFotos() {
 
   cont.innerHTML = `<div class="cfg-card"><p class="cfg-card-sub" style="margin:0;">Cargando fotografías…</p></div>`;
 
+  if (typeof fotosSitioRepoListo !== 'undefined') await fotosSitioRepoListo;
+
   const secciones = typeof obtenerSeccionesFotosSitio === 'function' ? obtenerSeccionesFotosSitio() : [];
   const bloques = [];
 
@@ -1003,29 +1005,32 @@ function wireSeccionFotos(cont) {
         titulo: 'Eliminar fotografía',
         peligrosa: true,
         mensaje: `Vas a eliminar la fotografía de <strong>${escapeHTMLPersonas(espacio ? espacio.ubicacionLabel : doc.ubicacion)}</strong>. ${espacio && espacio.tipo === 'unica' ? 'El espacio volverá a mostrar el logo MW mientras no subas otra.' : 'Deja de mostrarse en la galería del sitio público.'}`,
-        onConfirmar: () => {
-          const resultado = eliminarFotoSitio(id, ADMIN_IDENTIDAD.usuarioNombre);
-          if (resultado.ok) {
-            if (typeof registrarAuditoriaAdmin === 'function') {
-              registrarAuditoriaAdmin({
-                modulo: 'fotos-sitio',
-                accion: 'eliminar_foto',
-                descripcion: `Fotografía eliminada — ${espacio ? `${espacio.seccionLabel} / ${espacio.ubicacionLabel}` : doc.ubicacion}`
-              });
-            }
-            mostrarToast('Fotografía eliminada.');
-            renderSeccionFotos();
+        onConfirmar: async () => {
+          const resultado = await eliminarFotoSitio(id, ADMIN_IDENTIDAD.usuarioNombre);
+          if (!resultado.ok) {
+            mostrarToast(resultado.error || 'No se pudo eliminar la fotografía.');
+            return;
           }
+          if (typeof registrarAuditoriaAdmin === 'function') {
+            registrarAuditoriaAdmin({
+              modulo: 'fotos-sitio',
+              accion: 'eliminar_foto',
+              descripcion: `Fotografía eliminada — ${espacio ? `${espacio.seccionLabel} / ${espacio.ubicacionLabel}` : doc.ubicacion}`
+            });
+          }
+          mostrarToast('Fotografía eliminada.');
+          renderSeccionFotos();
         }
       });
     });
   });
 
   cont.querySelectorAll('[data-foto-mover]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const [id, direccion] = btn.getAttribute('data-foto-mover').split(':');
-      const resultado = reordenarFotoSitio(id, Number(direccion), ADMIN_IDENTIDAD.usuarioNombre);
+      const resultado = await reordenarFotoSitio(id, Number(direccion), ADMIN_IDENTIDAD.usuarioNombre);
       if (resultado.ok) renderSeccionFotos();
+      else mostrarToast(resultado.error || 'No se pudo mover la fotografía.');
     });
   });
 
@@ -1094,6 +1099,10 @@ function abrirModalSubirFotoSitio(espacio) {
       return;
     }
 
+    const guardarBtn = document.getElementById('fotoSitioGuardarBtn');
+    const textoOriginalBtn = guardarBtn ? guardarBtn.textContent : '';
+    if (guardarBtn) { guardarBtn.disabled = true; guardarBtn.textContent = 'Guardando…'; }
+
     const resultado = await subirFotoSitio({
       seccion: espacio.seccion,
       ubicacion: espacio.ubicacion,
@@ -1102,6 +1111,7 @@ function abrirModalSubirFotoSitio(espacio) {
     });
 
     if (!resultado.ok) {
+      if (guardarBtn) { guardarBtn.disabled = false; guardarBtn.textContent = textoOriginalBtn; }
       error.style.display = 'block';
       error.textContent = resultado.error;
       return;

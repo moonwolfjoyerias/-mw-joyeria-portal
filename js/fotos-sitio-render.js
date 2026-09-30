@@ -7,7 +7,8 @@
 // fotografía personalizada para ese espacio. No hace falta tocar HTML
 // para cambiar una fotografía: basta con subirla desde Configuración.
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof fotosSitioRepoListo !== 'undefined') await fotosSitioRepoListo;
   document.querySelectorAll('[data-foto-sitio]').forEach(pintarFotoUnicaSitio);
   document.querySelectorAll('[data-foto-sitio-galeria]').forEach(pintarGaleriaSitio);
 });

@@ -5,20 +5,23 @@
 // Fotografías del sitio, para que Admin pueda cambiarlas sin tocar
 // HTML/CSS/JS.
 //
-// ⚠️ TEMPORAL: localStorage simula la colección "fotosSitio" de Firestore
-// (mismo patrón que el resto del portal). El ARCHIVO de cada fotografía
-// (los bytes de la imagen) NO se guarda como Base64 dentro de ese
-// "documento" — se guarda como Blob real en IndexedDB, simulando Firebase
-// Storage. El documento solo conserva la referencia (storagePath) igual
-// que pasaría con Storage real. Migrar a Firebase en Fase 3 significa
-// cambiar subirBlobFotoSitio/obtenerBlobFotoSitio/eliminarBlobFotoSitio
-// por llamadas reales a Storage — la forma del documento no cambia.
+// El catálogo de espacios (ESPACIOS_FOTOS_SITIO) vive aquí igual que
+// antes. Las fotografías en sí (documentos + imagen) ahora viven en
+// Firestore — ver js/fotos-sitio-firestore-sync.js (FOTOS_SITIO_CACHE,
+// fotosSitioRepoListo) — así una fotografía subida desde cualquier
+// dispositivo se ve en todos los demás, incluido el sitio público sin
+// sesión. Antes de Firebase, esto vivía en localStorage + un Blob real
+// en IndexedDB por dispositivo — nunca salía del navegador donde se
+// subió.
+//
+// Cada fotografía se comprime a JPEG y se embebe directo en su
+// documento (mismo criterio que las fotos de producto del Catálogo —
+// ver comprimirImagenAProductoDataURL en catalogo-firestore-sync.js —
+// para no depender de Firebase Storage, que requiere plan de pago).
 
-const FOTOS_SITIO_STORAGE_KEY = 'mw-fotos-sitio-v1';
-const FOTOS_SITIO_DB_NOMBRE = 'mw-fotos-sitio-db';
-const FOTOS_SITIO_DB_VERSION = 1;
-const FOTOS_SITIO_DB_STORE = 'archivos';
-const FOTOS_SITIO_TAMANO_MAXIMO = 5 * 1024 * 1024; // 5 MB — "tamaño razonable" (requisito 18)
+const FOTOS_SITIO_TAMANO_MAXIMO = 5 * 1024 * 1024; // 5 MB — tamaño máximo del ARCHIVO original antes de comprimir
+const FOTOS_SITIO_LADO_MAX = 1600; // px del lado más largo, ya comprimida
+const FOTOS_SITIO_CALIDAD = 0.75;
 
 // Ruta base calculada a partir de dónde está cargado este script, para
 // que el fallback al logo funcione igual en páginas públicas (raíz) que
@@ -75,91 +78,51 @@ function obtenerSeccionesFotosSitio() {
 }
 
 // ============================================================
-// IndexedDB — almacenamiento de los archivos (simula Storage)
+// Compresión de imagen — mismo criterio que catalogo-firestore-sync.js
 // ============================================================
 
-let _fotosSitioDbPromise = null;
-
-function abrirDBFotosSitio() {
-  if (_fotosSitioDbPromise) return _fotosSitioDbPromise;
-  _fotosSitioDbPromise = new Promise((resolve, reject) => {
-    if (typeof indexedDB === 'undefined') {
-      reject(new Error('IndexedDB no disponible'));
-      return;
-    }
-    const solicitud = indexedDB.open(FOTOS_SITIO_DB_NOMBRE, FOTOS_SITIO_DB_VERSION);
-    solicitud.onupgradeneeded = () => {
-      const db = solicitud.result;
-      if (!db.objectStoreNames.contains(FOTOS_SITIO_DB_STORE)) {
-        db.createObjectStore(FOTOS_SITIO_DB_STORE);
-      }
+function comprimirImagenSitioADataURL(archivo) {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onerror = () => reject(lector.error || new Error('No se pudo leer el archivo'));
+    lector.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('No se pudo leer la imagen'));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width >= height && width > FOTOS_SITIO_LADO_MAX) {
+          height = Math.round(height * (FOTOS_SITIO_LADO_MAX / width));
+          width = FOTOS_SITIO_LADO_MAX;
+        } else if (height > width && height > FOTOS_SITIO_LADO_MAX) {
+          width = Math.round(width * (FOTOS_SITIO_LADO_MAX / height));
+          height = FOTOS_SITIO_LADO_MAX;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', FOTOS_SITIO_CALIDAD));
+      };
+      img.src = lector.result;
     };
-    solicitud.onsuccess = () => resolve(solicitud.result);
-    solicitud.onerror = () => reject(solicitud.error);
-  });
-  return _fotosSitioDbPromise;
-}
-
-async function guardarBlobFotoSitio(storagePath, blob) {
-  const db = await abrirDBFotosSitio();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(FOTOS_SITIO_DB_STORE, 'readwrite');
-    tx.objectStore(FOTOS_SITIO_DB_STORE).put(blob, storagePath);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+    lector.readAsDataURL(archivo);
   });
 }
 
-async function obtenerBlobFotoSitio(storagePath) {
-  const db = await abrirDBFotosSitio();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(FOTOS_SITIO_DB_STORE, 'readonly');
-    const solicitud = tx.objectStore(FOTOS_SITIO_DB_STORE).get(storagePath);
-    solicitud.onsuccess = () => resolve(solicitud.result || null);
-    solicitud.onerror = () => reject(solicitud.error);
-  });
-}
-
-async function eliminarBlobFotoSitio(storagePath) {
-  const db = await abrirDBFotosSitio();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(FOTOS_SITIO_DB_STORE, 'readwrite');
-    tx.objectStore(FOTOS_SITIO_DB_STORE).delete(storagePath);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-// Cache de object URLs ya creados en esta sesión de página, para no
-// generar uno nuevo (y filtrarlo) cada vez que se pinta el mismo espacio.
-const _fotosSitioUrlCache = new Map();
-
+// doc.imagenDataUrl ya trae la imagen lista para pintar — esta función
+// sigue siendo async (mismo nombre/forma que antes, cuando leía de
+// IndexedDB) porque fotos-sitio-render.js y admin-configuracion.js ya
+// la usan con await.
 async function resolverSrcFotoSitio(doc) {
-  if (_fotosSitioUrlCache.has(doc.storagePath)) {
-    return _fotosSitioUrlCache.get(doc.storagePath);
-  }
-  const blob = await obtenerBlobFotoSitio(doc.storagePath);
-  if (!blob) return null;
-  const url = URL.createObjectURL(blob);
-  _fotosSitioUrlCache.set(doc.storagePath, url);
-  return url;
+  return doc && doc.imagenDataUrl ? doc.imagenDataUrl : null;
 }
 
 // ============================================================
-// COLECCIÓN "fotosSitio" (documentos, simula Firestore)
+// COLECCIÓN "fotosSitio" — ver js/fotos-sitio-firestore-sync.js
 // ============================================================
 
 function obtenerFotosSitioTodas() {
-  try {
-    const registros = JSON.parse(localStorage.getItem(FOTOS_SITIO_STORAGE_KEY));
-    return Array.isArray(registros) ? registros : [];
-  } catch (error) {
-    return [];
-  }
-}
-
-function guardarFotosSitioTodas(registros) {
-  localStorage.setItem(FOTOS_SITIO_STORAGE_KEY, JSON.stringify(registros));
+  return FOTOS_SITIO_CACHE;
 }
 
 // Devuelve las fotos de un espacio, ordenadas. Por default solo activas.
@@ -191,24 +154,27 @@ async function subirFotoSitio({ seccion, ubicacion, archivo, actualizadoPor }) {
   const validacion = validarArchivoFotoSitio(archivo);
   if (!validacion.ok) return validacion;
 
-  const registros = obtenerFotosSitioTodas();
-  const storagePath = `fotos-sitio/${seccion}/${ubicacion}/${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-
+  let imagenDataUrl;
   try {
-    await guardarBlobFotoSitio(storagePath, archivo);
+    imagenDataUrl = await comprimirImagenSitioADataURL(archivo);
   } catch (error) {
-    return { ok: false, error: 'No se pudo guardar la imagen en este navegador.' };
+    return { ok: false, error: 'No se pudo procesar esa imagen. Intenta con otra.' };
   }
 
   const ahora = new Date().toISOString();
+  const registros = obtenerFotosSitioTodas();
 
   if (espacio.tipo === 'unica') {
-    registros.forEach(f => {
-      if (f.seccion === seccion && f.ubicacion === ubicacion && f.activa) {
-        f.activa = false;
-        f.fechaActualizacion = ahora;
+    const activasAntes = registros.filter(f => f.seccion === seccion && f.ubicacion === ubicacion && f.activa);
+    if (activasAntes.length) {
+      const cambios = {};
+      activasAntes.forEach(f => { cambios[f.id] = { activa: false, fechaActualizacion: ahora }; });
+      try {
+        await actualizarCamposFotosSitioRepo(cambios);
+      } catch (error) {
+        return { ok: false, error: 'No se pudo reemplazar la fotografía anterior. Intenta de nuevo.' };
       }
-    });
+    }
   }
 
   const fotosMismoEspacio = registros.filter(f => f.seccion === seccion && f.ubicacion === ubicacion);
@@ -219,9 +185,7 @@ async function subirFotoSitio({ seccion, ubicacion, archivo, actualizadoPor }) {
     seccion,
     ubicacion,
     nombre: archivo.name || 'fotografía',
-    storagePath,
-    tipoArchivo: archivo.type,
-    tamanoBytes: archivo.size,
+    imagenDataUrl,
     orden: espacio.tipo === 'multiple' ? ordenMax + 1 : 0,
     activa: true,
     fechaCreacion: ahora,
@@ -229,8 +193,11 @@ async function subirFotoSitio({ seccion, ubicacion, archivo, actualizadoPor }) {
     actualizadoPor: actualizadoPor || null
   };
 
-  registros.push(nuevoDoc);
-  guardarFotosSitioTodas(registros);
+  try {
+    await guardarFotoSitioRepo(nuevoDoc);
+  } catch (error) {
+    return { ok: false, error: 'No se pudo guardar la fotografía en el servidor. Revisa tu conexión e intenta de nuevo.' };
+  }
 
   return { ok: true, foto: nuevoDoc };
 }
@@ -238,22 +205,28 @@ async function subirFotoSitio({ seccion, ubicacion, archivo, actualizadoPor }) {
 // Elimina (desactiva) una fotografía. Nunca deja el espacio sin nada:
 // el helper getImagenSitio/getImagenesSitio regresa automáticamente al
 // logo MW en cuanto deja de haber una fotografía activa (requisito 10).
-function eliminarFotoSitio(id, actualizadoPor) {
-  const registros = obtenerFotosSitioTodas();
-  const doc = registros.find(f => f.id === id);
+async function eliminarFotoSitio(id, actualizadoPor) {
+  const doc = obtenerFotosSitioTodas().find(f => f.id === id);
   if (!doc) return { ok: false, error: 'Fotografía no encontrada.' };
 
-  doc.activa = false;
-  doc.fechaActualizacion = new Date().toISOString();
-  doc.actualizadoPor = actualizadoPor || doc.actualizadoPor;
-  guardarFotosSitioTodas(registros);
+  const cambios = {
+    activa: false,
+    fechaActualizacion: new Date().toISOString(),
+    actualizadoPor: actualizadoPor || doc.actualizadoPor
+  };
+
+  try {
+    await actualizarCamposFotosSitioRepo({ [id]: cambios });
+  } catch (error) {
+    return { ok: false, error: 'No se pudo eliminar la fotografía. Revisa tu conexión e intenta de nuevo.' };
+  }
 
   return { ok: true, foto: doc };
 }
 
 // Mueve una fotografía un lugar arriba (-1) o abajo (+1) dentro de su
 // espacio (solo aplica a espacios tipo "multiple").
-function reordenarFotoSitio(id, direccion, actualizadoPor) {
+async function reordenarFotoSitio(id, direccion, actualizadoPor) {
   const registros = obtenerFotosSitioTodas();
   const doc = registros.find(f => f.id === id);
   if (!doc) return { ok: false, error: 'Fotografía no encontrada.' };
@@ -269,14 +242,18 @@ function reordenarFotoSitio(id, direccion, actualizadoPor) {
   }
 
   const vecino = delEspacio[indiceVecino];
+  const ahora = new Date().toISOString();
   const ordenTemp = doc.orden;
-  doc.orden = vecino.orden;
-  vecino.orden = ordenTemp;
-  doc.fechaActualizacion = new Date().toISOString();
-  vecino.fechaActualizacion = doc.fechaActualizacion;
-  doc.actualizadoPor = actualizadoPor || doc.actualizadoPor;
 
-  guardarFotosSitioTodas(registros);
+  try {
+    await actualizarCamposFotosSitioRepo({
+      [doc.id]: { orden: vecino.orden, fechaActualizacion: ahora, actualizadoPor: actualizadoPor || doc.actualizadoPor },
+      [vecino.id]: { orden: ordenTemp, fechaActualizacion: ahora }
+    });
+  } catch (error) {
+    return { ok: false, error: 'No se pudo mover la fotografía. Revisa tu conexión e intenta de nuevo.' };
+  }
+
   return { ok: true };
 }
 

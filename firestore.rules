@@ -228,6 +228,19 @@ service cloud.firestore {
       allow read, write: if esInterno();
     }
 
+    // fotosSitio/{id} — Fotografías fijas del sitio (banners, carruseles,
+    // galerías) — ver js/fotos-sitio-firestore-sync.js. Lectura PÚBLICA a
+    // propósito, mismo motivo que productos/catalogoMeta: index.html,
+    // colecciones.html, nosotros.html, ventajas-plan.html y contacto.html
+    // son páginas públicas sin sesión que necesitan mostrar estas fotos a
+    // cualquier visitante. Solo Admin puede subir/eliminar/reordenar
+    // (Configuración → Fotografías del sitio vive en portal/admin/, no en
+    // portal/staff/ ni portal/encargado/).
+    match /fotosSitio/{id} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
     // Todo lo que no esté arriba sigue en localStorage — se deniega por
     // defecto hasta que tenga su propia migración y sus propias reglas.
     match /{document=**} {
