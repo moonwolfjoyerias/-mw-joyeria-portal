@@ -102,6 +102,34 @@ async function crearUsuarioFirebaseSinPerderSesion(usuario, password, nombre) {
   }
 }
 
+// Cuando crearUsuarioFirebaseSinPerderSesion() choca con
+// auth/email-already-in-use, no siempre es un usuario elegido a
+// propósito por segunda vez: si una conexión lenta o inestable cortó
+// la creación anterior justo DESPUÉS de crear el acceso real de
+// Firebase Auth pero ANTES de terminar de guardar su perfil, ese
+// acceso queda huérfano — existe en Firebase Auth, pero no tiene perfil
+// en users/{uid}, así que ni siquiera puede iniciar sesión. Antes de
+// rendirse con el error de "usuario ya usado", se intenta iniciar
+// sesión en ESE acceso con la misma contraseña que se acaba de
+// escribir: si coincide, es casi seguro ese mismo intento anterior
+// interrumpido (o alguien reintentando con la misma contraseña a
+// propósito) — se recupera su uid para terminar de crear el perfil en
+// vez de bloquear el usuario para siempre. Si la contraseña no
+// coincide, es una cuenta real distinta y no se toca — regresa null.
+async function intentarRecuperarUsuarioFirebaseExistente(usuario, password) {
+  const nombreAppTemporal = 'recuperar-cuenta-' + Date.now();
+  const appTemporal = firebase.initializeApp(FIREBASE_CONFIG, nombreAppTemporal);
+  try {
+    const credencial = await appTemporal.auth().signInWithEmailAndPassword(usuarioAEmailAuth(usuario), password);
+    return credencial.user.uid;
+  } catch (error) {
+    return null;
+  } finally {
+    await appTemporal.auth().signOut().catch(() => {});
+    await appTemporal.delete().catch(() => {});
+  }
+}
+
 async function cerrarSesionFirebase() {
   try {
     await authFirebase.signOut();

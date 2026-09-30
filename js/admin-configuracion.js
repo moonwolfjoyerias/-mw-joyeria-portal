@@ -1368,7 +1368,7 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
     }
 
     error.style.display = 'none';
-    if (btnConfirmar) btnConfirmar.disabled = true;
+    if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'Creando...'; }
 
     const nombreCompleto = [nombre, apellidos].filter(Boolean).join(' ');
     const credenciales = await generarCredenciales(nombreCompleto);
@@ -1393,9 +1393,9 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
       } catch (err) {
         error.style.display = 'block';
         error.textContent = (err && err.code === 'auth/email-already-in-use')
-          ? `El usuario "${credenciales.usuario}" ya se usó antes para una cuenta real y no se puede reutilizar todavía. Vuelve a intentarlo (se generará otro usuario).`
+          ? `El usuario "${credenciales.usuario}" ya se usó antes para una cuenta real con otra contraseña y no se puede reutilizar todavía. Vuelve a intentarlo (se generará otro usuario).`
           : 'No se pudo crear el acceso real: ' + (err && err.message ? err.message : 'error desconocido');
-        if (btnConfirmar) btnConfirmar.disabled = false;
+        if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = 'Crear cuenta'; }
         return;
       }
     }
@@ -1581,11 +1581,11 @@ function abrirModalCrearCuentaInterna() {
     const btnConfirmar = document.getElementById('cfgConfirmarCrearInternaBtn');
 
     error.style.display = 'none';
-    if (btnConfirmar) btnConfirmar.disabled = true;
+    if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'Creando...'; }
 
     const resultado = await crearCuentaInterna({ usuario, nombre, rol, password });
 
-    if (btnConfirmar) btnConfirmar.disabled = false;
+    if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = 'Crear cuenta'; }
 
     if (!resultado.ok) {
       error.style.display = 'block';

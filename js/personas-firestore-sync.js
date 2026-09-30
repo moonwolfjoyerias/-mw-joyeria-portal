@@ -146,7 +146,23 @@ async function sincronizarPersonasConFirestore(personas) {
 // (mismo contrato que crearUsuarioFirebaseSinPerderSesion).
 async function crearAccesoFirebaseParaPersona(persona, password) {
   if (!dbFirestore || typeof crearUsuarioFirebaseSinPerderSesion !== 'function') return null;
-  const uid = await crearUsuarioFirebaseSinPerderSesion(persona.usuario, password, nombreCompletoPersona(persona));
+
+  let uid;
+  try {
+    uid = await crearUsuarioFirebaseSinPerderSesion(persona.usuario, password, nombreCompletoPersona(persona));
+  } catch (error) {
+    // Antes de rendirse: puede ser un acceso huérfano de un intento
+    // anterior interrumpido a medias por una conexión lenta (se alcanzó
+    // a crear el acceso real de Firebase Auth, pero nunca se terminó de
+    // guardar su perfil) — ver intentarRecuperarUsuarioFirebaseExistente
+    // en auth-service.js. Mismo criterio que ya usa crearCuentaInterna.
+    const uidRecuperado = error?.code === 'auth/email-already-in-use' && typeof intentarRecuperarUsuarioFirebaseExistente === 'function'
+      ? await intentarRecuperarUsuarioFirebaseExistente(persona.usuario, password)
+      : null;
+    if (!uidRecuperado) throw error;
+    uid = uidRecuperado;
+  }
+
   persona.firebaseUid = uid;
   await dbFirestore.collection('users').doc(uid).set({
     usuario: persona.usuario,

@@ -191,16 +191,36 @@ async function crearCuentaInterna({ usuario, nombre, rol, password, empleadoNomi
       await sincronizarPerfilCuentaInterna(nueva);
     } catch (error) {
       if (error && error.code === 'auth/email-already-in-use') {
-        // El usuario ya se usó ANTES para una cuenta real de Firebase —
-        // aunque esa cuenta se haya "eliminado" (eso solo borra su
-        // perfil, ver eliminarCuentaInterna), el acceso de Firebase Auth
-        // en sí sigue existiendo y no se puede borrar desde aquí (hace
-        // falta el SDK de administración, server-side). Ese usuario ya
-        // no se puede volver a usar sin borrar antes esa cuenta desde un
-        // script — mientras tanto hay que elegir otro usuario.
-        return { ok: false, error: `El usuario "${usuario}" ya se usó antes para una cuenta real y no se puede reutilizar todavía (su acceso anterior no se pudo borrar por completo). Usa un usuario distinto, o pide que se borre ese acceso desde el script de administración.` };
+        // Antes de rendirse: puede ser un acceso huérfano de un intento
+        // anterior interrumpido a medias por una conexión lenta (se
+        // alcanzó a crear el acceso real de Firebase Auth, pero nunca
+        // se terminó de guardar su perfil) — ver
+        // intentarRecuperarUsuarioFirebaseExistente en auth-service.js.
+        const uidRecuperado = typeof intentarRecuperarUsuarioFirebaseExistente === 'function'
+          ? await intentarRecuperarUsuarioFirebaseExistente(usuario, password)
+          : null;
+
+        if (!uidRecuperado) {
+          // El usuario ya se usó ANTES para una cuenta real de Firebase
+          // con OTRA contraseña — aunque esa cuenta se haya "eliminado"
+          // (eso solo borra su perfil, ver eliminarCuentaInterna), el
+          // acceso de Firebase Auth en sí sigue existiendo y no se puede
+          // borrar desde aquí (hace falta el SDK de administración,
+          // server-side). Ese usuario ya no se puede volver a usar sin
+          // borrar antes esa cuenta desde un script — mientras tanto hay
+          // que elegir otro usuario.
+          return { ok: false, error: `El usuario "${usuario}" ya se usó antes para una cuenta real con otra contraseña y no se puede reutilizar todavía (su acceso anterior no se pudo borrar por completo). Usa un usuario distinto, o pide que se borre ese acceso desde el script de administración.` };
+        }
+
+        nueva.firebaseUid = uidRecuperado;
+        try {
+          await sincronizarPerfilCuentaInterna(nueva);
+        } catch (error2) {
+          return { ok: false, error: 'Se encontró el acceso anterior pero no se pudo terminar de crear su perfil: ' + (error2 && error2.message ? error2.message : 'error desconocido') };
+        }
+      } else {
+        return { ok: false, error: 'No se pudo crear el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
       }
-      return { ok: false, error: 'No se pudo crear el acceso real: ' + (error && error.message ? error.message : 'error desconocido') };
     }
   }
 
