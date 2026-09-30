@@ -82,9 +82,18 @@ async function cargarListaDeseosRepo() {
         ]);
       }
     } catch (error) {
-      LISTA_DESEOS_CACHE = listaDeseosDesdeLocalStorage();
-      RESURTIDO_CACHE = resurtidoDesdeLocalStorage();
-      LISTA_DESEOS_HISTORIAL_CACHE = historialListaDeseosDesdeLocalStorage();
+      // La consulta falló (reglas, red) — NO se rellena con lo que haya
+      // en local: eso podría resucitar solicitudes ya atendidas/
+      // eliminadas en otro dispositivo (mismo problema ya corregido en
+      // cuentas-firestore-sync.js / personas-firestore-sync.js / etc).
+      // Se avisa y se deja vacío en vez de mostrar datos que podrían
+      // estar mal.
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('No se pudo cargar la Lista de deseos desde el servidor. Revisa tu conexión y vuelve a cargar la página.');
+      }
+      LISTA_DESEOS_CACHE = [];
+      RESURTIDO_CACHE = [];
+      LISTA_DESEOS_HISTORIAL_CACHE = [];
     }
   } else {
     LISTA_DESEOS_CACHE = listaDeseosDesdeLocalStorage();

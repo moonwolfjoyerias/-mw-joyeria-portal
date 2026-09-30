@@ -63,17 +63,25 @@ async function cargarCuentasInternasRepo() {
   if (dbFirestore) {
     try {
       const snap = await dbFirestore.collection('users').where('rol', 'in', ['staff', 'encargado', 'admin']).get();
-      const remotas = snap.docs.map(d => firestoreUserACuentaInterna(d.id, d.data()));
-      // Lo local que YA vino de Firestore (mismo firebaseUid) no se
-      // duplica; lo puramente local (nunca tuvo Firebase, ej. datos de
-      // ejemplo previos a conectar el proyecto) se conserva tal cual.
-      const remotosUids = new Set(remotas.map(r => r.firebaseUid));
-      const localesSinDuplicar = cuentasInternasDesdeLocalStorage().filter(c => !c.firebaseUid || !remotosUids.has(c.firebaseUid));
-      CUENTAS_INTERNAS_CACHE = [...remotas, ...localesSinDuplicar];
+      // Firestore es la única fuente de verdad en cuanto hay conexión —
+      // ya NO se mezclan cuentas locales sin firebaseUid. Antes se hacía
+      // (para que una cuenta local de antes de conectar Firebase no
+      // desapareciera), pero eso significaba que una cuenta de ejemplo
+      // ELIMINADA de Firestore (users/{uid} borrado) volvía a aparecer
+      // para siempre en cualquier dispositivo cuyo localStorage todavía
+      // tuviera esa cuenta de ejemplo guardada — el demo sembrado por
+      // construirCuentasInternasEjemplo() nunca trae firebaseUid, así
+      // que "eliminar" nunca alcanzaba a borrarla de verdad ahí.
+      CUENTAS_INTERNAS_CACHE = snap.docs.map(d => firestoreUserACuentaInterna(d.id, d.data()));
     } catch (error) {
-      // Si la consulta falla (ej. reglas, red), no se rompe la pantalla
-      // — se sigue con lo que haya en local en vez de dejarla en blanco.
-      CUENTAS_INTERNAS_CACHE = cuentasInternasDesdeLocalStorage();
+      // La consulta falló (reglas, red) — no se rellena con lo que haya
+      // en local: eso podría resucitar cuentas ya eliminadas de
+      // Firestore. Se avisa y se deja la pantalla vacía hasta la
+      // siguiente carga en vez de mostrar datos que podrían estar mal.
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('No se pudieron cargar las cuentas internas desde el servidor. Revisa tu conexión y vuelve a cargar la página.');
+      }
+      CUENTAS_INTERNAS_CACHE = [];
     }
   } else {
     CUENTAS_INTERNAS_CACHE = cuentasInternasDesdeLocalStorage();

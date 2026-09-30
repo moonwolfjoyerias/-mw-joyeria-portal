@@ -65,9 +65,15 @@ async function cargarPersonasRepo() {
         await guardarPersonasRepo(semilla);
       }
     } catch (error) {
-      // Si falla la consulta (reglas, red), no se rompe la pantalla — se
-      // sigue con lo que haya en local en vez de dejarla en blanco.
-      PERSONAS_CACHE = personasDesdeLocalStorage();
+      // La consulta falló (reglas, red) — NO se rellena con lo que haya
+      // en local: eso podría resucitar personas ya eliminadas de
+      // Firestore en otro dispositivo (ver mismo problema ya corregido
+      // en cuentas-firestore-sync.js). Se avisa y se deja vacío hasta
+      // la siguiente carga en vez de mostrar datos que podrían estar mal.
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('No se pudieron cargar las cuentas de Emprendedora/Líder desde el servidor. Revisa tu conexión y vuelve a cargar la página.');
+      }
+      PERSONAS_CACHE = [];
     }
   } else {
     PERSONAS_CACHE = personasDesdeLocalStorage();

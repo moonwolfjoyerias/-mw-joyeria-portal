@@ -1127,6 +1127,22 @@ function abrirModalSubirFotoSitio(espacio) {
 // SECCIÓN: USUARIOS Y PERMISOS (solo lectura + aviso honesto)
 // ============================================================
 
+// Ids fijos de las cuentas de ejemplo que trae el portal (ver
+// construirPersonasEjemplo en personas-ejemplo.js y
+// construirCuentasInternasEjemplo en cuentas-internas-modelo.js) — se
+// escriben a mano y no se calculan, para no correr el riesgo de que un
+// cambio futuro en esos generadores borre cuentas reales por
+// accidente. Usado por "Eliminar cuentas de ejemplo" más abajo.
+const IDS_PERSONAS_EJEMPLO = [
+  'ana-torres', 'maria-camila-sanchez', 'me-lider', 'maria-fernanda', 'sofia-hernandez',
+  'valeria-ramirez', 'daniela-martinez', 'paola-gonzalez', 'andrea-castillo', 'camila-rojas',
+  'karla-torres', 'regina-flores', 'itzel-navarro', 'monica-diaz', 'brenda-salazar',
+  'cynthia-mora', 'leslie-pineda', 'gabriela-vega', 'renata-campos', 'ximena-duarte', 'me-emprendedora'
+];
+const IDS_CUENTAS_INTERNAS_EJEMPLO = [
+  'staff01', 'staff02', 'staff03', 'staff04', 'staff05', 'staff06', 'staff07', 'encargado01', 'admin01'
+];
+
 async function renderSeccionUsuarios() {
 
   if (typeof cuentasInternasRepoListo !== 'undefined') await cuentasInternasRepoListo;
@@ -1148,7 +1164,18 @@ async function renderSeccionUsuarios() {
   const internas = typeof obtenerCuentasInternas === 'function' ? obtenerCuentasInternas() : [];
   const lideresParaSelect = personas.filter(p => p.tipo === 'lider');
 
+  const personasEjemploPresentes = personas.filter(p => IDS_PERSONAS_EJEMPLO.includes(p.id));
+  const internasEjemploPresentes = internas.filter(c => IDS_CUENTAS_INTERNAS_EJEMPLO.includes(c.id));
+  const totalEjemploPresentes = personasEjemploPresentes.length + internasEjemploPresentes.length;
+
   cont.innerHTML = `
+    ${totalEjemploPresentes ? `
+    <div class="cfg-card" style="border:1px solid #e8c25a;background:#fffaf0;">
+      <h3 class="cfg-card-title">Cuentas de ejemplo (${totalEjemploPresentes})</h3>
+      <p class="cfg-card-sub">Las cuentas que trae el portal para probar (Ana Torres, admin01, staff04, etc.) siguen aquí. Este botón elimina sus perfiles — dejan de poder iniciar sesión y de aparecer en las listas — pero NO toca su acceso de Firebase Auth (eso requiere un script aparte, y no es necesario: sin perfil, Firebase Auth ya no les permite entrar).</p>
+      <button class="btn btn-danger" id="cfgEliminarCuentasEjemploBtn" style="width:auto;" type="button">Eliminar ${totalEjemploPresentes} cuenta${totalEjemploPresentes === 1 ? '' : 's'} de ejemplo</button>
+    </div>
+    ` : ''}
     <div class="cfg-card">
       <h3 class="cfg-card-title">Usuarios y permisos</h3>
       <p class="cfg-card-sub">Esta tabla es informativa: refleja el acceso que YA existe hoy en el sistema (qué páginas tiene cada rol en su portal), no un panel de permisos editable.</p>
@@ -1247,6 +1274,7 @@ async function renderSeccionUsuarios() {
 
   wireCuentasPersonas(cont, lideresParaSelect);
   wireCuentasInternas(cont);
+  wireEliminarCuentasEjemplo(cont, personasEjemploPresentes, internasEjemploPresentes);
 
   cont.querySelectorAll('[data-cfg-ver-password]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1256,6 +1284,59 @@ async function renderSeccionUsuarios() {
       span.textContent = mostrando ? '••••••••' : span.dataset.passwordReal;
       btn.innerHTML = mostrando ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3.5 3.5l17 17"/><path d="M10.6 5.2A10.6 10.6 0 0112 5c6.5 0 10 7 10 7a15.6 15.6 0 01-3.4 4.2M6.5 6.6A15.7 15.7 0 002 12s3.5 7 10 7a10.4 10.4 0 004.1-.8"/><path d="M9.9 10a3 3 0 004.1 4.1"/></svg>';
     });
+  });
+
+}
+
+// ============================================================
+// ELIMINAR CUENTAS DE EJEMPLO (limpieza de una sola vez)
+// ============================================================
+
+function wireEliminarCuentasEjemplo(cont, personasEjemploPresentes, internasEjemploPresentes) {
+
+  document.getElementById('cfgEliminarCuentasEjemploBtn')?.addEventListener('click', () => {
+
+    // Nunca se borra la cuenta con la que se inició sesión ahora mismo,
+    // aunque sea de ejemplo (ej. admin01) — borrar su propio perfil a
+    // medio uso dejaría a quien está haciendo la limpieza sin sesión
+    // válida. Si de verdad quiere borrarla, que inicie sesión con otra
+    // cuenta de Admin primero.
+    const internasABorrar = internasEjemploPresentes.filter(c => c.id !== ADMIN_IDENTIDAD.usuarioId);
+    const seOmiteLaPropia = internasABorrar.length !== internasEjemploPresentes.length;
+    const total = personasEjemploPresentes.length + internasABorrar.length;
+
+    abrirAutorizacionAdmin({
+      titulo: 'Eliminar cuentas de ejemplo',
+      peligrosa: true,
+      mensaje: `Vas a eliminar el perfil de <strong>${total} cuenta${total === 1 ? '' : 's'} de ejemplo</strong> (${personasEjemploPresentes.length} Emprendedora/Líder, ${internasABorrar.length} interna${internasABorrar.length === 1 ? '' : 's'}). No se toca Firebase Auth — solo dejan de poder iniciar sesión y de aparecer en las listas. Esta acción no se puede deshacer.${seOmiteLaPropia ? ' (Tu propia cuenta con sesión abierta se omite automáticamente.)' : ''}`,
+      onConfirmar: async () => {
+
+        let ok = 0, fallidas = 0;
+
+        for (const persona of personasEjemploPresentes) {
+          const resultado = await eliminarPersona(persona.id);
+          if (resultado.ok) ok++; else fallidas++;
+        }
+
+        for (const cuenta of internasABorrar) {
+          const resultado = await eliminarCuentaInterna(cuenta.id);
+          if (resultado.ok) ok++; else fallidas++;
+        }
+
+        if (typeof registrarAuditoriaAdmin === 'function') {
+          registrarAuditoriaAdmin({
+            modulo: 'cuentas',
+            accion: 'eliminar_cuentas_ejemplo',
+            descripcion: `Limpieza de cuentas de ejemplo: ${ok} eliminadas${fallidas ? `, ${fallidas} no se pudieron eliminar` : ''}`
+          });
+        }
+
+        mostrarToast(fallidas ? `${ok} cuentas eliminadas, ${fallidas} no se pudieron eliminar.` : `${ok} cuentas de ejemplo eliminadas.`);
+        renderSeccionUsuarios();
+
+      }
+    });
+
   });
 
 }

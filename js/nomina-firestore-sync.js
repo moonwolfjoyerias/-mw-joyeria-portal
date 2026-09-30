@@ -132,12 +132,20 @@ async function cargarNominaRepo() {
         ]);
       }
     } catch (error) {
-      NOMINA_EMPLEADOS_CACHE = nominaEmpleadosDesdeLocalStorage();
-      NOMINA_CONCEPTOS_CACHE = nominaConceptosDesdeLocalStorage();
-      NOMINA_PERIODOS_CACHE = nominaPeriodosDesdeLocalStorage();
-      NOMINA_HISTORIAL_AJUSTES_CACHE = nominaHistorialAjustesDesdeLocalStorage();
-      NOMINA_HISTORIAL_ESTADOS_CACHE = nominaHistorialEstadosDesdeLocalStorage();
-      NOMINA_SOLICITUDES_CACHE = nominaSolicitudesDesdeLocalStorage();
+      // La consulta falló (reglas, red) — NO se rellena con lo que haya
+      // en local: eso podría resucitar empleados/periodos ya eliminados
+      // en otro dispositivo (mismo problema ya corregido en cuentas-
+      // firestore-sync.js / personas-firestore-sync.js / etc). Se avisa
+      // y se deja vacío en vez de mostrar datos que podrían estar mal.
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('No se pudo cargar la Nómina desde el servidor. Revisa tu conexión y vuelve a cargar la página.');
+      }
+      NOMINA_EMPLEADOS_CACHE = [];
+      NOMINA_CONCEPTOS_CACHE = [];
+      NOMINA_PERIODOS_CACHE = {};
+      NOMINA_HISTORIAL_AJUSTES_CACHE = [];
+      NOMINA_HISTORIAL_ESTADOS_CACHE = [];
+      NOMINA_SOLICITUDES_CACHE = [];
     }
   } else {
     NOMINA_EMPLEADOS_CACHE = nominaEmpleadosDesdeLocalStorage();

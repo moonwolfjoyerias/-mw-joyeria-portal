@@ -100,22 +100,36 @@ function conCompraDePruebaOchoMil(ventanas) {
 
 async function cargarApartadosRepo() {
   if (dbFirestore) {
-    const metaSnap = await dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID).get();
+    try {
+      const metaSnap = await dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID).get();
 
-    if (metaSnap.exists) {
-      const snapVentanas = await dbFirestore.collection(APARTADOS_COLECCION_FIRESTORE).get();
-      APARTADOS_CACHE = snapVentanas.docs.map(d => ({ ...d.data(), id: d.id }));
+      if (metaSnap.exists) {
+        const snapVentanas = await dbFirestore.collection(APARTADOS_COLECCION_FIRESTORE).get();
+        APARTADOS_CACHE = snapVentanas.docs.map(d => ({ ...d.data(), id: d.id }));
 
-      const docCreditos = await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).get();
-      CREDITOS_CACHE = docCreditos.exists ? (docCreditos.data() || {}) : {};
-    } else {
-      // Primera vez que este proyecto de Firestore ve Apartados: siembra
-      // las compras de ejemplo + la prueba de $8,000 + el crédito demo,
-      // todo de una vez.
-      const ventanasSemilla = conCompraDePruebaOchoMil(apartadosSemillaLocal());
-      const creditosSemilla = creditosSemillaLocal();
-      await guardarVentanasRepo(ventanasSemilla);
-      await guardarCreditosRepo(creditosSemilla);
+        const docCreditos = await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).get();
+        CREDITOS_CACHE = docCreditos.exists ? (docCreditos.data() || {}) : {};
+      } else {
+        // Primera vez que este proyecto de Firestore ve Apartados: siembra
+        // las compras de ejemplo + la prueba de $8,000 + el crédito demo,
+        // todo de una vez.
+        const ventanasSemilla = conCompraDePruebaOchoMil(apartadosSemillaLocal());
+        const creditosSemilla = creditosSemillaLocal();
+        await guardarVentanasRepo(ventanasSemilla);
+        await guardarCreditosRepo(creditosSemilla);
+      }
+    } catch (error) {
+      // La consulta falló (reglas, red) — NO se rellena con lo que haya
+      // en local: eso podría resucitar ventanas ya eliminadas/cerradas
+      // en otro dispositivo (mismo problema ya corregido en
+      // cuentas-firestore-sync.js / personas-firestore-sync.js). Se
+      // avisa y se deja vacío en vez de mostrar datos que podrían
+      // estar mal o dejar la página sin terminar de cargar nunca.
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('No se pudieron cargar los apartados desde el servidor. Revisa tu conexión y vuelve a cargar la página.');
+      }
+      APARTADOS_CACHE = [];
+      CREDITOS_CACHE = {};
     }
   } else {
     APARTADOS_CACHE = conCompraDePruebaOchoMil(apartadosDesdeLocalStorage());

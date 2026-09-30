@@ -55,21 +55,34 @@ function catalogoDesdeLocalStorage() {
 
 async function cargarCatalogoRepo() {
   if (dbFirestore) {
-    const snap = await dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE).get();
-    if (!snap.empty) {
-      CATALOGO_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-    } else {
-      // Colección vacía: puede ser la primera vez que este proyecto de
-      // Firestore recibe catálogo, O alguien borró todo a propósito.
-      // catalogoMeta/estado distingue los dos casos — solo se siembra
-      // si ese marcador nunca se ha creado.
-      const meta = await dbFirestore.collection(CATALOGO_META_COLECCION).doc(CATALOGO_META_DOC_ID).get();
-      if (meta.exists) {
-        CATALOGO_CACHE = [];
+    try {
+      const snap = await dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE).get();
+      if (!snap.empty) {
+        CATALOGO_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
       } else {
-        CATALOGO_CACHE = catalogoSemillaLocal();
-        await guardarCatalogoRepo(CATALOGO_CACHE);
+        // Colección vacía: puede ser la primera vez que este proyecto de
+        // Firestore recibe catálogo, O alguien borró todo a propósito.
+        // catalogoMeta/estado distingue los dos casos — solo se siembra
+        // si ese marcador nunca se ha creado.
+        const meta = await dbFirestore.collection(CATALOGO_META_COLECCION).doc(CATALOGO_META_DOC_ID).get();
+        if (meta.exists) {
+          CATALOGO_CACHE = [];
+        } else {
+          CATALOGO_CACHE = catalogoSemillaLocal();
+          await guardarCatalogoRepo(CATALOGO_CACHE);
+        }
       }
+    } catch (error) {
+      // La consulta falló (reglas, red) — NO se rellena con lo que haya
+      // en local: eso podría resucitar productos ya eliminados en otro
+      // dispositivo (mismo problema ya corregido en cuentas-firestore-
+      // sync.js / personas-firestore-sync.js / apartados-firestore-
+      // sync.js). Se avisa y se deja vacío en vez de mostrar datos que
+      // podrían estar mal.
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('No se pudo cargar el catálogo desde el servidor. Revisa tu conexión y vuelve a cargar la página.');
+      }
+      CATALOGO_CACHE = [];
     }
   } else {
     CATALOGO_CACHE = catalogoDesdeLocalStorage();

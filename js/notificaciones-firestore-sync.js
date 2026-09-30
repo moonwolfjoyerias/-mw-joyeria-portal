@@ -54,7 +54,15 @@ async function cargarNotificacionesRepo() {
         await guardarNotificacionesRepo(semilla);
       }
     } catch (error) {
-      NOTIFICACIONES_CACHE = notificacionesDesdeLocalStorage();
+      // La consulta falló (reglas, red) — NO se rellena con lo que haya
+      // en local: eso podría resucitar avisos ya leídos/purgados en
+      // otro dispositivo (mismo problema ya corregido en cuentas-
+      // firestore-sync.js / personas-firestore-sync.js / etc). Se deja
+      // vacío en vez de mostrar datos que podrían estar mal — sin
+      // toast aquí a propósito (mismo motivo que ya documenta
+      // guardarNotificacionesRepo: no interrumpir lo que se estaba
+      // haciendo por un aviso que no cargó).
+      NOTIFICACIONES_CACHE = [];
     }
   } else {
     NOTIFICACIONES_CACHE = notificacionesDesdeLocalStorage();

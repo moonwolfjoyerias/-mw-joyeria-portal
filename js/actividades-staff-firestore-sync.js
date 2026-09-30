@@ -74,9 +74,17 @@ async function cargarActividadesStaffRepo() {
         await guardarActividadesStaffCatalogoRepo(actividadesStaffCatalogoSemillaLocal());
       }
     } catch (error) {
-      ACTIVIDADES_STAFF_CATALOGO_CACHE = actividadesStaffCatalogoDesdeLocalStorage();
-      ACTIVIDADES_STAFF_CACHE = actividadesStaffAsignacionesDesdeLocalStorage();
-      ACTIVIDADES_STAFF_HISTORIAL_CACHE = actividadesStaffHistorialDesdeLocalStorage();
+      // La consulta falló (reglas, red) — NO se rellena con lo que haya
+      // en local: eso podría resucitar actividades ya eliminadas en
+      // otro dispositivo (mismo problema ya corregido en cuentas-
+      // firestore-sync.js / personas-firestore-sync.js / etc). Se avisa
+      // y se deja vacío en vez de mostrar datos que podrían estar mal.
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('No se pudieron cargar las Actividades del Staff desde el servidor. Revisa tu conexión y vuelve a cargar la página.');
+      }
+      ACTIVIDADES_STAFF_CATALOGO_CACHE = [];
+      ACTIVIDADES_STAFF_CACHE = [];
+      ACTIVIDADES_STAFF_HISTORIAL_CACHE = [];
     }
   } else {
     ACTIVIDADES_STAFF_CATALOGO_CACHE = actividadesStaffCatalogoDesdeLocalStorage();
