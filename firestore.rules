@@ -57,21 +57,32 @@ service cloud.firestore {
       allow create, update, delete: if estaAutenticado() && esAdmin();
     }
 
-    // productos/{id} — Catálogo. Cualquier cuenta autenticada puede
-    // leer (Emprendedora/Líder necesitan ver precio y existencia al
-    // apartar); solo Staff/Encargado/Admin pueden crear, editar,
-    // eliminar o modificar existencia.
+    // productos/{id} — Catálogo. Lectura PÚBLICA a propósito (sin
+    // estaAutenticado()): colecciones.html y catalogo-publico.html son
+    // páginas públicas, sin login, que necesitan mostrar el catálogo
+    // real de mayoreo a cualquier visitante — ese es su propósito.
+    // Igual que ya pasaba con Emprendedora/Líder (que también podían
+    // leer el documento completo aunque la interfaz solo les muestre
+    // precio y existencia, nunca el código interno del producto), esto
+    // no agrega un riesgo nuevo: el campo "codigo" y la existencia por
+    // variante ya eran técnicamente legibles por cualquier cuenta
+    // autenticada desde antes — ahora también por un visitante sin
+    // cuenta, con la misma limitación de que el cliente solo puede
+    // ocultarlo en la interfaz, no en el documento. Solo Staff/
+    // Encargado/Admin pueden crear, editar, eliminar o modificar
+    // existencia.
     match /productos/{id} {
-      allow read: if estaAutenticado();
+      allow read: if true;
       allow write: if esInterno();
     }
 
     // catalogoMeta/estado — marca si el Catálogo ya se sembró alguna vez
     // en este proyecto, para no confundir "recién conectado" con
     // "alguien borró todos los productos a propósito" (ver
-    // js/catalogo-firestore-sync.js). Mismos permisos que productos.
+    // js/catalogo-firestore-sync.js). Mismos permisos que productos —
+    // lectura pública por el mismo motivo.
     match /catalogoMeta/{id} {
-      allow read: if estaAutenticado();
+      allow read: if true;
       allow write: if esInterno();
     }
 

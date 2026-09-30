@@ -1,17 +1,32 @@
 // MW JOYERÍA — Renderiza las tarjetas de producto en la página de Colecciones
-// No sabe ni le importa si PRODUCTOS_EJEMPLO viene de un archivo fijo (ahora)
-// o de Firestore (después) — solo espera un array con la forma:
-// { id, nombre, categoria, precioEtiqueta, destacado }
+//
+// Antes leía de PRODUCTOS_EJEMPLO, un arreglo fijo separado del
+// catálogo real que administra Staff/Encargado/Admin — un visitante
+// público siempre veía piezas inventadas, nunca el catálogo real. Ahora
+// lee del mismo repositorio real (js/catalogo-firestore-sync.js +
+// js/catalogo-variantes-modelo.js) que usan Staff/Encargado/Admin/
+// Emprendedora/Líder — ver firestore.rules (productos/{id} ahora
+// permite lectura pública a propósito, para esta página y
+// catalogo-publico.html).
+//
+// "Destacado" ya no existe como campo del producto real (nunca se migró
+// esa curación) — en su lugar se muestran hasta 4 piezas disponibles
+// por material, en el orden en que ya vienen. Nunca muestra el precio
+// de emprendedora (con descuento) ni el código interno del producto —
+// esta es una página pública, sin sesión.
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof catalogoRepoListo !== 'undefined') await catalogoRepoListo;
+
   const categorias = ['oro-laminado', 'acero-inoxidable', 'exhibidores', 'souvenirs', 'fantasia', 'otros'];
+  const catalogo = typeof obtenerCatalogoStaffStorage === 'function' ? obtenerCatalogoStaffStorage() : [];
 
-  categorias.forEach((categoria) => {
-    const grid = document.querySelector(`.product-grid[data-categoria="${categoria}"]`);
+  categorias.forEach((material) => {
+    const grid = document.querySelector(`.product-grid[data-categoria="${material}"]`);
     if (!grid) return;
 
-    const productos = PRODUCTOS_EJEMPLO
-      .filter((p) => p.categoria === categoria && p.destacado)
+    const productos = catalogo
+      .filter((p) => p.material === material && typeof productoDisponible === 'function' && productoDisponible(p))
       .slice(0, 4);
 
     if (productos.length === 0) {
@@ -22,11 +37,28 @@ document.addEventListener('DOMContentLoaded', () => {
     grid.innerHTML = productos.map((p) => `
       <a class="product-card" href="catalogo-publico.html?producto=${encodeURIComponent(p.id)}">
         <div class="product-photo">
-          <img src="assets/images/isotipo-morado.png" alt="">
+          <img src="${normalizarImagenProductoPublico(p.imagen)}" alt="">
         </div>
-        <h4>${p.nombre}</h4>
+        <h4>${escapeHTMLColecciones(p.nombre)}</h4>
         <p class="product-price">$${p.precioEtiqueta} MXN</p>
       </a>
     `).join('');
   });
 });
+
+// Mismo respaldo que ya usan admin/encargado/staff-catalogo.js, pero
+// esta página vive en la raíz del sitio (un nivel menos que /portal/).
+function normalizarImagenProductoPublico(imagen) {
+  if (!imagen) return 'assets/images/isotipo-morado.png';
+  if (imagen.startsWith('../assets/')) return imagen.slice(3);
+  return imagen;
+}
+
+function escapeHTMLColecciones(texto) {
+  return String(texto ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}

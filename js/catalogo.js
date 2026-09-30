@@ -204,7 +204,7 @@ function renderProductos(productos) {
     return `
     <div class="catalog-product-card">
       <div class="cp-photo">
-        <img src="../../assets/images/isotipo-morado.png" alt="">
+        <img src="${normalizarImagenProducto(p.imagen)}" alt="">
       </div>
       <div class="cp-body">
         <h4>${escapeHTMLCatalogoVariantes(p.nombre)}</h4>
@@ -411,4 +411,22 @@ function mostrarPasoPedirDeposito() {
       </div>
     `;
   });
+}
+
+// La tarjeta de producto nunca mostraba la foto real que sube Staff/
+// Admin — siempre el logo MW fijo. Mismo respaldo que ya usa
+// admin/encargado/staff-catalogo.js.
+function normalizarImagenProducto(imagen) {
+
+  if (!imagen) return '../../assets/images/isotipo-morado.png';
+
+  // Datos de ejemplo antiguos guardan la ruta relativa a /portal/ (un
+  // nivel), pero esta página vive en /portal/emprendedora/ o
+  // /portal/lider/ (dos niveles).
+  if (imagen.startsWith('../assets/')) {
+    return `../../${imagen.slice(3)}`;
+  }
+
+  return imagen;
+
 }

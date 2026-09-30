@@ -192,7 +192,7 @@ function renderProducto(p) {
 
   return `
     <tr>
-      <td><span class="catalog-product-id">${escapeHTML(p.id)}</span></td>
+      <td><span class="catalog-product-id">${escapeHTML(p.codigo || p.id)}</span></td>
       <td>
         <div class="catalog-product-cell">
           <img src="${imagen}" alt="${escapeHTML(p.nombre)}">
@@ -297,6 +297,12 @@ function abrirModalProducto(producto = null) {
         <select id="productoCategoria">
           ${CATEGORIAS_STAFF.map(c => `<option value="${c}" ${producto?.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}
         </select>
+      </div>
+
+      <div class="form-field">
+        <label>Código del producto</label>
+        <input id="productoCodigo" type="text" placeholder="Ej. AN-045" value="${escapeAttribute(producto?.codigo || '')}">
+        <small class="field-help">Solo lo ven Staff, Encargado y Admin (columna "ID del producto") — nunca Emprendedora/Líder.</small>
       </div>
 
       <div class="form-field">
@@ -483,6 +489,7 @@ function obtenerDatosProducto() {
   const descripcion = document.getElementById('productoDescripcion')?.value.trim();
   const material = document.getElementById('productoMaterial')?.value;
   const categoria = document.getElementById('productoCategoria')?.value;
+  const codigo = document.getElementById('productoCodigo')?.value.trim();
   const calidad = document.getElementById('productoCalidad')?.value;
   const precioEtiqueta = Number(document.getElementById('productoPrecioEtiqueta')?.value);
   const descuentoSelect = document.getElementById('productoDescuentoSelect')?.value;
@@ -502,7 +509,7 @@ function obtenerDatosProducto() {
   const variantes = variantesTemporalEncargado.map(v => crearVarianteProducto(v));
 
   return {
-    nombre, descripcion, material, categoria, calidad,
+    nombre, descripcion, material, categoria, calidad, codigo,
     variantes, precioEtiqueta, descuento,
     disponible: variantes.some(v => v.stock > 0),
     imagen: imagenTemporalEncargado

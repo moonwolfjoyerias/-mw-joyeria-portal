@@ -171,15 +171,9 @@ const MATERIALES_STAFF = [
 ];
 
 const CATEGORIAS_STAFF = [
-  'Anillos',
-  'Aretes',
-  'Cadenas',
-  'Pulseras',
-  'Dijes',
-  'Exhibidores',
-  'Souvenirs',
-  'Fantasía',
-  'Otros'
+  'Arracadas', 'Aretes', 'Anillos', 'Broqueles', 'Brazaletes', 'Cadenas', 'Collares',
+  'Dijes', 'Fin de semana', 'Huggies', 'Juegos', 'Misterios', 'Pulseras', 'Prendedores',
+  'Relicarios', 'Rosarios', 'Simuladores', 'Semanarios', 'Tobilleras', 'Tiaras'
 ];
 
 const CALIDADES_STAFF = [
@@ -190,5 +184,7 @@ const CALIDADES_STAFF = [
 const COLORES_ORO_STAFF = [
   'Amarillo',
   'Blanco',
+  'Dorado',
+  'Negro',
   'Rosa'
 ];

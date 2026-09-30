@@ -344,7 +344,7 @@ function renderProducto(p) {
 
   return `
     <tr>
-      <td><span class="catalog-product-id">${escapeHTML(p.id)}</span></td>
+      <td><span class="catalog-product-id">${escapeHTML(p.codigo || p.id)}</span></td>
       <td>
         <div class="catalog-product-cell">
           <img src="${imagen}" alt="${escapeHTML(p.nombre)}">
@@ -544,6 +544,17 @@ function abrirModalProducto(producto = null) {
           `).join('')}
 
         </select>
+
+      </div>
+
+
+      <div class="form-field">
+
+        <label>Código del producto</label>
+
+        <input id="productoCodigo" type="text" placeholder="Ej. AN-045" value="${escapeAttribute(producto?.codigo || '')}">
+
+        <small class="field-help">Solo lo ven Staff, Encargado y Admin (columna "ID del producto") — nunca Emprendedora/Líder.</small>
 
       </div>
 
@@ -848,6 +859,10 @@ function obtenerDatosProducto() {
     document.getElementById('productoCategoria')?.value;
 
 
+  const codigo =
+    document.getElementById('productoCodigo')?.value.trim();
+
+
   const calidad =
     document.getElementById('productoCalidad')?.value;
 
@@ -918,6 +933,7 @@ function obtenerDatosProducto() {
     material,
     categoria,
     calidad,
+    codigo,
     variantes,
     precioEtiqueta,
     descuento,
