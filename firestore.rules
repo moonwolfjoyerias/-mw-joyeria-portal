@@ -134,6 +134,22 @@ service cloud.firestore {
       allow read, write: if estaAutenticado();
     }
 
+    // notificaciones/{id} — ver js/notificaciones-firestore-sync.js.
+    // Necesario porque cada rol usa su propio dispositivo: sin esto, un
+    // aviso (solicitud aprobada, actividad asignada, apartado vencido…)
+    // nunca salía del dispositivo de quien lo generó. El filtrado por
+    // destinatario (paraId/rolDestino) sigue pasando en el cliente,
+    // igual que antes de Firestore — mismo criterio intencionalmente
+    // amplio que ventanasApartado/solicitudesInscripcion, documentado
+    // ahí mismo.
+    match /notificaciones/{id} {
+      allow read, write: if estaAutenticado();
+    }
+
+    match /notificacionesMeta/{id} {
+      allow read, write: if estaAutenticado();
+    }
+
     // Todo lo que no esté arriba sigue en localStorage — se deniega por
     // defecto hasta que tenga su propia migración y sus propias reglas.
     match /{document=**} {

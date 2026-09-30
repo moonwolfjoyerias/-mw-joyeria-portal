@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // initNotifPanel → admin-comun.js) revisa apartados vencidos — espera
   // a que la caché tenga datos reales antes de calcular ese conteo.
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+  if (typeof notificacionesRepoListo !== 'undefined') await notificacionesRepoListo;
   initNotifPanel();
   initProfileMenu();
   initTemaMenu();

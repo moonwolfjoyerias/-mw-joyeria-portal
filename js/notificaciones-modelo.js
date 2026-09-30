@@ -20,8 +20,11 @@
 // quién pertenece exactamente) — son cosas distintas: paraId es PARA
 // QUIÉN es, rolDestino es EN QUÉ BANDEJA aparece.
 //
-// ⚠️ TEMPORAL: localStorage simula la base de datos. Se reemplaza por
-// Firestore en Fase 3.
+// Fase 2 (Firebase): ya sincroniza con Firestore (colección
+// "notificaciones") vía js/notificaciones-firestore-sync.js — ver ese
+// archivo para la caché/carga asíncrona. Necesario porque cada rol usa
+// su PROPIO dispositivo: sin esto, un aviso generado en el dispositivo
+// de quien lo dispara nunca llegaba al de la persona destinataria.
 
 const NOTIFICACIONES_STORAGE_KEY = 'mw-notificaciones-v1';
 const ROLES_NOTIF_VALIDOS = ['emprendedora_lider', 'staff', 'encargado', 'admin'];
@@ -86,29 +89,16 @@ function normalizarYDeduplicarNotificaciones(lista) {
 }
 
 function obtenerNotificacionesCompartidas() {
-  try {
-    const guardadas = JSON.parse(localStorage.getItem(NOTIFICACIONES_STORAGE_KEY));
-    if (Array.isArray(guardadas)) {
-      const normalizadas = purgarNotificacionesDeDiasAnteriores(normalizarYDeduplicarNotificaciones(guardadas));
-      if (normalizadas.length !== guardadas.length || JSON.stringify(normalizadas) !== JSON.stringify(guardadas)) {
-        guardarNotificacionesCompartidas(normalizadas);
-      }
-      return normalizadas;
-    }
-  } catch (error) {
-    // sigue abajo y reconstruye desde el ejemplo estático
+  const guardadas = NOTIFICACIONES_CACHE;
+  const normalizadas = purgarNotificacionesDeDiasAnteriores(normalizarYDeduplicarNotificaciones(guardadas));
+  if (normalizadas.length !== guardadas.length || JSON.stringify(normalizadas) !== JSON.stringify(guardadas)) {
+    guardarNotificacionesCompartidas(normalizadas);
   }
-
-  const base = (typeof NOTIFICACIONES_EJEMPLO !== 'undefined')
-    ? NOTIFICACIONES_EJEMPLO.map(n => ({ ...n }))
-    : [];
-
-  guardarNotificacionesCompartidas(base);
-  return base;
+  return normalizadas;
 }
 
 function guardarNotificacionesCompartidas(lista) {
-  localStorage.setItem(NOTIFICACIONES_STORAGE_KEY, JSON.stringify(lista));
+  guardarNotificacionesRepo(lista);
 }
 
 // paraId: a quién pertenece (usuarioId de la persona). Es opcional y no
@@ -195,3 +185,10 @@ function obtenerNotificacionesPorRol(rol) {
   const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
   return notificaciones.filter(n => !n.paraId || n.paraId === idActual);
 }
+
+// Arranca la carga de notificaciones-firestore-sync.js — tiene que ser
+// AQUÍ (no en ese archivo, que se carga primero) porque
+// cargarNotificacionesRepo() necesita NOTIFICACIONES_EJEMPLO, definida
+// en notificaciones-ejemplo.js, para la semilla (mismo motivo/mismo
+// orden que personas-ejemplo.js con personas-firestore-sync.js).
+const notificacionesRepoListo = cargarNotificacionesRepo();
