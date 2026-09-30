@@ -341,7 +341,7 @@ function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, emplea
   ventana.fechaVencimiento = regla.dias
     ? new Date(ahora.getTime() + regla.dias * 24 * 60 * 60 * 1000).toISOString()
     : null;
-  ventana.auditoria.push(registrarAuditoriaVentana(`Depósito de $${montoFinal} confirmado`, empleado));
+  ventana.auditoria.push(registrarAuditoriaVentana(`Depósito de $${montoFinal} confirmado${referencia ? ` — referencia ${referencia}` : ''}`, empleado));
 
   return ventana;
 
@@ -401,7 +401,7 @@ function liquidarVentanaCompleta(ventana, { monto, metodo, referencia }, emplead
   });
 
   ventana.auditoria.push(registrarAuditoriaVentana(
-    `Apartado liquidado por completo (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'}) — $${monto}`,
+    `Apartado liquidado por completo (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'}) — $${monto}${referencia ? ` — referencia ${referencia}` : ''}`,
     empleado
   ));
 

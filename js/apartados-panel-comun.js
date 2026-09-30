@@ -342,12 +342,13 @@ function obtenerEstadoPieza(estado) {
 function obtenerDescripcionDeposito(v) {
 
   const regla = obtenerReglaCategoria(v.categoria);
+  const conReferencia = (texto) => v.referenciaDeposito ? `${texto} · Ref: ${escapeHTML(v.referenciaDeposito)}` : texto;
 
   if (!regla.requiereDeposito) return v.estado === "pendiente_aprobacion" ? "Esperando aprobación VIP" : "Categoría VIP";
   if (v.estado === "pendiente_deposito") return "Esperando depósito";
-  if (v.estado === "vencida" || v.estado === "cerrada") return "Ventana finalizada";
+  if (v.estado === "vencida" || v.estado === "cerrada") return conReferencia("Ventana finalizada");
   if (v.metodoDeposito === "credito_anterior") return "Crédito reutilizado";
-  return "Depósito confirmado";
+  return conReferencia("Depósito confirmado");
 
 }
 
