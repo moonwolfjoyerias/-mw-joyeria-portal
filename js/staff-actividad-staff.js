@@ -14,7 +14,9 @@
 
 let identidadStaffActual = null; // { usuarioId, usuarioNombre, empleado }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof actividadesStaffRepoListo !== 'undefined') await actividadesStaffRepoListo;
 
   document.getElementById('actIdTogglePassword')?.addEventListener('click', () => {
     const input = document.getElementById('actIdPassword');

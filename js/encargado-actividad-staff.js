@@ -14,7 +14,9 @@ let actFiltroTexto = '';
 let actFiltroEstado = '';
 let sorteoResultadoPreview = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof actividadesStaffRepoListo !== 'undefined') await actividadesStaffRepoListo;
 
   const hoy = new Date();
   const input = document.getElementById('actSemanaInput');

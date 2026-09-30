@@ -169,6 +169,23 @@ service cloud.firestore {
       allow read, write: if esInterno();
     }
 
+    // actividadesCatalogoStaff/{id}, actividadesStaff/{id},
+    // historialActividadesStaff/{id} — ver
+    // js/actividades-staff-firestore-sync.js. Exclusivo de
+    // Staff/Encargado/Admin, mismo criterio que Lista de deseos.
+    match /actividadesCatalogoStaff/{id} {
+      allow read, write: if esInterno();
+    }
+    match /actividadesStaff/{id} {
+      allow read, write: if esInterno();
+    }
+    match /historialActividadesStaff/{id} {
+      allow read, write: if esInterno();
+    }
+    match /actividadesStaffMeta/{id} {
+      allow read, write: if esInterno();
+    }
+
     // Todo lo que no esté arriba sigue en localStorage — se deniega por
     // defecto hasta que tenga su propia migración y sus propias reglas.
     match /{document=**} {

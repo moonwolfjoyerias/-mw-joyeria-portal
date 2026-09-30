@@ -19,7 +19,10 @@
 // ya usa Nómina (obtenerEmpleadosNomina, cargo === 'staff') — no se
 // inventa un registro de personas nuevo.
 //
-// ⚠️ TEMPORAL: localStorage simula Firestore.
+// Fase 2 (Firebase): ya sincroniza con Firestore vía
+// js/actividades-staff-firestore-sync.js — ver ese archivo para la
+// caché/carga asíncrona. Necesario porque Staff/Encargado/Admin usan
+// cada quien su propio dispositivo durante la beta.
 
 const ACTIVIDADES_STAFF_CATALOGO_KEY = 'mw-actividades-staff-catalogo-v1';
 const ACTIVIDADES_STAFF_ASIGNACIONES_KEY = 'mw-actividades-staff-asignaciones-v1';
@@ -149,19 +152,11 @@ function construirCatalogoActividadesStaffEjemplo() {
 }
 
 function obtenerCatalogoActividadesStaff() {
-  try {
-    const guardado = JSON.parse(localStorage.getItem(ACTIVIDADES_STAFF_CATALOGO_KEY));
-    if (Array.isArray(guardado) && guardado.length) return guardado;
-  } catch (error) {
-    // sigue abajo y reconstruye el ejemplo
-  }
-  const catalogo = construirCatalogoActividadesStaffEjemplo();
-  guardarCatalogoActividadesStaff(catalogo);
-  return catalogo;
+  return ACTIVIDADES_STAFF_CATALOGO_CACHE;
 }
 
 function guardarCatalogoActividadesStaff(catalogo) {
-  localStorage.setItem(ACTIVIDADES_STAFF_CATALOGO_KEY, JSON.stringify(catalogo));
+  guardarActividadesStaffCatalogoRepo(catalogo);
 }
 
 function obtenerActividadCatalogoStaffPorId(id) {
@@ -307,18 +302,11 @@ function empleadosDesdeIdsActividadStaff(ids) {
 }
 
 function obtenerAsignacionesActividadStaff() {
-  try {
-    const guardadas = JSON.parse(localStorage.getItem(ACTIVIDADES_STAFF_ASIGNACIONES_KEY));
-    if (Array.isArray(guardadas)) return guardadas.map(normalizarAsignacionActividadStaff);
-  } catch (error) {
-    // sigue abajo
-  }
-  guardarAsignacionesActividadStaff([]);
-  return [];
+  return ACTIVIDADES_STAFF_CACHE.map(normalizarAsignacionActividadStaff);
 }
 
 function guardarAsignacionesActividadStaff(lista) {
-  localStorage.setItem(ACTIVIDADES_STAFF_ASIGNACIONES_KEY, JSON.stringify(lista));
+  guardarActividadesStaffAsignacionesRepo(lista);
 }
 
 function obtenerAsignacionActividadStaffPorId(id) {
@@ -870,18 +858,11 @@ function eliminarAsignacionActividadStaff(id, { usuarioId, usuarioNombre, usuari
 // ============================================================
 
 function obtenerHistorialActividadStaff() {
-  try {
-    const guardado = JSON.parse(localStorage.getItem(ACTIVIDADES_STAFF_HISTORIAL_KEY));
-    if (Array.isArray(guardado)) return guardado;
-  } catch (error) {
-    // sigue abajo
-  }
-  guardarHistorialActividadStaff([]);
-  return [];
+  return ACTIVIDADES_STAFF_HISTORIAL_CACHE;
 }
 
 function guardarHistorialActividadStaff(historial) {
-  localStorage.setItem(ACTIVIDADES_STAFF_HISTORIAL_KEY, JSON.stringify(historial));
+  guardarActividadesStaffHistorialRepo(historial);
 }
 
 function registrarHistorialActividadStaff({ actividadId, estadoAnterior, estadoNuevo, usuarioId, usuarioNombre, usuarioRol, comentario }) {
@@ -943,3 +924,11 @@ function obtenerFilasReporteOrganizacionActividadStaff(semanaKey) {
       listaParaAnunciar: !!a.encargados?.length
     }));
 }
+
+// Arranca la carga de actividades-staff-firestore-sync.js — tiene que
+// ser AQUÍ (no en ese archivo, que se carga primero) porque
+// cargarActividadesStaffRepo() necesita
+// construirCatalogoActividadesStaffEjemplo(), definida arriba en este
+// mismo archivo, para la semilla (mismo motivo/mismo orden que
+// personas-ejemplo.js).
+const actividadesStaffRepoListo = cargarActividadesStaffRepo();
