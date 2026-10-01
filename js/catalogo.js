@@ -204,7 +204,7 @@ function renderProductos(productos) {
     return `
     <div class="catalog-product-card">
       <div class="cp-photo">
-        <img src="${normalizarImagenProducto(p.imagen)}" alt="">
+        <img src="${normalizarImagenProducto(p.imagen)}" alt="" class="${esFotoGenericaProducto(p.imagen) ? 'foto-generica' : ''}">
       </div>
       <div class="cp-body">
         <h4>${escapeHTMLCatalogoVariantes(p.nombre)}</h4>
@@ -429,4 +429,12 @@ function normalizarImagenProducto(imagen) {
 
   return imagen;
 
+}
+
+// true si "imagen" no es una foto real (vacío, o la ruta del logo MW
+// que trae la semilla de ejemplo) — para decidir si se pinta como
+// marca de agua desvanecida (clase "foto-generica" en css/styles.css)
+// o como foto completa.
+function esFotoGenericaProducto(imagen) {
+  return !imagen || /isotipo-morado\.png/.test(imagen);
 }

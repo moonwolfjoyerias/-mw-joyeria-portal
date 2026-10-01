@@ -157,6 +157,13 @@
       return imagen;
     }
 
+    // true si "imagen" no es una foto real (vacío, o la ruta del logo
+    // MW que trae la semilla de ejemplo) — mismo criterio que
+    // esFotoGenericaProducto en js/catalogo.js.
+    function esFotoGenericaPublico(imagen) {
+      return !imagen || /isotipo-morado\.png/.test(imagen);
+    }
+
     function escapeHTMLPublico(texto) {
       return String(texto ?? '')
         .replace(/&/g, '&amp;')
@@ -311,7 +318,7 @@
         return `
         <article class="catalog-product-card">
           <div class="cp-photo">
-            <img src="${normalizarImagenPublico(p.imagen)}" alt="${escapeHTMLPublico(p.nombre)}">
+            <img src="${normalizarImagenPublico(p.imagen)}" alt="${escapeHTMLPublico(p.nombre)}" class="${esFotoGenericaPublico(p.imagen) ? 'foto-generica' : ''}">
           </div>
           <div class="cp-body">
             <h4>${escapeHTMLPublico(p.nombre)}</h4>

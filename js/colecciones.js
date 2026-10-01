@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     grid.innerHTML = productos.map((p) => `
       <a class="product-card" href="catalogo-publico.html?producto=${encodeURIComponent(p.id)}">
         <div class="product-photo">
-          <img src="${normalizarImagenProductoPublico(p.imagen)}" alt="">
+          <img src="${normalizarImagenProductoPublico(p.imagen)}" alt="" class="${esFotoGenericaProductoPublico(p.imagen) ? 'foto-generica' : ''}">
         </div>
         <h4>${escapeHTMLColecciones(p.nombre)}</h4>
         <p class="product-price">$${p.precioEtiqueta} MXN</p>
@@ -52,6 +52,13 @@ function normalizarImagenProductoPublico(imagen) {
   if (!imagen) return 'assets/images/isotipo-morado.png';
   if (imagen.startsWith('../assets/')) return imagen.slice(3);
   return imagen;
+}
+
+// true si "imagen" no es una foto real (vacío, o la ruta del logo MW
+// que trae la semilla de ejemplo) — ver esFotoGenericaProducto en
+// js/catalogo.js (mismo criterio).
+function esFotoGenericaProductoPublico(imagen) {
+  return !imagen || /isotipo-morado\.png/.test(imagen);
 }
 
 function escapeHTMLColecciones(texto) {

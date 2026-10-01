@@ -599,7 +599,12 @@ a:hover { color: var(--mw-gold); }
   align-items: center;
   justify-content: center;
 }
-.product-photo img { width: 36%; opacity: 0.18; filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg); }
+/* El desvanecido morado es SOLO para cuando no hay foto real (se pinta
+   el logo MW como relleno decorativo) — ver clase "foto-generica" que
+   agrega js/colecciones.js. Una foto real debe verse completa y nítida,
+   no como una marca de agua casi invisible. */
+.product-photo img { width: 100%; height: 100%; object-fit: cover; }
+.product-photo img.foto-generica { width: 36%; height: auto; opacity: 0.18; filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg); }
 .product-card h4 {
   font-family: var(--font-body);
   font-weight: 500;
@@ -1386,7 +1391,12 @@ a:hover { color: var(--mw-gold); }
 .catalog-product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1.2rem; }
 .catalog-product-card { background: var(--surface); border: 1px solid var(--mw-border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-card); display: flex; flex-direction: column; }
 .catalog-product-card .cp-photo { aspect-ratio: 1/1; background: linear-gradient(155deg, var(--mw-lilac-soft), var(--mw-cream), var(--mw-gold-soft)); display: flex; align-items: center; justify-content: center; }
-.catalog-product-card .cp-photo img { width: 34%; opacity: 0.16; filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg); }
+/* Mismo criterio que .product-photo: el desvanecido morado es SOLO
+   para el logo MW de respaldo (clase "foto-generica", agregada desde
+   js/catalogo.js y catalogo-publico.html) — una foto real de producto
+   se ve completa. */
+.catalog-product-card .cp-photo img { width: 100%; height: 100%; object-fit: cover; }
+.catalog-product-card .cp-photo img.foto-generica { width: 34%; height: auto; opacity: 0.16; filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg); }
 .catalog-product-card .cp-body { padding: 0.8rem 0.9rem 1rem; flex: 1; display: flex; flex-direction: column; }
 .catalog-product-card h4 { font-size: 0.88rem; font-family: var(--font-body); font-weight: 500; color: var(--mw-text); margin: 0 0 0.25rem; }
 .catalog-product-card .cp-meta { font-size: 0.72rem; color: var(--mw-text-muted); margin-bottom: 0.5rem; min-height: 1em; }
