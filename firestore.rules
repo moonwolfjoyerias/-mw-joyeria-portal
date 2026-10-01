@@ -241,6 +241,22 @@ service cloud.firestore {
       allow write: if esAdmin();
     }
 
+    // eventos/{id} — Calendario de actividades (ver
+    // js/eventos-firestore-sync.js). Cualquier cuenta autenticada
+    // puede leer (Emprendedora/Líder solo lo consulta desde
+    // js/calendario.js); crear/editar/eliminar eventos queda en
+    // Staff/Encargado/Admin, que son quienes tienen el módulo de
+    // Calendario con el botón "Agregar evento" — mismo criterio que
+    // Lista de deseos/Actividades del Staff.
+    match /eventos/{id} {
+      allow read: if estaAutenticado();
+      allow write: if esInterno();
+    }
+    match /eventosMeta/{id} {
+      allow read: if estaAutenticado();
+      allow write: if esInterno();
+    }
+
     // Todo lo que no esté arriba sigue en localStorage — se deniega por
     // defecto hasta que tenga su propia migración y sus propias reglas.
     match /{document=**} {

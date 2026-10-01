@@ -12,9 +12,11 @@
 // auditoría de Encargado.
 
 let eventosCalendario = [];
+let imagenEventoTemporal = '';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
+  if (typeof eventosRepoListo !== 'undefined') await eventosRepoListo;
   eventosCalendario = cargarEventosCompartidos();
 
   renderResumenCalendario();
@@ -151,7 +153,7 @@ function renderFilaEvento(ev) {
     <tr>
       <td>
         <div class="catalog-product-cell">
-          <img src="../../assets/images/isotipo-morado.png" alt="">
+          <img src="${ev.imagen || '../../assets/images/isotipo-morado.png'}" alt="">
           <div>
             <strong>${escapeHTML(ev.titulo)}</strong>
             <div><span class="badge origen-badge ${ev.origen === 'emprendedora_lider' ? 'emprendedora-lider' : 'mw'}">${ev.origen === 'emprendedora_lider' ? 'Emprendedora/Líder' : 'MW'}</span></div>
@@ -203,6 +205,7 @@ function abrirModalEventoCalendario(evento = null) {
   if (!overlay || !box) return;
 
   const editando = !!evento;
+  imagenEventoTemporal = evento?.imagen || '';
 
   box.innerHTML = `
 
@@ -218,6 +221,22 @@ function abrirModalEventoCalendario(evento = null) {
         : 'Agrega una nueva actividad al calendario de MW Joyería.'
       }
     </p>
+
+    <div class="product-image-upload">
+      <div class="image-preview" id="eventoImagePreview">
+        ${imagenEventoTemporal ? `<img src="${imagenEventoTemporal}" id="eventoPreviewImage" alt="">` : '<span style="font-size:0.78rem;color:var(--mw-text-muted);">Sin foto</span>'}
+      </div>
+      <div class="image-upload-info">
+        <strong>Foto destacada (opcional)</strong>
+        <label class="upload-image-btn">
+          <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.2-1.8a1.5 1.5 0 011.25-.7h3.1a1.5 1.5 0 011.25.7L16 7h2.5A1.5 1.5 0 0120 8.5v9A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5v-9z"/><circle cx="12" cy="13" r="3.4"/></svg></span>
+          Seleccionar imagen
+          <input type="file" id="eventoImagen" accept="image/*" hidden>
+        </label>
+        <small>JPG, PNG o WEBP</small>
+        ${imagenEventoTemporal ? '<button type="button" id="eventoQuitarFotoBtn" style="margin-top:4px;background:none;border:none;padding:0;color:var(--mw-accent-text);font-size:0.78rem;text-decoration:underline;cursor:pointer;">Quitar foto</button>' : ''}
+      </div>
+    </div>
 
     <div class="form-grid">
 
@@ -250,14 +269,6 @@ function abrirModalEventoCalendario(evento = null) {
         <input id="eventoHora" type="text" placeholder="Ej. 9:30 a.m." value="${escapeAttribute(evento?.hora || '')}">
       </div>
 
-      <div class="form-field">
-        <label>Foto destacada</label>
-        <select id="eventoFoto">
-          <option value="no" ${!evento?.tieneFoto ? 'selected' : ''}>Sin foto</option>
-          <option value="si" ${evento?.tieneFoto ? 'selected' : ''}>Con foto</option>
-        </select>
-      </div>
-
       <div class="form-field full">
         <label>Lugar *</label>
         <input id="eventoLugar" type="text" placeholder="Ej. Centro Joyero San Luis, Local 21 / En línea (Zoom)" value="${escapeAttribute(evento?.lugarTexto || '')}">
@@ -282,6 +293,14 @@ function abrirModalEventoCalendario(evento = null) {
 
   overlay.classList.add('open');
 
+  document.getElementById('eventoImagen')?.addEventListener('change', manejarImagenEvento);
+  document.getElementById('eventoQuitarFotoBtn')?.addEventListener('click', () => {
+    imagenEventoTemporal = '';
+    const preview = document.getElementById('eventoImagePreview');
+    if (preview) preview.innerHTML = '<span style="font-size:0.78rem;color:var(--mw-text-muted);">Sin foto</span>';
+    document.getElementById('eventoQuitarFotoBtn')?.remove();
+  });
+
   document.getElementById('guardarEventoBtn')?.addEventListener('click', () => {
 
     const datos = obtenerDatosEventoCalendario();
@@ -303,6 +322,38 @@ function abrirModalEventoCalendario(evento = null) {
 
 }
 
+async function manejarImagenEvento(e) {
+
+  const archivo = e.target.files?.[0];
+  if (!archivo) return;
+
+  if (!archivo.type.startsWith('image/')) {
+    mostrarToast('Selecciona un archivo de imagen.');
+    return;
+  }
+
+  try {
+    imagenEventoTemporal = await comprimirImagenEventoADataURL(archivo);
+  } catch (error) {
+    mostrarToast('No se pudo procesar esa imagen. Intenta con otra.');
+    return;
+  }
+
+  const preview = document.getElementById('eventoImagePreview');
+  if (preview) preview.innerHTML = `<img src="${imagenEventoTemporal}" id="eventoPreviewImage" alt="">`;
+  if (!document.getElementById('eventoQuitarFotoBtn')) {
+    const info = preview?.parentElement?.querySelector('.image-upload-info');
+    if (info) info.insertAdjacentHTML('beforeend', '<button type="button" id="eventoQuitarFotoBtn" style="margin-top:4px;background:none;border:none;padding:0;color:var(--mw-accent-text);font-size:0.78rem;text-decoration:underline;cursor:pointer;">Quitar foto</button>');
+    document.getElementById('eventoQuitarFotoBtn')?.addEventListener('click', () => {
+      imagenEventoTemporal = '';
+      const preview2 = document.getElementById('eventoImagePreview');
+      if (preview2) preview2.innerHTML = '<span style="font-size:0.78rem;color:var(--mw-text-muted);">Sin foto</span>';
+      document.getElementById('eventoQuitarFotoBtn')?.remove();
+    });
+  }
+
+}
+
 
 function obtenerDatosEventoCalendario() {
 
@@ -313,7 +364,6 @@ function obtenerDatosEventoCalendario() {
   const hora = document.getElementById('eventoHora')?.value.trim();
   const lugarTexto = document.getElementById('eventoLugar')?.value.trim();
   const enlace = document.getElementById('eventoEnlace')?.value.trim();
-  const tieneFoto = document.getElementById('eventoFoto')?.value === 'si';
 
   if (!titulo) { mostrarToast('Escribe el título del evento.'); return null; }
   if (!descripcion) { mostrarToast('Agrega una descripción.'); return null; }
@@ -321,7 +371,7 @@ function obtenerDatosEventoCalendario() {
   if (!hora) { mostrarToast('Escribe la hora del evento.'); return null; }
   if (!lugarTexto) { mostrarToast('Escribe el lugar del evento.'); return null; }
 
-  return { titulo, descripcion, tipo, fecha, hora, lugarTexto, enlace, tieneFoto };
+  return { titulo, descripcion, tipo, fecha, hora, lugarTexto, enlace, imagen: imagenEventoTemporal, tieneFoto: !!imagenEventoTemporal };
 
 }
 

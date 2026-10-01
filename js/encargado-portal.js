@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
   if (typeof listaDeseosRepoListo !== 'undefined') await listaDeseosRepoListo;
+  if (typeof eventosRepoListo !== 'undefined') await eventosRepoListo;
 
   actualizarResumenInicioEncargado();
   renderRecordatoriosNomina();

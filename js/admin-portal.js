@@ -118,10 +118,12 @@ function obtenerProximoPeriodoPagoDash() {
 // EVENTOS DE ESTA SEMANA (mismo calendario compartido que Staff/Encargado)
 // ============================================================
 
-function renderEventosSemanaDash() {
+async function renderEventosSemanaDash() {
 
   const wrap = document.getElementById('weekEventsRow');
   if (!wrap) return;
+
+  if (typeof eventosRepoListo !== 'undefined') await eventosRepoListo;
 
   const eventos = typeof cargarEventosCompartidos === 'function'
     ? cargarEventosCompartidos()
