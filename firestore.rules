@@ -161,23 +161,27 @@ service cloud.firestore {
       allow read, write: if estaAutenticado();
     }
 
-    // listaDeseos/{id}, solicitudesResurtido/{id},
-    // listaDeseosHistorialEstados/{id} — ver
-    // js/lista-deseos-firestore-sync.js. Exclusivo de Staff/Encargado/
-    // Admin (Emprendedora/Líder nunca entra a este módulo), por eso aquí
-    // sí se restringe a esInterno() en vez del "cualquier autenticado"
-    // que usan otras colecciones todavía sin terminar de acotar.
+    // listaDeseos/{id}, listaDeseosHistorialEstados/{id},
+    // listaDeseosMeta/{id} — ver js/lista-deseos-firestore-sync.js.
+    // Emprendedora/Líder ahora SÍ entra aquí (js/deseos.js, "Mi lista de
+    // deseos"): puede crear sus propias solicitudes y cancelarlas, no
+    // solo Staff/Encargado/Admin como antes — por eso es "cualquier
+    // autenticado" en vez de esInterno(), mismo criterio ya usado en
+    // ventanasApartado/solicitudesInscripcion (no se restringe todavía a
+    // "solo su propio registro" por la misma razón documentada ahí:
+    // columnas intermedias). solicitudesResurtido sigue exclusivo de
+    // Staff/Encargado/Admin — Emprendedora/Líder nunca entra a esa parte.
     match /listaDeseos/{id} {
-      allow read, write: if esInterno();
+      allow read, write: if estaAutenticado();
     }
     match /solicitudesResurtido/{id} {
       allow read, write: if esInterno();
     }
     match /listaDeseosHistorialEstados/{id} {
-      allow read, write: if esInterno();
+      allow read, write: if estaAutenticado();
     }
     match /listaDeseosMeta/{id} {
-      allow read, write: if esInterno();
+      allow read, write: if estaAutenticado();
     }
 
     // actividadesCatalogoStaff/{id}, actividadesStaff/{id},
@@ -258,12 +262,16 @@ service cloud.firestore {
     }
 
     // auditoria/{id} — Bitácora de actividad ("Actividad"): quién hizo
-    // qué y cuándo en los 3 portales internos — ver js/auditoria-
-    // firestore-sync.js. Exclusivo de Staff/Encargado/Admin (Emprendedora/
-    // Líder no tiene esta pestaña). Nunca se edita ni se borra un
-    // registro ya escrito — solo se agregan documentos nuevos.
+    // qué y cuándo. Leerla sigue siendo exclusivo de Staff/Encargado/
+    // Admin (Emprendedora/Líder no tiene esta pestaña), pero CREAR un
+    // registro es de cualquier autenticado — crearSolicitudListaDeseos()
+    // también la llama desde "Mi lista de deseos" (Emprendedora/Líder),
+    // y esa acción sí debe quedar registrada. Nunca se edita ni se borra
+    // un registro ya escrito — solo se agregan documentos nuevos.
     match /auditoria/{id} {
-      allow read, write: if esInterno();
+      allow read: if esInterno();
+      allow create: if estaAutenticado();
+      allow update, delete: if esInterno();
     }
 
     // Todo lo que no esté arriba sigue en localStorage — se deniega por

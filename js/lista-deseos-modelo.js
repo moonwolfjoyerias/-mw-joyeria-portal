@@ -40,7 +40,7 @@ const ESTADOS_RESURTIDO = {
   atendida: 'Atendida'
 };
 
-const ROLES_CREADOR_DESEOS = { staff: 'Staff', encargado: 'Encargado', admin: 'Admin' };
+const ROLES_CREADOR_DESEOS = { staff: 'Staff', encargado: 'Encargado', admin: 'Admin', emprendedora: 'Emprendedora', lider: 'Líder' };
 
 // Mapeo compartido a las clases de badge ya existentes en el portal
 // (ver css/styles.css) — ninguna es nueva, se reutilizan tal cual.

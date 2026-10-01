@@ -1,11 +1,13 @@
 // MW JOYERÍA — Inicio de Emprendedora: resumen de apartados y lista de deseos
 //
 // Depende de apartados-modelo.js (piezas apartadas / próximo vencimiento,
-// misma fuente que usa la página "Mis apartados") y de deseos-ejemplo.js
-// (conteo de lista de deseos, misma fuente que usa esa página).
+// misma fuente que usa la página "Mis apartados") y de lista-deseos-
+// modelo.js (conteo de mis propias solicitudes, misma fuente real que
+// usa "Mi lista de deseos" — ver js/deseos.js).
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
+  if (typeof listaDeseosRepoListo !== 'undefined') await listaDeseosRepoListo;
 
   renderResumenApartados();
   renderResumenListaDeseos();
@@ -43,7 +45,9 @@ function renderResumenApartados() {
 
 function renderResumenListaDeseos() {
   const statDeseos = document.getElementById('statListaDeseos');
-  if (statDeseos && typeof SOLICITUDES_EJEMPLO !== 'undefined') {
-    statDeseos.textContent = SOLICITUDES_EJEMPLO.length;
-  }
+  if (!statDeseos || typeof obtenerListaDeseos !== 'function') return;
+
+  const idActual = (typeof obtenerIdPersonaActualPortal === 'function' && obtenerIdPersonaActualPortal()) || '';
+  const propias = idActual ? obtenerListaDeseos().filter(s => s.personaId === idActual) : [];
+  statDeseos.textContent = propias.length;
 }
