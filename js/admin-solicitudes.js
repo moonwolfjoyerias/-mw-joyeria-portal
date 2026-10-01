@@ -310,7 +310,7 @@ function abrirModalRechazarAdmin(solicitud) {
     <p class="modal-sub">Explica por qué se rechaza la solicitud de <strong>${escapeHTMLSolAdmin(solicitud.nombreCompleto)}</strong>. ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} podrá ver este motivo.</p>
 
     <label for="motivoRechazoInput">Motivo del rechazo *</label>
-    <textarea id="motivoRechazoInput" rows="3" placeholder="Ej. La información proporcionada está incompleta." style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;resize:vertical;"></textarea>
+    <textarea id="motivoRechazoInput" rows="3" placeholder="Ej. La información proporcionada está incompleta." style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:var(--mw-heading-d);resize:vertical;"></textarea>
 
     <div id="motivoError" class="auth-error" style="display:none;"></div>
 
@@ -459,7 +459,7 @@ function abrirModalRechazarEventoAdmin(solicitud) {
     <p class="modal-sub">Explica por qué se rechaza "<strong>${escapeHTMLSolAdmin(solicitud.titulo)}</strong>". ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} podrá ver este motivo.</p>
 
     <label for="motivoRechazoEventoInput">Motivo del rechazo *</label>
-    <textarea id="motivoRechazoEventoInput" rows="3" placeholder="Ej. Ya hay otro evento programado ese día." style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;resize:vertical;"></textarea>
+    <textarea id="motivoRechazoEventoInput" rows="3" placeholder="Ej. Ya hay otro evento programado ese día." style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:var(--mw-heading-d);resize:vertical;"></textarea>
 
     <div id="motivoEventoError" class="auth-error" style="display:none;"></div>
 

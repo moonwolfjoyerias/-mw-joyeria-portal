@@ -135,11 +135,11 @@ function abrirModalCambioRama(personaId, liderReal) {
     <h3>Solicitar cambio de rama de ${escapeHTMLMiEquipo(nombreCompletoPersona(persona))}</h3>
     <p class="modal-sub">Administración revisará tu solicitud y decidirá si la confirma.</p>
     <label for="liderDestinoSelect">¿A la rama de qué líder debería pasar?</label>
-    <select id="liderDestinoSelect" style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;margin-bottom:1.1rem;">
+    <select id="liderDestinoSelect" style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:var(--mw-heading-d);margin-bottom:1.1rem;">
       ${otrasLideres.map(l => `<option value="${l.id}">${escapeHTMLMiEquipo(nombreCompletoPersona(l))}</option>`).join('')}
     </select>
     <label for="motivoCambioRamaInput">Motivo (opcional)</label>
-    <textarea id="motivoCambioRamaInput" rows="3" placeholder="Ej. se inscribió bajo mí por error, en realidad es invitada de..." style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;resize:vertical;"></textarea>
+    <textarea id="motivoCambioRamaInput" rows="3" placeholder="Ej. se inscribió bajo mí por error, en realidad es invitada de..." style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:var(--mw-heading-d);resize:vertical;"></textarea>
     <div id="cambioRamaError" class="auth-error" style="display:none;"></div>
     <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="confirmarSolicitarCambioRamaBtn">Enviar solicitud</button>
   `;
@@ -296,7 +296,7 @@ function abrirModalReclamar(personaId, liderReal) {
     <h3>Solicitar a ${escapeHTMLMiEquipo(nombreCompletoPersona(persona))} para tu equipo</h3>
     <p class="modal-sub">Administración revisará tu solicitud y decidirá si la confirma.</p>
     <label for="motivoReclamarInput">Motivo (opcional)</label>
-    <textarea id="motivoReclamarInput" rows="3" placeholder="Ej. yo la invité, se inscribió bajo otra líder por error" style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;resize:vertical;"></textarea>
+    <textarea id="motivoReclamarInput" rows="3" placeholder="Ej. yo la invité, se inscribió bajo otra líder por error" style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:var(--mw-heading-d);resize:vertical;"></textarea>
     <div id="reclamarError" class="auth-error" style="display:none;"></div>
     <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="confirmarReclamarBtn">Enviar solicitud</button>
   `;

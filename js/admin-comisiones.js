@@ -1845,7 +1845,7 @@ function abrirModalRangoManual(liderId) {
     <h3>Rango manual — ${escapeHTMLPersonas(nombreCompletoPersona(lider))}</h3>
     <p class="modal-sub">Cambia solo el % que se paga en ${formatearPeriodoLabelComisiones(periodoActual)}. No modifica su rango histórico ni su recalificación real de Plan MW.</p>
     <label for="rangoManualSelect">Rango a aplicar este mes de pago</label>
-    <select id="rangoManualSelect" style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;margin-bottom:1.1rem;">
+    <select id="rangoManualSelect" style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:var(--mw-heading-d);margin-bottom:1.1rem;">
       <option value="">Usar el rango calculado automáticamente</option>
       ${RANGOS_MW.map(r => `<option value="${r.key}" ${actual === r.key ? 'selected' : ''}>${r.label}</option>`).join('')}
     </select>

@@ -1048,7 +1048,7 @@ function abrirModalSubirFotoSitio(espacio) {
     <div class="auth-icon">${FOTOS_SITIO_ICONO_AGREGAR}</div>
     <h3>${escapeHTMLPersonas(espacio.ubicacionLabel)}</h3>
     <p class="modal-sub">${escapeHTMLPersonas(espacio.dondeAparece)}</p>
-    <label style="display:block;color:#3b2a54;font-size:11px;font-weight:600;margin:12px 0 6px;">Fotografía</label>
+    <label style="display:block;color:var(--mwv-3b2a54);font-size:11px;font-weight:600;margin:12px 0 6px;">Fotografía</label>
     <input type="file" id="fotoSitioArchivo" accept="image/*">
     <div class="foto-upload-preview" id="fotoSitioPreview">Selecciona una imagen para ver la vista previa aquí.</div>
     <div class="modal-note">JPG, PNG o WEBP — máximo 5 MB. Se muestra automáticamente en el sitio público al guardar.</div>

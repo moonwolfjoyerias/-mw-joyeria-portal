@@ -266,7 +266,7 @@ function abrirModalEditar(id) {
     <h3>Editar: ${pieza.producto}</h3>
     <p class="modal-sub">Elige la nueva variante de esta pieza.</p>
     <label for="editVarianteSelect">Color / talla</label>
-    <select id="editVarianteSelect" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+    <select id="editVarianteSelect" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
       ${opciones.map(v => `<option value="${v.id}" ${v.id === pieza.varianteId ? 'selected' : ''}>${etiquetaVariante(v)}</option>`).join('')}
     </select>
     <button class="btn btn-primary" style="width:100%;margin-top:12px;" id="guardarEdicionBtn">Guardar cambios</button>

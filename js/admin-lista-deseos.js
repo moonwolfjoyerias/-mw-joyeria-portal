@@ -194,7 +194,7 @@ function abrirModalNuevaSolicitudDeseos() {
     <h3>Nueva solicitud de lista de deseos</h3>
 
     <label for="ldDestinatario">¿Para quién es esta solicitud?</label>
-    <select id="ldDestinatario" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+    <select id="ldDestinatario" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
       <option value="emprendedora">Para una Emprendedora</option>
       <option value="publico">Público en general</option>
     </select>
@@ -369,7 +369,7 @@ function abrirDetalleSolicitudDeseosAdmin(id) {
     ${s.comentarioEstado ? `<div class="modal-note"><strong>Comentario:</strong> ${escapeHTML(s.comentarioEstado)}</div>` : ''}
 
     <div class="eyebrow" style="margin-top:14px;">Actualizar estado</div>
-    <select id="ldNuevoEstado" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+    <select id="ldNuevoEstado" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
       ${Object.entries(ESTADOS_LISTA_DESEOS).map(([k, label]) => `<option value="${k}" ${k === s.estado ? 'selected' : ''}>${label}</option>`).join('')}
     </select>
     <input type="text" id="ldComentarioEstado" placeholder="Comentario (opcional)" style="margin-top:8px;">

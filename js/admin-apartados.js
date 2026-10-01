@@ -74,20 +74,20 @@ function abrirModalNuevaVentana() {
     <input id="nvTelefono" type="text" placeholder="Ej. 444 123 4567">
 
     <label for="nvCategoria">Categoría</label>
-    <select id="nvCategoria" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+    <select id="nvCategoria" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
       <option value="normal">Emprendedora normal (3 días)</option>
       <option value="foranea">Emprendedora foránea (15 días)</option>
       <option value="vip">Líder VIP (sin depósito, sin vencimiento)</option>
     </select>
 
     <label for="nvProductoId">Producto *</label>
-    <select id="nvProductoId" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+    <select id="nvProductoId" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
       <option value="">Selecciona un producto...</option>
       ${obtenerCatalogoStaffStorage().filter(productoDisponible).map(p => `<option value="${p.id}">${escapeHTML(p.nombre)} — $${Number(precioConDescuento(p)).toLocaleString('es-MX')} MXN</option>`).join('')}
     </select>
 
     <label for="nvVarianteId">Variante (color / talla) *</label>
-    <select id="nvVarianteId" disabled style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+    <select id="nvVarianteId" disabled style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
       <option value="">Primero selecciona un producto</option>
     </select>
 
@@ -298,7 +298,7 @@ function abrirModalConfirmarDeposito(ventanaId) {
     <input id="depositoMonto" type="number" min="${DEPOSITO_BASE}" step="0.01" value="${DEPOSITO_BASE}" placeholder="Mínimo $${DEPOSITO_BASE}">
 
     <label for="depositoMetodo">Método de pago</label>
-    <select id="depositoMetodo" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+    <select id="depositoMetodo" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
       <option value="">Selecciona una opción</option>
       <option value="transferencia">Transferencia</option>
       <option value="local">Pago en local</option>
@@ -398,7 +398,7 @@ function abrirModalLiquidar(v, decisionDeposito) {
 
     ${montoEsperado > 0 ? `
       <label for="liquidarMetodo">Método de pago</label>
-      <select id="liquidarMetodo" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+      <select id="liquidarMetodo" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
         <option value="">Selecciona una opción</option>
         <option value="transferencia">Transferencia</option>
         <option value="local">Pago en local</option>

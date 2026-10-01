@@ -307,7 +307,7 @@ function abrirModalNuevaSolicitudEvento() {
     <input id="solEvLugar" type="text" placeholder="Ej. Plaza Principal, Rioverde, S.L.P.">
 
     <label for="solEvDescripcion">Descripción / invitación *</label>
-    <textarea id="solEvDescripcion" rows="3" placeholder="Cuéntales a las demás de qué se trata y por qué deberían ir." style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:#312044;resize:vertical;"></textarea>
+    <textarea id="solEvDescripcion" rows="3" placeholder="Cuéntales a las demás de qué se trata y por qué deberían ir." style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:var(--mw-heading-d);resize:vertical;"></textarea>
 
     <div id="solEvError" class="auth-error" style="display:none;"></div>
 

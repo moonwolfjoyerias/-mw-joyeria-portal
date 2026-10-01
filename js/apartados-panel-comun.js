@@ -138,7 +138,7 @@ function crearFilaVentana(v) {
 
       <td>
         <span class="status ${estado.clase}">${estado.texto}</span>
-        ${v.resolucionDeposito ? `<small style="display:block;margin-top:4px;color:#766d83;">${obtenerTextoResolucion(v.resolucionDeposito)}</small>` : ""}
+        ${v.resolucionDeposito ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">${obtenerTextoResolucion(v.resolucionDeposito)}</small>` : ""}
         ${vencidaAviso ? `<small style="display:block;margin-top:4px;color:#bd4c4c;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Vencida — pendiente de gestionar</small>` : ""}
       </td>
 

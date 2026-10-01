@@ -253,7 +253,7 @@ function abrirModalApartar(productoId) {
     <h3>Apartar: ${escapeHTMLCatalogoVariantes(producto.nombre)}</h3>
     <p class="modal-sub">Elige la variante que quieres apartar.</p>
     <label for="apartarVarianteSelect">Color / talla</label>
-    <select id="apartarVarianteSelect" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;">
+    <select id="apartarVarianteSelect" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
       <option value="">Selecciona...</option>
       ${disponibles.map(v => `<option value="${v.id}">${escapeHTMLCatalogoVariantes(etiquetaVariante(v))}</option>`).join('')}
     </select>
