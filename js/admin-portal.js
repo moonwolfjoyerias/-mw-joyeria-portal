@@ -207,10 +207,12 @@ function escapeHTMLDash(texto) {
 // ACTIVIDAD RECIENTE (misma bitácora compartida que Actividad)
 // ============================================================
 
-function renderActividadRecienteDash() {
+async function renderActividadRecienteDash() {
 
   const wrap = document.getElementById('dashActividadReciente');
   if (!wrap) return;
+
+  if (typeof auditoriaRepoListo !== 'undefined') await auditoriaRepoListo;
 
   const registros = (typeof obtenerAuditoriaCompartida === 'function' ? obtenerAuditoriaCompartida() : []).slice(0, 6);
 

@@ -25,7 +25,9 @@ const ROLES_ACTIVIDAD = {
 // sin relación con el trabajo diario de Staff.
 const MODULOS_ACTIVIDAD_VISIBLES_STAFF = ['catalogo', 'apartados', 'calendario', 'lista_deseos'];
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  if (typeof auditoriaRepoListo !== 'undefined') await auditoriaRepoListo;
 
   // ACTIVIDAD_ROL_VISOR lo declara cada portal en su propio <script>
   // inline (admin/rh/staff-actividad.html). Solo Admin puede ver las

@@ -257,6 +257,15 @@ service cloud.firestore {
       allow write: if esInterno();
     }
 
+    // auditoria/{id} — Bitácora de actividad ("Actividad"): quién hizo
+    // qué y cuándo en los 3 portales internos — ver js/auditoria-
+    // firestore-sync.js. Exclusivo de Staff/Encargado/Admin (Emprendedora/
+    // Líder no tiene esta pestaña). Nunca se edita ni se borra un
+    // registro ya escrito — solo se agregan documentos nuevos.
+    match /auditoria/{id} {
+      allow read, write: if esInterno();
+    }
+
     // Todo lo que no esté arriba sigue en localStorage — se deniega por
     // defecto hasta que tenga su propia migración y sus propias reglas.
     match /{document=**} {

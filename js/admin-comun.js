@@ -24,8 +24,6 @@ const ADMIN_IDENTIDAD = (function () {
   return { usuarioId: 'admin01', usuarioNombre: 'Claudia', rol: 'admin' };
 })();
 
-const ADMIN_AUDITORIA_STORAGE_KEY = 'mw-auditoria-v1';
-
 let _adminAccionConfirmar = null;
 
 // ============================================================
@@ -74,15 +72,16 @@ function cerrarModalOverlayAdmin() {
 
 
 // ============================================================
-// AUDITORÍA (preparada para Firebase — misma bitácora que Encargado)
+// AUDITORÍA — ver js/auditoria-firestore-sync.js (AUDITORIA_CACHE,
+// registrarAuditoriaRepo). Misma bitácora compartida que Encargado/
+// Staff (js/auditoria-modelo.js), solo que ya con la identidad de
+// Admin resuelta.
 // ============================================================
 
 function registrarAuditoriaAdmin({ modulo, accion, descripcion }) {
 
-  const registros = obtenerAuditoriaAdmin();
-
-  registros.unshift({
-    id: `AUD-${Date.now()}`,
+  registrarAuditoriaRepo({
+    id: `AUD-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
     usuarioId: ADMIN_IDENTIDAD.usuarioId,
     usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre,
     rol: ADMIN_IDENTIDAD.rol,
@@ -92,17 +91,10 @@ function registrarAuditoriaAdmin({ modulo, accion, descripcion }) {
     fecha: new Date().toISOString()
   });
 
-  localStorage.setItem(ADMIN_AUDITORIA_STORAGE_KEY, JSON.stringify(registros));
-
 }
 
 function obtenerAuditoriaAdmin() {
-  try {
-    const registros = JSON.parse(localStorage.getItem(ADMIN_AUDITORIA_STORAGE_KEY));
-    return Array.isArray(registros) ? registros : [];
-  } catch (error) {
-    return [];
-  }
+  return AUDITORIA_CACHE;
 }
 
 // ============================================================

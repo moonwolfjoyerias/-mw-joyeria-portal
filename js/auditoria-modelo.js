@@ -1,19 +1,14 @@
 // MW JOYERÍA — Bitácora de actividad compartida (Staff / Encargado / Admin)
 //
-// Los 3 portales internos escriben en la misma llave de localStorage para
-// que cualquiera de los 3 roles pueda ver, desde su pestaña "Actividad",
-// quién hizo qué y cuándo — sin importar en qué portal ocurrió la acción.
-//
-// ⚠️ TEMPORAL: localStorage simula la base de datos / Firestore.
-
-const AUDITORIA_STORAGE_KEY = 'mw-auditoria-v1';
+// El almacenamiento real ya no vive aquí — ver js/auditoria-firestore-
+// sync.js (AUDITORIA_CACHE, auditoriaRepoListo, registrarAuditoriaRepo).
+// Este archivo solo expone las mismas dos funciones de siempre para
+// que ninguna página que ya las usa tenga que cambiar cómo las llama.
 
 function registrarAuditoria({ usuarioId, usuarioNombre, rol, modulo, accion, descripcion }) {
 
-  const registros = obtenerAuditoriaCompartida();
-
-  registros.unshift({
-    id: `AUD-${Date.now()}`,
+  registrarAuditoriaRepo({
+    id: `AUD-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
     usuarioId,
     usuarioNombre,
     rol,
@@ -23,15 +18,8 @@ function registrarAuditoria({ usuarioId, usuarioNombre, rol, modulo, accion, des
     fecha: new Date().toISOString()
   });
 
-  localStorage.setItem(AUDITORIA_STORAGE_KEY, JSON.stringify(registros));
-
 }
 
 function obtenerAuditoriaCompartida() {
-  try {
-    const registros = JSON.parse(localStorage.getItem(AUDITORIA_STORAGE_KEY));
-    return Array.isArray(registros) ? registros : [];
-  } catch (error) {
-    return [];
-  }
+  return AUDITORIA_CACHE;
 }

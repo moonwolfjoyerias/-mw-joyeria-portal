@@ -23,8 +23,6 @@ const ENCARGADO_IDENTIDAD = (function () {
   return { usuarioId: 'encargado01', usuarioNombre: 'Encargado', rol: 'encargado' };
 })();
 
-const ENCARGADO_AUDITORIA_STORAGE_KEY = 'mw-auditoria-v1';
-
 let _encargadoAccionConfirmar = null;
 
 // ============================================================
@@ -76,17 +74,16 @@ function cerrarModalOverlayEncargado() {
 
 
 // ============================================================
-// AUDITORÍA (preparada para Firebase)
+// AUDITORÍA — ver js/auditoria-firestore-sync.js (AUDITORIA_CACHE,
+// registrarAuditoriaRepo). Misma bitácora compartida que Admin/Staff.
 // ============================================================
 
 // Registra únicamente acciones que modifican, crean, eliminan o
 // cambian estados — nunca búsquedas, filtros o navegación.
 function registrarAuditoriaEncargado({ modulo, accion, descripcion }) {
 
-  const registros = obtenerAuditoriaEncargado();
-
-  registros.unshift({
-    id: `AUD-${Date.now()}`,
+  registrarAuditoriaRepo({
+    id: `AUD-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
     usuarioId: ENCARGADO_IDENTIDAD.usuarioId,
     usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre,
     rol: ENCARGADO_IDENTIDAD.rol,
@@ -96,17 +93,10 @@ function registrarAuditoriaEncargado({ modulo, accion, descripcion }) {
     fecha: new Date().toISOString()
   });
 
-  localStorage.setItem(ENCARGADO_AUDITORIA_STORAGE_KEY, JSON.stringify(registros));
-
 }
 
 function obtenerAuditoriaEncargado() {
-  try {
-    const registros = JSON.parse(localStorage.getItem(ENCARGADO_AUDITORIA_STORAGE_KEY));
-    return Array.isArray(registros) ? registros : [];
-  } catch (error) {
-    return [];
-  }
+  return AUDITORIA_CACHE;
 }
 
 // ============================================================
