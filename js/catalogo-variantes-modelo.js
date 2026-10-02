@@ -105,11 +105,55 @@ function guardarCatalogoStaffStorage(catalogo) {
   guardarCatalogoRepo(catalogo); // async, sin esperar — mismo patrón "fire and forget" que ya tenía este guardado
 }
 
+// LOG-01 de la auditoría: antes esto operaba sobre la copia del
+// catálogo en memoria de ESTE dispositivo y guardaba con un
+// lectura-modificación-escritura optimista de TODO el arreglo — si dos
+// cajas tenían abierta la última pieza de una variante casi al mismo
+// tiempo, ambas veían éxito y creaban un apartado, dejando dos
+// apartados reclamando la misma unidad física. Con Firestore real, el
+// descuento ahora ocurre dentro de una transacción (runTransaction)
+// SOLO sobre el documento de ese producto — Firestore reintenta la
+// transacción si el documento cambió entre la lectura y la escritura,
+// así que de dos intentos casi simultáneos sobre la última pieza, la
+// segunda transacción vuelve a leer el stock YA en 0 y falla limpio,
+// en vez de que ambas crean que tuvieron éxito.
+//
+// Ahora es asíncrona (regresa una Promise) — quien llama debe esperarla
+// antes de crear la pieza del apartado. En modo local/demo (sin
+// Firestore real) no hay otro dispositivo con quien pelear el stock, así
+// que se queda con el mismo cálculo síncrono de siempre, solo envuelto
+// en una Promise para que el contrato sea igual en ambos casos.
+
 // Descuenta 1 pieza de una variante exacta. Falla explícitamente (sin
 // tocar nada) si el producto/variante ya no existe o no tiene stock —
 // evita apartar una pieza que en realidad ya no hay.
-function descontarStockVariante(productoId, varianteId) {
+async function descontarStockVariante(productoId, varianteId) {
   if (!productoId || !varianteId) return { ok: true }; // pieza sin producto real vinculado (dato antiguo) — no hay nada que descontar
+
+  if (dbFirestore) {
+    try {
+      return await dbFirestore.runTransaction(async tx => {
+        const ref = dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE).doc(String(productoId));
+        const doc = await tx.get(ref);
+        if (!doc.exists) return { ok: false, error: 'Ese producto ya no existe en el catálogo.' };
+        const datos = doc.data();
+        const variantes = Array.isArray(datos.variantes) ? datos.variantes : [];
+        const indice = variantes.findIndex(v => v.id === varianteId);
+        if (indice === -1) return { ok: false, error: 'Esa variante ya no existe en el catálogo.' };
+        const variante = variantes[indice];
+        if (!variante.stock || variante.stock <= 0) {
+          return { ok: false, error: `Ya no hay existencia de ${datos.nombre} (${etiquetaVariante(variante)}).` };
+        }
+        const variantesActualizadas = variantes.map((v, i) => i === indice ? { ...v, stock: v.stock - 1 } : v);
+        tx.update(ref, { variantes: variantesActualizadas });
+        actualizarVarianteEnCacheLocal(productoId, varianteId, variantesActualizadas.find(v => v.id === varianteId).stock);
+        return { ok: true };
+      });
+    } catch (error) {
+      return { ok: false, error: 'No se pudo apartar la pieza: ' + (error && error.message ? error.message : 'error de conexión') + '.' };
+    }
+  }
+
   const catalogo = obtenerCatalogoStaffStorage();
   const producto = catalogo.find(p => p.id === productoId);
   if (!producto) return { ok: false, error: 'Ese producto ya no existe en el catálogo.' };
@@ -122,9 +166,35 @@ function descontarStockVariante(productoId, varianteId) {
 }
 
 // Contraparte de descontarStockVariante — se llama al cancelar/desapartar
-// una pieza, para que el inventario no quede perdido para siempre.
-function restaurarStockVariante(productoId, varianteId) {
+// una pieza, para que el inventario no quede perdido para siempre. No
+// necesita ser transacción (sumar 1 nunca "sobre-restaura" por una
+// carrera entre dispositivos de la misma forma en que restar sí puede
+// vender de más), pero igual usa FieldValue-free lectura-escritura
+// dentro de una transacción corta para no pisar un descuento concurrente
+// de la MISMA variante.
+async function restaurarStockVariante(productoId, varianteId) {
   if (!productoId || !varianteId) return;
+
+  if (dbFirestore) {
+    try {
+      await dbFirestore.runTransaction(async tx => {
+        const ref = dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE).doc(String(productoId));
+        const doc = await tx.get(ref);
+        if (!doc.exists) return;
+        const datos = doc.data();
+        const variantes = Array.isArray(datos.variantes) ? datos.variantes : [];
+        const indice = variantes.findIndex(v => v.id === varianteId);
+        if (indice === -1) return;
+        const variantesActualizadas = variantes.map((v, i) => i === indice ? { ...v, stock: (v.stock || 0) + 1 } : v);
+        tx.update(ref, { variantes: variantesActualizadas });
+        actualizarVarianteEnCacheLocal(productoId, varianteId, variantesActualizadas.find(v => v.id === varianteId).stock);
+      });
+    } catch (error) {
+      if (typeof mostrarToast === 'function') mostrarToast('No se pudo restaurar la existencia en el catálogo: ' + (error && error.message ? error.message : 'error de conexión') + '.');
+    }
+    return;
+  }
+
   const catalogo = obtenerCatalogoStaffStorage();
   const producto = catalogo.find(p => p.id === productoId);
   if (!producto) return;
@@ -132,6 +202,20 @@ function restaurarStockVariante(productoId, varianteId) {
   if (!variante) return;
   variante.stock += 1;
   guardarCatalogoStaffStorage(catalogo);
+}
+
+// Refleja en CATALOGO_CACHE (el arreglo en memoria que todo lo demás
+// sigue leyendo de forma síncrona) el stock que la transacción de
+// arriba ya confirmó en el servidor — para no disparar un resync
+// completo del catálogo (guardarCatalogoRepo) por un solo número, que
+// además podría pisar cambios concurrentes de OTROS productos hechos
+// por otro dispositivo entre la transacción y ese resync.
+function actualizarVarianteEnCacheLocal(productoId, varianteId, nuevoStock) {
+  if (typeof CATALOGO_CACHE === 'undefined') return;
+  const producto = CATALOGO_CACHE.find(p => p.id === productoId);
+  const variante = producto?.variantes?.find(v => v.id === varianteId);
+  if (variante) variante.stock = nuevoStock;
+  try { localStorage.setItem(CATALOGO_STORAGE_KEY, JSON.stringify(CATALOGO_CACHE)); } catch (error) { /* noop */ }
 }
 
 function escapeHTMLCatalogoVariantes(texto) {

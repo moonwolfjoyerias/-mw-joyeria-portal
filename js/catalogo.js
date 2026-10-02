@@ -274,7 +274,7 @@ function abrirModalApartar(productoId) {
 // esta persona ya tiene una ventana/crédito o si tiene que pedirlo —
 // exactamente lo que hace Staff al abrir una ventana nueva
 // (abrirVentanaApartado ya reutiliza el crédito guardado sola).
-function mostrarPasoConfirmarApartar(producto, variante) {
+async function mostrarPasoConfirmarApartar(producto, variante) {
   if (!usuarioIdActual) { mostrarToast('No se pudo identificar tu cuenta — vuelve a iniciar sesión.'); return; }
 
   const datosPieza = {
@@ -287,7 +287,7 @@ function mostrarPasoConfirmarApartar(producto, variante) {
   );
 
   if (ventanaExistente) {
-    const resultado = agregarPiezaAVentana(ventanaExistente, datosPieza, null);
+    const resultado = await agregarPiezaAVentana(ventanaExistente, datosPieza, null);
     if (!resultado.ok) { mostrarToast(resultado.error); return; }
     guardarVentanasApartado(obtenerVentanasApartado().map(v => v.id === ventanaExistente.id ? ventanaExistente : v));
     aplicarFiltros(); // refresca el grid: la existencia de la variante ya bajó
@@ -305,7 +305,7 @@ function mostrarPasoConfirmarApartar(producto, variante) {
   const nuevaVentana = abrirVentanaApartado({
     usuarioId: usuarioIdActual, usuarioNombre: usuarioNombreActual, telefono: persona?.telefono || '', categoria: 'normal'
   }, null);
-  const resultado = agregarPiezaAVentana(nuevaVentana, datosPieza, null);
+  const resultado = await agregarPiezaAVentana(nuevaVentana, datosPieza, null);
   if (!resultado.ok) { mostrarToast(resultado.error); return; }
 
   const ventanas = obtenerVentanasApartado();

@@ -1,18 +1,19 @@
 rules_version = '2';
 
-// MW JOYERÍA — Reglas de seguridad de Firestore (Fase 2)
+// MW JOYERÍA — Reglas de seguridad de Firestore
 //
-// Cubre SOLO lo que ya está migrado a Firestore en esta fase: el perfil
-// de cada cuenta real (colección "users", usada por js/auth-service.js
-// para saber el rol de quien inició sesión), el Catálogo (colección
-// "productos", ver js/catalogo-firestore-sync.js), Apartados, Solicitudes
-// de inscripción y Personas — Emprendedoras/Líderes (colección
-// "personas", ver js/personas-firestore-sync.js). Todo lo demás (Nómina,
-// Comisiones como registro propio, etc.) sigue funcionando en
-// localStorage — la regla final del archivo lo deniega explícitamente
-// para que nadie intente leer/escribir esas colecciones desde el
-// cliente antes de que tengan su propia migración y sus propias reglas
-// (ver AUDITORIA-FIREBASE.md).
+// Este encabezado quedó desactualizado conforme se fue migrando más a
+// Firestore (Catálogo, Apartados, Personas, Cuentas, Notificaciones,
+// Lista de deseos, Actividades del Staff, Nómina, Eventos, Auditoría,
+// Fotos del sitio) — ya no refleja solo "Fase 2". Cada bloque de abajo
+// documenta su propio alcance y límites conocidos en el momento en que
+// se escribió; no hay un resumen único que valga la pena mantener aquí.
+// Para el estado real de cada colección, ver el comentario de su propio
+// bloque más abajo, no este encabezado.
+//
+// La última revisión de seguridad completa es la auditoría del 1 de
+// octubre de 2026 (hallazgos SEC-01 a SEC-10) — varios bloques de este
+// archivo incluyen notas citándola directamente.
 //
 // Despliega estas reglas desde Firebase Console → Firestore Database →
 // Reglas (pega este archivo completo y publica), o con la CLI:
@@ -139,6 +140,18 @@ service cloud.firestore {
       allow write: if estaAutenticado() && (esInterno() || miPerfil().personaId == id);
     }
 
+    // personasFinanciero/{id} — SEC-01 de la auditoría: datos bancarios
+    // (CLABE, banco, titular) y cifras financieras individuales
+    // (constancia.montoMesActual, rifa.montoAcumuladoMes) ya NO viven
+    // dentro de personas/{id} — ese documento es legible por cualquier
+    // autenticado (ver arriba), y el documento de requisitos clasifica
+    // estos datos como "Restringido: persona misma + Administrativo
+    // ÚNICAMENTE" (Sección 14). Viven en esta colección aparte, con su
+    // propia regla, mucho más estricta que el resto del perfil.
+    match /personasFinanciero/{id} {
+      allow read, write: if estaAutenticado() && (esAdmin() || miPerfil().personaId == id);
+    }
+
     // personasMeta/estado — igual que catalogoMeta/apartadosMeta: solo
     // trackea si Personas ya se sembró antes en este proyecto.
     match /personasMeta/{id} {
@@ -201,35 +214,79 @@ service cloud.firestore {
       allow read, write: if esInterno();
     }
 
-    // nominaEmpleados/{id}, nominaConceptos/{id},
-    // nominaHistorialAjustes/{id}, nominaHistorialEstados/{id},
-    // nominaSolicitudes/{id} y nominaMeta/{id} (incluye el documento
-    // "periodos", el mapa completo de nóminas por semana) — ver
-    // js/nomina-firestore-sync.js. Exclusivo de Staff/Encargado/Admin,
-    // mismo criterio que Lista de deseos/Actividades del Staff. La
-    // misma limitación ya documentada arriba para esas dos aplica
-    // aquí: cualquier cuenta interna puede leer el salario de
-    // cualquier otra (antes de Firestore, el mismo dato ya vivía sin
-    // más barrera que un reingreso de contraseña en el navegador — ver
-    // js/staff-mi-cuenta.js → validarAutorizacionNomina — así que esto
-    // no empeora la protección que ya existía, solo la iguala).
+    // SEC-02/SEC-05 de la auditoría: "cada empleado puede ver su propio
+    // recibo — nunca el de otro, y no puede editarlo; RH/Encargado y
+    // Administrativo son los únicos que ven y editan la nómina de
+    // TODOS" (documento, Secciones 14 y 17.3). Antes esInterno() daba
+    // lectura Y ESCRITURA de todo a cualquier Staff, sin que el permiso
+    // permisos.nomina que Admin le asigna/retira a cada Encargado (ver
+    // cuentas-firestore-sync.js) se validara aquí.
+    //
+    // Lo que SÍ se puede cerrar con reglas: escritura (crear/editar
+    // cualquier nómina) queda exclusiva de Admin o de un Encargado con
+    // permisos.nomina == true — Staff pasa a ser de solo lectura, ya
+    // nunca puede modificar un sueldo, ni el propio ni el de otro.
+    //
+    // Lo que NO se puede cerrar solo con reglas: Staff usa una cuenta
+    // COMPARTIDA (un solo uid de Firebase Auth para las 8 personas de
+    // Staff — ver Sección 11 del documento); la identidad individual
+    // ("nombre + contraseña" antes de ver un recibo, en
+    // js/staff-mi-cuenta.js → validarAutorizacionNomina) es, por
+    // diseño, una verificación que solo existe del lado de la
+    // interfaz — Firestore no tiene forma de saber, a partir de ese
+    // mismo uid compartido, cuál de las 8 personas de Staff está
+    // pidiendo el dato, así que no puede limitar la LECTURA al recibo
+    // de una sola de ellas sin cambiar esa cuenta compartida por
+    // cuentas individuales (fuera del alcance de este arreglo).
+    function esEncargadoConNomina() {
+      return miRol() == 'encargado' && miPerfil().permisos.nomina == true;
+    }
+    function puedeEditarNomina() {
+      return esAdmin() || esEncargadoConNomina();
+    }
     match /nominaEmpleados/{id} {
-      allow read, write: if esInterno();
+      allow read: if esInterno();
+      allow write: if puedeEditarNomina();
     }
     match /nominaConceptos/{id} {
-      allow read, write: if esInterno();
+      allow read: if esInterno();
+      allow write: if puedeEditarNomina();
+    }
+    // nominaPeriodos/{empleadoId__periodoKey} — un documento por
+    // semana de nómina de un empleado (antes vivía como una sola llave
+    // dentro de nominaMeta/periodos, un único documento con el mapa
+    // COMPLETO de todas las semanas de TODOS los empleados — ver nota
+    // vieja en js/nomina-firestore-sync.js). Se separó para que, el
+    // día que Staff tenga cuentas individuales, sí sea posible
+    // restringir la lectura a un solo empleadoId; hoy, con cuenta
+    // compartida, la lectura sigue siendo esInterno() por el mismo
+    // motivo explicado arriba.
+    match /nominaPeriodos/{id} {
+      allow read: if esInterno();
+      allow create, delete: if puedeEditarNomina();
+      // Excepción puntual: Staff SÍ necesita poder "firmar" (acusar
+      // recibo) su propia semana desde js/staff-mi-cuenta.js →
+      // firmarReciboNomina — eso es un update que solo toca el campo
+      // firmaEmpleado, nunca sueldo/conceptos/totales. Se permite ese
+      // único caso aunque Staff ya no pueda editar nómina en general.
+      allow update: if puedeEditarNomina()
+        || (esInterno() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['firmaEmpleado']));
     }
     match /nominaHistorialAjustes/{id} {
-      allow read, write: if esInterno();
+      allow read: if esInterno();
+      allow write: if puedeEditarNomina();
     }
     match /nominaHistorialEstados/{id} {
-      allow read, write: if esInterno();
+      allow read: if esInterno();
+      allow write: if puedeEditarNomina();
     }
     match /nominaSolicitudes/{id} {
-      allow read, write: if esInterno();
+      allow read: if esInterno();
+      allow write: if puedeEditarNomina();
     }
     match /nominaMeta/{id} {
-      allow read, write: if esInterno();
+      allow read: if esInterno();
+      allow write: if puedeEditarNomina();
     }
 
     // fotosSitio/{id} — Fotografías fijas del sitio (banners, carruseles,

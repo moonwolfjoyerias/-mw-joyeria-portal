@@ -632,6 +632,19 @@ function guardarInformacionPersona(persona) {
     liderId: liderSeleccionadoEdicion ? liderSeleccionadoEdicion.id : null
   };
 
+  // LOG-03 de la auditoría: dar de baja a una líder con equipo activo
+  // debe comprimir ese equipo hacia su líder superior — nunca de forma
+  // automática, siempre con Admin confirmando (o cambiando) el destino
+  // sugerido. Antes esto no existía: el equipo se quedaba apuntando
+  // indefinidamente a una líder ya dada de baja.
+  if (persona.tipo === 'lider' && persona.estado !== 'baja' && cambios.estado === 'baja') {
+    const equipo = obtenerPersonas().filter(p => p.liderId === persona.id && p.estado !== 'baja');
+    if (equipo.length) {
+      abrirCompresionEquipoBaja(persona, cambios, equipo);
+      return;
+    }
+  }
+
   abrirAutorizacionAdmin({
     titulo: 'Guardar cambios',
     mensaje: `Vas a actualizar la información de ${escapeHTMLPersonas(nombreCompletoPersona(persona))}. Esta acción quedará registrada.`,
@@ -660,6 +673,92 @@ function guardarInformacionPersona(persona) {
       mostrarToastPersonas(`Cambios guardados por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
 
     }
+  });
+
+}
+
+// LOG-03: paso obligatorio al dar de baja a una líder con equipo activo
+// — comprime el equipo hacia el líder inmediato superior (sugerido,
+// nunca automático) o hacia quien Admin elija, o lo deja explícitamente
+// sin asignar si Admin decide resolverlo después. Nunca toca comisiones,
+// constancia ni rifa ya calculadas de ningún periodo anterior — solo
+// cambia liderId hacia adelante.
+function abrirCompresionEquipoBaja(persona, cambios, equipo) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const superior = persona.liderId ? obtenerPersonaPorId(persona.liderId) : null;
+  const superiorValida = !!(superior && superior.tipo === 'lider' && superior.estado !== 'baja');
+  const opcionesDestino = obtenerPersonas().filter(p => p.tipo === 'lider' && p.id !== persona.id && p.estado !== 'baja');
+
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Dar de baja a ${escapeHTMLPersonas(nombreCompletoPersona(persona))} — reasignar su equipo</h3>
+    <p class="modal-sub">${equipo.length} persona${equipo.length === 1 ? '' : 's'} depende${equipo.length === 1 ? '' : 'n'} directamente de ella. Según el documento de requisitos, su equipo se comprime hacia el líder inmediato superior al darla de baja — confirma o cambia el destino antes de continuar.</p>
+    <ul style="max-height:160px;overflow-y:auto;margin:10px 0;padding-left:18px;">
+      ${equipo.map(p => `<li>${escapeHTMLPersonas(nombreCompletoPersona(p))}</li>`).join('')}
+    </ul>
+    <div class="form-field">
+      <label>Nuevo líder para este equipo</label>
+      <select id="destinoCompresionSelect">
+        <option value="">— Dejar sin líder por ahora (decidir después) —</option>
+        ${opcionesDestino.map(p => `
+          <option value="${p.id}" ${superiorValida && p.id === superior.id ? 'selected' : ''}>${escapeHTMLPersonas(nombreCompletoPersona(p))}${superiorValida && p.id === superior.id ? ' (líder superior — sugerida)' : ''}</option>
+        `).join('')}
+      </select>
+      ${!superiorValida ? '<small class="field-help">Esta líder no tenía líder superior activa — elige a quién pasa su equipo, o déjalo sin asignar por ahora.</small>' : ''}
+    </div>
+    <div class="modal-note"><strong>Administración.</strong> Esta acción quedará registrada a tu nombre.</div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" id="compresionCancelarBtn" type="button">Cancelar</button>
+      <button class="btn btn-danger" style="flex:1;" id="compresionConfirmarBtn" type="button">Dar de baja y reasignar</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  document.getElementById('compresionCancelarBtn').addEventListener('click', cerrar);
+
+  document.getElementById('compresionConfirmarBtn').addEventListener('click', () => {
+
+    const destinoId = document.getElementById('destinoCompresionSelect').value || null;
+
+    const personas = obtenerPersonas();
+    const actual = personas.find(p => p.id === persona.id);
+    if (!actual) { cerrar(); return; }
+
+    Object.assign(actual, cambios);
+
+    let movidos = 0;
+    personas.forEach(p => {
+      if (p.liderId === persona.id && p.estado !== 'baja') {
+        p.liderId = destinoId;
+        movidos++;
+      }
+    });
+
+    guardarPersonas(personas);
+
+    const nombreDestino = destinoId ? nombreCompletoPersona(obtenerPersonaPorId(destinoId) || {}) : null;
+    registrarAuditoriaAdmin({
+      modulo: 'personas',
+      accion: 'baja_lider_comprimir_equipo',
+      descripcion: `${nombreCompletoPersona(actual)} dada de baja — equipo de ${movidos} persona${movidos === 1 ? '' : 's'} ${nombreDestino ? `reasignado a ${nombreDestino}` : 'dejado sin líder asignada (pendiente de decidir)'}`
+    });
+
+    cerrar();
+    modoEdicionPersona = false;
+    liderSeleccionadoEdicion = null;
+
+    renderFiltroLideres();
+    aplicarBusquedaPersonas();
+    renderDetallePersona();
+
+    mostrarToastPersonas(`Baja aplicada. Equipo ${nombreDestino ? `reasignado a ${nombreDestino}` : 'sin líder por ahora'}.`);
+
   });
 
 }

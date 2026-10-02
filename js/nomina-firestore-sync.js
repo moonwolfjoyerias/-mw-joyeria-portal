@@ -48,7 +48,8 @@ const NOMINA_HISTORIAL_ESTADOS_COLECCION = 'nominaHistorialEstados';
 const NOMINA_SOLICITUDES_COLECCION = 'nominaSolicitudes';
 const NOMINA_META_COLECCION = 'nominaMeta';
 const NOMINA_META_DOC_ID = 'estado';
-const NOMINA_PERIODOS_DOC_ID = 'periodos';
+const NOMINA_PERIODOS_DOC_ID = 'periodos'; // ya no se usa para escribir (ver NOMINA_PERIODOS_COLECCION) — solo para migrar lo viejo al cargar.
+const NOMINA_PERIODOS_COLECCION = 'nominaPeriodos';
 
 let NOMINA_EMPLEADOS_CACHE = [];
 let NOMINA_CONCEPTOS_CACHE = [];
@@ -108,20 +109,21 @@ async function cargarNominaRepo() {
     try {
       const metaSnap = await dbFirestore.collection(NOMINA_META_COLECCION).doc(NOMINA_META_DOC_ID).get();
       if (metaSnap.exists) {
-        const [snapEmpleados, snapConceptos, snapAjustes, snapEstados, snapSolicitudes, docPeriodos] = await Promise.all([
+        const [snapEmpleados, snapConceptos, snapAjustes, snapEstados, snapSolicitudes, snapPeriodos] = await Promise.all([
           dbFirestore.collection(NOMINA_EMPLEADOS_COLECCION).get(),
           dbFirestore.collection(NOMINA_CONCEPTOS_COLECCION).get(),
           dbFirestore.collection(NOMINA_HISTORIAL_AJUSTES_COLECCION).get(),
           dbFirestore.collection(NOMINA_HISTORIAL_ESTADOS_COLECCION).get(),
           dbFirestore.collection(NOMINA_SOLICITUDES_COLECCION).get(),
-          dbFirestore.collection(NOMINA_META_COLECCION).doc(NOMINA_PERIODOS_DOC_ID).get()
+          dbFirestore.collection(NOMINA_PERIODOS_COLECCION).get()
         ]);
         NOMINA_EMPLEADOS_CACHE = snapEmpleados.docs.map(d => ({ ...d.data(), id: d.id }));
         NOMINA_CONCEPTOS_CACHE = snapConceptos.docs.map(d => ({ ...d.data(), id: d.id }));
         NOMINA_HISTORIAL_AJUSTES_CACHE = snapAjustes.docs.map(d => ({ ...d.data(), id: d.id }));
         NOMINA_HISTORIAL_ESTADOS_CACHE = snapEstados.docs.map(d => ({ ...d.data(), id: d.id }));
         NOMINA_SOLICITUDES_CACHE = snapSolicitudes.docs.map(d => ({ ...d.data(), id: d.id }));
-        NOMINA_PERIODOS_CACHE = docPeriodos.exists ? (docPeriodos.data() || {}) : {};
+        NOMINA_PERIODOS_CACHE = {};
+        snapPeriodos.docs.forEach(d => { NOMINA_PERIODOS_CACHE[d.id] = d.data(); });
       } else {
         // Primera vez que este proyecto de Firestore ve Nómina: solo
         // empleados y conceptos tienen semilla — periodos/historiales/
@@ -201,14 +203,17 @@ function guardarNominaConceptosRepo(lista) {
   return tarea;
 }
 
+// SEC-02: periodos ya no se guarda como un solo documento con el mapa
+// completo (nominaMeta/periodos) — cada semana vive en su propio
+// documento de nominaPeriodos/{clave}, mismo patrón diff-y-resync que
+// el resto de las colecciones de este archivo (ver sincronizarColeccionNomina).
 function guardarNominaPeriodosRepo(periodos) {
   NOMINA_PERIODOS_CACHE = periodos;
   try { localStorage.setItem(NOMINA_PERIODOS_KEY, JSON.stringify(periodos)); } catch (error) { /* noop */ }
   if (!dbFirestore) return Promise.resolve();
+  const lista = Object.keys(periodos).map(clave => ({ ...periodos[clave], id: clave }));
   const tarea = _colaGuardadoNomina.then(() =>
-    dbFirestore.collection(NOMINA_META_COLECCION).doc(NOMINA_PERIODOS_DOC_ID).set(periodos)
-      .then(() => dbFirestore.collection(NOMINA_META_COLECCION).doc(NOMINA_META_DOC_ID).set({ inicializado: true }, { merge: true }))
-      .catch(error => avisarErrorGuardadoNomina(error, 'la nómina de la semana'))
+    sincronizarColeccionNomina(NOMINA_PERIODOS_COLECCION, lista).catch(error => avisarErrorGuardadoNomina(error, 'la nómina de la semana'))
   );
   _colaGuardadoNomina = tarea;
   return tarea;

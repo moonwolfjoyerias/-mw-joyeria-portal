@@ -9,18 +9,10 @@
 // Las credenciales de abajo son únicamente para simulación.
 // En producción se utilizará autenticación real.
 
-const STAFF_USUARIOS_EJEMPLO = [
-  {
-    usuario: 'staff01',
-    nombre: 'Staff MW',
-    password: '1234'
-  },
-  {
-    usuario: 'encargado01',
-    nombre: 'Valentina Cruz',
-    password: '1234'
-  }
-];
+// SEC-03 de la auditoría: igual que PERSONAL_EJEMPLO en
+// staff-apartados-ejemplo.js — credenciales de ejemplo duplicadas, ya
+// vaciadas por el mismo motivo (ver cuentas-internas-modelo.js).
+const STAFF_USUARIOS_EJEMPLO = [];
 
 // Cada producto es un MODELO con un arreglo `variantes`: una entrada por
 // cada combinación Color+Talla real que existe en inventario, con su
