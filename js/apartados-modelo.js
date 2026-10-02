@@ -625,6 +625,61 @@ function verificarApartadosVencidosPendientes() {
 
 }
 
+// NOTIF-01 de la auditoría: aviso PREVENTIVO a la propia Emprendedora/
+// Líder antes de que su ventana venza — lo único que existía antes
+// (verificarApartadosVencidosPendientes, arriba) avisaba a Admin
+// cuando la ventana YA había vencido, nunca antes y nunca a la dueña
+// del apartado. Dos avisos, cada uno una sola vez (mismo patrón de
+// bandera que avisoVencimientoEnviado): 1 día antes y 2 horas antes.
+function verificarApartadosPorVencerPendientes() {
+
+  const ventanas = obtenerVentanasApartado();
+  let huboCambios = false;
+  const ahora = Date.now();
+  const UN_DIA_MS = 24 * 60 * 60 * 1000;
+  const DOS_HORAS_MS = 2 * 60 * 60 * 1000;
+
+  ventanas.forEach(ventana => {
+
+    if (ventana.estado !== 'activa' || !ventana.fechaVencimiento) return;
+    const faltan = new Date(ventana.fechaVencimiento).getTime() - ahora;
+    if (faltan <= 0) return; // ya vencida — eso ya lo cubre verificarApartadosVencidosPendientes
+
+    const piezas = obtenerPiezasActivas(ventana).length;
+    if (!piezas) return;
+
+    if (faltan <= UN_DIA_MS && !ventana.avisoVencimiento1DiaEnviado) {
+      ventana.avisoVencimiento1DiaEnviado = true;
+      huboCambios = true;
+      if (typeof agregarNotificacion === 'function') {
+        agregarNotificacion({
+          texto: `Tu apartado de ${piezas} pieza${piezas === 1 ? '' : 's'} vence en menos de 1 día — si no se liquida o renueva, se pierde.`,
+          link: 'apartados',
+          paraId: ventana.usuarioId,
+          rolDestino: 'emprendedora_lider'
+        });
+      }
+    }
+
+    if (faltan <= DOS_HORAS_MS && !ventana.avisoVencimiento2HorasEnviado) {
+      ventana.avisoVencimiento2HorasEnviado = true;
+      huboCambios = true;
+      if (typeof agregarNotificacion === 'function') {
+        agregarNotificacion({
+          texto: `Tu apartado de ${piezas} pieza${piezas === 1 ? '' : 's'} vence en menos de 2 horas.`,
+          link: 'apartados',
+          paraId: ventana.usuarioId,
+          rolDestino: 'emprendedora_lider'
+        });
+      }
+    }
+
+  });
+
+  if (huboCambios) guardarVentanasApartado(ventanas);
+
+}
+
 // Arranca la carga real (Firestore o localStorage) — se hace aquí, no
 // en apartados-firestore-sync.js, porque la semilla de ejemplo y la
 // prueba de $8,000 necesitan crearVentanaApartado/crearApartadoPieza/

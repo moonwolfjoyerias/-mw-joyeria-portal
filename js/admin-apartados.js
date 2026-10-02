@@ -31,6 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   ventanas = calcularVentanasStaffActuales();
   verificarApartadosVencidosPendientes();
+  if (typeof verificarApartadosPorVencerPendientes === 'function') verificarApartadosPorVencerPendientes();
 
   // Enlace directo desde una notificación (?buscar=NOMBRE) — precarga
   // el buscador y, si hay una sola coincidencia, la abre expandida.

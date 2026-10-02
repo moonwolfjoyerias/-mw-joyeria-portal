@@ -153,6 +153,24 @@ function actualizarEstadoListaDeseos(id, nuevoEstado, { usuarioId, usuarioNombre
   solicitud.comentarioEstado = comentario || null;
   guardarListaDeseos(lista);
 
+  // LOG-09 de la auditoría: marcar una solicitud como "Disponible" (ya
+  // sea desde esta pantalla o desde el nuevo paso de revisión al dar de
+  // alta un producto — ver revisarListaDeseosAlCrearProducto en
+  // catalogo-notificar-deseos.js) nunca avisaba a quien la pidió.
+  if (nuevoEstado === 'disponible' && solicitud.destinatario === 'emprendedora' && solicitud.personaId
+      && typeof agregarNotificacion === 'function') {
+    const piezas = solicitud.piezas || [];
+    const resumen = piezas.length
+      ? (piezas.length === 1 ? piezas[0].producto : `${piezas[0].producto} (+${piezas.length - 1} más)`)
+      : 'tu pieza';
+    agregarNotificacion({
+      texto: `¡Buena noticia! Ya está disponible lo que pediste en tu lista de deseos: ${resumen}.`,
+      link: 'deseos',
+      paraId: solicitud.personaId,
+      rolDestino: 'emprendedora_lider'
+    });
+  }
+
   registrarCambioEstadoListaDeseos({
     listaDeseosId: id,
     estadoAnterior,
