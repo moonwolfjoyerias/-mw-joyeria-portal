@@ -96,6 +96,38 @@ function guardarNotificacionesRepo(lista) {
 
 async function sincronizarNotificacionesConFirestore(lista) {
   const coleccion = dbFirestore.collection(NOTIFICACIONES_COLECCION_FIRESTORE);
+
+  // SEC-08 de la auditoría: una cuenta de Emprendedora/Líder no puede
+  // re-escribir el arreglo COMPLETO de notificaciones (de todo mundo)
+  // en un solo batch — la regla ahora exige ser dueña (paraId ==
+  // su personaId) para TOCAR un documento que ya existía, y ese
+  // arreglo completo siempre trae de vuelta notificaciones ajenas sin
+  // ningún cambio real. En vez de repetir el patrón de "guardar solo lo
+  // propio" (aquí ella también puede estar CREANDO avisos para otra
+  // persona/bandeja, ej. avisar a Staff al cancelar una pieza — eso
+  // sigue permitido para cualquier autenticado), se manda solo lo que
+  // de verdad cambió: documentos nuevos (siempre permitido) o
+  // documentos existentes que SÍ son distintos a lo ya guardado — los
+  // que no cambiaron simplemente no se tocan, así nunca disparan la
+  // regla de propietario por algo que ni siquiera se está editando.
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  if (sesion && sesion.tipo === 'persona') {
+    const snapPersona = await coleccion.get();
+    const actuales = new Map(snapPersona.docs.map(d => [d.id, d.data()]));
+    const batchPersona = dbFirestore.batch();
+    let hayCambios = false;
+    lista.forEach(notificacion => {
+      const anterior = actuales.get(String(notificacion.id));
+      if (!anterior || JSON.stringify(anterior) !== JSON.stringify(notificacion)) {
+        batchPersona.set(coleccion.doc(String(notificacion.id)), notificacion);
+        hayCambios = true;
+      }
+    });
+    if (!hayCambios) return;
+    await batchPersona.commit();
+    return;
+  }
+
   const snap = await coleccion.get();
   const idsNuevos = new Set(lista.map(n => String(n.id)));
   const batch = dbFirestore.batch();

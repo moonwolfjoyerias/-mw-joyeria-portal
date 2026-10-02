@@ -228,6 +228,15 @@ function quitarPieza(id) {
       p.estado = 'cancelada';
       if (typeof restaurarStockVariante === 'function') restaurarStockVariante(p.productoId, p.varianteId);
     }
+    // LOG-11 de la auditoría: la clienta decide qué piezas quedan y
+    // cuáles quita — Staff/Encargado/Admin no deciden eso por ella,
+    // pero sí necesitan ver con claridad qué cambió para ir a liberar
+    // la pieza física en la tienda. Antes esto solo quedaba en la
+    // notificación y en el historial de la ventana (había que
+    // expandir la fila para verlo); ahora también queda marcado en la
+    // propia fila hasta que alguien del equipo la revise (ver
+    // crearFilaVentana en apartados-panel-comun.js).
+    v.cambioClienteSinRevisar = { texto: `Quitó "${nombrePieza}" (${variantePieza})`, fecha: new Date().toISOString() };
   });
 
   renderApartados();
@@ -312,9 +321,12 @@ async function cambiarVariantePiezaApartada(ventanaId, piezaId, nuevaVarianteId)
   if (typeof restaurarStockVariante === 'function') await restaurarStockVariante(pieza.productoId, pieza.varianteId);
 
   const etiqueta = etiquetaVariante(nuevaVariante);
+  const varianteAnterior = pieza.variante;
   mutarVentanaPropia(ventanaId, v => {
     const p = v.apartados.find(x => x.id === piezaId);
     if (p) { p.varianteId = nuevaVarianteId; p.variante = etiqueta; }
+    // LOG-11 de la auditoría: mismo motivo que quitarPieza arriba.
+    v.cambioClienteSinRevisar = { texto: `Cambió "${pieza.producto}" de ${varianteAnterior} a ${etiqueta}`, fecha: new Date().toISOString() };
   });
 
   return { ok: true, etiqueta };

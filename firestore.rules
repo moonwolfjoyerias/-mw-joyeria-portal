@@ -125,6 +125,17 @@ service cloud.firestore {
       allow read, write: if estaAutenticado();
     }
 
+    // solicitudesEventos/{id} — FB-04 de la auditoría (ver
+    // js/solicitudes-eventos-modelo.js), migrado con el mismo patrón que
+    // solicitudesInscripcion un renglón arriba — y la misma regla
+    // intencionalmente amplia por el mismo motivo: solicitanteId aquí
+    // también es el id de personas-ejemplo.js, no el uid real de
+    // Firebase Auth, así que comparar solicitanteId == request.auth.uid
+    // tampoco coincidiría nunca hoy.
+    match /solicitudesEventos/{id} {
+      allow read, write: if estaAutenticado();
+    }
+
     // personas/{id} — Emprendedoras/Líderes (ver
     // js/personas-firestore-sync.js). Cualquier cuenta autenticada
     // puede leer (Staff/Encargado la necesitan para Apartados/Lista de
@@ -169,11 +180,19 @@ service cloud.firestore {
     // aviso (solicitud aprobada, actividad asignada, apartado vencido…)
     // nunca salía del dispositivo de quien lo generó. El filtrado por
     // destinatario (paraId/rolDestino) sigue pasando en el cliente,
-    // igual que antes de Firestore — mismo criterio intencionalmente
-    // amplio que ventanasApartado/solicitudesInscripcion, documentado
-    // ahí mismo.
+    // igual que antes de Firestore.
+    //
+    // SEC-08 de la auditoría: crear sigue abierto a cualquier
+    // autenticado a propósito — avisar a OTRA persona es el punto
+    // central de este sistema (cancelar una pieza avisa a Staff, una
+    // alerta de inactividad avisa a la línea de líderes, etc.), así
+    // que restringir create por "dueño" rompería esos avisos cruzados.
+    // Lo que sí se cierra es tocar (marcar leída/borrar) un aviso que
+    // YA existía y no es suyo ni de una bandeja compartida de equipo.
     match /notificaciones/{id} {
-      allow read, write: if estaAutenticado();
+      allow read: if estaAutenticado();
+      allow create: if estaAutenticado();
+      allow update, delete: if estaAutenticado() && (esInterno() || resource.data.paraId == miPerfil().personaId);
     }
 
     match /notificacionesMeta/{id} {
@@ -190,14 +209,24 @@ service cloud.firestore {
     // "solo su propio registro" por la misma razón documentada ahí:
     // columnas intermedias). solicitudesResurtido sigue exclusivo de
     // Staff/Encargado/Admin — Emprendedora/Líder nunca entra a esa parte.
+    // SEC-08 de la auditoría: antes cualquier autenticado podía
+    // editar/cancelar la solicitud de OTRA persona. Crear sigue
+    // abierto a cualquier autenticado (una Emprendedora solo crea con
+    // su propio personaId — ver js/deseos.js — pero Staff/Encargado/
+    // Admin crean para cualquiera); tocar un documento que YA existía
+    // ahora exige ser quien la creó/la recibe, o ser del equipo interno.
     match /listaDeseos/{id} {
-      allow read, write: if estaAutenticado();
+      allow read: if estaAutenticado();
+      allow create: if estaAutenticado() && (esInterno() || request.resource.data.personaId == miPerfil().personaId);
+      allow update, delete: if estaAutenticado() && (esInterno() || resource.data.personaId == miPerfil().personaId);
     }
     match /solicitudesResurtido/{id} {
       allow read, write: if esInterno();
     }
     match /listaDeseosHistorialEstados/{id} {
-      allow read, write: if estaAutenticado();
+      allow read: if estaAutenticado();
+      allow create: if estaAutenticado() && (esInterno() || request.resource.data.usuarioId == miPerfil().personaId);
+      allow update, delete: if esInterno();
     }
     match /listaDeseosMeta/{id} {
       allow read, write: if estaAutenticado();
@@ -336,6 +365,33 @@ service cloud.firestore {
     }
     match /comisionesMeta/{id} {
       allow read, write: if esAdmin();
+    }
+
+    // rifaMensualConfigs/{mesKey}, rifaMensualSolicitudes/{personaId__mesKey},
+    // rifaMensualVotos/{personaId__mesKey} — FB-03 de la auditoría (ver
+    // js/rifa-mensual-firestore-sync.js). El modo del mes/opciones/
+    // ganadora los decide solo Admin (igual que hoy, portal/admin/ es la
+    // única carpeta con el módulo Rifa del mes). Lectura abierta a
+    // cualquier autenticado en las tres — mismo criterio que eventos/
+    // notificaciones/listaDeseos: nadie espera que su solicitud o su voto
+    // sean secretos frente a otras compañeras, y Admin necesita poder
+    // leer la colección completa (obtenerSolicitudesRifaMes/
+    // obtenerConteoVotosRifaMes) sin que la regla rechace esa consulta
+    // por no traer un "where" de propietario. Solo crear/editar
+    // solicitudes y votos queda restringido: cada persona únicamente el
+    // suyo (un doc por personaId__mesKey, igual que nominaPeriodos/
+    // comisionesPagos).
+    match /rifaMensualConfigs/{id} {
+      allow read: if estaAutenticado();
+      allow write: if esAdmin();
+    }
+    match /rifaMensualSolicitudes/{id} {
+      allow read: if estaAutenticado();
+      allow create, update: if estaAutenticado() && request.resource.data.personaId == miPerfil().personaId;
+    }
+    match /rifaMensualVotos/{id} {
+      allow read: if estaAutenticado();
+      allow create, update: if estaAutenticado() && request.resource.data.personaId == miPerfil().personaId;
     }
 
     // eventos/{id} — Calendario de actividades (ver

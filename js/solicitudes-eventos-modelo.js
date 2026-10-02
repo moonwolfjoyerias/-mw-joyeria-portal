@@ -11,11 +11,16 @@
 // pero datos y validaciones distintas; se unen solo en la vista de
 // Admin (admin-solicitudes.js), nunca en el almacenamiento.
 //
-// ⚠️ TEMPORAL: localStorage simula la base de datos hasta integrar
-// Firestore en Fase 3 — igual que js/eventos-modelo.js, del que depende
-// para publicar el evento ya aprobado.
+// FB-04 de la auditoría: mismo patrón de repositorio dual que ya usa
+// js/solicitudes-modelo.js (FASE 2, AUDITORIA-FIREBASE.md sección G.1)
+// — todas las funciones públicas son async: si dbFirestore tiene valor
+// (MODO_DEMO=false + config real), leen/escriben la colección
+// "solicitudesEventos" de Firestore; si no, siguen igual que antes
+// sobre localStorage. Sigue dependiendo de js/eventos-modelo.js (ya
+// migrado) para publicar el evento una vez aprobada la solicitud.
 
 const SOLICITUDES_EVENTOS_STORAGE_KEY = 'mw-solicitudes-eventos-v1';
+const SOLICITUDES_EVENTOS_COLECCION_FIRESTORE = 'solicitudesEventos';
 
 const ESTADOS_SOLICITUD_EVENTO = {
   pendiente: 'Pendiente',
@@ -23,7 +28,7 @@ const ESTADOS_SOLICITUD_EVENTO = {
   rechazada: 'Rechazada'
 };
 
-function obtenerSolicitudesEventos() {
+function obtenerSolicitudesEventosLocal() {
   try {
     const guardadas = JSON.parse(localStorage.getItem(SOLICITUDES_EVENTOS_STORAGE_KEY));
     if (Array.isArray(guardadas)) return guardadas;
@@ -33,17 +38,55 @@ function obtenerSolicitudesEventos() {
   return [];
 }
 
-function guardarSolicitudesEventos(lista) {
+function guardarSolicitudesEventosLocal(lista) {
   localStorage.setItem(SOLICITUDES_EVENTOS_STORAGE_KEY, JSON.stringify(lista));
 }
 
-function obtenerSolicitudEventoPorId(id) {
-  return obtenerSolicitudesEventos().find(s => s.id === id) || null;
+// Mismo mapeo que solicitudDesdeDocFirestore en solicitudes-modelo.js —
+// "id" incluido, fechaSolicitud/fechaRevision como ISO string igual que
+// produce localStorage, así ningún renderizador distingue de dónde vino.
+function solicitudEventoDesdeDocFirestore(doc) {
+  const datos = doc.data();
+  return {
+    ...datos,
+    id: doc.id,
+    fechaSolicitud: datos.fechaSolicitud?.toDate ? datos.fechaSolicitud.toDate().toISOString() : datos.fechaSolicitud,
+    fechaRevision: datos.fechaRevision?.toDate ? datos.fechaRevision.toDate().toISOString() : (datos.fechaRevision || null)
+  };
+}
+
+async function obtenerSolicitudesEventos() {
+  if (dbFirestore) {
+    const snap = await dbFirestore.collection(SOLICITUDES_EVENTOS_COLECCION_FIRESTORE).orderBy('fechaSolicitud', 'desc').get();
+    return snap.docs.map(solicitudEventoDesdeDocFirestore);
+  }
+  return obtenerSolicitudesEventosLocal();
+}
+
+async function obtenerSolicitudEventoPorId(id) {
+  if (dbFirestore) {
+    const doc = await dbFirestore.collection(SOLICITUDES_EVENTOS_COLECCION_FIRESTORE).doc(id).get();
+    return doc.exists ? solicitudEventoDesdeDocFirestore(doc) : null;
+  }
+  return obtenerSolicitudesEventosLocal().find(s => s.id === id) || null;
 }
 
 // Vista del solicitante: solo sus propias solicitudes de evento.
-function obtenerSolicitudesEventosDe(solicitanteId) {
-  return obtenerSolicitudesEventos()
+//
+// ⚠️ La consulta de Firestore (where + orderBy en campos distintos)
+// necesita un índice compuesto — Firestore lo pide la primera vez que se
+// ejecute en un proyecto real, con un enlace para crearlo en un clic
+// (mismo aviso que ya documenta obtenerSolicitudesDe en
+// solicitudes-modelo.js).
+async function obtenerSolicitudesEventosDe(solicitanteId) {
+  if (dbFirestore) {
+    const snap = await dbFirestore.collection(SOLICITUDES_EVENTOS_COLECCION_FIRESTORE)
+      .where('solicitanteId', '==', solicitanteId)
+      .orderBy('fechaSolicitud', 'desc')
+      .get();
+    return snap.docs.map(solicitudEventoDesdeDocFirestore);
+  }
+  return obtenerSolicitudesEventosLocal()
     .filter(s => s.solicitanteId === solicitanteId)
     .sort((a, b) => b.fechaSolicitud.localeCompare(a.fechaSolicitud));
 }
@@ -52,7 +95,7 @@ function obtenerSolicitudesEventosDe(solicitanteId) {
 // CREAR
 // ============================================================
 
-function crearSolicitudEvento({ solicitanteId, solicitanteNombre, titulo, fecha, hora, tipo, lugarTexto, enlace, descripcion }) {
+async function crearSolicitudEvento({ solicitanteId, solicitanteNombre, titulo, fecha, hora, tipo, lugarTexto, enlace, descripcion }) {
 
   titulo = String(titulo || '').trim();
   fecha = String(fecha || '').trim();
@@ -68,15 +111,13 @@ function crearSolicitudEvento({ solicitanteId, solicitanteNombre, titulo, fecha,
   if (!lugarTexto) return { ok: false, error: tipo === 'presencial' ? 'Escribe el lugar del evento.' : 'Escribe cómo se conectarán (por ejemplo, un enlace de Zoom).' };
   if (!descripcion) return { ok: false, error: 'Escribe una descripción para invitar a las demás.' };
 
-  const solicitud = {
-    id: `SOLEV-${Date.now()}`,
+  const datosSolicitud = {
     solicitanteId,
     solicitanteNombre,
 
     titulo, fecha, hora, tipo, lugarTexto, enlace, descripcion,
 
     estado: 'pendiente',
-    fechaSolicitud: new Date().toISOString(),
 
     revisadoPor: null,
     fechaRevision: null,
@@ -85,9 +126,22 @@ function crearSolicitudEvento({ solicitanteId, solicitanteNombre, titulo, fecha,
     eventoCreadoId: null
   };
 
-  const solicitudes = obtenerSolicitudesEventos();
-  solicitudes.unshift(solicitud);
-  guardarSolicitudesEventos(solicitudes);
+  let solicitud;
+
+  if (dbFirestore) {
+    const docRef = await dbFirestore.collection(SOLICITUDES_EVENTOS_COLECCION_FIRESTORE).add({
+      ...datosSolicitud,
+      fechaSolicitud: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // Marca de tiempo optimista solo para pintar de inmediato en pantalla
+    // — la autoritativa es el serverTimestamp() que ya quedó guardado.
+    solicitud = { ...datosSolicitud, id: docRef.id, fechaSolicitud: new Date().toISOString() };
+  } else {
+    solicitud = { ...datosSolicitud, id: `SOLEV-${Date.now()}`, fechaSolicitud: new Date().toISOString() };
+    const solicitudes = obtenerSolicitudesEventosLocal();
+    solicitudes.unshift(solicitud);
+    guardarSolicitudesEventosLocal(solicitudes);
+  }
 
   if (typeof agregarNotificacion === 'function') {
     agregarNotificacion({
@@ -107,10 +161,9 @@ function crearSolicitudEvento({ solicitanteId, solicitanteNombre, titulo, fecha,
 // APROBAR / RECHAZAR (Administración)
 // ============================================================
 
-function aprobarSolicitudEvento(solicitudId, { adminId, adminNombre }) {
+async function aprobarSolicitudEvento(solicitudId, { adminId, adminNombre }) {
 
-  const solicitudes = obtenerSolicitudesEventos();
-  const solicitud = solicitudes.find(s => s.id === solicitudId);
+  const solicitud = await obtenerSolicitudEventoPorId(solicitudId);
 
   if (!solicitud) return { ok: false, error: 'La solicitud no existe.' };
   if (solicitud.estado !== 'pendiente') {
@@ -139,11 +192,23 @@ function aprobarSolicitudEvento(solicitudId, { adminId, adminNombre }) {
   eventos.push(nuevoEvento);
   if (typeof guardarEventosCompartidos === 'function') guardarEventosCompartidos(eventos);
 
-  solicitud.estado = 'aprobada';
-  solicitud.revisadoPor = adminId;
-  solicitud.fechaRevision = new Date().toISOString();
-  solicitud.eventoCreadoId = nuevoEvento.id;
-  guardarSolicitudesEventos(solicitudes);
+  const cambios = {
+    estado: 'aprobada',
+    revisadoPor: adminId,
+    fechaRevision: new Date().toISOString(),
+    eventoCreadoId: nuevoEvento.id
+  };
+
+  if (dbFirestore) {
+    await dbFirestore.collection(SOLICITUDES_EVENTOS_COLECCION_FIRESTORE).doc(solicitudId).update(cambios);
+  } else {
+    const solicitudes = obtenerSolicitudesEventosLocal();
+    const solicitudLocal = solicitudes.find(s => s.id === solicitudId);
+    if (solicitudLocal) Object.assign(solicitudLocal, cambios);
+    guardarSolicitudesEventosLocal(solicitudes);
+  }
+
+  Object.assign(solicitud, cambios);
 
   if (typeof registrarAuditoria === 'function') {
     registrarAuditoria({
@@ -169,24 +234,35 @@ function aprobarSolicitudEvento(solicitudId, { adminId, adminNombre }) {
 
 }
 
-function rechazarSolicitudEvento(solicitudId, { adminId, adminNombre, motivo }) {
+async function rechazarSolicitudEvento(solicitudId, { adminId, adminNombre, motivo }) {
 
   motivo = String(motivo || '').trim();
   if (!motivo) return { ok: false, error: 'Escribe el motivo del rechazo.' };
 
-  const solicitudes = obtenerSolicitudesEventos();
-  const solicitud = solicitudes.find(s => s.id === solicitudId);
+  const solicitud = await obtenerSolicitudEventoPorId(solicitudId);
 
   if (!solicitud) return { ok: false, error: 'La solicitud no existe.' };
   if (solicitud.estado !== 'pendiente') {
     return { ok: false, error: 'Esta solicitud ya fue resuelta y no puede rechazarse.' };
   }
 
-  solicitud.estado = 'rechazada';
-  solicitud.revisadoPor = adminId;
-  solicitud.fechaRevision = new Date().toISOString();
-  solicitud.motivoRechazo = motivo;
-  guardarSolicitudesEventos(solicitudes);
+  const cambios = {
+    estado: 'rechazada',
+    revisadoPor: adminId,
+    fechaRevision: new Date().toISOString(),
+    motivoRechazo: motivo
+  };
+
+  if (dbFirestore) {
+    await dbFirestore.collection(SOLICITUDES_EVENTOS_COLECCION_FIRESTORE).doc(solicitudId).update(cambios);
+  } else {
+    const solicitudes = obtenerSolicitudesEventosLocal();
+    const solicitudLocal = solicitudes.find(s => s.id === solicitudId);
+    if (solicitudLocal) Object.assign(solicitudLocal, cambios);
+    guardarSolicitudesEventosLocal(solicitudes);
+  }
+
+  Object.assign(solicitud, cambios);
 
   if (typeof registrarAuditoria === 'function') {
     registrarAuditoria({

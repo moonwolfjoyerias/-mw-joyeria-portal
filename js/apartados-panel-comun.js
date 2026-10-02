@@ -20,6 +20,19 @@ function guardarVentanas() {
   guardarVentanasApartado(ventanas);
 }
 
+// LOG-11 de la auditoría: expandir la fila para ver sus piezas ya
+// cuenta como "revisar" el cambio que la clienta hizo — quita el aviso
+// de la fila sin necesitar un botón aparte. Se llama desde los 3
+// controladores (staff/encargado/admin-apartados.js) justo al
+// EXPANDIR (nunca al colapsar).
+function marcarCambioClienteRevisado(ventanaId) {
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (v && v.cambioClienteSinRevisar) {
+    delete v.cambioClienteSinRevisar;
+    guardarVentanas();
+  }
+}
+
 
 // ============================================================
 // EVENTOS
@@ -120,6 +133,7 @@ function crearFilaVentana(v) {
             <strong>${escapeHTML(v.usuarioNombre)}</strong>
             <small>${escapeHTML(v.telefono || "")}</small>
             <small style="color:#5b1689;font-weight:600;">${expandida ? "▾" : "▸"} Ver piezas (${v.apartados.length})</small>
+            ${v.cambioClienteSinRevisar ? `<small style="display:block;margin-top:3px;color:#9a6a00;background:#fff4da;border-radius:6px;padding:2px 6px;font-weight:600;">⚠ ${escapeHTML(v.cambioClienteSinRevisar.texto)} — sin revisar</small>` : ""}
           </div>
         </button>
       </td>

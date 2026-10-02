@@ -67,7 +67,11 @@ function abrirModalNuevaVentana() {
     <p class="modal-sub">Si la persona ya tiene crédito guardado de una ventana anterior, se usará automáticamente y no se pedirá otro depósito.</p>
 
     <label for="nvNombre">Nombre completo</label>
-    <input id="nvNombre" type="text" placeholder="Ej. María Fernanda">
+    <div class="persona-autocomplete" id="nvNombreWrap">
+      <input id="nvNombre" type="text" autocomplete="off" placeholder="Ej. María Fernanda — empieza a escribir para buscarla">
+      <div class="persona-autocomplete-list" id="nvNombreList" hidden></div>
+    </div>
+    <small class="field-help" id="nvPersonaHint" style="display:none;"></small>
 
     <label for="nvTelefono">Teléfono</label>
     <input id="nvTelefono" type="text" placeholder="Ej. 444 123 4567">
@@ -99,6 +103,35 @@ function abrirModalNuevaVentana() {
   `;
 
   overlay.classList.add("open");
+
+  // LOG-10 de la auditoría — ver nota completa en staff-apartados.js.
+  let personaSeleccionadaNuevaVentana = null;
+  if (typeof crearAutocompletePersonas === 'function' && typeof obtenerPersonas === 'function') {
+    crearAutocompletePersonas({
+      inputEl: document.getElementById('nvNombre'),
+      listEl: document.getElementById('nvNombreList'),
+      obtenerCandidatos: (texto) => obtenerPersonas().filter(p =>
+        p.estado !== 'baja' && nombreCompletoPersona(p).toLowerCase().includes(texto)
+      ),
+      onSeleccionar: (p) => {
+        personaSeleccionadaNuevaVentana = p;
+        const telefonoInput = document.getElementById('nvTelefono');
+        const categoriaSelect = document.getElementById('nvCategoria');
+        const hint = document.getElementById('nvPersonaHint');
+        if (telefonoInput && p.telefono) telefonoInput.value = p.telefono;
+        if (categoriaSelect && p.categoria) categoriaSelect.value = p.categoria;
+        if (hint) {
+          hint.style.display = 'block';
+          hint.textContent = 'Cuenta real encontrada — categoría y teléfono se llenaron de su perfil.';
+        }
+      },
+      onLimpiar: () => {
+        personaSeleccionadaNuevaVentana = null;
+        const hint = document.getElementById('nvPersonaHint');
+        if (hint) hint.style.display = 'none';
+      }
+    });
+  }
 
   document.getElementById("nvProductoId").addEventListener("change", (e) => {
 
@@ -150,7 +183,8 @@ function abrirModalNuevaVentana() {
     const producto = productoElegido.nombre;
     const variante = etiquetaVariante(varianteElegida);
 
-    const usuarioId = slugUsuarioId(nombre);
+    const personaId = personaSeleccionadaNuevaVentana ? personaSeleccionadaNuevaVentana.id : null;
+    const usuarioId = personaId || slugUsuarioId(nombre);
     const tieneCredito = obtenerCreditoDisponible(usuarioId) > 0;
 
     abrirAutorizacionEncargado({
@@ -158,16 +192,16 @@ function abrirModalNuevaVentana() {
       mensaje: tieneCredito
         ? `Estás a punto de abrir una nueva ventana de apartado para "${nombre}", reutilizando su crédito guardado.`
         : `Estás a punto de abrir una nueva ventana de apartado para "${nombre}" con la pieza "${producto}".`,
-      onConfirmar: () => ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total, productoId, varianteId })
+      onConfirmar: () => ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total, productoId, varianteId, personaId })
     });
 
   });
 
 }
 
-async function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total, productoId, varianteId }) {
+async function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total, productoId, varianteId, personaId }) {
 
-  const usuarioId = slugUsuarioId(nombre);
+  const usuarioId = personaId || slugUsuarioId(nombre);
 
   // Si la persona ya tiene una ventana activa, la pieza se suma ahí en
   // vez de abrir una segunda ventana con su propio vencimiento aparte
@@ -243,7 +277,12 @@ function agregarEventosFilas() {
   document.querySelectorAll("[data-toggle]").forEach(btn => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.toggle;
-      if (filasExpandidas.has(id)) filasExpandidas.delete(id); else filasExpandidas.add(id);
+      if (filasExpandidas.has(id)) {
+        filasExpandidas.delete(id);
+      } else {
+        filasExpandidas.add(id);
+        marcarCambioClienteRevisado(id);
+      }
       renderTabla();
     });
   });

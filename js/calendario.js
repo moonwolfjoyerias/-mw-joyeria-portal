@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderCalendario();
   renderProximosEventos();
   renderInvitacionesComunidad();
-  renderMisSolicitudesEvento();
+  await renderMisSolicitudesEvento();
 
   document.getElementById('solicitarEventoBtn')?.addEventListener('click', () => abrirModalNuevaSolicitudEvento());
 
@@ -250,12 +250,12 @@ function renderInvitacionesComunidad() {
 // js/solicitudes-eventos-modelo.js para la lógica/almacenamiento.
 // ============================================================
 
-function renderMisSolicitudesEvento() {
+async function renderMisSolicitudesEvento() {
   const wrap = document.getElementById('misSolicitudesEventoWrap');
   if (!wrap || typeof obtenerSolicitudesEventosDe !== 'function') return;
 
   const personaId = obtenerIdPersonaActualPortal();
-  const solicitudes = obtenerSolicitudesEventosDe(personaId);
+  const solicitudes = await obtenerSolicitudesEventosDe(personaId);
 
   if (!solicitudes.length) { wrap.innerHTML = ''; return; }
 
@@ -327,7 +327,7 @@ function abrirModalNuevaSolicitudEvento() {
   document.getElementById('enviarSolicitudEventoBtn')?.addEventListener('click', enviarNuevaSolicitudEvento);
 }
 
-function enviarNuevaSolicitudEvento() {
+async function enviarNuevaSolicitudEvento() {
   const boton = document.getElementById('enviarSolicitudEventoBtn');
   if (boton?.disabled) return;
 
@@ -338,13 +338,17 @@ function enviarNuevaSolicitudEvento() {
   const lugarTexto = document.getElementById('solEvLugar')?.value || '';
   const descripcion = document.getElementById('solEvDescripcion')?.value || '';
 
-  const resultado = crearSolicitudEvento({
+  if (boton) boton.disabled = true;
+
+  const resultado = await crearSolicitudEvento({
     solicitanteId: obtenerIdPersonaActualPortal(),
     solicitanteNombre: obtenerNombrePersonaActualPortal(),
     titulo, fecha, hora, tipo, lugarTexto,
     enlace: tipo === 'virtual' ? lugarTexto : '',
     descripcion
   });
+
+  if (boton) boton.disabled = false;
 
   if (!resultado.ok) {
     const error = document.getElementById('solEvError');

@@ -31,15 +31,14 @@ async function renderResumenGeneral() {
   if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
   if (typeof listaDeseosRepoListo !== 'undefined') await listaDeseosRepoListo;
   if (typeof comisionesRepoListo !== 'undefined') await comisionesRepoListo;
+  if (typeof catalogoRepoListo !== 'undefined') await catalogoRepoListo;
 
-  // Catálogo — misma clave de localStorage que usan Staff/Encargado/Admin.
-  let catalogo = [];
-  try {
-    catalogo = JSON.parse(localStorage.getItem('mw_staff_catalogo_demo')) || [];
-  } catch (error) {
-    catalogo = [];
-  }
-  if (!catalogo.length && typeof CATALOGO_EJEMPLO !== 'undefined') catalogo = CATALOGO_EJEMPLO;
+  // Catálogo — misma fuente (CATALOGO_CACHE) que ya usan Staff/Encargado/
+  // Admin vía catalogo-firestore-sync.js, no una lectura directa de
+  // localStorage con su propia semilla aparte (DUP-01 de la auditoría:
+  // esa lectura aparte podía quedar desactualizada o usar una semilla
+  // distinta a la que ven las demás páginas de catálogo).
+  const catalogo = typeof CATALOGO_CACHE !== 'undefined' ? CATALOGO_CACHE : [];
   setTextDash('dashCatalogoDisponibles', catalogo.filter(p => p.disponible).length);
 
   // Apartados — misma fuente que el resumen de Staff/Encargado.

@@ -1965,6 +1965,12 @@ a:hover { color: var(--mw-gold); }
 .zoom-controls { display: flex; align-items: center; gap: 6px; }
 .zoom-controls button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--mw-border); background: var(--surface); cursor: pointer; font-size: 1rem; line-height: 1; }
 .zoom-controls span { font-size: 0.8rem; color: var(--mw-text-muted); min-width: 40px; text-align: center; }
+/* UI-03 de la auditoría: "Restablecer" es el único botón de TEXTO
+   dentro de .zoom-controls (los demás son solo el ícono +/−) — la
+   regla de arriba lo forzaba al mismo círculo de 30px que ellos,
+   recortando el texto ("Restablece") a 1366px. Se le quita el ancho
+   fijo y la forma circular, sin tocar los botones de +/−. */
+.zoom-controls button#equipoZoomResetBtn { width: auto; height: auto; border-radius: var(--radius-sm); padding: 0.4em 0.8em; font-size: 0.8rem; white-space: nowrap; }
 
 .icon-tight { width: 15px; height: 15px; }
 

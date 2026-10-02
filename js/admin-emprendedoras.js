@@ -1360,63 +1360,9 @@ function abrirConfirmarQuitarEquipo(lider, integrante) {
 // AUTOCOMPLETADO DE PERSONAS (reutilizado por Líder y Equipo)
 // ============================================================
 
-function crearAutocompletePersonas({ inputEl, listEl, obtenerCandidatos, onSeleccionar, onLimpiar, limpiarInputAlSeleccionar }) {
-
-  if (!inputEl || !listEl) return;
-
-  inputEl.addEventListener('input', () => {
-
-    const texto = inputEl.value.toLowerCase().trim();
-
-    if (onLimpiar) onLimpiar();
-
-    if (!texto) {
-      listEl.hidden = true;
-      listEl.innerHTML = '';
-      return;
-    }
-
-    const candidatos = obtenerCandidatos(texto).slice(0, 8);
-
-    if (!candidatos.length) {
-      listEl.innerHTML = `<div class="persona-autocomplete-empty">Sin coincidencias.</div>`;
-      listEl.hidden = false;
-      return;
-    }
-
-    listEl.innerHTML = candidatos.map(p => `
-      <button type="button" class="persona-autocomplete-item" data-persona-id="${p.id}">
-        <span>${escapeHTMLPersonas(nombreCompletoPersona(p))}</span>
-        <small>${p.tipo === 'lider' ? 'Líder' : 'Emprendedora'}${p.liderId ? ` · Líder actual: ${escapeHTMLPersonas(nombreCompletoPersona(obtenerPersonaPorId(p.liderId) || {}))}` : ''}</small>
-      </button>
-    `).join('');
-
-    listEl.hidden = false;
-
-    listEl.querySelectorAll('[data-persona-id]').forEach(item => {
-      item.addEventListener('click', () => {
-        const persona = obtenerPersonaPorId(item.getAttribute('data-persona-id'));
-        if (!persona) return;
-        onSeleccionar(persona);
-        if (limpiarInputAlSeleccionar) {
-          inputEl.value = '';
-        } else {
-          inputEl.value = nombreCompletoPersona(persona);
-        }
-        listEl.hidden = true;
-        listEl.innerHTML = '';
-      });
-    });
-
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!inputEl.contains(e.target) && !listEl.contains(e.target)) {
-      listEl.hidden = true;
-    }
-  });
-
-}
+// crearAutocompletePersonas() se movió a js/personas-ejemplo.js (LOG-10
+// de la auditoría la reutiliza también desde Apartados) — sigue
+// funcionando igual aquí, ese archivo ya se carga antes que este.
 
 // ============================================================
 // UTILIDADES

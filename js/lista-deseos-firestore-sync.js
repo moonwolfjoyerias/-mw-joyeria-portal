@@ -154,6 +154,36 @@ function guardarHistorialListaDeseosRepo(lista) {
 
 async function sincronizarColeccionListaDeseos(nombreColeccion, lista) {
   const coleccion = dbFirestore.collection(nombreColeccion);
+
+  // SEC-08 de la auditoría: solo aplica a listaDeseos/su historial de
+  // estados (resurtido sigue exclusivo de Staff/Encargado/Admin, nunca
+  // llamado por una sesión de persona). Mismo motivo que ya se
+  // corrigió en notificaciones-firestore-sync.js: el arreglo completo
+  // siempre incluye solicitudes ajenas sin ningún cambio real, y la
+  // regla ahora exige ser dueña (personaId == su personaId, o
+  // usuarioId == su personaId en el historial) para tocar un
+  // documento que ya existía — se manda solo lo nuevo o lo que de
+  // verdad cambió.
+  if (nombreColeccion === LISTA_DESEOS_COLECCION_FIRESTORE || nombreColeccion === LISTA_DESEOS_HISTORIAL_COLECCION_FIRESTORE) {
+    const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+    if (sesion && sesion.tipo === 'persona') {
+      const snapPersona = await coleccion.get();
+      const actuales = new Map(snapPersona.docs.map(d => [d.id, d.data()]));
+      const batchPersona = dbFirestore.batch();
+      let hayCambios = false;
+      lista.forEach(item => {
+        const anterior = actuales.get(String(item.id));
+        if (!anterior || JSON.stringify(anterior) !== JSON.stringify(item)) {
+          batchPersona.set(coleccion.doc(String(item.id)), item);
+          hayCambios = true;
+        }
+      });
+      if (!hayCambios) return;
+      await batchPersona.commit();
+      return;
+    }
+  }
+
   const snap = await coleccion.get();
   const idsNuevos = new Set(lista.map(item => String(item.id)));
   const batch = dbFirestore.batch();

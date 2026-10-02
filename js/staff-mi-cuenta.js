@@ -4,11 +4,12 @@
 // nunca la contraseña) y permite a cada persona consultar su propio
 // recibo de nómina de la semana actual.
 //
-// Por seguridad, la autorización para ver un recibo debe coincidir
-// exactamente con la persona de esa tarjeta: nadie puede ver el recibo
-// de alguien más aunque tenga credenciales válidas de otro compañero.
-
-let empleadoNominaPendiente = null;
+// SEC-09 de la auditoría: antes, ver un recibo exigía reingresar
+// usuario/contraseña de ESE empleado — una comparación en texto plano
+// en el navegador, fácil de saltarse desde la consola. Como SEC-02 (la
+// ronda de altos) ya cerró el acceso real a nivel de Firestore, este
+// candado nunca protegía nada que las reglas no protegieran ya; se
+// quitó para no dar una falsa sensación de seguridad.
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -63,7 +64,10 @@ function inicializarEventosMiCuenta() {
 
   if (grid) {
     grid.querySelectorAll('[data-nomina]').forEach(btn => {
-      btn.addEventListener('click', () => abrirAutorizacionNomina(btn.dataset.nomina));
+      btn.addEventListener('click', () => {
+        const empleado = obtenerPersonalStaffTotal().find(e => e.usuario === btn.dataset.nomina);
+        if (empleado) abrirReciboNomina(empleado);
+      });
     });
   }
 
@@ -75,109 +79,6 @@ function inicializarEventosMiCuenta() {
       if (e.target === overlay) cerrarModalMiCuenta();
     });
   }
-
-}
-
-
-// ============================================================
-// AUTORIZACIÓN PARA VER EL RECIBO
-// ============================================================
-
-function abrirAutorizacionNomina(usuario) {
-
-  empleadoNominaPendiente = obtenerPersonalStaffTotal().find(e => e.usuario === usuario);
-
-  const overlay = document.getElementById('modalOverlay');
-  const box = document.getElementById('modalBox');
-
-  if (!overlay || !box || !empleadoNominaPendiente) return;
-
-  box.innerHTML = `
-
-    <button class="modal-close" data-close>×</button>
-
-    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
-
-    <h3>Autorizar consulta de nómina</h3>
-
-    <p class="modal-sub">
-      Solo ${escapeHTML(empleadoNominaPendiente.nombre)} puede ver este recibo.
-      Ingresa tu nombre de usuario y contraseña para confirmarlo.
-    </p>
-
-    <div class="modal-context">
-      <span>Empleado</span><strong>${escapeHTML(empleadoNominaPendiente.nombre)}</strong>
-      <span>Usuario</span><strong>${escapeHTML(empleadoNominaPendiente.usuario)}</strong>
-    </div>
-
-    <div class="auth-warning">
-      <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
-      <div>
-        <strong>Recibo personal</strong>
-        <small>Nadie más puede ver tu nómina, ni tú la de otra persona.</small>
-      </div>
-    </div>
-
-    <label for="nominaUsuario">Usuario de empleado</label>
-    <input id="nominaUsuario" type="text" autocomplete="username" placeholder="Ej. staff01">
-
-    <label for="nominaPassword">Contraseña</label>
-    <div class="password-wrap">
-      <input id="nominaPassword" type="password" autocomplete="current-password" placeholder="Contraseña">
-      <button type="button" id="mostrarPasswordNomina">Ver</button>
-    </div>
-
-    <div id="authError" style="display:none;" class="auth-error"></div>
-
-    <button class="btn btn-primary" id="autorizarNominaBtn" style="width:100%;">Autorizar y ver recibo</button>
-
-  `;
-
-  overlay.classList.add('open');
-
-  document.getElementById('mostrarPasswordNomina')?.addEventListener('click', () => {
-    const input = document.getElementById('nominaPassword');
-    if (!input) return;
-    input.type = input.type === 'password' ? 'text' : 'password';
-  });
-
-  document.getElementById('autorizarNominaBtn')?.addEventListener('click', validarAutorizacionNomina);
-
-  box.querySelector('[data-close]')?.addEventListener('click', () => {
-    empleadoNominaPendiente = null;
-    cerrarModalMiCuenta();
-  });
-
-  setTimeout(() => document.getElementById('nominaUsuario')?.focus(), 100);
-
-}
-
-
-function validarAutorizacionNomina() {
-
-  const usuario = document.getElementById('nominaUsuario')?.value.trim();
-  const password = document.getElementById('nominaPassword')?.value;
-  const error = document.getElementById('authError');
-
-  // La coincidencia debe ser exactamente con el empleado de la tarjeta
-  // que se presionó, no con cualquier credencial válida de Staff.
-  const coincide =
-    empleadoNominaPendiente &&
-    empleadoNominaPendiente.usuario === usuario &&
-    empleadoNominaPendiente.password === password;
-
-  if (!coincide) {
-
-    if (error) {
-      error.style.display = 'block';
-      error.textContent = 'Usuario o contraseña incorrectos, o no coinciden con este empleado.';
-    }
-
-    return;
-
-  }
-
-  abrirReciboNomina(empleadoNominaPendiente);
 
 }
 
@@ -214,10 +115,7 @@ function abrirReciboNomina(empleado) {
       <button class="btn btn-outline" style="width:100%;" data-close>Cerrar</button>
     `;
     overlay.classList.add('open');
-    box.querySelector('[data-close]')?.addEventListener('click', () => {
-      empleadoNominaPendiente = null;
-      cerrarModalMiCuenta();
-    });
+    box.querySelector('[data-close]')?.addEventListener('click', cerrarModalMiCuenta);
     return;
   }
 
@@ -256,10 +154,7 @@ function abrirReciboNomina(empleado) {
 
   overlay.classList.add('open');
 
-  box.querySelector('[data-close]')?.addEventListener('click', () => {
-    empleadoNominaPendiente = null;
-    cerrarModalMiCuenta();
-  });
+  box.querySelector('[data-close]')?.addEventListener('click', cerrarModalMiCuenta);
 
   document.getElementById('firmarReciboBtn')?.addEventListener('click', () => abrirConfirmarFirmaRecibo(empleado, empleadoNominaReal, periodoKey));
 
