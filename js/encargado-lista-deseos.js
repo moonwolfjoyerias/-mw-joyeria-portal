@@ -88,15 +88,6 @@ function resumenPiezasLD(piezas) {
   return piezas.length === 1 ? primera : `${primera} (+${piezas.length - 1} más)`;
 }
 
-function escapeHTML(texto) {
-  return String(texto ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
 // ============================================================
 // TABLA: LISTA DE DESEOS
 // ============================================================

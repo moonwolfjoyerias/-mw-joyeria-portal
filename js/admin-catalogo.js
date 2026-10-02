@@ -12,7 +12,7 @@
 // misma colección/clave que usa Staff/Encargado para representar el
 // mismo catálogo) ya no vive aquí — ver js/catalogo-firestore-sync.js.
 
-let catalogoRH = [];
+let catalogoAdmin = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -30,11 +30,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function cargarCatalogo() {
   await catalogoRepoListo;
-  catalogoRH = CATALOGO_CACHE.map(migrarProductoAVariantes);
+  catalogoAdmin = CATALOGO_CACHE.map(migrarProductoAVariantes);
 }
 
 function guardarCatalogo() {
-  guardarCatalogoRepo(catalogoRH);
+  guardarCatalogoRepo(catalogoAdmin);
 }
 
 
@@ -94,7 +94,7 @@ function renderCatalogo() {
   const categoria = document.getElementById('filterCategoria')?.value || '';
   const estado = document.getElementById('filterEstado')?.value || '';
 
-  const productos = catalogoRH.filter(p => {
+  const productos = catalogoAdmin.filter(p => {
 
     if (
       search &&
@@ -131,7 +131,7 @@ function renderCatalogo() {
   grid.innerHTML = productos.map(renderProducto).join('');
 
   grid.querySelectorAll('[data-editar]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalProducto(catalogoRH.find(p => p.id === btn.dataset.editar)));
+    btn.addEventListener('click', () => abrirModalProducto(catalogoAdmin.find(p => p.id === btn.dataset.editar)));
   });
 
   grid.querySelectorAll('[data-eliminar]').forEach(btn => {
@@ -139,17 +139,17 @@ function renderCatalogo() {
   });
 
   grid.querySelectorAll('[data-stock]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalStock(catalogoRH.find(p => p.id === btn.dataset.stock)));
+    btn.addEventListener('click', () => abrirModalStock(catalogoAdmin.find(p => p.id === btn.dataset.stock)));
   });
 
 }
 
 function actualizarResumenCatalogo() {
 
-  const total = catalogoRH.length;
-  const disponibles = catalogoRH.filter(productoDisponible).length;
-  const oro = catalogoRH.filter(p => p.material === 'oro-laminado').length;
-  const promedio = total ? catalogoRH.reduce((suma, p) => suma + Number(p.precioEtiqueta || 0), 0) / total : 0;
+  const total = catalogoAdmin.length;
+  const disponibles = catalogoAdmin.filter(productoDisponible).length;
+  const oro = catalogoAdmin.filter(p => p.material === 'oro-laminado').length;
+  const promedio = total ? catalogoAdmin.reduce((suma, p) => suma + Number(p.precioEtiqueta || 0), 0) / total : 0;
 
   const valores = {
     totalProductos: total,
@@ -229,8 +229,8 @@ function renderProducto(p) {
 // de guardar sí la pide, con el nombre real del producto.
 // ============================================================
 
-let imagenTemporalRH = '';
-let variantesTemporalRH = [];
+let imagenTemporalAdmin = '';
+let variantesTemporalAdmin = [];
 
 function abrirModalProducto(producto = null) {
 
@@ -244,8 +244,8 @@ function abrirModalProducto(producto = null) {
   box.classList.add('modal-box-wide');
 
   const editando = !!producto;
-  imagenTemporalRH = normalizarImagenProducto(producto?.imagen);
-  variantesTemporalRH = producto?.variantes?.length
+  imagenTemporalAdmin = normalizarImagenProducto(producto?.imagen);
+  variantesTemporalAdmin = producto?.variantes?.length
     ? producto.variantes.map(v => ({ ...v }))
     : [crearVarianteProducto()];
 
@@ -261,7 +261,7 @@ function abrirModalProducto(producto = null) {
 
     <div class="product-image-upload">
       <div class="image-preview" id="imagePreview">
-        <img src="${imagenTemporalRH}" id="previewImage" alt="">
+        <img src="${imagenTemporalAdmin}" id="previewImage" alt="">
       </div>
       <div class="image-upload-info">
         <strong>Foto del artículo</strong>
@@ -350,11 +350,11 @@ function abrirModalProducto(producto = null) {
 
   overlay.classList.add('open');
 
-  renderVariantesTemporalRH();
+  renderVariantesTemporalAdmin();
 
   document.getElementById('agregarVarianteBtn')?.addEventListener('click', () => {
-    variantesTemporalRH.push(crearVarianteProducto());
-    renderVariantesTemporalRH();
+    variantesTemporalAdmin.push(crearVarianteProducto());
+    renderVariantesTemporalAdmin();
   });
 
   document.getElementById('productoImagen')?.addEventListener('change', manejarImagen);
@@ -400,12 +400,12 @@ function abrirModalProducto(producto = null) {
 // REPETIDOR DE VARIANTES (color / talla / existencia)
 // ============================================================
 
-function renderVariantesTemporalRH() {
+function renderVariantesTemporalAdmin() {
 
   const cont = document.getElementById('variantesLista');
   if (!cont) return;
 
-  cont.innerHTML = variantesTemporalRH.map((v, i) => `
+  cont.innerHTML = variantesTemporalAdmin.map((v, i) => `
     <div class="variante-row" data-variante-row="${v.id}">
       <span class="variante-numero">Variante ${i + 1}</span>
       <div class="variante-campos">
@@ -431,7 +431,7 @@ function renderVariantesTemporalRH() {
 
   cont.querySelectorAll('[data-campo]').forEach(input => {
     input.addEventListener('input', (e) => {
-      const variante = variantesTemporalRH.find(v => v.id === e.target.dataset.id);
+      const variante = variantesTemporalAdmin.find(v => v.id === e.target.dataset.id);
       if (!variante) return;
       const campo = e.target.dataset.campo;
       variante[campo] = campo === 'stock' ? e.target.value : e.target.value.trim();
@@ -440,12 +440,12 @@ function renderVariantesTemporalRH() {
 
   cont.querySelectorAll('[data-quitar-variante]').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (variantesTemporalRH.length <= 1) {
+      if (variantesTemporalAdmin.length <= 1) {
         mostrarToast('El producto debe tener al menos una variante.');
         return;
       }
-      variantesTemporalRH = variantesTemporalRH.filter(v => v.id !== btn.dataset.quitarVariante);
-      renderVariantesTemporalRH();
+      variantesTemporalAdmin = variantesTemporalAdmin.filter(v => v.id !== btn.dataset.quitarVariante);
+      renderVariantesTemporalAdmin();
     });
   });
 
@@ -467,14 +467,14 @@ async function manejarImagen(e) {
   }
 
   try {
-    imagenTemporalRH = await comprimirImagenAProductoDataURL(archivo);
+    imagenTemporalAdmin = await comprimirImagenAProductoDataURL(archivo);
   } catch (error) {
     mostrarToast('No se pudo procesar esa imagen. Intenta con otra.');
     return;
   }
 
   const preview = document.getElementById('previewImage');
-  if (preview) preview.src = imagenTemporalRH;
+  if (preview) preview.src = imagenTemporalAdmin;
 
 }
 
@@ -499,20 +499,20 @@ function obtenerDatosProducto() {
 
   if (!nombre) { mostrarToast('Escribe el nombre del producto.'); return null; }
   if (!descripcion) { mostrarToast('Agrega una descripción.'); return null; }
-  if (!variantesTemporalRH.length || variantesTemporalRH.some(v => Number.isNaN(Number(v.stock)) || Number(v.stock) < 0)) {
+  if (!variantesTemporalAdmin.length || variantesTemporalAdmin.some(v => Number.isNaN(Number(v.stock)) || Number(v.stock) < 0)) {
     mostrarToast('La existencia de alguna variante no es válida.');
     return null;
   }
   if (Number.isNaN(precioEtiqueta) || precioEtiqueta < 0) { mostrarToast('El precio etiqueta no es válido.'); return null; }
   if (Number.isNaN(descuento) || descuento < 0 || descuento > 100) { mostrarToast('El descuento no es válido (0 a 100).'); return null; }
 
-  const variantes = variantesTemporalRH.map(v => crearVarianteProducto(v));
+  const variantes = variantesTemporalAdmin.map(v => crearVarianteProducto(v));
 
   return {
     nombre, descripcion, material, categoria, calidad, codigo,
     variantes, precioEtiqueta, descuento,
     disponible: variantes.some(v => v.stock > 0),
-    imagen: imagenTemporalRH
+    imagen: imagenTemporalAdmin
   };
 
 }
@@ -530,7 +530,7 @@ function agregarProducto(datos) {
     ultimaAccion: { tipo: 'Agregado', empleado: ADMIN_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() }
   };
 
-  catalogoRH.unshift(nuevoProducto);
+  catalogoAdmin.unshift(nuevoProducto);
   guardarCatalogo();
   cerrarModal();
   renderCatalogo();
@@ -546,7 +546,7 @@ function agregarProducto(datos) {
 
 function guardarEdicionProducto(id, datos) {
 
-  const producto = catalogoRH.find(p => p.id === id);
+  const producto = catalogoAdmin.find(p => p.id === id);
   if (!producto) return;
 
   Object.assign(producto, datos);
@@ -563,7 +563,7 @@ function guardarEdicionProducto(id, datos) {
 
 function confirmarEliminar(id) {
 
-  const producto = catalogoRH.find(p => p.id === id);
+  const producto = catalogoAdmin.find(p => p.id === id);
   if (!producto) return;
 
   abrirAutorizacionAdmin({
@@ -577,10 +577,10 @@ function confirmarEliminar(id) {
 
 function eliminarProducto(id) {
 
-  const producto = catalogoRH.find(p => p.id === id);
+  const producto = catalogoAdmin.find(p => p.id === id);
   if (!producto) return;
 
-  catalogoRH = catalogoRH.filter(p => p.id !== id);
+  catalogoAdmin = catalogoAdmin.filter(p => p.id !== id);
   guardarCatalogo();
   renderCatalogo();
 
@@ -664,7 +664,7 @@ function abrirModalStock(producto) {
 
 function guardarStock(id, nuevosValores) {
 
-  const producto = catalogoRH.find(p => p.id === id);
+  const producto = catalogoAdmin.find(p => p.id === id);
   if (!producto) return;
 
   producto.variantes.forEach(v => {
@@ -712,15 +712,3 @@ function normalizarImagenProducto(imagen) {
 
 }
 
-function escapeHTML(texto) {
-  return String(texto ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-function escapeAttribute(texto) {
-  return escapeHTML(texto);
-}

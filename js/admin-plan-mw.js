@@ -405,8 +405,7 @@ function construirTextoFaltanteCorto(limitante) {
 }
 
 function setTextPlanMW(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
+  return setText(id, val);
 }
 
 // ============================================================

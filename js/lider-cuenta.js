@@ -49,10 +49,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
 function fmtMoney(n) {
   return `$${Math.round(n).toLocaleString('es-MX')}`;
 }

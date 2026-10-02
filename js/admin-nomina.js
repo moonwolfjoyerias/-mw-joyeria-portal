@@ -241,12 +241,7 @@ function construirAvatarEmpleadoNomina(empleado, estilos = '') {
 }
 
 function escapeHTMLNomina(texto) {
-  return String(texto ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  return escapeHTML(texto);
 }
 
 // ============================================================

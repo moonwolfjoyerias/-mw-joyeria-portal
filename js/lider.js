@@ -101,11 +101,6 @@ function renderRankHero() {
   setText('rankHeroNote', esUltimo ? '¡Has alcanzado el rango más alto!' : '¡Vas por un camino incréible!');
 }
 
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
-
 function renderStatCards() {
   const { personasActivas, produccionGrupalMes, personasCalificadas } = LIDER_EJEMPLO.stats;
   setText('statPersonas', personasActivas);

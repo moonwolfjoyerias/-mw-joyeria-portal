@@ -174,16 +174,3 @@ function formatearFechaISO(fecha) {
 // UTILIDADES
 // ============================================================
 
-function setText(id, valor) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = valor;
-}
-
-function escapeHTML(texto) {
-  return String(texto ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}

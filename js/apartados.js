@@ -143,11 +143,6 @@ function actualizarReloj() {
   setText('cdSeg', String(seg).padStart(2, '0'));
 }
 
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
-
 // Avisa a Staff y Encargado de una acción que ellos deben revisar/confirmar
 // (quitar pieza, cambiar variante, avisar transferencia). El link lleva
 // directo a la fila de esa persona en la tabla operativa de Staff/Encargado
