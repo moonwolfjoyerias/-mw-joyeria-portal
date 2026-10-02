@@ -417,9 +417,23 @@ service cloud.firestore {
     // también la llama desde "Mi lista de deseos" (Emprendedora/Líder),
     // y esa acción sí debe quedar registrada. Nunca se edita ni se borra
     // un registro ya escrito — solo se agregan documentos nuevos.
+    //
+    // SEC-10 de la auditoría: antes "crear" no validaba nada del
+    // contenido — cualquier autenticado podía forjar un registro
+    // reportándose como otro rol (p. ej. una Emprendedora escribiendo
+    // "admin aprobó X"). usuarioId/usuarioNombre siguen sin poder
+    // compararse contra request.auth.uid (mismo motivo ya documentado en
+    // solicitudesInscripcion: hoy son el id de personas-ejemplo.js o de
+    // cuentasInternas, no el uid), pero el campo "rol" SÍ es siempre,
+    // en el código real, el mismo rol vigente del que escribe
+    // (registrarAuditoriaAdmin/registrarAuditoriaEncargado lo fijan
+    // ellos mismos; los demás llamadores pasan literalmente 'staff' o
+    // el rol real de la persona) — exigir que coincida con miRol() cierra
+    // el caso de forjar una entrada atribuida a un rol que no es el
+    // propio, sin romper ningún registro legítimo de hoy.
     match /auditoria/{id} {
       allow read: if esInterno();
-      allow create: if estaAutenticado();
+      allow create: if estaAutenticado() && request.resource.data.rol == miRol();
       allow update, delete: if esInterno();
     }
 
