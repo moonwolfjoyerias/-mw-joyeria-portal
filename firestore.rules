@@ -87,17 +87,23 @@ service cloud.firestore {
       allow write: if esInterno();
     }
 
-    // ventanasApartado/{id} — Apartados. Cualquier cuenta autenticada
-    // puede leer y escribir. Idealmente Emprendedora/Líder solo debería
-    // poder tocar sus propias ventanas (comparando usuarioId == su
-    // propio uid), pero usuarioId guarda el id de personas-ejemplo.js
-    // (ej. "persona-1234"), no el uid real de Firebase Auth que ya
-    // tiene su cuenta desde esta fase — esa comparación nunca
-    // coincidiría todavía (mismo motivo documentado abajo en
-    // solicitudesInscripcion). Ajustar cuando Apartados también guarde
-    // el uid real, no solo el id de personas.
+    // ventanasApartado/{id} — Apartados. SEC-07 de la auditoría: antes
+    // cualquier cuenta autenticada podía leer Y ESCRIBIR cualquier
+    // ventana ajena — el comentario original decía que usuarioId no
+    // coincidía con ningún dato real del perfil, pero sí coincide:
+    // usuarioId guarda personaId (ver abrirVentanaApartado en
+    // apartados-modelo.js), el mismo campo que ya vive en
+    // users/{uid}.personaId desde que existe esa cuenta real. Una
+    // Emprendedora/Líder ahora solo puede escribir SU PROPIA ventana;
+    // Staff/Encargado/Admin siguen con acceso total (ellos abren/editan
+    // ventanas de clientas que no siempre tienen cuenta propia — ver
+    // comentario de apartados-firestore-sync.js). La lectura se queda
+    // abierta a cualquier autenticado: Staff necesita poder buscar la
+    // ventana de cualquier clienta por nombre, no solo por id.
     match /ventanasApartado/{id} {
-      allow read, write: if estaAutenticado();
+      allow read: if estaAutenticado();
+      allow create: if estaAutenticado() && (esInterno() || request.resource.data.usuarioId == miPerfil().personaId);
+      allow update, delete: if estaAutenticado() && (esInterno() || resource.data.usuarioId == miPerfil().personaId);
     }
 
     // apartadosMeta/{id} — igual que catalogoMeta: solo trackea si

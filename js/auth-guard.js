@@ -71,14 +71,37 @@ function obtenerCarpetaPortalActual() {
 // Si no hay sesión válida para esta carpeta, manda a login.html de
 // inmediato — se llama sin esperar a DOMContentLoaded (ver abajo) para
 // que la redirección ocurra antes de que la página llegue a pintarse.
+//
+// SEC-04 de la auditoría: en modo Firebase, exigirSesionPortal() solo
+// puede decidir DENTRO del callback asíncrono de onAuthStateChanged —
+// mientras tanto, el controlador de datos de la propia página (p. ej.
+// admin-nomina.js) dispara en el evento síncrono DOMContentLoaded sin
+// esperar esa decisión, así que una cuenta sin permiso podía alcanzar a
+// iniciar la carga real de datos de ese rol antes de ser regresada a su
+// propio portal. En vez de retocar cada controlador de cada página (30+
+// archivos), se oculta el documento completo (ocultarDocumentoMientrasSeDecideSesion,
+// llamado síncronamente al final de este archivo, antes que cualquier
+// otro script) hasta que exigirSesionPortal() ya haya corrido — así
+// ningún controlador de página llega a pintar NADA, suyo o ajeno,
+// mientras la guardia todavía no decide.
 function exigirSesionPortal() {
   const carpeta = obtenerCarpetaPortalActual();
-  if (!carpeta) return; // No es una página de portal (ej. login.html).
+  if (!carpeta) { mostrarDocumento(); return; } // No es una página de portal (ej. login.html).
 
   const sesion = obtenerSesionActiva();
   if (!sesion || sesion.rol !== carpeta) {
     window.location.replace('../../login.html');
+    return; // La página está navegando fuera — no hace falta mostrarla.
   }
+  mostrarDocumento();
+}
+
+function ocultarDocumentoMientrasSeDecideSesion() {
+  if (obtenerCarpetaPortalActual()) document.documentElement.style.visibility = 'hidden';
+}
+
+function mostrarDocumento() {
+  document.documentElement.style.visibility = '';
 }
 
 // Reemplaza el nombre/inicial de perfil escritos a mano en el <header>
@@ -180,16 +203,26 @@ document.addEventListener('DOMContentLoaded', () => {
 // login.html, o cerraría la sesión de alguien que sí tiene una válida.
 // En modo demo (el caso de hoy) nada de esto corre: exigirSesionPortal()
 // se llama de inmediato, igual que siempre.
+ocultarDocumentoMientrasSeDecideSesion();
+
 if (typeof authFirebase !== 'undefined' && authFirebase) {
   authFirebase.onAuthStateChanged(async (user) => {
-    if (user) {
-      const sesion = await construirSesionDesdeUsuarioFirebase(user);
-      if (sesion) {
-        guardarSesionActiva(sesion);
+    try {
+      if (user) {
+        const sesion = await construirSesionDesdeUsuarioFirebase(user);
+        if (sesion) {
+          guardarSesionActiva(sesion);
+        } else {
+          cerrarSesion();
+        }
       } else {
         cerrarSesion();
       }
-    } else {
+    } catch (error) {
+      // Si construirSesionDesdeUsuarioFirebase truena, se trata igual
+      // que "sin sesión" — exigirSesionPortal() abajo decide y, si toca
+      // quedarse, mostrarDocumento() de todos modos revela la página
+      // (nunca se queda oculta para siempre por un error inesperado).
       cerrarSesion();
     }
     exigirSesionPortal();

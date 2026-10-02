@@ -1916,6 +1916,21 @@ a:hover { color: var(--mw-gold); }
   .org-node { padding: 0.55em 0.8em; }
   .org-node .on-name { font-size: 0.74rem; }
   .org-tree li { padding: 30px 12px 0 12px; }
+  /* UI-02 de la auditoría: a 390px la tarjeta recortaba el árbol sin
+     dejar forma de alcanzar el resto del equipo salvo el botón de zoom
+     "−". .org-tree-wrap ya tenía overflow-x:auto, pero sin un alto
+     máximo ni overflow-y, un árbol con varios niveles se salía por
+     abajo de la tarjeta sin ninguna barra para llegar ahí tampoco. Se
+     limita la altura visible y se habilita scroll en ambos ejes, con
+     inercia táctil, dentro de su propio contenedor. */
+  .org-tree-card { padding: 1rem; overflow: hidden; }
+  .org-tree-wrap {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 60vh;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
 }
 
 .equipo-modal-list { max-height: 320px; overflow-y: auto; margin: 1rem 0; }
@@ -2107,10 +2122,34 @@ a:hover { color: var(--mw-gold); }
 .text-muted { color: var(--mw-text-muted); }
 .container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
 
+/* ---------- Sidebar del portal: botón de hamburguesa (UI-01) ----------
+   Insertado por js/portal-common.js (initSidebarMovil) junto al logo.
+   Oculto por default — solo se ve en el media query de abajo. */
+.sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.25);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  position: absolute;
+  top: 1.4rem;
+  right: 1rem;
+}
+.sidebar-toggle svg { width: 20px; height: 20px; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 720px) {
   .layout-portal { flex-direction: column; }
-  .sidebar { width: 100%; }
+  .sidebar { width: 100%; position: relative; }
+  .sidebar-toggle { display: flex; }
+  /* Colapsada por default: solo se ve el logo + el botón. */
+  .sidebar nav { display: none; }
+  .sidebar.sidebar-abierta nav { display: block; margin-top: 0.75rem; }
   .topbar { flex-wrap: wrap; align-items: center; }
   .nav-toggle { display: flex; }
   #publicNav { display: none; width: 100%; }

@@ -183,6 +183,29 @@ async function guardarCreditosRepo(creditos) {
 
 async function sincronizarVentanasConFirestore(ventanas) {
   const coleccion = dbFirestore.collection(APARTADOS_COLECCION_FIRESTORE);
+
+  // SEC-07: una cuenta de Emprendedora/Líder (sesion.tipo === 'persona')
+  // solo puede escribir SUS PROPIAS ventanas (usuarioId == su
+  // personaId) — igual que ya exige la regla de ventanasApartado.
+  // guardarVentanasApartado() recibe el arreglo COMPLETO (todas las
+  // ventanas de todas las clientas, no solo las suyas — ver
+  // mutarVentanaPropia en js/apartados.js), así que recorrerlo entero
+  // en un solo batch (como sí hace Staff/Encargado/Admin abajo) haría
+  // que Firestore rechace el batch ENTERO por las ventanas ajenas —
+  // mismo motivo y misma solución que ya se aplicó en
+  // personas-firestore-sync.js para SEC-01.
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  if (sesion && sesion.tipo === 'persona' && sesion.personaId) {
+    const propias = ventanas.filter(v => v.usuarioId === sesion.personaId);
+    if (!propias.length) return;
+    const batchPropio = dbFirestore.batch();
+    propias.forEach(ventana => {
+      batchPropio.set(coleccion.doc(String(ventana.id)), ventana);
+    });
+    await batchPropio.commit();
+    return;
+  }
+
   const snap = await coleccion.get();
   const idsNuevos = new Set(ventanas.map(v => String(v.id)));
   const batch = dbFirestore.batch();

@@ -188,6 +188,10 @@ function agregarEventosFilas() {
     btn.addEventListener("click", () => iniciarLiquidacionVentana(btn.dataset.liquidarVentana));
   });
 
+  document.querySelectorAll("[data-aplicar-excedente]").forEach(btn => {
+    btn.addEventListener("click", () => abrirAutorizacion({ tipo: "aplicar-excedente-ventana", ventanaId: btn.dataset.aplicarExcedente }));
+  });
+
   document.querySelectorAll("[data-cancelar-ventana]").forEach(btn => {
     btn.addEventListener("click", () => abrirAutorizacion({ tipo: "cancelar-ventana", ventanaId: btn.dataset.cancelarVentana }));
   });
@@ -370,6 +374,7 @@ function abrirAutorizacion(accion) {
     "confirmar-deposito-ventana": "Autorizar depósito",
     "aprobar-vip-ventana": "Aprobar apartado VIP",
     "liquidar-ventana": "Autorizar liquidación",
+    "aplicar-excedente-ventana": "Aplicar excedente de depósito",
     "cancelar-ventana": "Autorizar cancelación",
     "desapartar-ventana": "Autorizar desapartar"
   };
@@ -559,6 +564,14 @@ async function ejecutarAccion(personal) {
     mensaje = `Apartado liquidado por ${personal.nombre}.`;
     auditoriaAccion = 'liquidar_ventana';
     auditoriaDescripcion = `Apartado de ${v.usuarioNombre} liquidado por $${accionPendiente.datos.monto}`;
+
+  } else if (accionPendiente.tipo === "aplicar-excedente-ventana") {
+
+    const resultadoExcedente = aplicarExcedenteDeposito(v, personal);
+    if (!resultadoExcedente.ok) { cerrarModal(); mostrarToast(resultadoExcedente.error); accionPendiente = null; return; }
+    mensaje = `Excedente de $${resultadoExcedente.aplicado} aplicado por ${personal.nombre}.`;
+    auditoriaAccion = 'aplicar_excedente_deposito';
+    auditoriaDescripcion = `Excedente de depósito de ${v.usuarioNombre} aplicado: $${resultadoExcedente.aplicado}`;
 
   } else if (accionPendiente.tipo === "aprobar-vip-ventana") {
 
