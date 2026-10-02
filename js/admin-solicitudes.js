@@ -45,7 +45,7 @@ async function renderListaSolicitudesAdmin() {
   const orden = document.getElementById('solicitudOrden')?.value || 'reciente';
 
   const solicitudesInscripcion = (await obtenerSolicitudes()).map(s => ({ ...s, _tipo: 'inscripcion', _titulo: s.nombreCompleto }));
-  const solicitudesEvento = (typeof obtenerSolicitudesEventos === 'function' ? obtenerSolicitudesEventos() : []).map(s => ({ ...s, _tipo: 'evento', _titulo: s.titulo }));
+  const solicitudesEvento = (typeof obtenerSolicitudesEventos === 'function' ? await obtenerSolicitudesEventos() : []).map(s => ({ ...s, _tipo: 'evento', _titulo: s.titulo }));
 
   const todasLasSolicitudes = [...solicitudesInscripcion, ...solicitudesEvento];
 
@@ -356,9 +356,9 @@ function abrirModalRechazarAdmin(solicitud) {
 // SOLICITUDES DE EVENTO
 // ============================================================
 
-function abrirDetalleSolicitudEventoAdmin(id) {
+async function abrirDetalleSolicitudEventoAdmin(id) {
 
-  const solicitud = obtenerSolicitudEventoPorId(id);
+  const solicitud = await obtenerSolicitudEventoPorId(id);
   if (!solicitud) return;
 
   const overlay = document.getElementById('modalOverlay');
@@ -423,9 +423,9 @@ function abrirConfirmarAprobarEventoAdmin(solicitud) {
   abrirAutorizacionAdmin({
     titulo: 'Aprobar solicitud de evento',
     mensaje: `¿Confirmas la publicación de "${escapeHTMLSolAdmin(solicitud.titulo)}" en el calendario? Toda la comunidad podrá verlo e invitarse.`,
-    onConfirmar: () => {
+    onConfirmar: async () => {
 
-      const resultado = aprobarSolicitudEvento(solicitud.id, {
+      const resultado = await aprobarSolicitudEvento(solicitud.id, {
         adminId: ADMIN_IDENTIDAD.usuarioId,
         adminNombre: ADMIN_IDENTIDAD.usuarioNombre
       });
@@ -471,7 +471,7 @@ function abrirModalRechazarEventoAdmin(solicitud) {
 
   overlay.classList.add('open');
 
-  document.getElementById('confirmarRechazoEventoBtn')?.addEventListener('click', () => {
+  document.getElementById('confirmarRechazoEventoBtn')?.addEventListener('click', async () => {
 
     const motivo = document.getElementById('motivoRechazoEventoInput')?.value.trim();
 
@@ -481,7 +481,7 @@ function abrirModalRechazarEventoAdmin(solicitud) {
       return;
     }
 
-    const resultado = rechazarSolicitudEvento(solicitud.id, {
+    const resultado = await rechazarSolicitudEvento(solicitud.id, {
       adminId: ADMIN_IDENTIDAD.usuarioId,
       adminNombre: ADMIN_IDENTIDAD.usuarioNombre,
       motivo

@@ -62,7 +62,11 @@ function abrirModalNuevaVentana() {
     <p class="modal-sub">Si la persona ya tiene crédito guardado de una ventana anterior, se usará automáticamente y no se pedirá otro depósito.</p>
 
     <label for="nvNombre">Nombre completo</label>
-    <input id="nvNombre" type="text" placeholder="Ej. María Fernanda">
+    <div class="persona-autocomplete" id="nvNombreWrap">
+      <input id="nvNombre" type="text" autocomplete="off" placeholder="Ej. María Fernanda — empieza a escribir para buscarla">
+      <div class="persona-autocomplete-list" id="nvNombreList" hidden></div>
+    </div>
+    <small class="field-help" id="nvPersonaHint" style="display:none;"></small>
 
     <label for="nvTelefono">Teléfono</label>
     <input id="nvTelefono" type="text" placeholder="Ej. 444 123 4567">
@@ -94,6 +98,42 @@ function abrirModalNuevaVentana() {
   `;
 
   overlay.classList.add("open");
+
+  // LOG-10 de la auditoría: antes la categoría (normal/foránea/VIP) era
+  // un selector manual independiente que Staff debía recordar escoger
+  // cada vez, sin relación con el perfil real de la persona — si lo
+  // olvidaba, una líder VIP podía terminar con una ventana normal (le
+  // exige depósito, vence en 3 días). Buscar por nombre contra el
+  // registro real (si existe cuenta) llena categoría y teléfono solos;
+  // para una clienta sin cuenta registrada, el formulario sigue
+  // funcionando igual que siempre con texto libre.
+  let personaSeleccionadaNuevaVentana = null;
+  if (typeof crearAutocompletePersonas === 'function' && typeof obtenerPersonas === 'function') {
+    crearAutocompletePersonas({
+      inputEl: document.getElementById('nvNombre'),
+      listEl: document.getElementById('nvNombreList'),
+      obtenerCandidatos: (texto) => obtenerPersonas().filter(p =>
+        p.estado !== 'baja' && nombreCompletoPersona(p).toLowerCase().includes(texto)
+      ),
+      onSeleccionar: (p) => {
+        personaSeleccionadaNuevaVentana = p;
+        const telefonoInput = document.getElementById('nvTelefono');
+        const categoriaSelect = document.getElementById('nvCategoria');
+        const hint = document.getElementById('nvPersonaHint');
+        if (telefonoInput && p.telefono) telefonoInput.value = p.telefono;
+        if (categoriaSelect && p.categoria) categoriaSelect.value = p.categoria;
+        if (hint) {
+          hint.style.display = 'block';
+          hint.textContent = 'Cuenta real encontrada — categoría y teléfono se llenaron de su perfil.';
+        }
+      },
+      onLimpiar: () => {
+        personaSeleccionadaNuevaVentana = null;
+        const hint = document.getElementById('nvPersonaHint');
+        if (hint) hint.style.display = 'none';
+      }
+    });
+  }
 
   document.getElementById("nvProductoId").addEventListener("change", (e) => {
 
@@ -148,7 +188,8 @@ function abrirModalNuevaVentana() {
         nombre, telefono, categoria, total,
         productoId, varianteId,
         producto: productoElegido.nombre,
-        variante: etiquetaVariante(varianteElegida)
+        variante: etiquetaVariante(varianteElegida),
+        personaId: personaSeleccionadaNuevaVentana ? personaSeleccionadaNuevaVentana.id : null
       }
     });
 
@@ -171,7 +212,12 @@ function agregarEventosFilas() {
   document.querySelectorAll("[data-toggle]").forEach(btn => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.toggle;
-      if (filasExpandidas.has(id)) filasExpandidas.delete(id); else filasExpandidas.add(id);
+      if (filasExpandidas.has(id)) {
+        filasExpandidas.delete(id);
+      } else {
+        filasExpandidas.add(id);
+        marcarCambioClienteRevisado(id);
+      }
       renderTabla();
     });
   });
@@ -462,8 +508,12 @@ async function ejecutarAccion(personal) {
 
   if (accionPendiente.tipo === "nueva-ventana") {
 
-    const { nombre, telefono, categoria, producto, variante, total, productoId, varianteId } = accionPendiente.datos;
-    const usuarioId = slugUsuarioId(nombre);
+    const { nombre, telefono, categoria, producto, variante, total, productoId, varianteId, personaId } = accionPendiente.datos;
+    // LOG-10: si Staff eligió una cuenta real del autocompletado, usa
+    // su id real (igual que ya hace catalogo.js para el autoservicio)
+    // en vez del slug derivado del nombre — así esta ventana también
+    // es "suya" para cualquier regla que compare usuarioId == personaId.
+    const usuarioId = personaId || slugUsuarioId(nombre);
 
     // Si la persona ya tiene una ventana activa, la pieza se suma ahí en
     // vez de abrir una segunda ventana con su propio vencimiento aparte

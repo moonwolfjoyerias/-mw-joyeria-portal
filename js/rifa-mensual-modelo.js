@@ -15,8 +15,10 @@
 // detalle de todos los votos (sección 9 del encargo original — "no crear
 // un sistema paralelo" — reutiliza agregarNotificacion cuando aplica).
 //
-// ⚠️ TEMPORAL: localStorage simula Firestore. Se reemplaza en Fase 3 sin
-// cambiar la forma de estos objetos.
+// FB-03 de la auditoría: la lectura/escritura real (Firestore o
+// localStorage) ya no vive aquí — ver js/rifa-mensual-firestore-sync.js.
+// Las claves de abajo son solo el respaldo local que ese archivo sigue
+// usando cuando no hay Firestore configurado.
 
 const RIFA_MENSUAL_CONFIG_KEY = 'mw-rifa-mensual-config-v1';
 const RIFA_MENSUAL_SOLICITUDES_KEY = 'mw-rifa-mensual-solicitudes-v1';
@@ -35,17 +37,11 @@ function obtenerMesKeyActualRifaMensual() {
 // ============================================================
 
 function obtenerConfigsRifaMensual() {
-  try {
-    const guardado = JSON.parse(localStorage.getItem(RIFA_MENSUAL_CONFIG_KEY));
-    if (guardado && typeof guardado === 'object') return guardado;
-  } catch (error) {
-    // sigue abajo con un objeto vacío
-  }
-  return {};
+  return RIFA_MENSUAL_CONFIGS_CACHE;
 }
 
 function guardarConfigsRifaMensual(configs) {
-  localStorage.setItem(RIFA_MENSUAL_CONFIG_KEY, JSON.stringify(configs));
+  guardarConfigsRifaMensualRepo(configs);
 }
 
 // Config del mes indicado (por defecto, el mes en curso) — nunca null,
@@ -175,17 +171,11 @@ function eliminarOpcionRifaMes(mesKey, opcionId, { usuarioId, usuarioNombre } = 
 // ============================================================
 
 function obtenerSolicitudesRifaMensual() {
-  try {
-    const guardadas = JSON.parse(localStorage.getItem(RIFA_MENSUAL_SOLICITUDES_KEY));
-    if (Array.isArray(guardadas)) return guardadas;
-  } catch (error) {
-    // sigue abajo
-  }
-  return [];
+  return RIFA_MENSUAL_SOLICITUDES_CACHE;
 }
 
 function guardarSolicitudesRifaMensual(lista) {
-  localStorage.setItem(RIFA_MENSUAL_SOLICITUDES_KEY, JSON.stringify(lista));
+  guardarSolicitudesRifaMensualRepo(lista);
 }
 
 // Una sola solicitud VIGENTE por persona por mes — volver a enviar
@@ -212,7 +202,7 @@ function guardarSolicitudRifaPersona({ personaId, personaNombre, mesKey, texto, 
   }
 
   const nueva = {
-    id: `rifa-sol-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    id: rifaMensualClavePersonaMes(personaId, mesKey),
     personaId,
     personaNombre: personaNombre || '',
     mesKey,
@@ -237,17 +227,11 @@ function obtenerSolicitudesRifaMes(mesKey) {
 // ============================================================
 
 function obtenerVotosRifaMensual() {
-  try {
-    const guardados = JSON.parse(localStorage.getItem(RIFA_MENSUAL_VOTOS_KEY));
-    if (Array.isArray(guardados)) return guardados;
-  } catch (error) {
-    // sigue abajo
-  }
-  return [];
+  return RIFA_MENSUAL_VOTOS_CACHE;
 }
 
 function guardarVotosRifaMensual(lista) {
-  localStorage.setItem(RIFA_MENSUAL_VOTOS_KEY, JSON.stringify(lista));
+  guardarVotosRifaMensualRepo(lista);
 }
 
 // Un solo voto VIGENTE por persona por mes — puede cambiarlo mientras
@@ -277,6 +261,7 @@ function votarOpcionRifaMes({ personaId, personaNombre, mesKey, opcionId }) {
   }
 
   const nuevo = {
+    id: rifaMensualClavePersonaMes(personaId, mesKey),
     personaId,
     personaNombre: personaNombre || '',
     mesKey,
@@ -306,3 +291,8 @@ function obtenerConteoVotosRifaMes(mesKey) {
     votos: votos.filter(v => v.opcionId === opcion.id)
   }));
 }
+
+// Cada página espera esta promesa una vez antes de su primer render que
+// dependa de la Rifa del mes — mismo patrón que comisionesRepoListo/
+// apartadosRepoListo (ver cabecera de este archivo).
+const rifaMensualRepoListo = cargarRifaMensualRepo();

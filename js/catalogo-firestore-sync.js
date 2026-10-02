@@ -20,17 +20,19 @@
 // primer render — igual que ya hace solicitudes-modelo.js con sus
 // consultas — así nunca se pinta con el arreglo todavía vacío.
 //
-// ⚠️ Nota conocida (ver AUDITORIA-FIREBASE.md, sección C.4): hoy
-// existen DOS semillas distintas con el mismo nombre CATALOGO_EJEMPLO
-// —catalogo-productos-ejemplo.js (catálogo público, forma antigua sin
-// variantes) y staff-catalogo-ejemplo.js (gestión Staff/Encargado/
-// Admin, ya en forma de variantes)— cada página carga solo una de las
-// dos. Este archivo no intenta resolver esa inconsistencia (viene de
-// antes de Firebase); solo usa la que ya esté cargada en cada página,
-// exactamente como el comportamiento actual. Si Firestore arranca
-// vacío, la primera página que se visite siembra la colección
-// "productos" con SU semilla local — normalizarlas a una sola es
-// trabajo de una migración aparte.
+// Nota (DUP-01 de la auditoría, ya corregido): llegó a haber DOS
+// semillas distintas con el mismo nombre CATALOGO_EJEMPLO —catalogo-
+// productos-ejemplo.js (catálogo público, forma antigua sin variantes)
+// y staff-catalogo-ejemplo.js (gestión Staff/Encargado/Admin, ya en
+// forma de variantes)— y admin-portal.html era la única página que
+// todavía cargaba la antigua, con su propio conteo leído directo de
+// localStorage en vez de esperar a `catalogoRepoListo`. Ahora las 11
+// páginas que usan catálogo cargan la MISMA semilla
+// (staff-catalogo-ejemplo.js) antes de este archivo, así que si
+// Firestore arranca vacío, cualquiera que sea la primera página
+// visitada siembra la colección "productos" con la misma forma.
+// catalogo-productos-ejemplo.js quedó sin ninguna página que lo
+// cargue (ver DUP-02 de la auditoría).
 
 const CATALOGO_STORAGE_KEY = 'mw_staff_catalogo_demo';
 const CATALOGO_COLECCION_FIRESTORE = 'productos';
