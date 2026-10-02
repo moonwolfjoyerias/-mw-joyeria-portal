@@ -308,6 +308,36 @@ service cloud.firestore {
       allow write: if esAdmin();
     }
 
+    // comisionesAjustes/{clave}, comisionesHistorialAjustes/{id},
+    // comisionesPagos/{clave}, comisionesBonos/{clave},
+    // comisionesRangoManual/{clave}, comisionesMeta/{id} — FB-01 de la
+    // auditoría (ver js/comisiones-firestore-sync.js). Exclusivo de
+    // Admin: a diferencia de Nómina, ni Staff ni Encargado tienen un
+    // módulo de Comisiones en su portal ni un permiso.comisiones que
+    // active un segundo rol — portal/admin/ es la única carpeta que la
+    // usa. Pendiente (igual que el resto de "claves compuestas" de este
+    // archivo): restringir lectura a que cada líder solo vea lo suyo
+    // requeriría separar el personaId/liderId de la clave compuesta a
+    // un campo propio del documento — no se inventa esa regla aquí.
+    match /comisionesAjustes/{id} {
+      allow read, write: if esAdmin();
+    }
+    match /comisionesHistorialAjustes/{id} {
+      allow read, write: if esAdmin();
+    }
+    match /comisionesPagos/{id} {
+      allow read, write: if esAdmin();
+    }
+    match /comisionesBonos/{id} {
+      allow read, write: if esAdmin();
+    }
+    match /comisionesRangoManual/{id} {
+      allow read, write: if esAdmin();
+    }
+    match /comisionesMeta/{id} {
+      allow read, write: if esAdmin();
+    }
+
     // eventos/{id} — Calendario de actividades (ver
     // js/eventos-firestore-sync.js). Cualquier cuenta autenticada
     // puede leer (Emprendedora/Líder solo lo consulta desde
