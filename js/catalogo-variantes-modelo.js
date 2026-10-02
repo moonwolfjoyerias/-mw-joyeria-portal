@@ -14,11 +14,11 @@
 // todos, solo cambia si esos campos están vacíos o no.
 //
 // Comparten este módulo los 3 controladores de catálogo operativo
-// (staff/rh/admin-catalogo.js — casi copias entre sí, ver sus propios
-// encabezados) y los 3 controladores de Apartados (staff/rh/admin-
-// apartados.js), que ahora seleccionan la pieza del catálogo real en
-// vez de texto libre, y descuentan/restauran el stock de la variante
-// exacta al apartar/cancelar.
+// (staff/encargado/admin-catalogo.js — casi copias entre sí, ver sus
+// propios encabezados) y los 3 controladores de Apartados (staff/
+// encargado/admin-apartados.js), que ahora seleccionan la pieza del
+// catálogo real en vez de texto libre, y descuentan/restauran el stock
+// de la variante exacta al apartar/cancelar.
 //
 // FASE 2 (Firebase): el almacenamiento real (Firestore o localStorage,
 // colección/clave "productos"/"mw_staff_catalogo_demo") ya no vive

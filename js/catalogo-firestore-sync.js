@@ -20,8 +20,8 @@
 // primer render — igual que ya hace solicitudes-modelo.js con sus
 // consultas — así nunca se pinta con el arreglo todavía vacío.
 //
-// Nota (DUP-01 de la auditoría, ya corregido): llegó a haber DOS
-// semillas distintas con el mismo nombre CATALOGO_EJEMPLO —catalogo-
+// Nota (DUP-01 y DUP-02 de la auditoría, ya corregidos): llegó a haber
+// DOS semillas distintas con el mismo nombre CATALOGO_EJEMPLO —catalogo-
 // productos-ejemplo.js (catálogo público, forma antigua sin variantes)
 // y staff-catalogo-ejemplo.js (gestión Staff/Encargado/Admin, ya en
 // forma de variantes)— y admin-portal.html era la única página que
@@ -31,8 +31,8 @@
 // (staff-catalogo-ejemplo.js) antes de este archivo, así que si
 // Firestore arranca vacío, cualquiera que sea la primera página
 // visitada siembra la colección "productos" con la misma forma.
-// catalogo-productos-ejemplo.js quedó sin ninguna página que lo
-// cargue (ver DUP-02 de la auditoría).
+// catalogo-productos-ejemplo.js se eliminó del proyecto al quedar sin
+// ninguna página que lo cargara.
 
 const CATALOGO_STORAGE_KEY = 'mw_staff_catalogo_demo';
 const CATALOGO_COLECCION_FIRESTORE = 'productos';

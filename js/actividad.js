@@ -30,9 +30,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof auditoriaRepoListo !== 'undefined') await auditoriaRepoListo;
 
   // ACTIVIDAD_ROL_VISOR lo declara cada portal en su propio <script>
-  // inline (admin/rh/staff-actividad.html). Solo Admin puede ver las
-  // acciones de Admin — Staff y Encargado nunca las ven, aunque las suyas
-  // propias sí quedan visibles entre ellos.
+  // inline (admin/encargado/staff-actividad.html). Solo Admin puede ver
+  // las acciones de Admin — Staff y Encargado nunca las ven, aunque las
+  // suyas propias sí quedan visibles entre ellos.
   if (typeof ACTIVIDAD_ROL_VISOR !== 'undefined' && ACTIVIDAD_ROL_VISOR !== 'admin') {
     document.querySelector('#filtroRolActividad option[value="admin"]')?.remove();
   }

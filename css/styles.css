@@ -3760,7 +3760,7 @@ a:hover { color: var(--mw-gold); }
 /* Icono circular de los modales de autorización — antes solo estaba
    definido dentro de .catalog-modal; esta versión sin ámbito hace que
    también se vea bien en el resto de los modales (#modalOverlay /
-   .modal-box) que ya usan abrirAutorizacionAdmin/abrirAutorizacionRH. */
+   .modal-box) que ya usan abrirAutorizacionAdmin/abrirAutorizacionEncargado. */
 .auth-icon {
   width: 56px;
   height: 56px;
