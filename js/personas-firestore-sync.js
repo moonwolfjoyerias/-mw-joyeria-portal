@@ -34,6 +34,8 @@
 const PERSONAS_COLECCION_FIRESTORE = 'personas';
 const PERSONAS_META_COLECCION = 'personasMeta';
 const PERSONAS_META_DOC_ID = 'estado';
+const PERSONAS_FINANCIERO_COLECCION = 'personasFinanciero';
+const PERSONAS_FINANCIERO_CAMPOS = ['datosBancarios', 'constancia', 'rifa'];
 
 let PERSONAS_CACHE = [];
 
@@ -58,6 +60,7 @@ async function cargarPersonasRepo() {
       if (metaSnap.exists) {
         const snap = await dbFirestore.collection(PERSONAS_COLECCION_FIRESTORE).get();
         PERSONAS_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        await fusionarPersonasFinanciero(PERSONAS_CACHE);
       } else {
         // Primera vez que este proyecto de Firestore ve Personas: siembra
         // el ejemplo completo de una vez (misma semilla que ya existía).
@@ -80,6 +83,53 @@ async function cargarPersonasRepo() {
   }
   try { localStorage.setItem(PERSONAS_STORAGE_KEY, JSON.stringify(PERSONAS_CACHE)); } catch (error) { /* noop */ }
   return PERSONAS_CACHE;
+}
+
+// SEC-01 de la auditoría: datosBancarios/constancia/rifa viven en la
+// colección aparte personasFinanciero/{id} (ver firestore.rules), legible
+// solo por la propia persona o Admin — así que esta fusión solo puede
+// traer lo que el perfil de quien inició sesión tenga permitido leer.
+// Staff/Encargado nunca llaman esto con éxito (ni lo necesitan: ningún
+// controlador de Staff/Encargado lee estos tres campos) — se detectan
+// por sesión para no intentar una lectura que las reglas van a negar.
+async function fusionarPersonasFinanciero(personas) {
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  if (!sesion) return;
+  try {
+    if (sesion.tipo === 'interna' && sesion.rol === 'admin') {
+      const snap = await dbFirestore.collection(PERSONAS_FINANCIERO_COLECCION).get();
+      const porId = new Map(snap.docs.map(d => [d.id, d.data()]));
+      personas.forEach(persona => {
+        const datos = porId.get(String(persona.id));
+        if (datos) Object.assign(persona, datos);
+      });
+    } else if (sesion.tipo === 'persona' && sesion.personaId) {
+      const doc = await dbFirestore.collection(PERSONAS_FINANCIERO_COLECCION).doc(String(sesion.personaId)).get();
+      if (doc.exists) {
+        const persona = personas.find(p => String(p.id) === String(sesion.personaId));
+        if (persona) Object.assign(persona, doc.data());
+      }
+    }
+    // Staff/Encargado: ni lo intentan — no tienen permiso ni lo necesitan.
+  } catch (error) {
+    // Sin estos campos, cada lector ya trata datosBancarios/constancia/
+    // rifa como ausentes (persona?.datosBancarios, (persona.rifa||{}).x);
+    // no vale la pena tumbar toda la carga de Personas por esto.
+  }
+}
+
+// Separa de un objeto persona los campos restringidos (para que nunca
+// se vuelvan a escribir en personas/{id}) — regresa { publico, financiero }.
+function separarCamposFinancieroPersona(persona) {
+  const financiero = {};
+  const publico = { ...persona };
+  PERSONAS_FINANCIERO_CAMPOS.forEach(campo => {
+    if (persona[campo] !== undefined) {
+      financiero[campo] = persona[campo];
+      delete publico[campo];
+    }
+  });
+  return { publico, financiero };
 }
 
 // Igual que Apartados: varias acciones seguidas (crear, editar, cambiar
@@ -108,6 +158,30 @@ function guardarPersonasRepo(personas) {
 
 async function sincronizarPersonasConFirestore(personas) {
   const coleccion = dbFirestore.collection(PERSONAS_COLECCION_FIRESTORE);
+  const financieroColeccion = dbFirestore.collection(PERSONAS_FINANCIERO_COLECCION);
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+
+  // Una cuenta de Emprendedora/Líder (sesion.tipo === 'persona') solo
+  // puede escribir SU PROPIO documento — igual que ya exige la regla de
+  // personas/{id} (esInterno() || miPerfil().personaId == id). obtenerPersonas()
+  // regresa el arreglo COMPLETO (todas las personas, no solo ella), así
+  // que recorrer ese arreglo completo en un solo batch (como sí hace
+  // Admin/Staff/Encargado abajo) haría que Firestore rechace el batch
+  // ENTERO por los documentos ajenos — por eso aquí se escribe un único
+  // documento en vez del diff-y-resync completo.
+  if (sesion && sesion.tipo === 'persona' && sesion.personaId) {
+    const persona = personas.find(p => String(p.id) === String(sesion.personaId));
+    if (!persona) return;
+    const { publico, financiero } = separarCamposFinancieroPersona(persona);
+    const batchPropio = dbFirestore.batch();
+    batchPropio.set(coleccion.doc(String(persona.id)), publico);
+    if (Object.keys(financiero).length) {
+      batchPropio.set(financieroColeccion.doc(String(persona.id)), financiero, { merge: true });
+    }
+    await batchPropio.commit();
+    return;
+  }
+
   const snap = await coleccion.get();
   const idsNuevos = new Set(personas.map(p => String(p.id)));
   const batch = dbFirestore.batch();
@@ -115,7 +189,11 @@ async function sincronizarPersonasConFirestore(personas) {
     if (!idsNuevos.has(doc.id)) batch.delete(doc.ref);
   });
   personas.forEach(persona => {
-    batch.set(coleccion.doc(String(persona.id)), persona);
+    const { publico, financiero } = separarCamposFinancieroPersona(persona);
+    batch.set(coleccion.doc(String(persona.id)), publico);
+    if (Object.keys(financiero).length) {
+      batch.set(financieroColeccion.doc(String(persona.id)), financiero, { merge: true });
+    }
   });
   batch.set(dbFirestore.collection(PERSONAS_META_COLECCION).doc(PERSONAS_META_DOC_ID), { inicializado: true }, { merge: true });
 

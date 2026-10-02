@@ -115,24 +115,18 @@ async function actualizarPermisosCuentaInterna(id, permisos) {
 
 }
 
-// Semilla: mismas personas/contraseñas que ya existían en
-// PERSONAL_STAFF_EJEMPLO (js/staff-mi-cuenta-ejemplo.js) más las
-// identidades fijas de Encargado y Admin (mismas de
-// CALENDARIO_USUARIOS_EJEMPLO) — no se inventan personas nuevas. Se
-// excluye MW0005 porque ya es una Líder con su propia cuenta en
-// personas-ejemplo.js; no se duplica aquí.
+// SEC-03 de la auditoría: este archivo llegó a tener aquí ~9 cuentas de
+// ejemplo (admin01, staff01-07, encargado01) con la MISMA contraseña
+// ('1234') que scripts/seed-firebase.js usó para sembrar el proyecto
+// REAL de Firebase Auth — cualquiera podía leer este archivo desde el
+// sitio público y entrar como Admin. Nunca se van a usar en producción
+// (confirmado con la dirección), así que la semilla se vació por
+// completo: un proyecto nuevo arranca sin ninguna cuenta interna hasta
+// que Admin cree las reales desde Configuración → Usuarios y permisos.
+// Las cuentas viejas ya sembradas en el proyecto real de Firebase se
+// borran aparte con un script de Admin SDK (ver scripts/).
 function construirCuentasInternasEjemplo() {
-  return [
-    { id: 'staff01', usuario: 'staff01', nombre: 'Ana López', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
-    { id: 'staff02', usuario: 'staff02', nombre: 'Mariana Torres', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
-    { id: 'staff03', usuario: 'staff03', nombre: 'Carlos Reyes', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
-    { id: 'staff04', usuario: 'staff04', nombre: 'Fernanda Ibarra', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
-    { id: 'staff05', usuario: 'staff05', nombre: 'Jorge Salinas', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
-    { id: 'staff06', usuario: 'staff06', nombre: 'Paulina Gómez', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
-    { id: 'staff07', usuario: 'staff07', nombre: 'Luis Medina', rol: 'staff', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true },
-    { id: 'encargado01', usuario: 'encargado01', nombre: 'Valentina Cruz', rol: 'encargado', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true, permisos: permisosEncargadoPorDefecto({ nomina: true }) },
-    { id: 'admin01', usuario: 'admin01', nombre: 'Claudia', rol: 'admin', password: '1234', fechaAlta: '2023-01-01T00:00:00.000Z', telefono: '', correo: '', fotoUrl: '', activa: true }
-  ];
+  return [];
 }
 
 function obtenerCuentasInternas() {

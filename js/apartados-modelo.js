@@ -351,10 +351,10 @@ function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, emplea
 // — cantidad por combinación color+talla) antes de crear la pieza. Si ya
 // no hay existencia (otra persona se adelantó, o el catálogo cambió
 // mientras se llenaba el formulario), no crea nada y regresa el error.
-function agregarPiezaAVentana(ventana, datosPieza, empleado) {
+async function agregarPiezaAVentana(ventana, datosPieza, empleado) {
 
   if (typeof descontarStockVariante === 'function') {
-    const resultado = descontarStockVariante(datosPieza.productoId, datosPieza.varianteId);
+    const resultado = await descontarStockVariante(datosPieza.productoId, datosPieza.varianteId);
     if (!resultado.ok) return { ok: false, error: resultado.error };
   }
 
@@ -376,9 +376,9 @@ function agregarPiezaAVentana(ventana, datosPieza, empleado) {
 // Contraparte de agregarPiezaAVentana — restaura la existencia de la
 // variante de cada pieza que se cancela, para que el inventario no
 // quede perdido para siempre.
-function restaurarStockPiezasCanceladas(piezas) {
+async function restaurarStockPiezasCanceladas(piezas) {
   if (typeof restaurarStockVariante !== 'function') return;
-  piezas.forEach(pieza => restaurarStockVariante(pieza.productoId, pieza.varianteId));
+  await Promise.all(piezas.map(pieza => restaurarStockVariante(pieza.productoId, pieza.varianteId)));
 }
 
 // Liquida (paga) TODAS las piezas activas de la ventana juntas — el

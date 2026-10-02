@@ -165,7 +165,7 @@ function abrirModalNuevaVentana() {
 
 }
 
-function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total, productoId, varianteId }) {
+async function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total, productoId, varianteId }) {
 
   const usuarioId = slugUsuarioId(nombre);
 
@@ -176,7 +176,7 @@ function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante,
 
   if (ventanaExistente) {
 
-    const resultadoPiezaExistente = agregarPiezaAVentana(ventanaExistente, { producto, variante, total, productoId, varianteId }, ENCARGADO_EMPLEADO);
+    const resultadoPiezaExistente = await agregarPiezaAVentana(ventanaExistente, { producto, variante, total, productoId, varianteId }, ENCARGADO_EMPLEADO);
 
     if (!resultadoPiezaExistente.ok) {
       cerrarModal();
@@ -201,7 +201,7 @@ function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante,
   }
 
   const nuevaVentana = abrirVentanaApartado({ usuarioId, usuarioNombre: nombre, telefono, categoria }, ENCARGADO_EMPLEADO);
-  const resultadoPieza = agregarPiezaAVentana(nuevaVentana, { producto, variante, total, productoId, varianteId }, ENCARGADO_EMPLEADO);
+  const resultadoPieza = await agregarPiezaAVentana(nuevaVentana, { producto, variante, total, productoId, varianteId }, ENCARGADO_EMPLEADO);
 
   if (!resultadoPieza.ok) {
     cerrarModal();

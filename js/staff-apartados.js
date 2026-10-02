@@ -449,7 +449,7 @@ function validarAutorizacion() {
 // EJECUTAR ACCIÓN
 // ============================================================
 
-function ejecutarAccion(personal) {
+async function ejecutarAccion(personal) {
 
   if (!accionPendiente) return;
 
@@ -467,7 +467,7 @@ function ejecutarAccion(personal) {
 
     if (ventanaExistente) {
 
-      const resultadoPiezaExistente = agregarPiezaAVentana(ventanaExistente, { producto, variante, total, productoId, varianteId }, personal);
+      const resultadoPiezaExistente = await agregarPiezaAVentana(ventanaExistente, { producto, variante, total, productoId, varianteId }, personal);
 
       if (!resultadoPiezaExistente.ok) {
         cerrarModal();
@@ -497,7 +497,7 @@ function ejecutarAccion(personal) {
     }
 
     const nuevaVentana = abrirVentanaApartado({ usuarioId, usuarioNombre: nombre, telefono, categoria }, personal);
-    const resultadoPieza = agregarPiezaAVentana(nuevaVentana, { producto, variante, total, productoId, varianteId }, personal);
+    const resultadoPieza = await agregarPiezaAVentana(nuevaVentana, { producto, variante, total, productoId, varianteId }, personal);
 
     if (!resultadoPieza.ok) {
       cerrarModal();

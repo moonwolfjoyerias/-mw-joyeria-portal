@@ -2,18 +2,13 @@
 // DATOS DE EJEMPLO — ventanas de apartado (ver js/apartados-modelo.js)
 // ⚠️ TEMPORAL: estos datos serán reemplazados por Firestore en Fase 3.
 
-const PERSONAL_EJEMPLO = [
-  {
-    usuario: "staff01",
-    nombre: "Ana López",
-    password: "1234"
-  },
-  {
-    usuario: "admin01",
-    nombre: "Claudia",
-    password: "1234"
-  }
-];
+// SEC-03 de la auditoría: esta lista traía usuario/contraseña de
+// ejemplo duplicados de cuentas-internas-modelo.js (ya vaciado por el
+// mismo motivo) — se usaba como primer intento de autorización antes
+// de caer a verificarCredencialInterna(). Se vacía igual: la
+// autorización real ahora depende únicamente de las cuentas internas
+// de verdad que Admin cree desde Configuración.
+const PERSONAL_EJEMPLO = [];
 
 // Crédito ya guardado de una ventana anterior (Sección 3, opción B):
 // Andrea Castillo canceló su última pieza y su $50 quedó disponible

@@ -14,12 +14,7 @@
 // Las credenciales de abajo son únicamente para simulación.
 // En producción se utilizará autenticación real.
 
-const PERSONAL_STAFF_EJEMPLO = [
-  { usuario: 'staff01', nombre: 'Ana López', password: '1234' },
-  { usuario: 'staff02', nombre: 'Mariana Torres', password: '1234' },
-  { usuario: 'staff03', nombre: 'Carlos Reyes', password: '1234' },
-  { usuario: 'staff04', nombre: 'Fernanda Ibarra', password: '1234' },
-  { usuario: 'staff05', nombre: 'Jorge Salinas', password: '1234' },
-  { usuario: 'staff06', nombre: 'Paulina Gómez', password: '1234' },
-  { usuario: 'staff07', nombre: 'Luis Medina', password: '1234' }
-];
+// SEC-03 de la auditoría: igual que PERSONAL_EJEMPLO en
+// staff-apartados-ejemplo.js — credenciales de ejemplo duplicadas, ya
+// vaciadas por el mismo motivo (ver cuentas-internas-modelo.js).
+const PERSONAL_STAFF_EJEMPLO = [];

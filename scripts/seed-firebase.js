@@ -25,6 +25,14 @@
 // Es seguro correrlo más de una vez: si el usuario ya existe en
 // Firebase Auth, solo actualiza su contraseña/nombre y su perfil en
 // Firestore, no lo duplica.
+//
+// SEC-03 de la auditoría: construirPersonasEjemplo() y
+// construirCuentasInternasEjemplo() se vaciaron a propósito (esas
+// contraseñas de ejemplo quedaban escritas en JS público, ver
+// cuentas-internas-modelo.js) — así que este script hoy no siembra
+// nada ("0 cuentas sembradas"). Para borrar las cuentas de ejemplo que
+// ya existan en el proyecto real de un uso anterior de este script, usa
+// scripts/borrar-cuentas-ejemplo.js en vez de este archivo.
 
 const path = require('path');
 const vm = require('vm');

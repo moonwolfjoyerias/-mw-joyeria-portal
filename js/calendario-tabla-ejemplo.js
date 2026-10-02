@@ -9,23 +9,10 @@
 // Las credenciales de abajo son únicamente para simulación.
 // En producción se utilizará autenticación real.
 
-const CALENDARIO_USUARIOS_EJEMPLO = [
-  {
-    usuario: 'staff01',
-    nombre: 'Staff MW',
-    password: '1234'
-  },
-  {
-    usuario: 'encargado01',
-    nombre: 'Valentina Cruz',
-    password: '1234'
-  },
-  {
-    usuario: 'admin01',
-    nombre: 'Claudia',
-    password: '1234'
-  }
-];
+// SEC-03 de la auditoría: igual que PERSONAL_EJEMPLO en
+// staff-apartados-ejemplo.js — credenciales de ejemplo duplicadas, ya
+// vaciadas por el mismo motivo (ver cuentas-internas-modelo.js).
+const CALENDARIO_USUARIOS_EJEMPLO = [];
 
 const TIPOS_EVENTO_CALENDARIO = [
   { key: 'presencial', label: 'Presencial' },

@@ -273,13 +273,13 @@ function abrirModalEditar(id) {
   `;
   overlay.classList.add('open');
 
-  document.getElementById('guardarEdicionBtn').addEventListener('click', () => {
+  document.getElementById('guardarEdicionBtn').addEventListener('click', async () => {
     const nuevaVarianteId = document.getElementById('editVarianteSelect').value;
     if (!nuevaVarianteId || nuevaVarianteId === pieza.varianteId) {
       overlay.classList.remove('open');
       return;
     }
-    const resultado = cambiarVariantePiezaApartada(ventana.id, id, nuevaVarianteId);
+    const resultado = await cambiarVariantePiezaApartada(ventana.id, id, nuevaVarianteId);
     if (!resultado.ok) { mostrarToast(resultado.error); return; }
     overlay.classList.remove('open');
     renderApartados();
@@ -288,7 +288,7 @@ function abrirModalEditar(id) {
   });
 }
 
-function cambiarVariantePiezaApartada(ventanaId, piezaId, nuevaVarianteId) {
+async function cambiarVariantePiezaApartada(ventanaId, piezaId, nuevaVarianteId) {
   const encontrado = obtenerPiezasPropiasConVentana().find(({ pieza }) => pieza.id === piezaId);
   if (!encontrado) return { ok: false, error: 'No se encontró la pieza.' };
   const { pieza } = encontrado;
@@ -297,10 +297,19 @@ function cambiarVariantePiezaApartada(ventanaId, piezaId, nuevaVarianteId) {
   const producto = catalogo.find(p => p.id === pieza.productoId);
   const nuevaVariante = producto ? producto.variantes.find(v => v.id === nuevaVarianteId) : null;
   if (!producto || !nuevaVariante) return { ok: false, error: 'Esa variante ya no existe en el catálogo.' };
-  if (nuevaVariante.stock <= 0) return { ok: false, error: `Ya no hay existencia de ${producto.nombre} (${etiquetaVariante(nuevaVariante)}).` };
 
-  if (typeof restaurarStockVariante === 'function') restaurarStockVariante(pieza.productoId, pieza.varianteId);
-  if (typeof descontarStockVariante === 'function') descontarStockVariante(pieza.productoId, nuevaVarianteId);
+  // LOG-01: primero se intenta descontar la variante NUEVA (transacción
+  // real contra el servidor) — si falla (otro dispositivo se adelantó
+  // entre que se abrió este modal y se guardó), se aborta sin tocar
+  // nada: la pieza se queda exactamente como estaba, con la variante
+  // vieja todavía reservada. Solo si el descuento de la nueva variante
+  // tiene éxito se libera la vieja — nunca al revés, o una variante
+  // podría quedar "liberada" sin que la pieza en realidad haya cambiado.
+  if (typeof descontarStockVariante === 'function') {
+    const resultado = await descontarStockVariante(pieza.productoId, nuevaVarianteId);
+    if (!resultado.ok) return resultado;
+  }
+  if (typeof restaurarStockVariante === 'function') await restaurarStockVariante(pieza.productoId, pieza.varianteId);
 
   const etiqueta = etiquetaVariante(nuevaVariante);
   mutarVentanaPropia(ventanaId, v => {
