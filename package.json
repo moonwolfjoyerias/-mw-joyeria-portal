@@ -1,0 +1,12 @@
+{
+  "name": "mw-joyeria-portal",
+  "private": true,
+  "version": "1.0.0",
+  "description": "MW Joyería — portal web (sitio estático de páginas múltiples, sin framework). package.json solo para la herramienta de build (MEJ-03 de la auditoría: empaquetado y minificación opcionales con `npm run build`) — el sitio en sí sigue siendo HTML/CSS/JS servidos directo, sin Node en producción.",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

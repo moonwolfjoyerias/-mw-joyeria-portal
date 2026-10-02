@@ -17,8 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setTextDash(id, valor) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = valor;
+  return setText(id, valor);
 }
 
 // ============================================================
@@ -195,12 +194,7 @@ function formatearFechaISODash(fecha) {
 }
 
 function escapeHTMLDash(texto) {
-  return String(texto ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  return escapeHTML(texto);
 }
 
 // ============================================================

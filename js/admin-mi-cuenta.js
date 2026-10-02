@@ -136,15 +136,9 @@ function abrirModalEditarCampoCuentaAdmin(campo) {
 }
 
 function setTextMiCuentaAdmin(id, valor) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = valor;
+  return setText(id, valor);
 }
 
 function escapeHTMLMiCuentaAdmin(texto) {
-  return String(texto ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  return escapeHTML(texto);
 }

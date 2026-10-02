@@ -61,11 +61,6 @@ function renderPerfil() {
   setText('perfilCorreo', CUENTA_EJEMPLO.correo);
 }
 
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
-
 // Persona real con sesión abierta, con su Plan MW (Rifa/Constancia) al
 // día — misma función de cierre idempotente que usa Admin en cada
 // carga (js/plan-mw-admin.js), así nunca se desincroniza de lo que ve

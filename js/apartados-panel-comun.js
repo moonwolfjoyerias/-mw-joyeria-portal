@@ -449,11 +449,3 @@ function cerrarModal() {
   document.getElementById("modalOverlay")?.classList.remove("open");
 }
 
-function escapeHTML(texto) {
-  return String(texto ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}

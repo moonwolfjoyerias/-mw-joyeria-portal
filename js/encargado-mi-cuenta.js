@@ -58,7 +58,3 @@ function renderFotoPerfilEncargado() {
     : inicial;
 }
 
-function setText(id, valor) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = valor;
-}

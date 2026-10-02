@@ -1698,21 +1698,3 @@ function normalizarImagenProducto(imagen) {
 
 }
 
-
-function escapeHTML(texto) {
-
-  return String(texto ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-
-}
-
-
-function escapeAttribute(texto) {
-
-  return escapeHTML(texto);
-
-}
