@@ -1,17 +1,19 @@
 // MW JOYERÍA — Staff: Lista de deseos y Solicitud de resurtido
 //
 // Dos pestañas independientes (ver js/lista-deseos-modelo.js):
-// - "Mis solicitudes": listaDeseos creadas por Staff (piezas para una
-//   Emprendedora o para público en general).
+// - "Solicitudes": TODAS las solicitudes pendientes de listaDeseos
+//   (piezas para una Emprendedora o para público en general) — las que
+//   Staff registra a mano Y las que una Emprendedora/Líder envía por sí
+//   misma desde su propio portal (LOG-08 de la auditoría: antes solo se
+//   veían las de Staff, igual que ya ve Admin sin filtro).
 // - "Solicitar resurtido": solicitudesResurtido creadas por Staff,
 //   avisando a Administración — Staff nunca las administra (eso es
 //   exclusivo de Administración, ver js/admin-lista-deseos.js).
 //
 // No existe una sesión individual de Staff (ver js/staff-apartados.js):
-// cada acción sensible vuelve a pedir usuario/contraseña de empleado,
-// y "mis solicitudes" en la práctica es "las que creó el equipo de
-// Staff" (rol, no persona) — mismo criterio que ya usa Apartados, donde
-// cualquier Staff puede actuar sobre cualquier ventana del equipo.
+// cada acción sensible vuelve a pedir usuario/contraseña de empleado —
+// mismo criterio que ya usa Apartados, donde cualquier Staff puede
+// actuar sobre cualquier ventana del equipo.
 //
 // ⚠️ TEMPORAL: localStorage simula la base de datos compartida.
 
@@ -117,7 +119,13 @@ function renderTablaDeseosStaff() {
   const tbody = document.getElementById('ldTableBody');
   if (!tbody) return;
 
-  let solicitudes = obtenerListaDeseos().filter(s => s.creadoPorRol === 'staff');
+  // LOG-08 de la auditoría: antes solo mostraba lo que Staff MISMO
+  // registraba a mano — las solicitudes que una Emprendedora/Líder
+  // envía por sí misma desde su propio portal (creadoPorRol:
+  // 'emprendedora'|'lider') quedaban invisibles aquí, solo Admin las
+  // veía. El documento pide que Staff tenga "una vista con todas las
+  // peticiones pendientes", así que ya no se filtra por quién la creó.
+  let solicitudes = obtenerListaDeseos();
 
   if (ldFiltroTexto) {
     solicitudes = solicitudes.filter(s =>

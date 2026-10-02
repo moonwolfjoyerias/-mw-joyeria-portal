@@ -260,6 +260,10 @@ function agregarEventosFilas() {
     btn.addEventListener("click", () => iniciarLiquidacionVentana(btn.dataset.liquidarVentana));
   });
 
+  document.querySelectorAll("[data-aplicar-excedente]").forEach(btn => {
+    btn.addEventListener("click", () => confirmarAplicarExcedente(btn.dataset.aplicarExcedente));
+  });
+
   document.querySelectorAll("[data-cancelar-ventana]").forEach(btn => {
     btn.addEventListener("click", () => confirmarCancelarVentana(btn.dataset.cancelarVentana));
   });
@@ -519,6 +523,37 @@ function confirmarAprobarVip(ventanaId) {
     mensaje: `Estás a punto de aprobar el apartado VIP de "${v.usuarioNombre}".`,
     onConfirmar: () => ejecutarAprobarVip(ventanaId)
   });
+
+}
+
+function confirmarAplicarExcedente(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  abrirAutorizacionEncargado({
+    titulo: "Aplicar excedente de depósito",
+    mensaje: `Vas a aplicar el excedente de depósito de "${v.usuarioNombre}" ($${v.depositoExcedente} MXN) al saldo pendiente de sus piezas activas.`,
+    onConfirmar: () => ejecutarAplicarExcedente(ventanaId)
+  });
+
+}
+
+function ejecutarAplicarExcedente(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  const resultado = aplicarExcedenteDeposito(v, ENCARGADO_EMPLEADO);
+  if (!resultado.ok) { cerrarModal(); mostrarToast(resultado.error); return; }
+
+  guardarVentanas();
+  actualizarResumen();
+  renderTabla();
+  cerrarModal();
+
+  registrarAuditoriaEncargado({ modulo: "apartados", accion: "aplicar_excedente_deposito", descripcion: `Excedente de depósito de ${v.usuarioNombre} aplicado: $${resultado.aplicado}` });
+  mostrarToast(`Excedente de $${resultado.aplicado} aplicado.`);
 
 }
 

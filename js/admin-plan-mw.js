@@ -645,10 +645,12 @@ function renderBoletosRifaMes() {
 
   const resumen = obtenerResumenBoletosPorPersonaRifaMes(mesKey);
   const bloque = document.getElementById('boletosRifaBloque');
+  const ganadorBloque = document.getElementById('rifaGanadorBloque');
   if (!bloque) return;
 
   if (!resumen.length) {
     bloque.innerHTML = '<p class="bp-sub">Nadie ganó boletos el mes pasado.</p>';
+    if (ganadorBloque) ganadorBloque.innerHTML = '';
     return;
   }
 
@@ -667,6 +669,58 @@ function renderBoletosRifaMes() {
       </table>
     </div>
   `;
+
+  if (ganadorBloque) renderGanadorRifaMes(mesKey, resumen, ganadorBloque);
+
+}
+
+// NOTIF-02 de la auditoría: el sorteo es presencial (evento del día
+// 15, con estos mismos boletos ya impresos) — esto solo registra a
+// mano QUIÉN ganó ese sorteo físico y avisa. Nunca sortea nada por sí
+// mismo ni elige sola: siempre es Admin quien decide, de entre quienes
+// de verdad tienen boletos ese mes.
+function renderGanadorRifaMes(mesKey, resumen, ganadorBloque) {
+
+  const config = obtenerConfigRifaMes(mesKey);
+
+  if (config.ganadorPersonaId) {
+    ganadorBloque.innerHTML = `
+      <div class="modal-note" style="margin-top:12px;">
+        <strong>🎉 Ganadora: ${escapeHTMLPersonas(config.ganadorPersonaNombre)}</strong>
+        <p style="margin:4px 0 0;">Seleccionada el ${formatearFechaLogro(config.ganadorSeleccionadoEn)} por ${escapeHTMLPersonas(config.ganadorSeleccionadoPorNombre || '—')}. Ya se le avisó que tiene 7 días para recoger su premio.</p>
+      </div>
+    `;
+    return;
+  }
+
+  ganadorBloque.innerHTML = `
+    <div class="form-field" style="margin-top:12px;">
+      <label for="rifaGanadorSelect">Seleccionar ganadora del sorteo presencial</label>
+      <select id="rifaGanadorSelect">
+        <option value="">Elige a la persona que ganó en el evento...</option>
+        ${resumen.map(r => `<option value="${r.personaId}">${escapeHTMLPersonas(r.personaNombre)} (${r.boletos.length} boleto${r.boletos.length === 1 ? '' : 's'})</option>`).join('')}
+      </select>
+      <button class="btn btn-primary" type="button" id="rifaGanadorConfirmarBtn" style="margin-top:8px;">Confirmar ganadora</button>
+    </div>
+  `;
+
+  document.getElementById('rifaGanadorConfirmarBtn')?.addEventListener('click', () => {
+    const select = document.getElementById('rifaGanadorSelect');
+    const personaId = select.value;
+    if (!personaId) { mostrarToast('Elige a la ganadora primero.'); return; }
+    const persona = resumen.find(r => r.personaId === personaId);
+
+    abrirAutorizacionAdmin({
+      titulo: 'Confirmar ganadora de la rifa',
+      mensaje: `Vas a registrar a "${escapeHTMLPersonas(persona.personaNombre)}" como ganadora del sorteo de ${formatearPeriodoLabel(mesKey)}. Se le notificará que tiene 7 días para recoger su premio.`,
+      onConfirmar: () => {
+        const resultado = establecerGanadorRifaMes(mesKey, { personaId: persona.personaId, personaNombre: persona.personaNombre }, { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre });
+        if (!resultado.ok) { mostrarToast(resultado.error); return; }
+        mostrarToast(`${persona.personaNombre} registrada como ganadora.`);
+        renderBoletosRifaMes();
+      }
+    });
+  });
 
 }
 

@@ -31,6 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   ventanas = calcularVentanasStaffActuales();
   verificarApartadosVencidosPendientes();
+  if (typeof verificarApartadosPorVencerPendientes === 'function') verificarApartadosPorVencerPendientes();
 
   // Enlace directo desde una notificación (?buscar=NOMBRE) — precarga
   // el buscador y, si hay una sola coincidencia, la abre expandida.
@@ -259,6 +260,10 @@ function agregarEventosFilas() {
 
   document.querySelectorAll("[data-liquidar-ventana]").forEach(btn => {
     btn.addEventListener("click", () => iniciarLiquidacionVentana(btn.dataset.liquidarVentana));
+  });
+
+  document.querySelectorAll("[data-aplicar-excedente]").forEach(btn => {
+    btn.addEventListener("click", () => confirmarAplicarExcedente(btn.dataset.aplicarExcedente));
   });
 
   document.querySelectorAll("[data-cancelar-ventana]").forEach(btn => {
@@ -520,6 +525,37 @@ function confirmarAprobarVip(ventanaId) {
     mensaje: `Estás a punto de aprobar el apartado VIP de "${v.usuarioNombre}".`,
     onConfirmar: () => ejecutarAprobarVip(ventanaId)
   });
+
+}
+
+function confirmarAplicarExcedente(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  abrirAutorizacionAdmin({
+    titulo: "Aplicar excedente de depósito",
+    mensaje: `Vas a aplicar el excedente de depósito de "${v.usuarioNombre}" ($${v.depositoExcedente} MXN) al saldo pendiente de sus piezas activas.`,
+    onConfirmar: () => ejecutarAplicarExcedente(ventanaId)
+  });
+
+}
+
+function ejecutarAplicarExcedente(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  const resultado = aplicarExcedenteDeposito(v, ADMIN_EMPLEADO);
+  if (!resultado.ok) { cerrarModal(); mostrarToast(resultado.error); return; }
+
+  guardarVentanas();
+  actualizarResumen();
+  renderTabla();
+  cerrarModal();
+
+  registrarAuditoriaAdmin({ modulo: "apartados", accion: "aplicar_excedente_deposito", descripcion: `Excedente de depósito de ${v.usuarioNombre} aplicado: $${resultado.aplicado}` });
+  mostrarToast(`Excedente de $${resultado.aplicado} aplicado.`);
 
 }
 

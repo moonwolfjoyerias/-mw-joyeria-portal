@@ -131,19 +131,14 @@ const COMISIONES_RANGO_MANUAL_KEY = 'mw-comisiones-rango-manual-v1';
 // nunca toca historialLogros ni historialRangoEfectivo (el rango
 // histórico/real de la persona sigue intacto en Plan MW).
 function obtenerRangosManualesComisiones() {
-  try {
-    const datos = JSON.parse(localStorage.getItem(COMISIONES_RANGO_MANUAL_KEY));
-    return (datos && typeof datos === 'object' && !Array.isArray(datos)) ? datos : {};
-  } catch (error) {
-    return {};
-  }
+  return COMISIONES_RANGO_MANUAL_CACHE;
 }
 
 function guardarRangoManualComision(personaId, periodoKey, rangoKey) {
-  const mapa = obtenerRangosManualesComisiones();
+  const mapa = { ...obtenerRangosManualesComisiones() };
   const clave = `${personaId}__${periodoKey}`;
   if (rangoKey) mapa[clave] = rangoKey; else delete mapa[clave];
-  localStorage.setItem(COMISIONES_RANGO_MANUAL_KEY, JSON.stringify(mapa));
+  guardarRangoManualRepo(mapa);
 }
 
 function obtenerRangoManualComision(personaId, periodoKey) {
@@ -230,17 +225,14 @@ function construirClaveAjuste(liderId, personaId, periodoKey, subPeriodo) {
   return `${liderId}__${personaId}__${periodoKey}__${subPeriodo}`;
 }
 
+// FB-01 de la auditoría: la lectura/escritura real (Firestore o
+// localStorage) ya no vive aquí — ver js/comisiones-firestore-sync.js.
 function obtenerAjustes() {
-  try {
-    const datos = JSON.parse(localStorage.getItem(COMISIONES_AJUSTES_KEY));
-    return datos && typeof datos === 'object' ? datos : {};
-  } catch (error) {
-    return {};
-  }
+  return COMISIONES_AJUSTES_CACHE;
 }
 
 function guardarAjustes(ajustes) {
-  localStorage.setItem(COMISIONES_AJUSTES_KEY, JSON.stringify(ajustes));
+  guardarAjustesRepo(ajustes);
 }
 
 function obtenerAjuste(clave) {
@@ -287,18 +279,14 @@ function guardarAjusteManual({ liderId, emprendedoraId, periodoKey, subPeriodo, 
 // emprendedoraId, periodo, valorCalculado, valorAnterior, valorNuevo,
 // motivo, usuarioAdminId, fecha).
 function obtenerHistorialAjustes() {
-  try {
-    const registros = JSON.parse(localStorage.getItem(COMISIONES_HISTORIAL_KEY));
-    return Array.isArray(registros) ? registros : [];
-  } catch (error) {
-    return [];
-  }
+  return COMISIONES_HISTORIAL_CACHE;
 }
 
 function registrarHistorialAjuste(registro) {
-  const historial = obtenerHistorialAjustes();
-  historial.push(registro);
-  localStorage.setItem(COMISIONES_HISTORIAL_KEY, JSON.stringify(historial));
+  // Antes vivía como un arreglo sin id propia — ver cabecera de
+  // js/comisiones-firestore-sync.js (necesita un id de documento).
+  registro.id = registro.id || `AJU-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+  registrarHistorialAjusteRepo(registro);
 }
 
 function obtenerHistorialAjustePersona(liderId, personaId, periodoKey, subPeriodo) {
@@ -331,16 +319,11 @@ function restaurarCalculoAutomatico({ liderId, emprendedoraId, periodoKey, subPe
 // ============================================================
 
 function obtenerPagos() {
-  try {
-    const datos = JSON.parse(localStorage.getItem(COMISIONES_PAGOS_KEY));
-    return datos && typeof datos === 'object' ? datos : {};
-  } catch (error) {
-    return {};
-  }
+  return COMISIONES_PAGOS_CACHE;
 }
 
 function guardarPagos(pagos) {
-  localStorage.setItem(COMISIONES_PAGOS_KEY, JSON.stringify(pagos));
+  guardarPagosRepo(pagos);
 }
 
 function construirClavePago(liderId, periodoKey, subPeriodo) {
@@ -369,6 +352,17 @@ function registrarPago({ liderId, periodoKey, subPeriodo, montoPagado, registrad
     accion: 'registrar_pago',
     descripcion: `Pago de comisión registrado (${periodoKey}-${subPeriodo}) por $${Number(montoPagado).toFixed(2)}`
   });
+
+  // NOTIF-03 de la auditoría: antes registrarPago() guardaba el pago y
+  // la auditoría, pero nunca avisaba a la líder que lo recibió.
+  if (typeof agregarNotificacion === 'function') {
+    agregarNotificacion({
+      texto: `Se pagó tu comisión del periodo ${formatearPeriodoLabelComisiones(periodoKey)} (${subPeriodo === 'p1' ? 'Periodo 1' : 'Periodo 2'}): $${Number(montoPagado).toFixed(2)} MXN.`,
+      link: 'cuenta',
+      paraId: liderId,
+      rolDestino: 'emprendedora_lider'
+    });
+  }
 }
 
 // ============================================================
@@ -376,16 +370,11 @@ function registrarPago({ liderId, periodoKey, subPeriodo, montoPagado, registrad
 // ============================================================
 
 function obtenerBonos() {
-  try {
-    const datos = JSON.parse(localStorage.getItem(COMISIONES_BONOS_KEY));
-    return datos && typeof datos === 'object' ? datos : {};
-  } catch (error) {
-    return {};
-  }
+  return COMISIONES_BONOS_CACHE;
 }
 
 function guardarBonos(bonos) {
-  localStorage.setItem(COMISIONES_BONOS_KEY, JSON.stringify(bonos));
+  guardarBonosRepo(bonos);
 }
 
 // Devuelve el bono correspondiente a este periodo (si el ascenso a un
@@ -521,3 +510,11 @@ function calcularTodasLasComisiones(periodoKey, subPeriodo) {
     .filter(p => p.tipo === 'lider')
     .map(lider => calcularComisionesLider(lider, periodoKey, subPeriodo));
 }
+
+// Arranca la carga real (Firestore o localStorage) — se hace aquí, no
+// en comisiones-firestore-sync.js, porque las constantes *_KEY del
+// respaldo local (COMISIONES_AJUSTES_KEY, etc.) están definidas arriba
+// en este mismo archivo, no en el otro — mismo motivo/mismo orden que
+// ya usa nomina-firestore-sync.js con nomina-modelo.js. Cada página que
+// use Comisiones debe esperar esto una vez antes de su primer render.
+const comisionesRepoListo = cargarComisionesRepo();

@@ -538,6 +538,10 @@ function agregarProducto(datos) {
   registrarAuditoriaAdmin({ modulo: 'catalogo', accion: 'agregar_producto', descripcion: `Producto agregado: ${datos.nombre}` });
   mostrarToast(`Producto agregado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
 
+  if (typeof abrirRevisionListaDeseosNuevoProducto === 'function') {
+    abrirRevisionListaDeseosNuevoProducto(nuevoProducto, ADMIN_IDENTIDAD);
+  }
+
 }
 
 function guardarEdicionProducto(id, datos) {

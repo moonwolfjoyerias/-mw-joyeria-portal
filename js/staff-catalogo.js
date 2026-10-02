@@ -1285,6 +1285,10 @@ function ejecutarAccion(accion, empleado) {
       `Producto agregado por ${empleado.nombre}.`
     );
 
+    if (typeof abrirRevisionListaDeseosNuevoProducto === 'function') {
+      abrirRevisionListaDeseosNuevoProducto(nuevoProducto, empleado);
+    }
+
     return;
 
   }

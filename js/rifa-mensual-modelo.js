@@ -75,6 +75,40 @@ function establecerModoRifaMes(mesKey, modo, { usuarioId, usuarioNombre } = {}) 
   return { ok: true, config: actual };
 }
 
+// NOTIF-02 de la auditoría: el sorteo es presencial (boletos físicos,
+// evento del día 15) — esto NO sortea nada, solo registra quién ganó
+// ese sorteo físico y dispara el aviso. Admin elige a mano de entre
+// quienes sí tienen boletos ese mes (obtenerResumenBoletosPorPersonaRifaMes
+// en rifa-boletos-modelo.js) — nunca una selección aleatoria del sistema.
+function establecerGanadorRifaMes(mesKey, { personaId, personaNombre }, { usuarioId, usuarioNombre } = {}) {
+  if (!personaId) return { ok: false, error: 'Elige a la ganadora.' };
+
+  const configs = obtenerConfigsRifaMensual();
+  const actual = configs[mesKey] || { mesKey, modo: null, opciones: [] };
+  actual.ganadorPersonaId = personaId;
+  actual.ganadorPersonaNombre = personaNombre || '';
+  actual.ganadorSeleccionadoEn = new Date().toISOString();
+  actual.ganadorSeleccionadoPorId = usuarioId || null;
+  actual.ganadorSeleccionadoPorNombre = usuarioNombre || null;
+  configs[mesKey] = actual;
+  guardarConfigsRifaMensual(configs);
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({ modulo: 'rifa_mensual', accion: 'seleccionar_ganador', descripcion: `Rifa del mes ${mesKey}: ganadora seleccionada — ${personaNombre}` });
+  }
+
+  if (typeof agregarNotificacion === 'function') {
+    agregarNotificacion({
+      texto: '¡Ganaste la rifa! Tienes 7 días para pasar a recoger tu premio.',
+      link: 'cuenta',
+      paraId: personaId,
+      rolDestino: 'emprendedora_lider'
+    });
+  }
+
+  return { ok: true, config: actual };
+}
+
 function agregarOpcionRifaMes(mesKey, { nombre, fotoUrl, descripcion }, { usuarioId, usuarioNombre } = {}) {
   nombre = String(nombre || '').trim();
   if (!nombre) return { ok: false, error: 'Escribe el nombre del regalo.' };

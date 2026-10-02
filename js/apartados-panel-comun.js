@@ -223,6 +223,13 @@ function obtenerAccionesVentana(v) {
     if (obtenerPiezasActivas(v).length) {
       html += `<button class="action-btn primary-action" data-liquidar-ventana="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Liquidar apartado</button>`;
       html += `<button class="action-btn danger-action" data-cancelar-ventana="${v.id}"><span>×</span> Cancelar apartado</button>`;
+      // LOG-06 de la auditoría: antes el excedente del depósito (lo que
+      // pasa de $50) quedaba congelado junto con el piso hasta cerrar
+      // toda la ventana. Si hay excedente Y saldo pendiente en alguna
+      // pieza activa, se puede aplicar ahora mismo, sin esperar al cierre.
+      if (Number(v.depositoExcedente) > 0 && obtenerPiezasActivas(v).some(p => p.saldo > 0)) {
+        html += `<button class="action-btn detail-action" data-aplicar-excedente="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2v20M17 7a5 5 0 0 0-5-2 4 4 0 0 0 0 8 4 4 0 0 1 0 8 5 5 0 0 1-5-2"/></svg></span> Aplicar excedente ($${v.depositoExcedente} MXN)</button>`;
+      }
     }
 
     if (ventanaEstaVencida(v)) {
@@ -347,8 +354,16 @@ function obtenerDescripcionDeposito(v) {
   if (!regla.requiereDeposito) return v.estado === "pendiente_aprobacion" ? "Esperando aprobación VIP" : "Categoría VIP";
   if (v.estado === "pendiente_deposito") return "Esperando depósito";
   if (v.estado === "vencida" || v.estado === "cerrada") return conReferencia("Ventana finalizada");
-  if (v.metodoDeposito === "credito_anterior") return "Crédito reutilizado";
-  return conReferencia("Depósito confirmado");
+
+  // LOG-06: el piso de $50 (congelado hasta el cierre) y el excedente
+  // (usable en cualquier pago mientras siga activa) se muestran por
+  // separado solo cuando de verdad hay excedente — si no, el texto de
+  // siempre ("Depósito confirmado"/"Crédito reutilizado") ya basta.
+  const base = v.metodoDeposito === "credito_anterior" ? "Crédito reutilizado" : conReferencia("Depósito confirmado");
+  if (Number(v.depositoExcedente) > 0) {
+    return `${base} · Piso $${v.depositoPiso} + excedente $${v.depositoExcedente}`;
+  }
+  return base;
 
 }
 

@@ -30,6 +30,7 @@ async function renderResumenGeneral() {
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
   if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
   if (typeof listaDeseosRepoListo !== 'undefined') await listaDeseosRepoListo;
+  if (typeof comisionesRepoListo !== 'undefined') await comisionesRepoListo;
 
   // Catálogo — misma clave de localStorage que usan Staff/Encargado/Admin.
   let catalogo = [];

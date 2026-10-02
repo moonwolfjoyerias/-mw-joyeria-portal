@@ -150,10 +150,25 @@ function crearApartadoPieza(datos = {}) {
   };
 }
 
+// LOG-06 de la auditoría: separa el depósito en dos partes — el PISO de
+// $50 (congelado, solo se resuelve al cerrar la ventana por completo,
+// igual que siempre) y el EXCEDENTE sobre $50 (utilizable en cualquier
+// pago mientras la ventana sigue activa — ver aplicarExcedenteDeposito).
+// depositoApartadoDisponible se conserva como el TOTAL (piso+excedente)
+// — varias pantallas ya lo muestran o comparan contra 0 — pero ya nunca
+// se asigna directo: siempre se deriva aquí a partir de los otros dos,
+// para que ambos números nunca queden desincronizados del total.
+function fijarDepositoVentana(ventana, montoTotal) {
+  const total = Number(montoTotal) || 0;
+  ventana.depositoPiso = Math.min(total, DEPOSITO_BASE);
+  ventana.depositoExcedente = Math.max(0, total - DEPOSITO_BASE);
+  ventana.depositoApartadoDisponible = ventana.depositoPiso + ventana.depositoExcedente;
+}
+
 function crearVentanaApartado(datos = {}) {
   const regla = obtenerReglaCategoria(datos.categoria);
   const fechaInicio = datos.fechaInicio || new Date().toISOString();
-  return {
+  const ventana = {
     id: datos.id || `VENT-${Date.now()}`,
     usuarioId: datos.usuarioId || '',
     usuarioNombre: datos.usuarioNombre || '',
@@ -163,7 +178,6 @@ function crearVentanaApartado(datos = {}) {
     fechaVencimiento: regla.dias
       ? new Date(new Date(fechaInicio).getTime() + regla.dias * 24 * 60 * 60 * 1000).toISOString()
       : null,
-    depositoApartadoDisponible: Number(datos.depositoApartadoDisponible || 0),
     metodoDeposito: datos.metodoDeposito || null,
     referenciaDeposito: datos.referenciaDeposito || null,
     estado: datos.estado || (regla.requiereDeposito ? 'pendiente_deposito' : 'activa'),
@@ -171,6 +185,43 @@ function crearVentanaApartado(datos = {}) {
     apartados: Array.isArray(datos.apartados) ? datos.apartados : [],
     auditoria: Array.isArray(datos.auditoria) ? datos.auditoria : []
   };
+  fijarDepositoVentana(ventana, datos.depositoApartadoDisponible);
+  return ventana;
+}
+
+// Permite usar el excedente del depósito (lo que pasa de $50) en un
+// pago AHORA, mientras la ventana sigue activa — sin esperar a que se
+// liquide o cierre por completo. El piso de $50 nunca se toca aquí,
+// solo el excedente. Se aplica contra el saldo de las piezas activas,
+// en el orden en que aparecen, hasta agotar el excedente o el saldo
+// pendiente (lo que pase primero).
+function aplicarExcedenteDeposito(ventana, empleado) {
+  const disponible = Number(ventana.depositoExcedente || 0);
+  if (disponible <= 0) return { ok: false, error: 'No hay excedente de depósito disponible para aplicar.' };
+
+  const piezasActivas = obtenerPiezasActivas(ventana).filter(p => p.saldo > 0);
+  if (!piezasActivas.length) return { ok: false, error: 'No hay saldo pendiente en piezas activas para aplicar el excedente.' };
+
+  let restante = disponible;
+  const fecha = new Date().toISOString();
+  piezasActivas.forEach(pieza => {
+    if (restante <= 0) return;
+    const aplicado = Math.min(restante, pieza.saldo);
+    pieza.pagos.push({ monto: aplicado, tipo: 'excedente_aplicado', metodo: null, referencia: null, fecha });
+    pieza.saldo -= aplicado;
+    restante -= aplicado;
+  });
+
+  const aplicadoTotal = disponible - restante;
+  ventana.depositoExcedente = restante;
+  ventana.depositoApartadoDisponible = ventana.depositoPiso + ventana.depositoExcedente;
+
+  ventana.auditoria.push(registrarAuditoriaVentana(
+    `Excedente de depósito aplicado: $${aplicadoTotal} a saldo pendiente` + (restante > 0 ? ` ($${restante} sin aplicar — ya no quedó saldo pendiente)` : ''),
+    empleado
+  ));
+
+  return { ok: true, aplicado: aplicadoTotal, restante };
 }
 
 
@@ -299,7 +350,7 @@ function abrirVentanaApartado(datosPersona, empleado) {
 
   const ventana = crearVentanaApartado({
     ...datosPersona,
-    depositoApartadoDisponible: creditoPrevio,
+    depositoApartadoDisponible: creditoPrevio, // fijarDepositoVentana() separa esto en piso/excedente
     estado: estadoInicial,
     metodoDeposito: creditoPrevio > 0 ? 'credito_anterior' : null
   });
@@ -333,7 +384,7 @@ function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, emplea
   const regla = obtenerReglaCategoria(ventana.categoria);
   const ahora = new Date();
 
-  ventana.depositoApartadoDisponible = montoFinal;
+  fijarDepositoVentana(ventana, montoFinal);
   ventana.metodoDeposito = metodo || null;
   ventana.referenciaDeposito = referencia || null;
   ventana.estado = 'activa';
@@ -434,6 +485,8 @@ function resolverDepositoVentana(ventana, decision, empleado) {
     ventana.auditoria.push(registrarAuditoriaVentana(`Depósito de $${monto} guardado como crédito`, empleado));
   }
 
+  ventana.depositoPiso = 0;
+  ventana.depositoExcedente = 0;
   ventana.depositoApartadoDisponible = 0;
 
   return ventana;
@@ -461,6 +514,8 @@ function cancelarVentanaCompleta(ventana, empleado) {
     const monto = ventana.depositoApartadoDisponible;
     establecerCredito(ventana.usuarioId, monto);
     cerrarVentana(ventana, 'credito');
+    ventana.depositoPiso = 0;
+    ventana.depositoExcedente = 0;
     ventana.depositoApartadoDisponible = 0;
     ventana.auditoria.push(registrarAuditoriaVentana(`Depósito de $${monto} guardado como crédito`, empleado));
   } else {
@@ -487,6 +542,8 @@ function desapartarVentanaVencida(ventana, empleado) {
   restaurarStockPiezasCanceladas(piezasActivas);
 
   const montoPerdido = ventana.depositoApartadoDisponible;
+  ventana.depositoPiso = 0;
+  ventana.depositoExcedente = 0;
   ventana.depositoApartadoDisponible = 0;
   ventana.estado = 'vencida';
   ventana.resolucionDeposito = 'perdido';
@@ -560,6 +617,61 @@ function verificarApartadosVencidosPendientes() {
         });
       }
 
+    }
+
+  });
+
+  if (huboCambios) guardarVentanasApartado(ventanas);
+
+}
+
+// NOTIF-01 de la auditoría: aviso PREVENTIVO a la propia Emprendedora/
+// Líder antes de que su ventana venza — lo único que existía antes
+// (verificarApartadosVencidosPendientes, arriba) avisaba a Admin
+// cuando la ventana YA había vencido, nunca antes y nunca a la dueña
+// del apartado. Dos avisos, cada uno una sola vez (mismo patrón de
+// bandera que avisoVencimientoEnviado): 1 día antes y 2 horas antes.
+function verificarApartadosPorVencerPendientes() {
+
+  const ventanas = obtenerVentanasApartado();
+  let huboCambios = false;
+  const ahora = Date.now();
+  const UN_DIA_MS = 24 * 60 * 60 * 1000;
+  const DOS_HORAS_MS = 2 * 60 * 60 * 1000;
+
+  ventanas.forEach(ventana => {
+
+    if (ventana.estado !== 'activa' || !ventana.fechaVencimiento) return;
+    const faltan = new Date(ventana.fechaVencimiento).getTime() - ahora;
+    if (faltan <= 0) return; // ya vencida — eso ya lo cubre verificarApartadosVencidosPendientes
+
+    const piezas = obtenerPiezasActivas(ventana).length;
+    if (!piezas) return;
+
+    if (faltan <= UN_DIA_MS && !ventana.avisoVencimiento1DiaEnviado) {
+      ventana.avisoVencimiento1DiaEnviado = true;
+      huboCambios = true;
+      if (typeof agregarNotificacion === 'function') {
+        agregarNotificacion({
+          texto: `Tu apartado de ${piezas} pieza${piezas === 1 ? '' : 's'} vence en menos de 1 día — si no se liquida o renueva, se pierde.`,
+          link: 'apartados',
+          paraId: ventana.usuarioId,
+          rolDestino: 'emprendedora_lider'
+        });
+      }
+    }
+
+    if (faltan <= DOS_HORAS_MS && !ventana.avisoVencimiento2HorasEnviado) {
+      ventana.avisoVencimiento2HorasEnviado = true;
+      huboCambios = true;
+      if (typeof agregarNotificacion === 'function') {
+        agregarNotificacion({
+          texto: `Tu apartado de ${piezas} pieza${piezas === 1 ? '' : 's'} vence en menos de 2 horas.`,
+          link: 'apartados',
+          paraId: ventana.usuarioId,
+          rolDestino: 'emprendedora_lider'
+        });
+      }
     }
 
   });

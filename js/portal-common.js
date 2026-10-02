@@ -16,7 +16,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderEventos();
   initEventsScroll();
   initResumenDatePill();
+  initSidebarMovil();
 });
+
+// ---------- UI-01 de la auditoría: menú lateral colapsable en móvil ----------
+// Antes, en una pantalla angosta, .sidebar se apilaba COMPLETA (los
+// 10-15 enlaces del menú) arriba de .main-content en los 5 roles —
+// había que desplazarse por todo el menú antes de llegar al contenido
+// de cada página. Se agrega aquí (una sola vez, para las 44 páginas del
+// portal que cargan este archivo) un botón de hamburguesa que colapsa
+// <nav> dentro de .sidebar; la regla de qué se ve en cada ancho vive en
+// css/styles.css (.sidebar nav / .sidebar.sidebar-abierta nav).
+function initSidebarMovil() {
+  const sidebar = document.querySelector('.sidebar');
+  const nav = sidebar?.querySelector('nav');
+  const brand = sidebar?.querySelector('.brand-link');
+  if (!sidebar || !nav || !brand) return;
+
+  const boton = document.createElement('button');
+  boton.type = 'button';
+  boton.className = 'sidebar-toggle';
+  boton.setAttribute('aria-label', 'Abrir/cerrar menú');
+  boton.setAttribute('aria-expanded', 'false');
+  boton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
+  boton.addEventListener('click', () => {
+    const abierta = sidebar.classList.toggle('sidebar-abierta');
+    boton.setAttribute('aria-expanded', String(abierta));
+  });
+  brand.after(boton);
+
+  // Si cambia de tamaño (o al navegar a otra página del portal) nunca
+  // debe quedar "abierta" heredada en un ancho donde ya no aplica.
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 720) sidebar.classList.remove('sidebar-abierta');
+  });
+}
 
 // ---------- Iniciales a partir de un nombre ----------
 // Ej. "María Camila" → "MC". Reutilizable en cualquier burbuja de
