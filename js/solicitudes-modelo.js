@@ -92,16 +92,22 @@ async function obtenerSolicitudPorId(id) {
 // Vista del solicitante: solo sus propias solicitudes (sección 5 y 15
 // del documento de requisitos — nunca las de otra persona).
 //
-// ⚠️ La consulta de Firestore (where + orderBy en campos distintos)
-// necesita un índice compuesto — Firestore lo pide la primera vez que se
-// ejecute en un proyecto real, con un enlace para crearlo en un clic.
+// BUG reportado tras lanzar a producción ("no se envían las solicitudes
+// de inscripción"): la solicitud SÍ se creaba en Firestore, pero el
+// where+orderBy en campos distintos de abajo exige un índice compuesto
+// que este proyecto no tiene creado — reventaba con una excepción no
+// capturada justo después de crear la solicitud (ver enviarNuevaSolicitud
+// en solicitudes-ui.js), antes de poder mostrar el toast de confirmación,
+// así que parecía que nunca se había enviado. Mismo fix que ya se aplicó
+// en solicitudes-eventos-modelo.js: quitar el orderBy de Firestore y
+// ordenar en el cliente.
 async function obtenerSolicitudesDe(solicitanteId) {
   if (dbFirestore) {
     const snap = await dbFirestore.collection(SOLICITUDES_COLECCION_FIRESTORE)
       .where('solicitanteId', '==', solicitanteId)
-      .orderBy('fechaSolicitud', 'desc')
       .get();
-    return snap.docs.map(solicitudDesdeDocFirestore);
+    return snap.docs.map(solicitudDesdeDocFirestore)
+      .sort((a, b) => b.fechaSolicitud.localeCompare(a.fechaSolicitud));
   }
   return obtenerSolicitudesLocal()
     .filter(s => s.solicitanteId === solicitanteId)

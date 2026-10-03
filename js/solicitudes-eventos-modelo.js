@@ -73,18 +73,22 @@ async function obtenerSolicitudEventoPorId(id) {
 
 // Vista del solicitante: solo sus propias solicitudes de evento.
 //
-// ⚠️ La consulta de Firestore (where + orderBy en campos distintos)
-// necesita un índice compuesto — Firestore lo pide la primera vez que se
-// ejecute en un proyecto real, con un enlace para crearlo en un clic
-// (mismo aviso que ya documenta obtenerSolicitudesDe en
-// solicitudes-modelo.js).
+// BUG reportado tras lanzar a producción: antes esta consulta hacía
+// where + orderBy en campos distintos, lo que en Firestore real EXIGE
+// un índice compuesto que nadie había creado todavía — la consulta
+// tronaba con una excepción sin atrapar, y como calendario.js hace
+// `await renderMisSolicitudesEvento()` antes de enganchar el resto de
+// los botones de la página (incluido "Solicitar evento"), ese error
+// cortaba el resto del DOMContentLoaded a medias: el modal de
+// solicitud ya ni siquiera abría. Se ordena en el cliente (igual que
+// ya hacía el respaldo local) para no depender de ningún índice.
 async function obtenerSolicitudesEventosDe(solicitanteId) {
   if (dbFirestore) {
     const snap = await dbFirestore.collection(SOLICITUDES_EVENTOS_COLECCION_FIRESTORE)
       .where('solicitanteId', '==', solicitanteId)
-      .orderBy('fechaSolicitud', 'desc')
       .get();
-    return snap.docs.map(solicitudEventoDesdeDocFirestore);
+    return snap.docs.map(solicitudEventoDesdeDocFirestore)
+      .sort((a, b) => b.fechaSolicitud.localeCompare(a.fechaSolicitud));
   }
   return obtenerSolicitudesEventosLocal()
     .filter(s => s.solicitanteId === solicitanteId)

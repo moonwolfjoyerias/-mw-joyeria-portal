@@ -24,9 +24,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderCalendario();
   renderProximosEventos();
   renderInvitacionesComunidad();
-  await renderMisSolicitudesEvento();
 
   document.getElementById('solicitarEventoBtn')?.addEventListener('click', () => abrirModalNuevaSolicitudEvento());
+
+  // BUG reportado tras lanzar a producción: esto va DESPUÉS de enganchar
+  // el botón de arriba (y en su propio try/catch) a propósito — si esta
+  // consulta llega a fallar por cualquier motivo, ya no debe tumbar el
+  // resto del cableado de la página (botones de mes, enlace directo a
+  // un evento, etc.), como pasaba antes.
+  try {
+    await renderMisSolicitudesEvento();
+  } catch (error) {
+    console.error('No se pudieron cargar tus solicitudes de evento:', error);
+  }
 
   // Enlace directo desde una notificación (?evento=ID) — abre ese
   // evento de una vez, en vez de dejar a la persona a buscarlo.

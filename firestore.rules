@@ -210,10 +210,21 @@ service cloud.firestore {
     // que restringir create por "dueño" rompería esos avisos cruzados.
     // Lo que sí se cierra es tocar (marcar leída/borrar) un aviso que
     // YA existía y no es suyo ni de una bandeja compartida de equipo.
+    // BUG reportado tras lanzar a producción: "update, delete" exigía
+    // que resource.data.paraId fuera EXACTAMENTE su personaId — pero
+    // los avisos de ejemplo (NOTIFICACIONES_EJEMPLO, rolDestino
+    // 'emprendedora_lider') nunca tienen paraId (a propósito: el propio
+    // cliente los muestra a cualquier cuenta, ver obtenerNotificacionesPorRol
+    // en notificaciones-modelo.js). Si alguna llegó a sembrarse en
+    // Firestore, NINGUNA Emprendedora/Líder podía marcarla como leída
+    // — Firestore aplica cada lote de escritura completo o nada, así
+    // que ese único rechazo podía tumbar todo el lote de esa sesión.
+    // Se permite también cuando paraId es null/no existe, igual que ya
+    // acepta el propio cliente.
     match /notificaciones/{id} {
       allow read: if estaAutenticado();
       allow create: if estaAutenticado();
-      allow update, delete: if estaAutenticado() && (esInterno() || resource.data.paraId == miPerfil().personaId);
+      allow update, delete: if estaAutenticado() && (esInterno() || resource.data.paraId == null || resource.data.paraId == miPerfil().personaId);
     }
 
     match /notificacionesMeta/{id} {
