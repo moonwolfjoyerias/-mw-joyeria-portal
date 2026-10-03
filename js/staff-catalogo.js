@@ -391,6 +391,7 @@ function abrirModalProducto(producto = null) {
   // quita en cerrarModal() para no afectar a los demás.
   box.classList.add('modal-box-wide');
 
+  imagenProcesandoFoto = null;
 
   const editando = !!producto;
 
@@ -718,7 +719,9 @@ function abrirModalProducto(producto = null) {
 
   document
     .getElementById('guardarProductoBtn')
-    ?.addEventListener('click', () => {
+    ?.addEventListener('click', async () => {
+
+      if (imagenProcesandoFoto) await imagenProcesandoFoto;
 
       const datos = obtenerDatosProducto();
 
@@ -804,6 +807,14 @@ function renderVariantesTemporal() {
 // IMAGEN
 // ============================================================
 
+// BUG reportado tras lanzar a producción: comprimir la foto es async
+// (comprimirImagenAProductoDataURL) pero nada impedía dar clic en
+// "Guardar" ANTES de que terminara — se guardaba el placeholder que
+// traía el modal (la ruta del isologo) como si fuera la foto real, en
+// vez de esperar/avisar. imagenProcesandoFoto guarda esa promesa para
+// que el botón de Guardar la espere si hace falta (ver su listener).
+let imagenProcesandoFoto = null;
+
 async function manejarImagen(e) {
 
   const archivo = e.target.files?.[0];
@@ -819,20 +830,22 @@ async function manejarImagen(e) {
 
   }
 
+  const boton = document.getElementById('guardarProductoBtn');
+  const textoBotonOriginal = boton?.textContent;
+  if (boton) { boton.disabled = true; boton.textContent = 'Procesando foto...'; }
 
-  try {
-    imagenTemporal = await comprimirImagenAProductoDataURL(archivo);
-  } catch (error) {
-    mostrarToast('No se pudo procesar esa imagen. Intenta con otra.');
-    return;
-  }
-
-  const preview =
-    document.getElementById('previewImage');
-
-  if (preview) {
-    preview.src = imagenTemporal;
-  }
+  imagenProcesandoFoto = (async () => {
+    try {
+      imagenTemporal = await comprimirImagenAProductoDataURL(archivo);
+      const preview = document.getElementById('previewImage');
+      if (preview) preview.src = imagenTemporal;
+    } catch (error) {
+      mostrarToast('No se pudo procesar esa imagen. Intenta con otra.');
+    } finally {
+      if (boton) { boton.disabled = false; boton.textContent = textoBotonOriginal; }
+      imagenProcesandoFoto = null;
+    }
+  })();
 
 }
 

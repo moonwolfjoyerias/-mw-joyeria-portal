@@ -63,7 +63,8 @@ async function abrirRevisionListaDeseosNuevoProducto(producto, empleado) {
       usuarioId: empleado.usuario || empleado.usuarioId || null,
       usuarioNombre: empleado.nombre || empleado.usuarioNombre || '',
       usuarioRol: empleado.rol || 'staff',
-      comentario: `Coincide con el producto nuevo: ${producto.nombre}`
+      comentario: `Coincide con el producto nuevo: ${producto.nombre}`,
+      productoId: producto.id
     }));
 
     if (typeof mostrarToast === 'function') {

@@ -42,35 +42,42 @@ function normalizarNotificacion(notificacion) {
     normalizada.rolDestino = 'staff';
   }
 
-  // Fecha de creación — necesaria para poder borrar automáticamente las
-  // notificaciones del día anterior (ver purgarNotificacionesDeDiasAnteriores).
-  // Las que ya existían sin este campo (datos de ejemplo, o guardadas
-  // antes de este cambio) se sellan con "ahora" la primera vez que se
-  // leen, así no se borran de inmediato por no tener fecha.
+  // Fecha de creación — informativa, ya no decide el borrado (ver
+  // purgarNotificacionesLeidasVencidas). Las que ya existían sin este
+  // campo se sellan con "ahora" la primera vez que se leen.
   if (!normalizada.creadaEn) normalizada.creadaEn = new Date().toISOString();
+
+  // Ya estaba marcada como leída antes de este cambio (sin leidaEn
+  // todavía) — se sella con "ahora" en vez de dejarla sin fecha para
+  // siempre (nunca se borraría sola) o borrarla de inmediato (el clic
+  // real pudo haber sido hace mucho). Las nuevas siempre la traen desde
+  // marcarNotificacionLeida().
+  if (normalizada.leida && !normalizada.leidaEn) normalizada.leidaEn = new Date().toISOString();
 
   return normalizada;
 }
 
-// Compara solo año/mes/día (hora local) — una notificación creada hoy
-// sigue viva aunque hayan pasado varias horas; una de ayer o antes no.
-function esNotificacionDeHoy(fechaISO) {
-  const fecha = new Date(fechaISO);
-  if (Number.isNaN(fecha.getTime())) return true;
-  const hoy = new Date();
-  return fecha.getFullYear() === hoy.getFullYear()
-    && fecha.getMonth() === hoy.getMonth()
-    && fecha.getDate() === hoy.getDate();
+// BUG/mejora reportada tras lanzar a producción: antes se borraba TODO
+// lo que no fuera de "hoy" (leído o no) — una notificación sin leer
+// podía desaparecer sola a medianoche sin que nadie la viera. Ahora solo
+// se borra lo que YA se marcó como leída (clic en la campana, ver
+// marcarNotificacionLeida) y han pasado 24 horas desde ese momento — una
+// sin leer nunca se borra sola, sin importar cuántos días lleve. No hay
+// proceso en segundo plano (esto es localStorage/Firestore, no un
+// servidor con cron), así que el borrado ocurre la próxima vez que
+// alguien abre la campana, igual que antes.
+const NOTIF_HORAS_BORRAR_LEIDA = 24;
+
+function notificacionLeidaVencida(notificacion) {
+  if (!notificacion.leida) return false;
+  if (!notificacion.leidaEn) return false; // se leyó antes de este cambio — se sella la primera vez que se detecta, ver abajo
+  const leidaEn = new Date(notificacion.leidaEn).getTime();
+  if (Number.isNaN(leidaEn)) return false;
+  return (Date.now() - leidaEn) >= NOTIF_HORAS_BORRAR_LEIDA * 60 * 60 * 1000;
 }
 
-// "Borrarlas al final del día": no hay un proceso en segundo plano que
-// corra a medianoche (esto es localStorage, no un servidor), así que el
-// borrado ocurre en el primer momento en que alguien vuelve a abrir la
-// campana de notificaciones en un día distinto al que se crearon —
-// desaparecen igual, solo que el "final del día" se detecta la próxima
-// vez que se leen en vez de con un temporizador.
-function purgarNotificacionesDeDiasAnteriores(lista) {
-  return lista.filter(n => esNotificacionDeHoy(n.creadaEn));
+function purgarNotificacionesLeidasVencidas(lista) {
+  return lista.filter(n => !notificacionLeidaVencida(n));
 }
 
 function claveUnicaNotificacion(notificacion) {
@@ -90,7 +97,7 @@ function normalizarYDeduplicarNotificaciones(lista) {
 
 function obtenerNotificacionesCompartidas() {
   const guardadas = NOTIFICACIONES_CACHE;
-  const normalizadas = purgarNotificacionesDeDiasAnteriores(normalizarYDeduplicarNotificaciones(guardadas));
+  const normalizadas = purgarNotificacionesLeidasVencidas(normalizarYDeduplicarNotificaciones(guardadas));
   if (normalizadas.length !== guardadas.length || JSON.stringify(normalizadas) !== JSON.stringify(guardadas)) {
     guardarNotificacionesCompartidas(normalizadas);
   }
@@ -113,7 +120,12 @@ function guardarNotificacionesCompartidas(lista) {
 // dividida en dos grupos separados (ver admin-comun.js →
 // renderNotificacionesAdminAgrupadas). Si se omite, se asume
 // 'emprendedora_lider' (era el único origen antes de dividirlos).
-function agregarNotificacion({ texto, link, paraId, rolDestino, tipo, origen }) {
+// productoId: FEAT-03 pedida tras lanzar a producción — cuando el aviso
+// es "ya está disponible lo que pediste", lleva el id del producto real
+// del catálogo para que el panel de notificaciones (portal-common.js)
+// arme el link directo a apartarlo (?apartar=), no solo un aviso
+// genérico que la obliga a buscarlo ella misma.
+function agregarNotificacion({ texto, link, paraId, rolDestino, tipo, origen, productoId }) {
   const lista = obtenerNotificacionesCompartidas();
   const nueva = normalizarNotificacion({
     id: `NOTIF-${Date.now()}`,
@@ -123,6 +135,7 @@ function agregarNotificacion({ texto, link, paraId, rolDestino, tipo, origen }) 
     paraId: paraId || null,
     tipo: tipo || null,
     origen: origen || 'emprendedora_lider',
+    productoId: productoId || null,
     rolDestino: ROLES_NOTIF_VALIDOS.includes(rolDestino) ? rolDestino : 'emprendedora_lider'
   });
 
@@ -135,12 +148,14 @@ function agregarNotificacion({ texto, link, paraId, rolDestino, tipo, origen }) 
 
 // Marca una notificación como leída (clic en la campana) — persiste de
 // inmediato para que, al reabrir el panel, ya aparezca atenuada y no
-// cuente en el badge de "sin leer".
+// cuente en el badge de "sin leer". leidaEn sella el momento exacto —
+// purgarNotificacionesLeidasVencidas la borra sola 24 horas después.
 function marcarNotificacionLeida(id) {
   const lista = obtenerNotificacionesCompartidas();
   const notif = lista.find(n => n.id === id);
   if (!notif || notif.leida) return;
   notif.leida = true;
+  notif.leidaEn = new Date().toISOString();
   guardarNotificacionesCompartidas(lista);
 }
 

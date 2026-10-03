@@ -57,6 +57,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const clearBtn = document.getElementById('clearFiltersBtn');
   if (clearBtn) clearBtn.addEventListener('click', limpiarFiltros);
+
+  // FEAT-03 pedida tras lanzar a producción: enlace directo desde la
+  // notificación de "ya está disponible lo que pediste" (lista de
+  // deseos) — abre de una vez el modal de Apartar para ese producto.
+  const productoIdDesdeUrl = new URLSearchParams(window.location.search).get('apartar');
+  if (productoIdDesdeUrl) abrirModalApartar(productoIdDesdeUrl);
 });
 
 // ---------- Catálogo real (mismo que Staff/Encargado/Admin) ----------

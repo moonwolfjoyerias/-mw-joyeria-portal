@@ -312,6 +312,12 @@ function abrirModalConfirmarDeposito(ventanaId) {
       return;
     }
 
+    if (metodo === "transferencia" && typeof existeReferenciaDuplicada === 'function' && existeReferenciaDuplicada(referencia)) {
+      error.style.display = "block";
+      error.textContent = "Ese número de referencia ya existe.";
+      return;
+    }
+
     abrirAutorizacion({ tipo: "confirmar-deposito-ventana", ventanaId: v.id, datos: { monto, metodo, referencia: referencia || null } });
 
   });
@@ -388,6 +394,12 @@ function abrirModalLiquidar(v, decisionDeposito) {
       error.textContent = metodo === "transferencia" && !referencia
         ? "La referencia es obligatoria para una transferencia."
         : "Selecciona el método de pago.";
+      return;
+    }
+
+    if (metodo === "transferencia" && typeof existeReferenciaDuplicada === 'function' && existeReferenciaDuplicada(referencia)) {
+      error.style.display = "block";
+      error.textContent = "Ese número de referencia ya existe.";
       return;
     }
 

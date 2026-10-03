@@ -104,6 +104,17 @@ function initResumenDatePill() {
   el.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
+// FEAT-03 pedida tras lanzar a producción: un aviso de lista de deseos
+// "ya está disponible" trae productoId (ver agregarNotificacion en
+// notificaciones-modelo.js) — se agrega como ?apartar=<id> a la URL ya
+// resuelta por PORTAL_LINKS, para que catalogo.js abra el modal de
+// Apartar directo en ese producto en vez de solo llevarla al catálogo.
+function resolverHrefNotificacion(n) {
+  const base = (typeof PORTAL_LINKS !== 'undefined' && PORTAL_LINKS[n.link]) || n.link;
+  if (!n.productoId) return base;
+  return `${base}${base.includes('?') ? '&' : '?'}apartar=${encodeURIComponent(n.productoId)}`;
+}
+
 // ---------- Campana de notificaciones ----------
 // Cada rol solo ve su propia bandeja (Emprendedora/Líder, Staff o Encargado),
 // detectada automáticamente por la URL — ver obtenerRolPortalActual()
@@ -149,7 +160,7 @@ function initNotifPanel() {
   if (notificaciones.length > 0) {
     panel.innerHTML = '<div class="notif-header">Notificaciones</div>' +
       notificaciones.map(n => `
-        <a class="notif-item" data-notif-id="${n.id}" href="${(typeof PORTAL_LINKS !== 'undefined' && PORTAL_LINKS[n.link]) || n.link}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
+        <a class="notif-item" data-notif-id="${n.id}" href="${resolverHrefNotificacion(n)}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
       `).join('');
   } else {
     panel.innerHTML = '<div class="notif-empty">No tienes notificaciones nuevas.</div>';

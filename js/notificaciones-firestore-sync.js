@@ -19,7 +19,7 @@
 // Una sola colección (notificaciones/{id}), diff-y-resync como
 // ventanasApartado — se siguen purgando/deduplicando en el cliente
 // exactamente igual que antes (ver normalizarYDeduplicarNotificaciones/
-// purgarNotificacionesDeDiasAnteriores en notificaciones-modelo.js), solo
+// purgarNotificacionesLeidasVencidas en notificaciones-modelo.js), solo
 // que ahora la lista de partida viene de Firestore.
 
 const NOTIFICACIONES_COLECCION_FIRESTORE = 'notificaciones';

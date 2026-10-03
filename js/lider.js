@@ -1,7 +1,20 @@
 // MW JOYERÍA — Dashboard de Líder (Inicio)
-// Depende de RANGOS_MW, LIDER_EJEMPLO, EQUIPO_NIVELES_EJEMPLO (lider-ejemplo.js).
+// Depende de RANGOS_MW (lider-ejemplo.js). Antes también leía
+// LIDER_EJEMPLO/EQUIPO_NIVELES_EJEMPLO — BUG reportado tras lanzar a
+// producción: cualquier líder real veía el equipo/producción/rango de
+// la cuenta de ejemplo en vez de los suyos (en blanco/cero si todavía
+// no tiene rango asignado). Ahora usa el registro real de la persona
+// con sesión abierta (personas-ejemplo.js), mismo patrón que ya usa
+// js/lider-cuenta.js y js/mi-equipo.js para lo mismo.
 
-document.addEventListener('DOMContentLoaded', () => {
+let miPersonaLider = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
+
+  const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
+  miPersonaLider = idActual && typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(idActual) : null;
+
   renderRankHero();
   renderStatCards();
   renderProgresoRango();
@@ -9,6 +22,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('verBeneficiosBtn')?.addEventListener('click', abrirModalBeneficios);
 });
+
+// Rango y stats reales de la líder con sesión abierta — nunca null:
+// stats en cero y 'sin_rango' si todavía no se le ha asignado nada
+// (mismos valores por defecto que ya pone crearPersonaEjemplo()).
+function miRangoActualKeyLider() {
+  return miPersonaLider?.rangoActualKey || 'sin_rango';
+}
+
+function misStatsLider() {
+  return miPersonaLider?.stats || {
+    personasActivas: 0,
+    produccionGrupalMes: 0,
+    personasCalificadas: 0,
+    compraPersonalPeriodo1: 0,
+    compraPersonalPeriodo2: 0
+  };
+}
 
 // Tabla de referencia: qué gana cada rango (comisión por nivel de
 // equipo + bono al alcanzarlo) — a diferencia de renderProgresoRango(),
@@ -42,7 +72,7 @@ function abrirModalBeneficios() {
           ${rangosConBeneficio.map(r => {
             const pct = (typeof COMISIONES_PCT !== 'undefined' && COMISIONES_PCT[r.key]) || [0, 0, 0, 0, 0];
             const bono = (typeof BONOS_RANGO !== 'undefined' && BONOS_RANGO[r.key]) || 0;
-            const esActual = r.key === LIDER_EJEMPLO.rangoActualKey;
+            const esActual = r.key === miRangoActualKeyLider();
             return `
               <tr style="border-bottom:1px solid var(--mw-border);${esActual ? 'background:var(--mw-lilac-soft);' : ''}">
                 <td style="padding:0.5rem 0.6rem;font-weight:600;">${r.label}${esActual ? ' <span style="font-weight:400;color:var(--mw-purple);">(tú)</span>' : ''}</td>
@@ -94,7 +124,7 @@ function cumpleCompraPersonalRangoLider(rangoKey, p1, p2, montoRequerido) {
 }
 
 function renderRankHero() {
-  const idx = idxRango(LIDER_EJEMPLO.rangoActualKey);
+  const idx = idxRango(miRangoActualKeyLider());
   const rango = RANGOS_MW[idx];
   setText('rankHeroLabel', rango.label.toUpperCase());
   const esUltimo = idx === RANGOS_MW.length - 1;
@@ -102,18 +132,18 @@ function renderRankHero() {
 }
 
 function renderStatCards() {
-  const { personasActivas, produccionGrupalMes, personasCalificadas } = LIDER_EJEMPLO.stats;
+  const { personasActivas, produccionGrupalMes, personasCalificadas } = misStatsLider();
   setText('statPersonas', personasActivas);
   setText('statProduccion', fmtPuntos(produccionGrupalMes));
   setText('statCalificado', personasCalificadas);
-  setText('statRango', RANGOS_MW[idxRango(LIDER_EJEMPLO.rangoActualKey)].label.toUpperCase());
+  setText('statRango', RANGOS_MW[idxRango(miRangoActualKeyLider())].label.toUpperCase());
 }
 
 function renderProgresoRango() {
-  const idxActual = idxRango(LIDER_EJEMPLO.rangoActualKey);
+  const idxActual = idxRango(miRangoActualKeyLider());
   const esUltimo = idxActual === RANGOS_MW.length - 1;
   const siguiente = esUltimo ? null : RANGOS_MW[idxActual + 1];
-  const { personasActivas, produccionGrupalMes, personasCalificadas, compraPersonalPeriodo1, compraPersonalPeriodo2 } = LIDER_EJEMPLO.stats;
+  const { personasActivas, produccionGrupalMes, personasCalificadas, compraPersonalPeriodo1, compraPersonalPeriodo2 } = misStatsLider();
 
   // Línea de tiempo (todos los rangos, avance según producción grupal acumulada)
   const nodesWrap = document.getElementById('rankNodes');
@@ -190,9 +220,25 @@ function renderProgresoRango() {
   setText('nextRankLabel', siguiente.label.toUpperCase());
 }
 
+// Mismo cálculo por niveles que ya usa js/mi-equipo.js
+// (calcularDescendenciaPersona) — nunca un arreglo de ejemplo aparte.
+function calcularEquipoNivelesLider() {
+  const niveles = [1, 2, 3, 4, 5].map(nivel => ({ nivel, personasActivas: 0, nombres: [] }));
+  if (!miPersonaLider || typeof calcularDescendenciaPersona !== 'function') return niveles;
+
+  const { conNivel } = calcularDescendenciaPersona(miPersonaLider.id);
+  conNivel.forEach(({ persona, nivel }) => {
+    if (nivel < 1 || nivel > 5 || persona.estado !== 'activa') return;
+    const n = niveles[nivel - 1];
+    n.personasActivas += 1;
+    n.nombres.push(nombreCompletoPersona(persona));
+  });
+  return niveles;
+}
+
 function renderEquipoNiveles() {
   const wrap = document.getElementById('equipoNivelesGrid');
-  wrap.innerHTML = EQUIPO_NIVELES_EJEMPLO.map(n => {
+  wrap.innerHTML = calcularEquipoNivelesLider().map(n => {
     const avatares = n.nombres.slice(0, 4).map(nom => {
       const iniciales = nom.split(' ').map(p => p[0]).join('').toUpperCase();
       return `<span class="tl-avatar">${iniciales}</span>`;

@@ -43,22 +43,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
+// BUG reportado tras lanzar a producción: esta función ya traía el
+// registro real de la persona (abajo, `persona`) para su foto, pero el
+// nombre/líder/teléfono/correo seguían usando CUENTA_EJEMPLO — cualquier
+// cuenta real veía el nombre y los datos de la cuenta de ejemplo en vez
+// de los suyos.
 function renderPerfil() {
-  const iniciales = typeof obtenerInicialesPerfil === 'function' ? obtenerInicialesPerfil(CUENTA_EJEMPLO.nombre) : CUENTA_EJEMPLO.nombre.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
-
   const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
   const persona = idActual && typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(idActual) : null;
+  const nombre = persona ? nombreCompletoPersona(persona) : CUENTA_EJEMPLO.nombre;
+  const lider = persona?.liderId ? obtenerPersonaPorId(persona.liderId) : null;
+
+  const iniciales = typeof obtenerInicialesPerfil === 'function' ? obtenerInicialesPerfil(nombre) : nombre.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+
   const fotoBox = document.getElementById('perfilIniciales');
   if (fotoBox) {
     fotoBox.innerHTML = persona?.fotoUrl
-      ? `<img src="${persona.fotoUrl}" alt="Foto de ${CUENTA_EJEMPLO.nombre}" style="width:100%;height:100%;object-fit:cover;">`
+      ? `<img src="${persona.fotoUrl}" alt="Foto de ${escapeHTML(nombre)}" style="width:100%;height:100%;object-fit:cover;">`
       : iniciales;
   }
 
-  setText('perfilNombre', CUENTA_EJEMPLO.nombre);
-  setText('perfilLider', `Equipo de ${CUENTA_EJEMPLO.lider}`);
-  setText('perfilTelefono', CUENTA_EJEMPLO.telefono);
-  setText('perfilCorreo', CUENTA_EJEMPLO.correo);
+  setText('perfilNombre', nombre);
+  setText('perfilLider', lider ? `Equipo de ${nombreCompletoPersona(lider)}` : CUENTA_EJEMPLO.lider);
+  setText('perfilTelefono', persona?.telefono || CUENTA_EJEMPLO.telefono);
+  setText('perfilCorreo', persona?.correo || CUENTA_EJEMPLO.correo);
 }
 
 // Persona real con sesión abierta, con su Plan MW (Rifa/Constancia) al

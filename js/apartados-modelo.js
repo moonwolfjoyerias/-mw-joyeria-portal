@@ -374,6 +374,21 @@ function aprobarVentanaVip(ventana, empleado) {
   return ventana;
 }
 
+// BUG/mejora reportada tras lanzar a producción: el número de
+// referencia de una transferencia (comprobante real del banco) se
+// podía repetir sin aviso — por error, o por reusar el comprobante de
+// otra persona. Revisa TODA la tienda: el depósito de cada ventana
+// (referenciaDeposito) y cada pago de liquidación de cada pieza de
+// cada ventana (pagos[].referencia) — nunca solo la ventana actual.
+function existeReferenciaDuplicada(referencia) {
+  referencia = String(referencia || '').trim();
+  if (!referencia) return false;
+  return obtenerVentanasApartado().some(v =>
+    v.referenciaDeposito === referencia ||
+    (v.apartados || []).some(pieza => (pieza.pagos || []).some(pago => pago.referencia === referencia))
+  );
+}
+
 // El monto mínimo son $50, pero algunas personas transfieren más — el
 // monto completo recibido queda como depósito disponible de la ventana.
 // El plazo de vencimiento se cuenta a partir de este momento (no desde

@@ -80,22 +80,28 @@ function obtenerIvaDivisorLider() {
 }
 
 // ---------- Perfil ----------
+// BUG reportado tras lanzar a producción: ya traía el registro real de
+// la persona (abajo, `persona`) para su foto, pero nombre/rango/
+// teléfono/correo seguían usando PERFIL_LIDER_EJEMPLO/LIDER_EJEMPLO —
+// cualquier cuenta real veía el nombre y rango de la cuenta de ejemplo.
 function renderPerfilLider() {
-  const iniciales = typeof obtenerInicialesPerfil === 'function' ? obtenerInicialesPerfil(PERFIL_LIDER_EJEMPLO.nombre) : 'L';
-
   const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
   const persona = idActual && typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(idActual) : null;
+  const nombre = persona ? nombreCompletoPersona(persona) : PERFIL_LIDER_EJEMPLO.nombre;
+
+  const iniciales = typeof obtenerInicialesPerfil === 'function' ? obtenerInicialesPerfil(nombre) : 'L';
+
   const fotoBox = document.getElementById('perfilIniciales');
   if (fotoBox) {
     fotoBox.innerHTML = persona?.fotoUrl
-      ? `<img src="${persona.fotoUrl}" alt="Foto de ${PERFIL_LIDER_EJEMPLO.nombre}" style="width:100%;height:100%;object-fit:cover;">`
+      ? `<img src="${persona.fotoUrl}" alt="Foto de ${escapeHTML(nombre)}" style="width:100%;height:100%;object-fit:cover;">`
       : iniciales;
   }
 
-  setText('perfilNombre', PERFIL_LIDER_EJEMPLO.nombre);
-  setText('perfilLider', `Líder ${RANGOS_MW[idxRango(LIDER_EJEMPLO.rangoActualKey)].label}`);
-  setText('perfilTelefono', PERFIL_LIDER_EJEMPLO.telefono);
-  setText('perfilCorreo', PERFIL_LIDER_EJEMPLO.correo);
+  setText('perfilNombre', nombre);
+  setText('perfilLider', `Líder ${RANGOS_MW[idxRango(persona?.rangoActualKey || 'sin_rango')].label}`);
+  setText('perfilTelefono', persona?.telefono || PERFIL_LIDER_EJEMPLO.telefono);
+  setText('perfilCorreo', persona?.correo || PERFIL_LIDER_EJEMPLO.correo);
 
   const datosBancarios = persona?.datosBancarios;
   setText('perfilDatosBancarios', (datosBancarios && (datosBancarios.titular || datosBancarios.banco || datosBancarios.clabe))

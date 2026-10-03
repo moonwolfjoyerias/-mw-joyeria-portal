@@ -138,10 +138,18 @@ function crearSolicitudListaDeseos({ destinatario, personaId, piezas, creadoPorI
 // "los roles autorizados" (sección 3) son: quien la creó (Staff/Encargado
 // sobre lo suyo) o Administración (sobre cualquiera) — ver
 // puedeGestionarListaDeseos() en cada controlador de página.
-function actualizarEstadoListaDeseos(id, nuevoEstado, { usuarioId, usuarioNombre, usuarioRol, comentario } = {}) {
+// FEAT-03 pedida tras lanzar a producción: marcar "disponible" ahora
+// EXIGE el producto real del catálogo (productoId) — así la
+// notificación a quien la pidió lleva directo a apartarlo (?apartar=),
+// en vez de solo avisarle que revise la Lista de deseos a mano.
+function actualizarEstadoListaDeseos(id, nuevoEstado, { usuarioId, usuarioNombre, usuarioRol, comentario, productoId } = {}) {
 
   if (!ESTADOS_LISTA_DESEOS[nuevoEstado]) {
     return { ok: false, error: 'Ese estado no es válido.' };
+  }
+
+  if (nuevoEstado === 'disponible' && !productoId) {
+    return { ok: false, error: 'Elige el producto del catálogo para marcarla disponible.' };
   }
 
   const lista = obtenerListaDeseos();
@@ -151,6 +159,7 @@ function actualizarEstadoListaDeseos(id, nuevoEstado, { usuarioId, usuarioNombre
   const estadoAnterior = solicitud.estado;
   solicitud.estado = nuevoEstado;
   solicitud.comentarioEstado = comentario || null;
+  if (nuevoEstado === 'disponible') solicitud.productoId = productoId;
   guardarListaDeseos(lista);
 
   // LOG-09 de la auditoría: marcar una solicitud como "Disponible" (ya
@@ -164,8 +173,9 @@ function actualizarEstadoListaDeseos(id, nuevoEstado, { usuarioId, usuarioNombre
       ? (piezas.length === 1 ? piezas[0].producto : `${piezas[0].producto} (+${piezas.length - 1} más)`)
       : 'tu pieza';
     agregarNotificacion({
-      texto: `¡Buena noticia! Ya está disponible lo que pediste en tu lista de deseos: ${resumen}.`,
-      link: 'deseos',
+      texto: `¡Buena noticia! Ya está disponible lo que pediste en tu lista de deseos: ${resumen}. Toca aquí para apartarlo.`,
+      link: 'catalogo',
+      productoId,
       paraId: solicitud.personaId,
       rolDestino: 'emprendedora_lider'
     });

@@ -243,6 +243,8 @@ function abrirModalProducto(producto = null) {
   // quita en cerrarModal() para no afectar a los demás.
   box.classList.add('modal-box-wide');
 
+  imagenProcesandoFoto = null;
+
   const editando = !!producto;
   imagenTemporalEncargado = normalizarImagenProducto(producto?.imagen);
   variantesTemporalEncargado = producto?.variantes?.length
@@ -374,7 +376,9 @@ function abrirModalProducto(producto = null) {
     else { otro.style.display = 'none'; otro.value = ''; }
   });
 
-  document.getElementById('guardarProductoBtn')?.addEventListener('click', () => {
+  document.getElementById('guardarProductoBtn')?.addEventListener('click', async () => {
+
+    if (imagenProcesandoFoto) await imagenProcesandoFoto;
 
     const datos = obtenerDatosProducto();
     if (!datos) return;
@@ -456,6 +460,14 @@ function renderVariantesTemporalEncargado() {
 // IMAGEN
 // ============================================================
 
+// BUG reportado tras lanzar a producción: comprimir la foto es async
+// (comprimirImagenAProductoDataURL) pero nada impedía dar clic en
+// "Guardar" ANTES de que terminara — se guardaba el placeholder que
+// traía el modal (la ruta del isologo) como si fuera la foto real, en
+// vez de esperar/avisar. imagenProcesandoFoto guarda esa promesa para
+// que el botón de Guardar la espere si hace falta (ver su listener).
+let imagenProcesandoFoto = null;
+
 async function manejarImagen(e) {
 
   const archivo = e.target.files?.[0];
@@ -466,15 +478,22 @@ async function manejarImagen(e) {
     return;
   }
 
-  try {
-    imagenTemporalEncargado = await comprimirImagenAProductoDataURL(archivo);
-  } catch (error) {
-    mostrarToast('No se pudo procesar esa imagen. Intenta con otra.');
-    return;
-  }
+  const boton = document.getElementById('guardarProductoBtn');
+  const textoBotonOriginal = boton?.textContent;
+  if (boton) { boton.disabled = true; boton.textContent = 'Procesando foto...'; }
 
-  const preview = document.getElementById('previewImage');
-  if (preview) preview.src = imagenTemporalEncargado;
+  imagenProcesandoFoto = (async () => {
+    try {
+      imagenTemporalEncargado = await comprimirImagenAProductoDataURL(archivo);
+      const preview = document.getElementById('previewImage');
+      if (preview) preview.src = imagenTemporalEncargado;
+    } catch (error) {
+      mostrarToast('No se pudo procesar esa imagen. Intenta con otra.');
+    } finally {
+      if (boton) { boton.disabled = false; boton.textContent = textoBotonOriginal; }
+      imagenProcesandoFoto = null;
+    }
+  })();
 
 }
 
