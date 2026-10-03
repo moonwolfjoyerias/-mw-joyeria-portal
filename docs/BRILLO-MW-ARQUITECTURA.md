@@ -288,7 +288,8 @@ Lo que antes hacía Aronium y ahora debe cubrir BRILLO:
 | Ticket impreso | Impresora térmica vía Tauri | `Venta.folio`, `ticketImpreso` |
 | Inventario físico | `stock` por variante + historial | `MovimientoInventario` |
 | Apertura y corte de caja | Turno por dispositivo | `TurnoCaja` |
-| Historial de ventas y estadísticas | Reportes de Administrativo | `Venta`, `TurnoCaja` |
+| Historial de ventas y estadísticas | Historial completo migrado + ventas nuevas | `Venta`, `ImportacionAronium` |
+| Reporte de ventas, métodos de pago y comisiones | Reporte por periodo (con referencias) | `ReporteVentasPeriodo` |
 | Datos de emprendedoras | Ya viven en `users`/`personas` | `UsuarioVenta` |
 
 Cambios respecto a los requisitos v8 (Sección 20):
@@ -301,22 +302,83 @@ Cambios respecto a los requisitos v8 (Sección 20):
   solo cambia por movimientos de inventario, en la misma transacción que
   la venta o el apartado.
 
-**Migración (`scripts/importar-aronium.js`):** exportar de Aronium a
-Excel/CSV los productos con existencias (→ `productos` + movimientos
-`carga_inicial`), las emprendedoras (requisitos 20.2) y, si se quiere
-conservar, el historial de ventas (→ `Venta` con
-`origen: 'importada_aronium'`). Conviene hacer el cambio en un corte de
-caja, con conteo físico el mismo día.
+### 6.1 Sin facturación electrónica
+
+Hoy no se factura (no hay CFDI). Lo que se usa de Aronium es un
+**reporte**: ventas totales, cuánto entró por tarjeta, transferencia y
+efectivo, y los pagos de comisiones. BRILLO lo reemplaza con
+`ReporteVentasPeriodo` (página `admin/admin-reportes.html`):
+
+- Ventas del periodo: total, número de ventas y cancelaciones, normal
+  vs. souvenirs, público general vs. emprendedoras/líderes.
+- Ingresos por método (efectivo, tarjeta, transferencia), **incluyendo
+  depósitos y liquidaciones de apartados**, no solo las ventas de caja.
+- Detalle de cada pago con tarjeta o transferencia con su referencia,
+  para conciliar contra la terminal y el estado de cuenta.
+- Depósitos de apartado: recibidos, aplicados a compra, guardados como
+  crédito y perdidos.
+- Comisiones pagadas por líder, con método y referencia.
+- Diferencias de los cortes de caja del periodo.
+
+Se calcula al vuelo; al cerrar un periodo se guarda una foto
+(`cerrado: true`) para que no cambie si después se corrige algo.
+Exportable a Excel/PDF.
+
+### 6.2 Número de referencia obligatorio
+
+La terminal y las transferencias arrojan un número de referencia que
+Aronium no guardaba. En BRILLO:
+
+- Un pago con `tarjeta` o `transferencia` **no se puede guardar sin
+  referencia** (`PagoConReferencia.referencia` es obligatorio). Aplica
+  igual a ventas de caja, depósitos de apartado, liquidaciones y pagos
+  de comisiones.
+- `referenciasPago/{metodo}_{referencia}` se crea en la misma transacción
+  que el pago. Si esa referencia ya existe, la caja avisa en qué folio se
+  usó, en lugar de registrar dos veces el mismo cobro.
+- Los pagos anteriores a BRILLO que no tienen referencia (historial de
+  Aronium, "Pago en local" de los apartados actuales) se marcan como
+  `PagoHistorico` (`historico: true`) en vez de inventarles una.
+
+### 6.3 Migración completa del historial
+
+Se migra **todo**, incluidas las ventas pasadas: las comisiones, el rango
+de las líderes, el Reto de Constancia y las rifas se calculan sobre
+compras anteriores. `scripts/importar-aronium.js` procesa tres
+exportaciones de Aronium (Excel/CSV), en este orden:
+
+1. **Productos y existencias** → `productos` + movimientos `carga_inicial`.
+2. **Emprendedoras** (requisitos 20.2) → se empatan con las personas que
+   ya existen en BRILLO por teléfono o nombre.
+3. **Ventas** → `Venta` con `origen: 'importada_aronium'` y
+   `importacion.folioAronium`. Para cada venta hay que resolver la
+   compradora, el material de cada artículo (normal vs. souvenir) y la
+   líder vigente en esa fecha.
+
+Cada archivo es un lote (`ImportacionAronium`) que queda **en revisión**
+antes de aplicarse: muestra cuántas filas se importan, cuáles se saltan
+por duplicadas y cuáles necesitan resolverse a mano (una clienta que no
+empata, un producto sin categoría). Reimportar el mismo archivo no
+duplica nada.
+
+**Impacto en el código actual:** hoy `js/compras-modelo.js` (que alimenta
+Comisiones, Plan MW, Reto y rifas) solo cuenta piezas de apartado
+liquidadas. Hay que hacer que también lea `ventas` (POS e importadas);
+si no, el historial migrado no contaría para nada.
+
+**Corte de cambio:** hacer el cambio en un cierre de caja, con conteo
+físico el mismo día. Las ventas de Aronium posteriores a la exportación
+se importan en un último lote antes de empezar a cobrar en BRILLO.
 
 ## 7. Pendientes por confirmar
 
-1. **Facturación electrónica (CFDI).** Si hoy se facturan ventas desde
-   Aronium o con su ayuda, BRILLO necesita una integración con un PAC.
-   No está modelado todavía.
-2. **Métodos de pago en caja.** El modelo asume efectivo, tarjeta (con
-   terminal externa, capturando solo la referencia) y transferencia.
-   ¿Hay terminal integrada o vales/monederos?
-3. **Historial de Aronium.** ¿Se migran las ventas pasadas o se arranca
-   con el inventario en limpio?
-4. **Plan Blaze.** Si se activa, la verificación de PIN y el cálculo de
+1. **Exportaciones de Aronium.** Necesito un archivo de ejemplo de cada
+   exportación (productos, clientas, ventas — aunque sean pocas filas)
+   para escribir el importador con las columnas reales. En particular:
+   ¿la exportación de ventas trae el detalle por artículo o solo el total
+   por ticket? Sin detalle, la separación normal/souvenirs del historial
+   habría que capturarla o estimarla.
+2. **Desde cuándo** migrar el historial de ventas (¿todo lo que tenga
+   Aronium, o desde una fecha?).
+3. **Plan Blaze.** Si se activa, la verificación de PIN y el cálculo de
    comisiones pueden moverse a Cloud Functions (más robusto).
