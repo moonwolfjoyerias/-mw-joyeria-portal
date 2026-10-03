@@ -6,6 +6,14 @@ modos: **web** (portal público y clientas), **escritorio** (PC de caja,
 Tauri → `.exe`) y **tablet** (piso de venta, Capacitor → `.apk`/`.ipa`),
 todas contra el mismo proyecto de Firebase (`moonwolf-portal`).
 
+Decisiones confirmadas (3-oct-2026):
+
+- **BRILLO reemplaza a Aronium.** BRILLO pasa a ser la caja registradora
+  y la fuente de verdad del inventario físico. Esto sustituye la
+  Sección 20 de los requisitos v8 (ver §6).
+- **Staff conserva la cuenta compartida** (requisitos, Sección 16) por
+  ahora, con Nombre + PIN en cada acción registrable (ver §4).
+
 Estado: **propuesta + modelo de datos**. Lo único ya agregado al repo es
 `src/types/brillo.ts`, `tsconfig.json` (`npm run typecheck`) y la
 exclusión de las carpetas nativas en `scripts/build.mjs`. Nada de lo que
@@ -36,7 +44,8 @@ duplican**:
 - **Comisiones** — `js/comisiones-modelo.js` (÷1.16 × % por nivel/rango, ajustes manuales con historial).
 - **Nómina semanal** — `js/nomina-modelo.js` (flujo RH → validación Admin → pagado, ajustes con historial).
 
-Lo que **no existe** todavía: ventas/POS, PIN de Staff, custom claims,
+Lo que **no existe** todavía: ventas/POS, turnos y cortes de caja,
+historial de movimientos de inventario, PIN de Staff, custom claims,
 dispositivos registrados, impresión de tickets, lectura de código de
 barras, y cualquier configuración de Tauri o Capacitor.
 
@@ -54,7 +63,10 @@ mw-joyeria-portal/
 ├── index.html, login.html, …        ← sitio público (sin cambios)
 ├── portal/<rol>/*.html              ← portal por rol (sin cambios)
 │   ├── staff/staff-pos.html         ← NUEVO: punto de venta (caja/tablet)
-│   └── staff/staff-depositos.html   ← NUEVO: captura de depósitos con firma
+│   ├── staff/staff-caja.html        ← NUEVO: apertura y corte de caja
+│   ├── staff/staff-inventario.html  ← NUEVO: entradas, ajustes, mermas
+│   ├── staff/staff-depositos.html   ← NUEVO: captura de depósitos con firma
+│   └── admin/admin-reportes.html    ← NUEVO: ventas, cortes, inventario
 ├── css/  assets/                    ← sin cambios
 ├── js/                              ← lógica actual (scripts globales)
 │   ├── plataforma.js                ← NUEVO: detecta web / escritorio / tablet
@@ -72,6 +84,7 @@ mw-joyeria-portal/
 ├── android/  ios/                   ← generadas por `npx cap add` (versionadas)
 ├── functions/                       ← OPCIONAL (requiere plan Blaze), ver §4
 ├── scripts/                         ← + fijar-claims.js (custom claims)
+│                                       + importar-aronium.js (migración inicial)
 ├── docs/BRILLO-MW-ARQUITECTURA.md
 ├── firestore.rules
 └── package.json                     ← scripts: build, typecheck, desktop:*, tablet:*
@@ -97,7 +110,7 @@ tipos con `// @ts-check` + JSDoc `@type {import('../src/types/brillo').Venta}`.
 |---|---|---|
 | `admin` | Administrativo | Todo; reportes globales; nómina; **ajustar y congelar** cualquier `ValorCalculado` |
 | `encargado` | **RH** | Nómina semanal de Staff/RH/Admin + catálogo, apartados y calendario |
-| `staff` | Staff (Caja) | POS, cobros, depósitos, altas/bajas de inventario — **cada acción firmada con PIN** |
+| `staff` | Staff (Caja) | POS, cobros, cortes de caja, depósitos, inventario — **una cuenta compartida; cada acción firmada con Nombre + PIN** |
 | `lider` | Líder | Equipo, comisiones, apartados; `isVip: true` = sin depósito ni vencimiento (con aprobación de Staff) |
 | `emprendedora` | Emprendedora | Catálogo con mayoreo automático; apartados; `isForanea: true` = 15 días |
 
@@ -126,42 +139,45 @@ lectura, y el rol queda firmado por Firebase.
 
 ---
 
-## 4. Firma con Nombre + PIN en dispositivo compartido
+## 4. Firma con Nombre + PIN (cuenta compartida de Staff)
 
-Requisito: la caja/tablet mantiene la sesión abierta, pero cada acción
-registrable (venta, cancelación, depósito, liquidación, alta/baja de
-inventario, consulta de nómina propia) pide Nombre + PIN de 4-6 dígitos.
+Requisito: la caja/tablet mantiene abierta la sesión **compartida** de
+Staff, y cada acción registrable (venta, cancelación, depósito,
+liquidación, inventario, apertura/corte de caja, consulta de nómina
+propia) pide elegir Nombre + PIN de 4-6 dígitos.
 
-**Riesgo a evitar:** guardar un hash del PIN en Firestore y compararlo en
-el navegador. Con solo 10 000-1 000 000 combinaciones, cualquiera con la
-sesión abierta podría leer el hash y probarlas todas en segundos.
+Diseño (sin cuentas individuales para Staff):
 
-**Diseño recomendado (funciona en el plan gratuito Spark):**
+1. **`pinesStaff/{empleadoId}`** guarda por empleado de nómina un hash
+   PBKDF2-SHA256 con sal propia (tipo `PinStaff`) — nunca el PIN en
+   claro. Solo Administrativo lo crea o restablece (requisitos 19.2).
+2. **`js/firma-pin.js`** muestra el modal, calcula el hash con WebCrypto
+   (disponible en web, Tauri y Capacitor) y lo compara. Tras
+   `PIN_MAX_INTENTOS` (5) fallos seguidos fija `bloqueadoHasta`
+   (15 minutos) y avisa a Administración.
+3. La acción se escribe con una **`FirmaEmpleado`** (`empleadoId`,
+   `empleadoNombre`, `sesionUid`, `dispositivoId`, fecha) y además queda
+   en `bitacoraAcciones` (append-only).
+4. Las reglas exigen que `firma.sesionUid == request.auth.uid`, que
+   `firma.empleadoId` sea un empleado de Staff activo, y que
+   `bitacoraAcciones` y `movimientosInventario` no se puedan editar ni borrar.
 
-1. Cada empleado de Staff tiene **su propia cuenta de Firebase Auth**
-   (`staff-ana@pin.mwjoyeria.local`) cuya contraseña deriva de su PIN. El
-   dispositivo entra con una cuenta de **mostrador** (`claims.mostrador`)
-   que solo puede *leer* lo necesario.
-2. Al confirmar una acción, `js/firma-pin.js` inicia sesión con el PIN en
-   una **segunda instancia** de Firebase (`firebase.initializeApp(cfg, 'firma')`)
-   — sin tocar la sesión del mostrador — y **escribe el documento con esa
-   instancia**. Después cierra esa sesión.
-3. Las reglas exigen que toda escritura registrable venga del propio
-   empleado: `request.auth.uid == request.resource.data.firma.empleadoUid`.
-   La trazabilidad deja de depender de que el cliente "diga" quién fue.
-4. Firebase Auth aplica su propio límite de intentos fallidos, y solo
-   Administrativo restablece el PIN (requisitos 19.2) con el Admin SDK.
+**Límite conocido (aceptado por ahora):** como las 8 personas comparten
+la misma cuenta de Firebase, el servidor no puede comprobar *quién*
+tecleó el PIN — la verificación ocurre en el dispositivo, y la cuenta
+compartida necesita poder leer los hashes. El PIN evita que un
+compañero firme por otro desde la pantalla normal de la caja, pero no
+frena a alguien que abra las herramientas de desarrollador y pruebe las
+10 000-1 000 000 combinaciones. Es el mismo nivel de confianza que el
+"registro de nombre por acción" de los requisitos, con un control
+adicional. `pinesStaff` solo es legible por `staff`/`admin`, nunca por
+emprendedoras ni líderes.
 
-Alternativa: verificar el PIN en una Cloud Function (`functions/`), que
-exige el plan **Blaze**. El repo hoy evita Blaze a propósito (ver
-`SETUP-FIREBASE.md`), por eso no es la opción por defecto.
-
-Firebase Auth exige contraseñas de al menos 6 caracteres; para PIN de 4-5
-dígitos la contraseña se deriva como `"mw-" + PIN` (el prefijo no aporta
-seguridad, solo cumple la longitud — la protección real es el límite de
-intentos del servidor).
-
----
+**Cuándo reforzarlo:** si hace falta trazabilidad que valga ante una
+disputa (faltantes en el corte de caja, por ejemplo), hay dos opciones
+que no cambian el modelo de datos más allá de la firma: cuentas
+individuales de Firebase Auth por empleado usadas solo para firmar, o
+verificar el PIN en una Cloud Function (requiere plan Blaze).
 
 ## 5. Integración multiplataforma
 
@@ -239,6 +255,10 @@ La UI táctil se ajusta con `[data-plataforma="tablet"]` en `css/styles.css`
 
 ### 5.3 Firebase en las apps nativas
 
+- **La caja debe poder cobrar sin internet** ahora que no hay Aronium de
+  respaldo: Firestore con persistencia local encola las ventas y las
+  sube al volver la red. Los folios se generan por dispositivo
+  (`prefijoFolio` + consecutivo local) para no depender del servidor.
 - Agregar a **Authentication → Configuración → Dominios autorizados**:
   `tauri.localhost` (Tauri en Windows) y `localhost` (Capacitor).
 - El SDK *compat* por CDN necesita red en el primer arranque. Para que la
@@ -258,17 +278,45 @@ La UI táctil se ajusta con `[data-plataforma="tablet"]` en `css/styles.css`
 
 ---
 
-## 6. Decisiones abiertas para el negocio
+## 6. BRILLO como reemplazo de Aronium
 
-1. **POS vs. Aronium.** Los requisitos v8 (Sección 20) dicen que **Aronium
-   sigue siendo la caja registradora y la fuente de verdad del
-   inventario**, sin integración. Un POS dentro de BRILLO con impresora y
-   escáner cambia eso: ¿BRILLO reemplaza a Aronium, o convive y el POS solo
-   registra ventas a emprendedoras/líderes? El modelo `Venta` ya soporta
-   ambos casos (`origen: 'pos' | 'compra_directa_aronium'`), pero el flujo
-   de inventario depende de esta respuesta.
-2. **Staff con cuenta compartida.** Los requisitos dicen "8 personas, cuenta
-   compartida con registro de nombre por acción"; el diseño de §4 lo
-   convierte en cuenta de mostrador + cuenta individual por PIN. Confirmar.
-3. **Plan Blaze.** Si se activa, la verificación de PIN y el cálculo de
+Lo que antes hacía Aronium y ahora debe cubrir BRILLO:
+
+| Función de Aronium | En BRILLO | Tipo en `brillo.ts` |
+|---|---|---|
+| Cobro en caja (público y emprendedoras) | POS en escritorio/tablet | `Venta` (`origen: 'pos'`) |
+| Ticket impreso | Impresora térmica vía Tauri | `Venta.folio`, `ticketImpreso` |
+| Inventario físico | `stock` por variante + historial | `MovimientoInventario` |
+| Apertura y corte de caja | Turno por dispositivo | `TurnoCaja` |
+| Historial de ventas y estadísticas | Reportes de Administrativo | `Venta`, `TurnoCaja` |
+| Datos de emprendedoras | Ya viven en `users`/`personas` | `UsuarioVenta` |
+
+Cambios respecto a los requisitos v8 (Sección 20):
+
+- Ya no existe la "compra directa capturada después de cobrar en
+  Aronium": una emprendedora que compra en tienda es una venta `pos` con
+  `compradorId`, y el desglose normal/souvenirs se calcula solo a partir
+  de las líneas del ticket.
+- El catálogo deja de copiar a mano las cantidades de Aronium: el stock
+  solo cambia por movimientos de inventario, en la misma transacción que
+  la venta o el apartado.
+
+**Migración (`scripts/importar-aronium.js`):** exportar de Aronium a
+Excel/CSV los productos con existencias (→ `productos` + movimientos
+`carga_inicial`), las emprendedoras (requisitos 20.2) y, si se quiere
+conservar, el historial de ventas (→ `Venta` con
+`origen: 'importada_aronium'`). Conviene hacer el cambio en un corte de
+caja, con conteo físico el mismo día.
+
+## 7. Pendientes por confirmar
+
+1. **Facturación electrónica (CFDI).** Si hoy se facturan ventas desde
+   Aronium o con su ayuda, BRILLO necesita una integración con un PAC.
+   No está modelado todavía.
+2. **Métodos de pago en caja.** El modelo asume efectivo, tarjeta (con
+   terminal externa, capturando solo la referencia) y transferencia.
+   ¿Hay terminal integrada o vales/monederos?
+3. **Historial de Aronium.** ¿Se migran las ventas pasadas o se arranca
+   con el inventario en limpio?
+4. **Plan Blaze.** Si se activa, la verificación de PIN y el cálculo de
    comisiones pueden moverse a Cloud Functions (más robusto).

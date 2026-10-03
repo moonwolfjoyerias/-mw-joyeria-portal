@@ -36,8 +36,10 @@ export interface DispositivoRegistrado {
   id: string;
   nombre: string; // "Caja 1", "Tablet exhibidor norte"
   plataforma: Exclude<Plataforma, 'web'>;
-  /** Cuenta de Auth "de mostrador" con la que el dispositivo mantiene su sesión abierta. */
-  cuentaMostradorUid: string;
+  /** Cuenta compartida de Staff con la que el dispositivo mantiene su sesión abierta. */
+  cuentaSesionUid: string;
+  /** Prefijo de folio de los tickets de esta caja ("C1" → C1-000123). */
+  prefijoFolio: string;
   tieneImpresoraTickets: boolean;
   activo: boolean;
   creadoEn: FechaISO;
@@ -76,8 +78,6 @@ export const ROLES_INTERNOS: readonly RolBrillo[] = ['admin', 'encargado', 'staf
  */
 export interface ClaimsBrillo {
   rol: RolBrillo;
-  /** true en la cuenta compartida de mostrador de una caja/tablet. */
-  mostrador?: boolean;
   /** Versión del esquema de claims, para migraciones futuras. */
   cv: 1;
 }
@@ -136,8 +136,6 @@ export interface UsuarioInterno extends UsuarioBase {
   cuentaId: string;
   /** nominaEmpleados/{id} — roster de nómina separado a propósito (ver js/nomina-modelo.js). */
   empleadoNominaId?: string;
-  /** Solo Staff: datos públicos de su PIN. El PIN en sí NUNCA se guarda en Firestore. */
-  pin?: PinStaffInfo;
 }
 
 /** Fuerza de venta: Emprendedora o Líder (compensación por comisiones, no nómina). */
@@ -157,20 +155,33 @@ export interface UsuarioVenta extends UsuarioBase {
 export type Usuario = UsuarioInterno | UsuarioVenta;
 
 /**
- * PIN individual de Staff (4-6 dígitos). Ver la sección "Firma con PIN"
- * de docs/BRILLO-MW-ARQUITECTURA.md: cada empleado tiene su PROPIA
- * cuenta de Firebase Auth (correo interno) cuya contraseña deriva del
- * PIN, de modo que la verificación y el límite de intentos los hace
- * Firebase Auth — nunca un hash consultable desde el navegador.
+ * pinesStaff/{empleadoId} — PIN individual de Staff (4-6 dígitos).
+ *
+ * Staff sigue usando UNA cuenta compartida (requisitos, Sección 16:
+ * "cuenta compartida con registro de nombre por acción"); las 8 personas
+ * NO tienen cuenta propia de Firebase Auth. Por eso el PIN se identifica
+ * por empleado de nómina (nominaEmpleados/{id}), no por uid, y se guarda
+ * solo como hash PBKDF2-SHA256 con sal propia — nunca en claro.
+ * Límite conocido: ver "Firma con PIN" en docs/BRILLO-MW-ARQUITECTURA.md.
  */
-export interface PinStaffInfo {
-  /** Correo interno de la cuenta individual (staff-ana@pin.mwjoyeria.local). */
-  authEmail: string;
+export interface PinStaff {
+  empleadoId: string;
+  empleadoNombre: string;
+  /** Base64 de PBKDF2-SHA256(PIN, sal, iteraciones). */
+  hash: string;
+  sal: string;
+  iteraciones: number;
   longitud: 4 | 5 | 6;
-  /** Solo Administrativo restablece el PIN (requisitos 19.2). */
+  /** Se reinicia al acertar; al llegar a PIN_MAX_INTENTOS se fija bloqueadoHasta. */
+  intentosFallidos: number;
+  bloqueadoHasta: FechaISO | null;
+  /** Solo Administrativo crea o restablece un PIN (requisitos 19.2). */
   actualizadoPor: string;
   actualizadoEn: FechaISO;
 }
+
+export const PIN_MAX_INTENTOS = 5;
+export const PIN_MINUTOS_BLOQUEO = 15;
 
 // ============================================================
 // FIRMA DE ACCIONES (Nombre + PIN en dispositivo compartido)
@@ -184,16 +195,22 @@ export type AccionRegistrable =
   | 'liquidacion_apartado'
   | 'alta_inventario'
   | 'baja_inventario'
+  | 'ajuste_inventario'
+  | 'apertura_caja'
+  | 'corte_caja'
   | 'consulta_nomina_propia';
 
 /**
- * Se adjunta a todo documento creado/modificado desde una caja o tablet.
- * `empleadoUid` es el uid de la cuenta INDIVIDUAL que firmó (no la de
- * mostrador): las reglas exigen request.auth.uid == firma.empleadoUid.
+ * Se adjunta a todo documento creado/modificado tras el modal de
+ * Nombre + PIN. `empleadoId` es nominaEmpleados/{id} (quién lo hizo);
+ * `sesionUid` es la cuenta con la que estaba abierto el dispositivo
+ * (la compartida de Staff, o la individual de RH/Administrativo).
+ * Las reglas comprueban sesionUid == request.auth.uid.
  */
 export interface FirmaEmpleado {
-  empleadoUid: string;
+  empleadoId: string;
   empleadoNombre: string;
+  sesionUid: string;
   accion: AccionRegistrable;
   dispositivoId: string;
   plataforma: Plataforma;
@@ -424,13 +441,15 @@ export interface VentanaDeposito {
 // ============================================================
 
 /**
- * Toda compra que cuenta para comisiones/recompensas, venga de donde
- * venga: cobro en el POS de BRILLO, apartado liquidado o compra directa
- * capturada después de cobrar en Aronium (requisitos 20.3). Las tres
- * cuentan exactamente igual para activación, comisión, producción,
- * equipo calificado, Reto de Constancia y rifas.
+ * BRILLO reemplaza a Aronium como caja registradora (decisión del
+ * 3-oct-2026, sustituye la Sección 20 de los requisitos v8): toda venta
+ * se cobra en el POS de BRILLO. La compra directa de una emprendedora/
+ * líder en tienda es simplemente una venta 'pos' con compradorId, y
+ * cuenta igual que un apartado liquidado para activación, comisión,
+ * producción, equipo calificado, Reto de Constancia y rifas.
+ * 'importada_aronium' solo existe para el historial migrado al arrancar.
  */
-export type OrigenVenta = 'pos' | 'apartado_liquidado' | 'compra_directa_aronium';
+export type OrigenVenta = 'pos' | 'apartado_liquidado' | 'importada_aronium';
 
 export interface LineaVenta {
   productoId: string;
@@ -454,10 +473,13 @@ export interface Venta {
   /** Líder de la compradora al momento de la venta (congelado para comisiones). */
   liderIdAlVender: string | null;
   ventanaApartadoId?: string;
+  /** Turno de caja en que se cobró (null en apartado liquidado desde portal o importada). */
+  turnoCajaId: string | null;
   lineas: LineaVenta[];
   /**
-   * Desglose obligatorio (requisitos 4.2). En compra_directa_aronium no
-   * hay líneas: Staff captura estos dos importes a mano.
+   * Desglose obligatorio (requisitos 4.2), derivado de `lineas`. En el
+   * historial importado de Aronium puede venir sin líneas, solo con
+   * estos dos importes.
    */
   subtotalNormal: Pesos;
   subtotalSouvenirs: Pesos;
@@ -469,6 +491,69 @@ export interface Venta {
   firma: FirmaEmpleado;
   ticketImpreso: boolean;
   creadoEn: FechaISO;
+}
+
+// ============================================================
+// INVENTARIO — movimientosInventario/{id}
+// ============================================================
+
+/**
+ * Con BRILLO como fuente de verdad del inventario físico, el `stock` de
+ * cada variante ya no se captura copiando Aronium: solo cambia mediante
+ * un movimiento, escrito en la MISMA transacción que actualiza el
+ * producto. El historial es append-only y explica cada pieza.
+ */
+export type TipoMovimientoInventario =
+  | 'entrada' // compra a proveedor / alta de piezas
+  | 'venta'
+  | 'apartado' // reserva: sale del disponible
+  | 'liberacion_apartado' // pieza cancelada o desapartada: regresa
+  | 'cancelacion_venta' // devolución: regresa
+  | 'ajuste' // conteo físico (positivo o negativo)
+  | 'merma' // daño, pérdida
+  | 'carga_inicial'; // migración desde Aronium
+
+export interface MovimientoInventario {
+  id: string;
+  productoId: string;
+  varianteId: string;
+  tipo: TipoMovimientoInventario;
+  /** Positivo entra, negativo sale. */
+  cantidad: number;
+  stockAntes: number;
+  stockDespues: number;
+  /** 'ventas/V-123', 'ventanasApartado/VENT-9'... */
+  referencia?: string;
+  motivo?: string;
+  costoUnitario?: Pesos;
+  firma: FirmaEmpleado;
+}
+
+// ============================================================
+// CAJA — turnosCaja/{id}
+// ============================================================
+
+/**
+ * Apertura y corte de caja por dispositivo (lo que hoy hace Aronium).
+ * El efectivo esperado se calcula de las ventas y depósitos en efectivo
+ * del turno; Administrativo puede ajustar la diferencia con motivo.
+ */
+export interface TurnoCaja {
+  id: string;
+  dispositivoId: string;
+  estado: 'abierto' | 'cerrado';
+  apertura: { fondoInicial: Pesos; firma: FirmaEmpleado };
+  cierre?: {
+    efectivoContado: Pesos;
+    efectivoEsperado: ValorCalculado<Pesos>;
+    diferencia: Pesos;
+    totalesPorMetodo: Partial<Record<MetodoPago, Pesos>>;
+    numVentas: number;
+    numCancelaciones: number;
+    firma: FirmaEmpleado;
+  };
+  /** Retiros/ingresos de efectivo durante el turno (pago a proveedor, cambio...). */
+  movimientosEfectivo: { monto: Pesos; motivo: string; firma: FirmaEmpleado }[];
 }
 
 // ============================================================
@@ -525,14 +610,17 @@ export interface ConceptoNomina {
 
 /**
  * Recibo semanal de un empleado con sueldo (Staff, RH, Administrativo).
- * La captura es manual (requisitos 17.2). Cada empleado ve SOLO el suyo;
- * en una caja compartida, Staff lo abre firmando con Nombre + PIN
- * (accion 'consulta_nomina_propia'), y esa consulta queda en bitácora.
+ * La captura es manual (requisitos 17.2). Cada empleado ve SOLO el suyo:
+ * RH/Administrativo por su cuenta individual (las reglas comparan
+ * empleadoUid); Staff, al usar cuenta compartida, lo abre firmando con
+ * Nombre + PIN (accion 'consulta_nomina_propia'), y la consulta queda
+ * en bitácora.
  */
 export interface ReciboNominaSemanal {
   id: string; // `${empleadoId}_${semana}`
   empleadoId: string; // nominaEmpleados/{id}
-  empleadoUid: string; // users/{uid} — lo que comparan las reglas para "solo el propio"
+  /** users/{uid} de RH/Administrativo. null en Staff (cuenta compartida). */
+  empleadoUid: string | null;
   empleadoNombre: string;
   cargo: 'admin' | 'encargado' | 'staff';
   semana: SemanaISO;
