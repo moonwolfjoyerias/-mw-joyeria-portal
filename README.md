@@ -22,10 +22,3 @@ Genera una copia completa y lista para publicar en `dist/`, con los
 reordenados ni mezclados con los SDK de Firebase por CDN). `dist/` no se
 versiona — se regenera con el comando de arriba cuando haga falta
 publicar esa versión optimizada en vez de los archivos sueltos.
-
-## BRILLO MW (monorepo multiplataforma)
-
-Ver [docs/BRILLO-MW-ARQUITECTURA.md](docs/BRILLO-MW-ARQUITECTURA.md) para
-la estructura propuesta (web + escritorio con Tauri + tablet con
-Capacitor) y `src/types/brillo.ts` para el modelo de datos compartido.
-`npm run typecheck` valida esos tipos; no afecta al sitio que se sirve.
