@@ -376,14 +376,80 @@ export type EstadoVentana =
 
 export type EstadoPieza = 'activa' | 'liquidada' | 'cancelada';
 
+/**
+ * 'local' = "Pago en local" de los apartados actuales (js/apartados-
+ * modelo.js), sin desglose; solo existe en documentos anteriores a
+ * BRILLO. Los pagos nuevos siempre usan uno de los otros tres.
+ */
 export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia' | 'local';
 
-export interface Pago {
+/** Métodos que generan número de referencia (terminal o banco). */
+export type MetodoConReferencia = 'tarjeta' | 'transferencia';
+
+export const METODOS_CON_REFERENCIA: readonly MetodoPago[] = ['tarjeta', 'transferencia'];
+
+interface PagoBase {
   monto: Pesos;
-  metodo: MetodoPago;
-  referencia?: string | null;
   fecha: FechaISO;
   firma?: FirmaEmpleado;
+}
+
+/**
+ * Tarjeta y transferencia SIEMPRE llevan el número de referencia que
+ * arroja la terminal o el banco — Aronium no lo guardaba y es lo que
+ * permite conciliar contra el estado de cuenta. Además se registra en
+ * referenciasPago/{metodo}_{referencia} (ver ReferenciaPago) para que
+ * la misma referencia no se capture dos veces.
+ */
+export interface PagoConReferencia extends PagoBase {
+  historico?: false;
+  metodo: MetodoConReferencia;
+  referencia: string;
+  /** Tarjeta: últimos 4 dígitos, si la terminal los muestra. */
+  ultimos4?: string;
+  /** Transferencia: banco de origen, si se conoce. */
+  banco?: string;
+}
+
+export interface PagoEfectivo extends PagoBase {
+  historico?: false;
+  metodo: 'efectivo';
+  /** Lo que entregó la clienta; el cambio es recibido - monto. */
+  recibido?: Pesos;
+}
+
+/**
+ * Pagos anteriores a BRILLO: "Pago en local" y transferencias sin
+ * referencia de los apartados actuales, y el historial de Aronium (que
+ * nunca guardó referencias). Se distinguen por `historico: true`, no por
+ * el método, para no inventar referencias que no existen.
+ */
+export interface PagoHistorico extends PagoBase {
+  historico: true;
+  metodo: MetodoPago;
+  referencia?: string | null;
+}
+
+export type Pago = PagoConReferencia | PagoEfectivo | PagoHistorico;
+
+export function requiereReferencia(metodo: MetodoPago): metodo is MetodoConReferencia {
+  return METODOS_CON_REFERENCIA.includes(metodo);
+}
+
+/**
+ * referenciasPago/{metodo}_{referencia} — índice de unicidad. Se crea en
+ * la misma transacción que el pago; si el documento ya existe, la
+ * transacción falla y la caja avisa "esta referencia ya se registró en
+ * el folio X" en vez de duplicar el cobro.
+ */
+export interface ReferenciaPago {
+  metodo: MetodoConReferencia;
+  referencia: string;
+  monto: Pesos;
+  /** 'ventas/V-123' o 'ventanasApartado/VENT-9'. */
+  documento: string;
+  folio?: string;
+  fecha: FechaISO;
 }
 
 export interface PiezaApartada {
@@ -491,6 +557,89 @@ export interface Venta {
   firma: FirmaEmpleado;
   ticketImpreso: boolean;
   creadoEn: FechaISO;
+  /** Solo en origen 'importada_aronium': de dónde salió, para no importarla dos veces. */
+  importacion?: { loteId: string; folioAronium: string };
+}
+
+// ============================================================
+// HISTORIAL DE ARONIUM — importacionesAronium/{loteId}
+// ============================================================
+
+/**
+ * Se migra TODO el historial de ventas de Aronium: las comisiones, el
+ * rango de las líderes, el Reto de Constancia y las rifas dependen de
+ * compras pasadas. Cada venta importada es una `Venta` normal con
+ * origen 'importada_aronium', así que los cálculos no distinguen entre
+ * historial y ventas nuevas.
+ *
+ * Lo que la importación tiene que resolver, fila por fila:
+ * - Clienta de Aronium → personaId de BRILLO (por teléfono o nombre;
+ *   lo que no empate queda en `pendientes` para resolver a mano).
+ * - Producto → material, para separar subtotalNormal/subtotalSouvenirs.
+ * - Líder vigente en la fecha de la venta (liderIdAlVender), si se conoce.
+ * Es idempotente: (loteId, folioAronium) evita duplicar si se reintenta.
+ */
+export interface ImportacionAronium {
+  id: string;
+  archivo: string;
+  tipo: 'productos' | 'emprendedoras' | 'ventas';
+  /** Rango de fechas que cubre el archivo (solo ventas). */
+  desde?: FechaISO;
+  hasta?: FechaISO;
+  filasLeidas: number;
+  filasImportadas: number;
+  /** Ya existían (mismo folioAronium) — se saltaron. */
+  filasDuplicadas: number;
+  pendientes: { fila: number; folioAronium?: string; motivo: string }[];
+  estado: 'en_revision' | 'aplicada' | 'revertida';
+  importadoPor: string;
+  fecha: FechaISO;
+}
+
+// ============================================================
+// REPORTE DE VENTAS Y COMISIONES (reemplaza el reporte de Aronium)
+// ============================================================
+
+/**
+ * Lo que hoy se saca de Aronium: ventas totales, cuánto entró por
+ * tarjeta, transferencia y efectivo, y los pagos de comisiones — ahora
+ * con el detalle de referencias que Aronium no guardaba. No es una
+ * factura (no hay CFDI); se calcula al vuelo desde ventas, turnos de
+ * caja y comisiones, y se puede guardar como foto en
+ * reportesVentas/{id} al cerrar un periodo para que no cambie después.
+ */
+export interface ReporteVentasPeriodo {
+  id: string;
+  desde: FechaISO;
+  hasta: FechaISO;
+  /** null = todas las cajas. */
+  dispositivoId: string | null;
+  ventas: {
+    numVentas: number;
+    numCanceladas: number;
+    total: Pesos;
+    subtotalNormal: Pesos;
+    subtotalSouvenirs: Pesos;
+    /** Público general vs. emprendedoras/líderes. */
+    totalMostrador: Pesos;
+    totalFuerzaVenta: Pesos;
+  };
+  /** Incluye depósitos y liquidaciones de apartados, no solo ventas de caja. */
+  ingresosPorMetodo: Record<Exclude<MetodoPago, 'local'>, { monto: Pesos; numPagos: number }>;
+  /** Detalle para conciliar contra terminal y banco. */
+  pagosConReferencia: (PagoConReferencia & { documento: string; folio?: string })[];
+  depositosApartado: { recibidos: Pesos; aplicadosACompra: Pesos; guardadosComoCredito: Pesos; perdidos: Pesos };
+  comisiones: {
+    pagadas: Pesos;
+    numPagos: number;
+    porLider: { liderId: string; liderNombre: string; monto: Pesos; metodo: MetodoPago; referencia?: string }[];
+  };
+  /** Diferencias de los cortes de caja del periodo. */
+  diferenciasCaja: { turnoCajaId: string; diferencia: Pesos }[];
+  generadoPor: string;
+  generadoEn: FechaISO;
+  /** true = foto guardada al cierre; ya no se recalcula. */
+  cerrado: boolean;
 }
 
 // ============================================================
@@ -588,6 +737,7 @@ export interface RegistroComision {
   pct: number;
   monto: ValorCalculado<Pesos>;
   estado: 'calculada' | 'pagada';
+  /** Pago de la comisión a la líder — entra al reporte del periodo. */
   pago?: { fecha: FechaISO; metodo: MetodoPago; referencia?: string; pagadoPor: string };
 }
 
