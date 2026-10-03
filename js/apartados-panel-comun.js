@@ -235,7 +235,15 @@ function obtenerAccionesVentana(v) {
   if (v.estado === "activa") {
 
     if (obtenerPiezasActivas(v).length) {
-      html += `<button class="action-btn primary-action" data-liquidar-ventana="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Liquidar apartado</button>`;
+      // Pedido tras lanzar a producción: cuando la propia Emprendedora/
+      // Líder ya avisó que pagó todo (botón "Ya envié mi comprobante" en
+      // js/apartados.js, que marca v.fechaDeclaracionPago), este MISMO
+      // botón se marca como "Ya pagó todo" para que S/E/A lo note sin
+      // tener que abrir la fila — sigue abriendo el mismo modal de
+      // Liquidar de siempre, exactamente la misma acción, solo cambia la
+      // etiqueta como aviso visual.
+      const etiquetaLiquidar = v.fechaDeclaracionPago ? 'Ya pagó todo' : 'Liquidar apartado';
+      html += `<button class="action-btn primary-action" data-liquidar-ventana="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> ${etiquetaLiquidar}</button>`;
       html += `<button class="action-btn danger-action" data-cancelar-ventana="${v.id}"><span>×</span> Cancelar apartado</button>`;
       // LOG-06 de la auditoría: antes el excedente del depósito (lo que
       // pasa de $50) quedaba congelado junto con el piso hasta cerrar

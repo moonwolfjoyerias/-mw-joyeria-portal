@@ -195,7 +195,15 @@ function obtenerRolPortalActual() {
 // ajeno, etc.). Los pocos ejemplos sin paraId (NOTIFICACIONES_EJEMPLO)
 // se siguen mostrando a cualquiera, igual que siempre.
 function obtenerNotificacionesPorRol(rol) {
-  const notificaciones = obtenerNotificacionesCompartidas().filter(n => (n.rolDestino || 'emprendedora_lider') === rol);
+  // BUG encontrado al revisar por qué un aviso para "staff/encargado/
+  // admin" no le llegaba a Encargado: normalizarNotificacion promueve
+  // casi cualquier aviso de Encargado a rolDestino 'staff' (todo menos
+  // nómina — ver esNotificacionEncargadoExclusiva), pero esto filtraba
+  // únicamente por 'encargado' exacto — su campana nunca mostraba nada
+  // de apartados/catálogo/deseos/calendario/actividades, solo los
+  // poquísimos avisos de nómina que sí conservan 'encargado' tal cual.
+  const rolesABuscar = rol === 'encargado' ? ['encargado', 'staff'] : [rol];
+  const notificaciones = obtenerNotificacionesCompartidas().filter(n => rolesABuscar.includes(n.rolDestino || 'emprendedora_lider'));
   if (rol !== 'emprendedora_lider') return notificaciones;
   const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
   return notificaciones.filter(n => !n.paraId || n.paraId === idActual);
