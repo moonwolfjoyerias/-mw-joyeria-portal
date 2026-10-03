@@ -69,12 +69,33 @@ service cloud.firestore {
     // variante ya eran técnicamente legibles por cualquier cuenta
     // autenticada desde antes — ahora también por un visitante sin
     // cuenta, con la misma limitación de que el cliente solo puede
-    // ocultarlo en la interfaz, no en el documento. Solo Staff/
-    // Encargado/Admin pueden crear, editar, eliminar o modificar
-    // existencia.
+    // ocultarlo en la interfaz, no en el documento. Crear, eliminar o
+    // editar cualquier otro campo (nombre, precio, fotos...) sigue
+    // siendo exclusivo de Staff/Encargado/Admin.
+    //
+    // BUG reportado tras lanzar a producción: "Apartar" desde el
+    // catálogo (Emprendedora/Líder, js/catalogo.js) descuenta 1 pieza de
+    // la variante elegida directo en este mismo documento —
+    // descontarStockVariante()/restaurarStockVariante() en
+    // catalogo-variantes-modelo.js, dentro de una transacción de
+    // Firestore (tx.update) que SOLO toca el campo "variantes", nunca
+    // otro — antes esto quedaba bloqueado por error (solo esInterno()
+    // podía escribir), con "Missing or insufficient permissions" al
+    // apartar. Se permite que cualquier autenticado (no solo interno)
+    // actualice el producto SI y SOLO SI lo único que cambia es
+    // "variantes" — nunca nombre/precio/fotos/etc. Límite conocido: esto
+    // no valida que el cambio dentro de "variantes" sea exactamente un
+    // ±1 de stock en una sola variante (validar esa forma exacta en
+    // reglas de Firestore sería mucho más complejo); un cliente
+    // malicioso podría en teoría manipular el arreglo de variantes más
+    // allá de su propio apartado — se acepta ese riesgo residual, igual
+    // que otros ya documentados en este archivo, en vez de bloquear la
+    // función real.
     match /productos/{id} {
       allow read: if true;
-      allow write: if esInterno();
+      allow create, delete: if esInterno();
+      allow update: if esInterno()
+        || (estaAutenticado() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['variantes']));
     }
 
     // catalogoMeta/estado — marca si el Catálogo ya se sembró alguna vez

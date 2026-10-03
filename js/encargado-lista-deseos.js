@@ -21,6 +21,7 @@ let personaSeleccionadaForm = null; // { id, nombre }
 document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof listaDeseosRepoListo !== 'undefined') await listaDeseosRepoListo;
+  if (typeof catalogoRepoListo !== 'undefined') await catalogoRepoListo;
 
   renderTablaDeseosEncargado();
   renderTablaResurtidoEncargado();
@@ -327,21 +328,69 @@ function abrirDetalleSolicitudDeseos(id) {
     <select id="ldNuevoEstado" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
       ${Object.entries(ESTADOS_LISTA_DESEOS).map(([k, label]) => `<option value="${k}" ${k === s.estado ? 'selected' : ''}>${label}</option>`).join('')}
     </select>
+
+    <div id="ldProductoWrap" style="display:none;margin-top:8px;">
+      <label for="ldProductoInput">Producto del catálogo *</label>
+      <div class="persona-autocomplete" id="ldProductoAutocomplete">
+        <input id="ldProductoInput" type="text" autocomplete="off" placeholder="Empieza a escribir el nombre del producto">
+        <div class="persona-autocomplete-list" id="ldProductoList" hidden></div>
+      </div>
+      <small class="field-help">Así la notificación la lleva directo a apartarlo.</small>
+    </div>
+
     <input type="text" id="ldComentarioEstado" placeholder="Comentario (opcional)" style="margin-top:8px;">
+    <div id="ldEstadoError" class="auth-error" style="display:none;"></div>
     <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="ldGuardarEstadoBtn">Guardar estado</button>
   `;
 
   overlay.classList.add('open');
 
+  // FEAT-03 pedida tras lanzar a producción: producto real del catálogo,
+  // obligatorio para marcar "disponible" — ver actualizarEstadoListaDeseos.
+  let productoSeleccionadoLD = s.productoId && typeof CATALOGO_CACHE !== 'undefined'
+    ? CATALOGO_CACHE.find(p => p.id === s.productoId) || null
+    : null;
+
+  const estadoSelect = document.getElementById('ldNuevoEstado');
+  const productoWrap = document.getElementById('ldProductoWrap');
+  const productoInput = document.getElementById('ldProductoInput');
+
+  const sincronizarVisibilidadProducto = () => {
+    const visible = estadoSelect.value === 'disponible';
+    productoWrap.style.display = visible ? '' : 'none';
+    if (visible && productoSeleccionadoLD) productoInput.value = productoSeleccionadoLD.nombre;
+  };
+  sincronizarVisibilidadProducto();
+  estadoSelect.addEventListener('change', sincronizarVisibilidadProducto);
+
+  if (typeof crearAutocompleteProductos === 'function' && typeof CATALOGO_CACHE !== 'undefined') {
+    crearAutocompleteProductos({
+      inputEl: productoInput,
+      listEl: document.getElementById('ldProductoList'),
+      obtenerCandidatos: (texto) => CATALOGO_CACHE.filter(p => p.nombre.toLowerCase().includes(texto)),
+      onSeleccionar: (producto) => { productoSeleccionadoLD = producto; },
+      onLimpiar: () => { productoSeleccionadoLD = null; }
+    });
+  }
+
   document.getElementById('ldGuardarEstadoBtn')?.addEventListener('click', () => {
-    const nuevoEstado = document.getElementById('ldNuevoEstado').value;
+    const nuevoEstado = estadoSelect.value;
     const comentario = document.getElementById('ldComentarioEstado').value.trim();
+    const error = document.getElementById('ldEstadoError');
+
+    if (nuevoEstado === 'disponible' && !productoSeleccionadoLD) {
+      error.style.display = 'block';
+      error.textContent = 'Elige el producto del catálogo para marcarla disponible.';
+      return;
+    }
+
     abrirAutorizacionEncargado({
       titulo: 'Actualizar estado',
       mensaje: `Vas a cambiar el estado de esta solicitud a <strong>${ESTADOS_LISTA_DESEOS[nuevoEstado]}</strong>.`,
       onConfirmar: () => {
         const resultado = actualizarEstadoListaDeseos(s.id, nuevoEstado, {
-          usuarioId: ENCARGADO_IDENTIDAD.usuarioId, usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre, usuarioRol: 'encargado', comentario
+          usuarioId: ENCARGADO_IDENTIDAD.usuarioId, usuarioNombre: ENCARGADO_IDENTIDAD.usuarioNombre, usuarioRol: 'encargado', comentario,
+          productoId: nuevoEstado === 'disponible' ? productoSeleccionadoLD.id : null
         });
         if (!resultado.ok) { mostrarToast(resultado.error); return; }
         renderTablaDeseosEncargado();

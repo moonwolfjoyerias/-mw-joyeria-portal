@@ -379,6 +379,12 @@ function abrirModalConfirmarDeposito(ventanaId) {
       return;
     }
 
+    if (metodo === "transferencia" && typeof existeReferenciaDuplicada === 'function' && existeReferenciaDuplicada(referencia)) {
+      error.style.display = "block";
+      error.textContent = "Ese número de referencia ya existe.";
+      return;
+    }
+
     abrirAutorizacionAdmin({
       titulo: "Autorizar depósito",
       mensaje: `Estás a punto de confirmar el depósito de $${monto} MXN de "${v.usuarioNombre}".`,
@@ -476,6 +482,12 @@ function abrirModalLiquidar(v, decisionDeposito) {
       error.textContent = metodo === "transferencia" && !referencia
         ? "La referencia es obligatoria para una transferencia."
         : "Selecciona el método de pago.";
+      return;
+    }
+
+    if (metodo === "transferencia" && typeof existeReferenciaDuplicada === 'function' && existeReferenciaDuplicada(referencia)) {
+      error.style.display = "block";
+      error.textContent = "Ese número de referencia ya existe.";
       return;
     }
 

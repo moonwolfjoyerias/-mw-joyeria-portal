@@ -221,3 +221,68 @@ function actualizarVarianteEnCacheLocal(productoId, varianteId, nuevoStock) {
 function escapeHTMLCatalogoVariantes(texto) {
   return escapeHTML(texto);
 }
+
+// FEAT-03 pedida tras lanzar a producción: al marcar una solicitud de
+// Lista de deseos como "disponible", S/E/A eligen el producto REAL del
+// catálogo (en vez de solo texto libre) para que la notificación a la
+// Emprendedora/Líder la lleve directo a apartarlo — ver
+// js/lista-deseos-modelo.js y js/catalogo.js (?apartar=). Mismo patrón
+// que crearAutocompletePersonas (personas-ejemplo.js), solo que busca
+// en CATALOGO_CACHE en vez del registro de personas.
+function crearAutocompleteProductos({ inputEl, listEl, obtenerCandidatos, onSeleccionar, onLimpiar, limpiarInputAlSeleccionar }) {
+
+  if (!inputEl || !listEl) return;
+
+  inputEl.addEventListener('input', () => {
+
+    const texto = inputEl.value.toLowerCase().trim();
+
+    if (onLimpiar) onLimpiar();
+
+    if (!texto) {
+      listEl.hidden = true;
+      listEl.innerHTML = '';
+      return;
+    }
+
+    const candidatos = obtenerCandidatos(texto).slice(0, 8);
+
+    if (!candidatos.length) {
+      listEl.innerHTML = `<div class="persona-autocomplete-empty">Sin coincidencias.</div>`;
+      listEl.hidden = false;
+      return;
+    }
+
+    listEl.innerHTML = candidatos.map(p => `
+      <button type="button" class="persona-autocomplete-item" data-producto-id="${p.id}">
+        <span>${escapeHTML(p.nombre)}</span>
+        <small>${stockTotalProducto(p)} piezas disponibles</small>
+      </button>
+    `).join('');
+
+    listEl.hidden = false;
+
+    listEl.querySelectorAll('[data-producto-id]').forEach(item => {
+      item.addEventListener('click', () => {
+        const producto = candidatos.find(p => p.id === item.getAttribute('data-producto-id'));
+        if (!producto) return;
+        onSeleccionar(producto);
+        if (limpiarInputAlSeleccionar) {
+          inputEl.value = '';
+        } else {
+          inputEl.value = producto.nombre;
+        }
+        listEl.hidden = true;
+        listEl.innerHTML = '';
+      });
+    });
+
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!inputEl.contains(e.target) && !listEl.contains(e.target)) {
+      listEl.hidden = true;
+    }
+  });
+
+}
