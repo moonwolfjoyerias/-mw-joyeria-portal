@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const identidad = obtenerIdentidadSolicitante();
   if (!identidad) return; // esta página no es Mi cuenta de Emprendedora/Líder
 
-  renderMisSolicitudes(identidad);
+  renderMisSolicitudes(identidad).catch(error => console.error('No se pudo cargar "Mis solicitudes":', error));
 
   document.getElementById('nuevaSolicitudBtn')?.addEventListener('click', () => abrirModalNuevaSolicitud());
 
@@ -219,8 +219,15 @@ async function enviarNuevaSolicitud(identidad) {
     history.replaceState(null, '', window.location.pathname + window.location.search);
   }
 
-  await renderMisSolicitudes(identidad);
+  // La solicitud YA quedó creada arriba — el toast de confirmación nunca
+  // debe depender de que esta lista cargue bien (ver nota de BUG en
+  // obtenerSolicitudesDe, solicitudes-modelo.js).
   mostrarToast(`Solicitud enviada. Te avisaremos cuando sea revisada.`);
+  try {
+    await renderMisSolicitudes(identidad);
+  } catch (error) {
+    console.error('No se pudo actualizar la lista de "Mis solicitudes":', error);
+  }
 
 }
 

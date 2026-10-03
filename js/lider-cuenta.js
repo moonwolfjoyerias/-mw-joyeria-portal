@@ -1,10 +1,15 @@
 // MW JOYERÍA — Mi cuenta (Líder)
-// Depende de: PERFIL_LIDER_EJEMPLO, COMISIONES_PCT (lider-cuenta-ejemplo.js)
-// + RANGOS_MW, LIDER_EJEMPLO (lider-ejemplo.js) + EQUIPO_ARBOL_EJEMPLO
-// (equipo-ejemplo.js). La Rifa mensual y el Reto de Constancia son la
-// excepción: usan el registro REAL de la persona con sesión abierta
-// (personas-ejemplo.js + plan-mw-admin.js), no RIFA_LIDER_EJEMPLO ni
-// CONSTANCIA_LIDER_EJEMPLO.
+// BUG reportado tras lanzar a producción: Progreso de rango y Ticket de
+// comisiones seguían leyendo LIDER_EJEMPLO/EQUIPO_ARBOL_EJEMPLO en vez
+// del equipo y las compras reales — cualquier cuenta real, aunque no
+// tuviera equipo todavía, veía producción/comisiones de ejemplo. Ahora
+// ambos usan el mismo motor real que ya usa Administración:
+// calcularStatsRangoLider (compras-modelo.js) para las estadísticas de
+// rango y calcularComisionesLider (comisiones-modelo.js) para el
+// ticket — así esta página, Inicio y Mi equipo nunca pueden mostrar
+// datos distintos para la misma líder. Depende de: RANGOS_MW
+// (lider-ejemplo.js), COMISIONES_PCT (lider-cuenta-ejemplo.js, solo
+// como referencia visual del %, el cálculo real ya no lo usa).
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
@@ -283,10 +288,19 @@ function renderConstanciaLider() {
 
 // ---------- Progreso de rango (detalle completo) ----------
 function renderProgresoRangoCuenta() {
-  const idxActual = idxRango(LIDER_EJEMPLO.rangoActualKey);
+  const persona = obtenerPersonaConPlanMWAlDia();
+  if (!persona) return;
+
+  const idxActual = idxRango(persona.rangoActualKey || 'sin_rango');
   const esUltimo = idxActual === RANGOS_MW.length - 1;
   const siguiente = esUltimo ? null : RANGOS_MW[idxActual + 1];
-  const { personasActivas, produccionGrupalMes, personasCalificadas, compraPersonalPeriodo1, compraPersonalPeriodo2 } = LIDER_EJEMPLO.stats;
+
+  const mesKey = typeof mesKeyActualComprasModelo === 'function' ? mesKeyActualComprasModelo() : new Date().toISOString().slice(0, 7);
+  const subPeriodo = typeof subPeriodoActualComprasModelo === 'function' ? subPeriodoActualComprasModelo() : (new Date().getDate() <= 15 ? 'p1' : 'p2');
+  const stats = typeof calcularStatsRangoLider === 'function'
+    ? calcularStatsRangoLider(persona, mesKey, subPeriodo)
+    : { personasActivas: 0, produccionGrupalMes: 0, personasCalificadas: 0, compraPersonalPeriodo1: 0, compraPersonalPeriodo2: 0 };
+  const { personasActivas, produccionGrupalMes, personasCalificadas, compraPersonalPeriodo1, compraPersonalPeriodo2 } = stats;
 
   setText('cuentaRangoActual', RANGOS_MW[idxActual].label.toUpperCase());
 
@@ -335,46 +349,32 @@ function renderProgresoRangoCuenta() {
 }
 
 // ---------- Ticket de comisiones ----------
-function calcularProfundidadesEquipo() {
-  const depthById = { yo: 0 };
-  let added = true;
-  while (added) {
-    added = false;
-    EQUIPO_ARBOL_EJEMPLO.forEach((m) => {
-      if (m.leaderId && depthById.hasOwnProperty(m.leaderId) && !depthById.hasOwnProperty(m.id)) {
-        depthById[m.id] = depthById[m.leaderId] + 1;
-        added = true;
-      }
-    });
-  }
-  return depthById;
-}
-
+// Comisiones "a la fecha" del mes en curso = quincena 1 + quincena 2,
+// exactamente como las combina Admin → Comisiones (construirCardLider)
+// — así la Líder nunca ve un total distinto del que calcula Admin para
+// ella. calcularComisionesLider ya aplica el rango CONGELADO del cierre
+// del mes anterior (nunca el rango en vivo) y ya filtra por equipo REAL
+// (calcularDescendenciaPersona) — un equipo vacío da niveles vacíos y
+// comisión $0, no el ticket de ejemplo.
 function renderTicketComisiones() {
+  if (typeof calcularComisionesLider !== 'function') return;
 
-  const depths = calcularProfundidadesEquipo();
-  const miembrosPorNivel = [[], [], [], [], []];
-  EQUIPO_ARBOL_EJEMPLO.forEach((m) => {
-    const d = depths[m.id];
-    if (d >= 1 && d <= 5) miembrosPorNivel[d - 1].push(m);
-  });
+  const persona = obtenerPersonaConPlanMWAlDia();
+  if (!persona) return;
 
-  // El % de comisión debe usar el rango CONGELADO del cierre del mes
-  // anterior (Sección 7.4), nunca el rango en vivo — misma función que
-  // usa el motor de Admin, para que la Líder nunca vea un % distinto
-  // del que realmente se le va a pagar.
-  const rangoAplicado = typeof calcularRangoAplicadoPeriodo === 'function'
-    ? calcularRangoAplicadoPeriodo(LIDER_EJEMPLO, obtenerPeriodoActualKey()).rangoKey
-    : LIDER_EJEMPLO.rangoActualKey;
-  const pcts = COMISIONES_PCT[rangoAplicado];
+  const periodoKey = typeof obtenerPeriodoActualKey === 'function' ? obtenerPeriodoActualKey() : new Date().toISOString().slice(0, 7);
+  const rP1 = calcularComisionesLider(persona, periodoKey, 'p1');
+  const rP2 = calcularComisionesLider(persona, periodoKey, 'p2');
+
   const wrap = document.getElementById('ticketNiveles');
   let total = 0;
 
-  wrap.innerHTML = miembrosPorNivel.map((miembros, i) => {
+  wrap.innerHTML = rP1.niveles.map((nivelP1, i) => {
 
-    const pct = pcts[i];
-    const produccion = miembros.reduce((suma, m) => suma + (m.puntos || 0), 0);
-    const comisionNivel = (produccion / obtenerIvaDivisorLider()) * (pct / 100);
+    const nivelP2 = rP2.niveles[i];
+    const pct = nivelP1.pct;
+    const produccion = nivelP1.filas.reduce((s, f) => s + f.compraNormal, 0) + nivelP2.filas.reduce((s, f) => s + f.compraNormal, 0);
+    const comisionNivel = nivelP1.totalNivel + nivelP2.totalNivel;
     total += comisionNivel;
 
     return `
@@ -387,7 +387,7 @@ function renderTicketComisiones() {
           <span class="ct-amount">${fmtMoney(comisionNivel)} <span class="ct-chevron">▾</span></span>
         </button>
         <div class="ct-detail-list" id="ctDetalle${i}" hidden>
-          ${construirDetalleNivelComisiones(miembros, pct)}
+          ${construirDetalleNivelComisiones(nivelP1.filas, nivelP2.filas)}
         </div>
       </div>
     `;
@@ -395,7 +395,7 @@ function renderTicketComisiones() {
   }).join('');
 
   setText('ticketTotal', fmtMoney(total));
-  setText('ticketRango', RANGOS_MW[idxRango(rangoAplicado)].label);
+  setText('ticketRango', RANGOS_MW[idxRango(rP1.rangoKey)].label);
 
   wrap.querySelectorAll('[data-toggle-nivel]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -409,45 +409,35 @@ function renderTicketComisiones() {
 
 }
 
-// Desglose por emprendedora de un nivel: cada compra individual con su
-// fecha, IVA y comisión — mismo % que ya se usó para el total del nivel.
-function construirDetalleNivelComisiones(miembros, pct) {
+// Desglose por emprendedora de un nivel: compra y comisión real de
+// quincena 1 + quincena 2, emparejadas por persona (mismo criterio que
+// construirBloqueNivel en admin-comisiones.js).
+function construirDetalleNivelComisiones(filasP1, filasP2) {
 
-  if (!miembros.length) {
+  if (!filasP1.length) {
     return `<div class="ct-detail-empty">Todavía no hay integrantes en este nivel.</div>`;
   }
 
-  return miembros.map((m) => {
-
-    const compras = (m.compras && m.compras.length) ? m.compras : [{ monto: m.puntos || 0, fecha: null }];
-
-    return compras.map((c) => {
-      const base = c.monto / obtenerIvaDivisorLider();
-      const iva = c.monto - base;
-      const comisionCompra = base * (pct / 100);
-      return `
-        <div class="ct-detail-row">
-          <div>
-            <strong>${m.nombre}</strong>
-            <span class="ct-detail-sub">${c.fecha ? formatearFechaComision(c.fecha) : 'Sin fecha registrada'} · ${fmtMoney(c.monto)} en compra</span>
-          </div>
-          <div class="ct-detail-nums">
-            <span>IVA ${fmtMoney(iva)}</span>
-            <span>${pct}% comisión</span>
-            <strong>${fmtMoney(comisionCompra)}</strong>
-          </div>
+  return filasP1.map((f1) => {
+    const f2 = filasP2.find(f => f.persona.id === f1.persona.id) || null;
+    const compraTotal = f1.compraNormal + (f2 ? f2.compraNormal : 0);
+    const comisionTotal = f1.comisionFinal + (f2 ? f2.comisionFinal : 0);
+    const base = compraTotal / obtenerIvaDivisorLider();
+    const iva = compraTotal - base;
+    return `
+      <div class="ct-detail-row">
+        <div>
+          <strong>${nombreCompletoPersona(f1.persona)}</strong>
+          <span class="ct-detail-sub">${fmtMoney(compraTotal)} en compra este mes</span>
         </div>
-      `;
-    }).join('');
-
+        <div class="ct-detail-nums">
+          <span>IVA ${fmtMoney(iva)}</span>
+          <strong>${fmtMoney(comisionTotal)}</strong>
+        </div>
+      </div>
+    `;
   }).join('');
 
-}
-
-function formatearFechaComision(fechaISO) {
-  const fecha = new Date(fechaISO);
-  if (Number.isNaN(fecha.getTime())) return '—';
-  return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 // ---------- Próxima fecha de pago ----------
 // El calendario real es día 5 y día 20 de cada mes, alternados (5, 20,

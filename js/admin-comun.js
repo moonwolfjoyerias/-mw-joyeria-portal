@@ -175,12 +175,6 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
   if (typeof procesarAlertasInactividadTodas === 'function') procesarAlertasInactividadTodas();
 
   const todas = typeof obtenerNotificacionesCompartidas === 'function' ? obtenerNotificacionesCompartidas() : [];
-  const noLeidas = todas.filter(n => !n.leida).length;
-
-  if (badge) {
-    if (noLeidas > 0) { badge.textContent = noLeidas; badge.style.display = 'flex'; }
-    else { badge.style.display = 'none'; }
-  }
 
   const grupos = NOTIF_ADMIN_GRUPOS.map(g => ({
     ...g,
@@ -189,6 +183,19 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
       (!g.origen || (n.origen || 'emprendedora_lider') === g.origen)
     )
   }));
+
+  // BUG reportado tras lanzar a producción: el número de la campanita
+  // contaba sin leer de TODAS las notificaciones compartidas (incluida
+  // la bandeja 'emprendedora_lider', que Admin nunca ve — ver nota
+  // arriba de NOTIF_ADMIN_GRUPOS) — mostraba 2 cuando el panel, que solo
+  // pinta "grupos", únicamente tenía 1 para mostrar. Ahora cuenta sobre
+  // los mismos items que de verdad se renderizan abajo.
+  const noLeidas = grupos.reduce((suma, g) => suma + g.items.filter(n => !n.leida).length, 0);
+
+  if (badge) {
+    if (noLeidas > 0) { badge.textContent = noLeidas; badge.style.display = 'flex'; }
+    else { badge.style.display = 'none'; }
+  }
 
   if (!grupos.some(g => g.items.length)) {
     panel.innerHTML = '<div class="notif-empty">No tienes notificaciones nuevas.</div>';

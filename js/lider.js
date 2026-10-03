@@ -30,7 +30,18 @@ function miRangoActualKeyLider() {
   return miPersonaLider?.rangoActualKey || 'sin_rango';
 }
 
+// BUG reportado tras lanzar a producción: aunque ya no leía
+// LIDER_EJEMPLO, seguía leyendo persona.stats — un campo estático que
+// nadie recalcula. Ahora usa el mismo motor real que Mi cuenta/Admin
+// (calcularStatsRangoLider en compras-modelo.js, a partir del equipo y
+// las compras liquidadas de verdad), así Inicio y Mi cuenta nunca
+// pueden mostrar números distintos para la misma líder.
 function misStatsLider() {
+  if (miPersonaLider && typeof calcularStatsRangoLider === 'function') {
+    const mesKey = typeof mesKeyActualComprasModelo === 'function' ? mesKeyActualComprasModelo() : new Date().toISOString().slice(0, 7);
+    const subPeriodo = typeof subPeriodoActualComprasModelo === 'function' ? subPeriodoActualComprasModelo() : (new Date().getDate() <= 15 ? 'p1' : 'p2');
+    return calcularStatsRangoLider(miPersonaLider, mesKey, subPeriodo);
+  }
   return miPersonaLider?.stats || {
     personasActivas: 0,
     produccionGrupalMes: 0,
