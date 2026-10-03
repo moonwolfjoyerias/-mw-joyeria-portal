@@ -30,7 +30,10 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
 
-const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'scripts']);
+// src/ (tipos de BRILLO MW), src-tauri/ (escritorio) y android/ + ios/
+// (Capacitor) nunca son páginas del sitio — y android/ios guardan una
+// COPIA de dist/ dentro de sus assets, que aquí se duplicaría.
+const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'scripts', 'src', 'src-tauri', 'android', 'ios', 'docs']);
 // js/ se copia completo (no solo lo que se fusiona en bundles): los
 // tramos de un solo archivo (ver agruparTramos) se dejan tal cual, con
 // su <script src="js/archivo.js"> original, así que ese archivo
