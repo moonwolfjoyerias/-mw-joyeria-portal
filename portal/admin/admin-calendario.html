@@ -17,6 +17,9 @@
   <script src="../../js/auditoria-firestore-sync.js?v=1"></script>
   <script src="../../js/auth-service.js?v=2"></script>
   <script src="../../js/auth-guard.js?v=3"></script>
+  <!-- FEAT-08: EmailJS (envío de correos reales desde el navegador) — solo se activa si js/email-config.js tiene credenciales reales; si no, no hace nada. -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="../../js/email-config.js?v=1"></script>
 </head>
 <body>
 
@@ -256,6 +259,7 @@
   <script src="../../js/plan-mw-admin.js?v=2"></script>
   <script src="../../js/alertas-inactividad-modelo.js?v=2"></script>
   <script src="../../js/admin-comun.js?v=9"></script>
-  <script src="../../js/admin-calendario.js?v=6"></script>
+  <script src="../../js/email-modelo.js?v=1"></script>
+  <script src="../../js/admin-calendario.js?v=7"></script>
 </body>
 </html>

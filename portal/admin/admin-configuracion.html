@@ -17,6 +17,9 @@
   <script src="../../js/auditoria-firestore-sync.js?v=1"></script>
   <script src="../../js/auth-service.js?v=2"></script>
   <script src="../../js/auth-guard.js?v=3"></script>
+  <!-- FEAT-08: EmailJS (envío de correos reales desde el navegador) — solo se activa si js/email-config.js tiene credenciales reales; si no, no hace nada. -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="../../js/email-config.js?v=1"></script>
 </head>
 <body>
 
@@ -140,6 +143,7 @@
           <button type="button" class="cfg-nav-item" data-cfg-seccion="fotos">Fotografías del sitio</button>
           <button type="button" class="cfg-nav-item" data-cfg-seccion="usuarios">Usuarios y permisos</button>
           <button type="button" class="cfg-nav-item" data-cfg-seccion="notificaciones">Notificaciones</button>
+          <button type="button" class="cfg-nav-item" data-cfg-seccion="correos">Correos</button>
           <button type="button" class="cfg-nav-item" data-cfg-seccion="sistema">Sistema</button>
           <button type="button" class="cfg-nav-item" data-cfg-seccion="auditoria">Auditoría</button>
         </nav>
@@ -155,6 +159,7 @@
           <div id="seccion-fotos" class="cfg-seccion" hidden></div>
           <div id="seccion-usuarios" class="cfg-seccion" hidden></div>
           <div id="seccion-notificaciones" class="cfg-seccion" hidden></div>
+          <div id="seccion-correos" class="cfg-seccion" hidden></div>
           <div id="seccion-sistema" class="cfg-seccion" hidden></div>
           <div id="seccion-auditoria" class="cfg-seccion" hidden></div>
         </div>
@@ -189,6 +194,7 @@
   <script src="../../js/solicitudes-modelo.js?v=3"></script>
   <script src="../../js/cuentas-firestore-sync.js?v=2"></script>
   <script src="../../js/cuentas-internas-modelo.js?v=3"></script>
-  <script src="../../js/admin-configuracion.js?v=2"></script>
+  <script src="../../js/email-modelo.js?v=1"></script>
+  <script src="../../js/admin-configuracion.js?v=3"></script>
 </body>
 </html>

@@ -134,6 +134,7 @@ function renderSeccionActual() {
     fotos: renderSeccionFotos,
     usuarios: renderSeccionUsuarios,
     notificaciones: renderSeccionNotificaciones,
+    correos: renderSeccionCorreos,
     sistema: renderSeccionSistema,
     auditoria: renderSeccionAuditoria
   }[seccionActual];
@@ -662,6 +663,80 @@ function renderSeccionNotificaciones() {
         descripcion: `Se ${chk.checked ? 'activó' : 'desactivó'} la notificación: ${EVENTOS_NOTIF_CONFIG.find(e => e.clave === clave)?.label || clave}`
       });
       mostrarToast(chk.checked ? 'Notificación activada.' : 'Notificación desactivada.');
+    });
+  });
+}
+
+// ============================================================
+// SECCIÓN: CORREOS (FEAT-08, primera prueba con EmailJS)
+// ============================================================
+
+const AUDIENCIAS_CORREO = [
+  { clave: 'emprendedoras_lideres', label: 'Todas las Emprendedoras/Líderes activas' },
+  { clave: 'staff', label: 'Todo Staff' },
+  { clave: 'encargado', label: 'Todo Encargado' },
+  { clave: 'admin', label: 'Todo Admin' },
+  { clave: 'todos', label: 'Todo el equipo' }
+];
+
+function renderSeccionCorreos() {
+  const cont = document.getElementById('seccion-correos');
+  const activo = typeof EMAILJS_CONFIG !== 'undefined' && EMAILJS_CONFIG.publicKey;
+
+  cont.innerHTML = `
+    <div class="cfg-card">
+      <h3 class="cfg-card-title">Correos</h3>
+      <p class="cfg-card-sub">
+        ${activo
+          ? 'El envío de correos ya está conectado (EmailJS).'
+          : 'El envío de correos todavía no está conectado — ver js/email-config.js para los pasos. Mientras tanto, los correos de aquí y los automáticos (nuevo evento de calendario, nueva pieza de catálogo) no se mandan, pero el resto del portal sigue funcionando igual.'}
+      </p>
+      <ul class="cfg-card-sub" style="margin:0 0 1.2rem 1.2rem;">
+        <li>Nuevo evento de calendario y nueva pieza de catálogo ya avisan automáticamente por correo a todas las Emprendedoras/Líderes activas.</li>
+        <li>Para cualquier otro aviso (junta, promoción, etc.), úsalo manualmente aquí abajo.</li>
+      </ul>
+      <form id="cfgFormCorreo" class="cfg-form-grid">
+        <label>
+          Audiencia
+          <select id="correoAudiencia">
+            ${AUDIENCIAS_CORREO.map(a => `<option value="${a.clave}">${a.label}</option>`).join('')}
+          </select>
+        </label>
+        <label>
+          Asunto
+          <input type="text" id="correoAsunto" placeholder="Ej. Junta de equipo este viernes" required>
+        </label>
+        <label class="cfg-span-2">
+          Mensaje
+          <textarea id="correoMensaje" rows="5" placeholder="Escribe el mensaje completo..." required></textarea>
+        </label>
+        <div class="cfg-span-2">
+          <button type="submit" class="btn btn-primary" ${activo ? '' : 'disabled title="Conecta EmailJS primero (ver js/email-config.js)."'}>Enviar correo</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.getElementById('cfgFormCorreo')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const audienciaClave = document.getElementById('correoAudiencia').value;
+    const audienciaLabel = AUDIENCIAS_CORREO.find(a => a.clave === audienciaClave)?.label || audienciaClave;
+    const asunto = document.getElementById('correoAsunto').value.trim();
+    const mensaje = document.getElementById('correoMensaje').value.trim();
+    if (!asunto || !mensaje) return;
+
+    const destinatarios = obtenerDestinatariosCorreoPorAudiencia(audienciaClave);
+    if (!destinatarios.length) { mostrarToast('No hay cuentas activas con correo registrado en esa audiencia.'); return; }
+
+    abrirAutorizacionAdmin({
+      titulo: 'Autorizar envío de correo',
+      mensaje: `Vas a mandar este correo a ${destinatarios.length} cuenta${destinatarios.length === 1 ? '' : 's'} (${audienciaLabel}). Esta acción no se puede deshacer.`,
+      onConfirmar: () => {
+        enviarCorreoMasivo(destinatarios, { asunto, mensaje });
+        registrarAuditoriaAdmin({ modulo: 'correos', accion: 'enviar_aviso', descripcion: `Correo enviado a ${audienciaLabel} (${destinatarios.length}): ${asunto}` });
+        mostrarToast(`Enviando correo a ${destinatarios.length} cuenta${destinatarios.length === 1 ? '' : 's'}...`);
+        document.getElementById('cfgFormCorreo')?.reset();
+      }
     });
   });
 }
