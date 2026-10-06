@@ -90,17 +90,43 @@ function wirearZoomFotos(contenedor) {
 // notificaciones-firestore-sync.js cuando llega, en vivo, una
 // notificación nueva sin leer para la cuenta con sesión abierta.
 let _audioCtxNotificacion = null;
+
+// BUG reportado tras lanzar a producción: el sonido nunca se oía,
+// aunque la campana sí se actualizaba en vivo. Causa real — los
+// navegadores solo dejan "destrabar" un AudioContext suspendido
+// DENTRO del mismo gesto del usuario (clic/tecla/toque); un
+// resume() llamado después, desde un callback asíncrono como el de
+// Firestore, nunca lo logra, así que el contexto se queda
+// "suspended" para siempre y las notas programadas simplemente no
+// suenan (sin ningún error visible). Se intenta destrabar en el
+// primer clic/tecla/toque que haya en cualquier página del portal —
+// casi siempre ocurre mucho antes de que llegue la primera
+// notificación — y se deja de escuchar en cuanto se logra.
+function _obtenerCtxAudioNotificacion() {
+  if (_audioCtxNotificacion) return _audioCtxNotificacion;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  _audioCtxNotificacion = new Ctx();
+  return _audioCtxNotificacion;
+}
+function _destrabarAudioNotificacionConGesto() {
+  const ctx = _obtenerCtxAudioNotificacion();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+  ['pointerdown', 'keydown'].forEach(evento => document.removeEventListener(evento, _destrabarAudioNotificacionConGesto));
+}
+['pointerdown', 'keydown'].forEach(evento => document.addEventListener(evento, _destrabarAudioNotificacionConGesto));
+
 function reproducirSonidoNotificacion() {
   try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    // Los navegadores no dejan crear/arrancar audio antes de una
-    // interacción del usuario con la página — si todavía no hubo
-    // ninguna, el contexto se crea "suspended" y resume() no hace
-    // nada; no hay manera de evitarlo sin pedir un clic primero, así
-    // que simplemente no suena esa primera vez (nunca truena).
-    if (!_audioCtxNotificacion) _audioCtxNotificacion = new Ctx();
-    const ctx = _audioCtxNotificacion;
+    const ctx = _obtenerCtxAudioNotificacion();
+    if (!ctx) return;
+    // Si todavía no hubo ningún gesto del usuario en esta página, el
+    // contexto sigue "suspended" y este resume() tampoco va a
+    // lograrlo (mismo motivo de arriba) — no truena, solo no suena
+    // esa primera vez en particular.
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
     const ahora = ctx.currentTime;
