@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Staff MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=33">
+  <link rel="stylesheet" href="../../css/styles.css?v=34">
   <link rel="icon" type="image/png" href="../../assets/images/favicon.png">
   <!-- Fase 2: SDK compat de Firebase — solo se activa si js/firebase-config.js tiene MODO_DEMO=false y credenciales reales; si no, no hace nada. -->
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
@@ -56,7 +56,8 @@
     .modal-overlay{position:fixed;inset:0;background:rgba(24,10,43,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:50;backdrop-filter:blur(2px)}.modal-overlay.open{display:flex}.modal-box{position:relative;width:min(470px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:15px;padding:30px;box-shadow:0 25px 70px rgba(26,7,48,.25)}.modal-close{position:absolute;right:17px;top:14px;border:0;background:transparent;color:#776c82;font-size:25px}.auth-icon{width:54px;height:54px;border-radius:50%;background:#efe4f5;color:#4b1974;display:grid;place-items:center;font-size:24px;margin-bottom:15px}.auth-icon.danger{background:#fff0f0;color:#b94a4a}.modal-box h3{margin:0;color:#2e1155;font:600 21px Cinzel,serif}.modal-sub{color:#71677f;line-height:1.55;margin:7px 0 18px}.modal-context{display:grid;grid-template-columns:110px 1fr;gap:7px 12px;padding:14px;background:#faf7fb;border:1px solid #eee5f2;border-radius:9px;margin-bottom:15px}.modal-context span{color:#8b8193;font-size:10px}.modal-context strong{font-size:11px;color:#34204e}.auth-warning{display:flex;gap:10px;padding:12px;background:#fff8e9;border:1px solid #f1dfb2;border-radius:8px;margin-bottom:16px}.auth-warning span{font-size:18px;color:#aa781c}.auth-warning strong{display:block;font-size:11px;color:#72521d}.auth-warning small{display:block;color:#806f50;font-size:9px;margin-top:2px}.modal-box label{display:block;color:#3b2a54;font-size:11px;font-weight:600;margin:12px 0 6px}.modal-box input{width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:#312044;outline:none}.modal-box input:focus{border-color:#8b55ad;box-shadow:0 0 0 3px #8b55ad14}.password-wrap{display:flex;gap:6px}.password-wrap input{flex:1}.password-wrap button{width:70px;border:1px solid #ddd5e3;background:#fff;border-radius:7px;color:#5d5270}.btn{border:0;border-radius:7px;height:43px;padding:0 18px;font-weight:600;margin-top:16px}.btn-primary{background:#3e096c;color:#fff}.btn-danger{background:#b54b4b;color:#fff}.btn-outline{background:#fff;border:1px solid #cdbcdc;color:#4e1778}.auth-error{margin-top:10px;padding:10px;border-radius:7px;background:#fff0f0;color:#ad4545;font-size:10px}.demo-note{font-size:9px;color:#988fa0;text-align:center;margin:10px 0 0}.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#8c5ca6}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.detail-grid>div{background:#faf8fb;border:1px solid #eee7f0;border-radius:8px;padding:12px}.detail-grid span:not(.status){display:block;color:#887e91;font-size:9px;margin-bottom:4px}.detail-grid strong{font-size:11px;color:#39224f}.log-box{border-left:3px solid var(--gold);background:#fffbf2;padding:12px 13px;margin-bottom:17px}.log-box span,.log-box strong,.log-box small{display:block}.log-box span{font-size:9px;color:#8b7c61}.log-box strong{font-size:11px;margin:3px 0}.log-box small{font-size:9px;color:#817667}.empty-cell{text-align:center;padding:45px}.empty-state{display:flex;flex-direction:column;align-items:center;gap:6px;color:#776d81}.empty-icon{font-size:30px;color:#a48ab8}.empty-state strong{color:#422361}.mw-toast{position:fixed;right:25px;bottom:25px;background:#2d0b50;color:#fff;padding:13px 18px;border-radius:9px;box-shadow:0 12px 35px #1d063555;transform:translateY(20px);opacity:0;pointer-events:none;transition:.25s;z-index:100;font-size:11px}.mw-toast.show{transform:none;opacity:1}
 
     @media(max-width:1180px){.summary-grid{grid-template-columns:repeat(2,1fr)}.main{padding:25px}.guide{grid-template-columns:1fr 1fr 1fr}.guide-title{grid-column:1/-1;margin-bottom:10px}.guide-item{margin-top:4px}}
-    @media(max-width:800px){.layout{grid-template-columns:1fr}.sidebar{display:none}.header{height:auto}.profile-info{display:none}.main{padding:20px 15px}.summary-grid{grid-template-columns:1fr}.apartados-summary{grid-template-columns:repeat(2,1fr)}.toolbar{justify-content:stretch;flex-direction:column}.search{width:100%}.table-footer{gap:10px;flex-direction:column}.guide{grid-template-columns:1fr}.guide-item{border-left:0;border-top:1px solid #e4dce8;padding:10px 0 0}.guide-title{grid-column:auto}.modal-box{padding:25px 20px}}
+    /* BUG reportado: antes esta regla tambien escondia .sidebar por completo en movil (sin boton para reabrirla, ya que el toggle de UI-01 vive adentro de .sidebar) -- se quito, el menu colapsable ya lo resuelve css/styles.css igual que en el resto del portal. */
+    @media(max-width:800px){.header{height:auto}.profile-info{display:none}.main{padding:20px 15px}.summary-grid{grid-template-columns:1fr}.apartados-summary{grid-template-columns:repeat(2,1fr)}.toolbar{justify-content:stretch;flex-direction:column}.search{width:100%}.table-footer{gap:10px;flex-direction:column}.guide{grid-template-columns:1fr}.guide-item{border-left:0;border-top:1px solid #e4dce8;padding:10px 0 0}.guide-title{grid-column:auto}.modal-box{padding:25px 20px}}
     @media(max-width:420px){.apartados-summary{grid-template-columns:1fr}}
     .portal-header .profile-avatar{width:34px;height:34px;font-size:0.9rem}
 
@@ -64,6 +65,80 @@
     .expand-row td{background:#faf8fc}
     .expand-row table{min-width:0;width:100%}
     .expand-row .log-box:last-child{margin-bottom:0}
+
+    /* BUG reportado: esta hoja local usa colores fijos en vez de las
+       variables globales de css/styles.css, así que el modo oscuro
+       (data-theme="dark" en <html>, ver js/auth-guard.js) no tocaba nada
+       aquí — la tabla y los modales (incluido "Nueva ventana de
+       apartado") se quedaban siempre en blanco/claro. */
+    :root[data-theme="dark"] { --purple-bg:#2d2140; --yellow-bg:#3a3018; --green-bg:#213a1c; --red-bg:#3a1f1f; --blue-bg:#232a47; --text:#f1ecf8; --muted:#b9adce; --gold:#e3c15a; --shadow:0 12px 30px rgba(0,0,0,.35); }
+    :root[data-theme="dark"] body { background:#140c20; }
+    :root[data-theme="dark"] .date-pill { background:#20152f; border-color:#3a2f4d; color:var(--text); }
+    :root[data-theme="dark"] .date-pill span { color:#cdb878; }
+    :root[data-theme="dark"] .summary-card { background:#20152f; border-color:#3a2f4d; }
+    :root[data-theme="dark"] .summary-card strong { color:var(--text); }
+    :root[data-theme="dark"] .summary-icon { background:#352849; color:#e3c15a; }
+    :root[data-theme="dark"] .filter-select, :root[data-theme="dark"] .search { background:#20152f; border-color:#3a2f4d; color:var(--text); }
+    :root[data-theme="dark"] .table-card { background:#1a1225; border-color:#3a2f4d; }
+    :root[data-theme="dark"] thead { background:#1a1225; }
+    :root[data-theme="dark"] th { color:#d8c4f5; border-bottom-color:#3a2f4d; }
+    :root[data-theme="dark"] td { color:var(--text); border-bottom-color:#2c2238; }
+    :root[data-theme="dark"] tbody tr:hover { background:#221a30; }
+    :root[data-theme="dark"] .client-cell strong, :root[data-theme="dark"] .piece-cell strong, :root[data-theme="dark"] .date-cell strong, :root[data-theme="dark"] .deposit-cell strong, :root[data-theme="dark"] .last-action strong { color:var(--text); }
+    :root[data-theme="dark"] .client-cell small, :root[data-theme="dark"] .piece-cell small, :root[data-theme="dark"] .date-cell small, :root[data-theme="dark"] .deposit-cell small, :root[data-theme="dark"] .last-action small { color:var(--muted); }
+    :root[data-theme="dark"] .piece-thumb { background:linear-gradient(145deg,#2a2036,#352849); box-shadow:inset 0 0 0 1px #4a3c5c; }
+    :root[data-theme="dark"] .status-pending { color:#e8c458; }
+    :root[data-theme="dark"] .status-deposit { color:#9aabe0; }
+    :root[data-theme="dark"] .status-active { color:#8fcf6a; }
+    :root[data-theme="dark"] .status-expired { color:#f08a8a; }
+    :root[data-theme="dark"] .status-cancelled { color:#c9a9f0; }
+    :root[data-theme="dark"] .action-btn { background:#20152f; border-color:#3a2f4d; color:var(--text); }
+    :root[data-theme="dark"] .primary-action { background:#6b2aa8; color:#fff; border-color:#6b2aa8; }
+    :root[data-theme="dark"] .primary-action:hover { background:#7c37bd; }
+    :root[data-theme="dark"] .danger-action { color:#f08a8a; border-color:#6b3a3a; }
+    :root[data-theme="dark"] .danger-action:hover { background:#2a1a1a; }
+    :root[data-theme="dark"] .detail-action { color:#d8b8f0; border-color:#4a3c5c; }
+    :root[data-theme="dark"] .detail-action:hover { background:#241a30; }
+    :root[data-theme="dark"] .table-footer { color:var(--muted); border-top-color:#2c2238; }
+    :root[data-theme="dark"] .page-btn { background:#20152f; border-color:#3a2f4d; color:var(--text); }
+    :root[data-theme="dark"] .page-btn.active { background:#6b2aa8; border-color:#6b2aa8; color:#fff; }
+    :root[data-theme="dark"] .guide { background:linear-gradient(90deg,#241a30,#1c1526); border-color:#3a2f4d; }
+    :root[data-theme="dark"] .guide-title { color:#e2d0fa; }
+    :root[data-theme="dark"] .guide-item { border-left-color:#3a2f4d; }
+    :root[data-theme="dark"] .guide-item small { color:var(--muted); }
+    :root[data-theme="dark"] .modal-overlay { background:rgba(0,0,0,.65); }
+    :root[data-theme="dark"] .modal-box { background:#1a1225; box-shadow:0 25px 70px rgba(0,0,0,.5); }
+    :root[data-theme="dark"] .modal-close { color:var(--muted); }
+    :root[data-theme="dark"] .auth-icon { background:#352849; color:#e3c15a; }
+    :root[data-theme="dark"] .auth-icon.danger { background:#3a1f1f; color:#f08a8a; }
+    :root[data-theme="dark"] .modal-box h3 { color:var(--text); }
+    :root[data-theme="dark"] .modal-sub { color:var(--muted); }
+    :root[data-theme="dark"] .modal-context { background:#20152f; border-color:#3a2f4d; }
+    :root[data-theme="dark"] .modal-context span { color:var(--muted); }
+    :root[data-theme="dark"] .modal-context strong { color:var(--text); }
+    :root[data-theme="dark"] .auth-warning { background:#3a3018; border-color:#5a4a28; }
+    :root[data-theme="dark"] .auth-warning strong { color:#e8c458; }
+    :root[data-theme="dark"] .auth-warning small { color:#c9b878; }
+    :root[data-theme="dark"] .modal-box label { color:var(--text); }
+    :root[data-theme="dark"] .modal-box input { background:#20152f; border-color:#3a2f4d; color:var(--text); }
+    :root[data-theme="dark"] .modal-box input:focus { border-color:#9d6fd1; box-shadow:0 0 0 3px #9d6fd130; }
+    :root[data-theme="dark"] .password-wrap button { background:#20152f; border-color:#3a2f4d; color:var(--text); }
+    :root[data-theme="dark"] .btn-outline { background:transparent; border-color:#4a3c5c; color:#d8b8f0; }
+    :root[data-theme="dark"] .auth-error { background:#3a1f1f; color:#f08a8a; }
+    :root[data-theme="dark"] .demo-note { color:var(--muted); }
+    :root[data-theme="dark"] .eyebrow { color:#c49ad8; }
+    :root[data-theme="dark"] .detail-grid>div { background:#20152f; border-color:#3a2f4d; }
+    :root[data-theme="dark"] .detail-grid span:not(.status) { color:var(--muted); }
+    :root[data-theme="dark"] .detail-grid strong { color:var(--text); }
+    :root[data-theme="dark"] .log-box { background:#241e14; }
+    :root[data-theme="dark"] .log-box span { color:#b8a878; }
+    :root[data-theme="dark"] .log-box strong { color:var(--text); }
+    :root[data-theme="dark"] .log-box small { color:#a89868; }
+    :root[data-theme="dark"] .empty-state { color:var(--muted); }
+    :root[data-theme="dark"] .empty-state strong { color:var(--text); }
+    :root[data-theme="dark"] .empty-icon { color:#a98ad1; }
+    :root[data-theme="dark"] .expand-toggle { background:#20152f; border-color:#3a2f4d; color:#d8b8f0; }
+    :root[data-theme="dark"] .expand-row td { background:#1c1526; }
   </style>
 
   <div class="layout-portal">
@@ -210,8 +285,8 @@
   <script src="../../js/configuracion-modelo.js?v=2"></script>
   <script src="../../js/apartados-firestore-sync.js?v=3"></script>
   <script src="../../js/apartados-modelo.js?v=4"></script>
-  <script src="../../js/dom-utils.js?v=1"></script>
-  <script src="../../js/apartados-panel-comun.js?v=6"></script>
+  <script src="../../js/dom-utils.js?v=2"></script>
+  <script src="../../js/apartados-panel-comun.js?v=7"></script>
   <script src="../../js/staff-catalogo-ejemplo.js?v=3"></script>
   <script src="../../js/catalogo-firestore-sync.js?v=3"></script>
   <script src="../../js/catalogo-variantes-modelo.js?v=5"></script>

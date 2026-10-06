@@ -237,6 +237,8 @@ function renderCatalogo() {
 
   grid.innerHTML = productos.map(renderProducto).join('');
 
+  wirearZoomFotos(grid);
+
 
   grid.querySelectorAll('[data-editar]').forEach(btn => {
 
@@ -347,7 +349,7 @@ function renderProducto(p) {
       <td><span class="catalog-product-id">${escapeHTML(p.codigo || p.id)}</span></td>
       <td>
         <div class="catalog-product-cell">
-          <img src="${imagen}" alt="${escapeHTML(p.nombre)}">
+          <img src="${imagen}" alt="${escapeHTML(p.nombre)}" ${/isotipo-morado\.png/.test(imagen) ? '' : `data-zoom="${escapeAttribute(imagen)}" data-zoom-alt="${escapeAttribute(p.nombre)}"`}>
           <strong>${escapeHTML(p.nombre)}</strong>
         </div>
       </td>

@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   usuarioIdActual = (typeof obtenerIdPersonaActualPortal === 'function' && obtenerIdPersonaActualPortal()) || '';
 
   await apartadosRepoListo; // FASE 2 (Firebase): espera a que obtenerVentanasApartado() tenga datos reales, no un caché vacío
+  if (typeof catalogoRepoListo !== 'undefined') await catalogoRepoListo; // BUG reportado: sin esto, renderApartados() buscaba la foto real antes de que el catálogo cargara y siempre caía al isologo
 
   renderApartados();
   iniciarReloj();
@@ -153,6 +154,29 @@ function notificarEquipoOperativo(texto, nombrePersona) {
   agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff' });
 }
 
+// BUG reportado tras lanzar a producción: esta vista siempre mostraba el
+// isologo sin importar qué pieza se hubiera apartado — nunca resolvía la
+// foto real del producto. Mismo criterio de ruta que ya usa catalogo.js
+// (normalizarImagenProducto) para esta misma carpeta de portal (dos
+// niveles de profundidad), copiado aquí porque ese archivo no se carga
+// en esta página.
+function normalizarImagenApartado(imagen) {
+  if (!imagen) return '../../assets/images/isotipo-morado.png';
+  if (imagen.startsWith('../assets/')) return `../../${imagen.slice(3)}`;
+  return imagen;
+}
+
+function fotoPiezaApartado(pieza) {
+  const producto = typeof obtenerCatalogoStaffStorage === 'function'
+    ? obtenerCatalogoStaffStorage().find(p => p.id === pieza.productoId)
+    : null;
+  return normalizarImagenApartado(producto?.imagen);
+}
+
+function esFotoGenericaApartado(foto) {
+  return /isotipo-morado\.png/.test(foto);
+}
+
 // ---------- Render de la lista ----------
 function renderApartados() {
   const list = document.getElementById('apartadosList');
@@ -171,12 +195,15 @@ function renderApartados() {
   if (wrap) wrap.style.display = '';
   if (empty) empty.style.display = 'none';
 
-  list.innerHTML = items.map(({ pieza }) => `
+  list.innerHTML = items.map(({ pieza }) => {
+    const foto = fotoPiezaApartado(pieza);
+    const generica = esFotoGenericaApartado(foto);
+    return `
     <div class="apartado-row" data-id="${pieza.id}">
-      <div class="apartado-photo"><img src="../../assets/images/isotipo-morado.png" alt=""></div>
+      <div class="apartado-photo"><img src="${foto}" alt="${escapeAttribute(pieza.producto)}" class="${generica ? 'foto-generica' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(pieza.producto)}"`}></div>
       <div class="apartado-info">
-        <h4>${pieza.producto}</h4>
-        <span class="variant">${pieza.variante}</span>
+        <h4>${escapeHTML(pieza.producto)}</h4>
+        <span class="variant">${escapeHTML(pieza.variante)}</span>
       </div>
       <div class="apartado-prices">
         <span class="price-emprendedora">$${pieza.total} MXN</span>
@@ -186,7 +213,10 @@ function renderApartados() {
         <button class="quitar" data-quitar="${pieza.id}">Quitar</button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
+
+  wirearZoomFotos(list);
 
   list.querySelectorAll('[data-quitar]').forEach(btn => {
     btn.addEventListener('click', () => quitarPieza(btn.getAttribute('data-quitar')));
