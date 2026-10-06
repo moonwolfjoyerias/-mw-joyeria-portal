@@ -1124,16 +1124,37 @@ a:hover { color: var(--mw-gold); }
   z-index: 30;
 }
 .notif-panel.open { display: block; }
+/* NOTIF-06 pedida tras lanzar a producción: borrar una notificación a
+   mano. .notif-item-row envuelve el link (que antes era todo el
+   renglón) + el botón de borrar, para que el clic de uno no dispare
+   el otro. */
+.notif-panel .notif-item-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--mw-border);
+}
+.notif-panel .notif-item-row:last-child { border-bottom: none; }
+.notif-panel .notif-item-row:hover { background: var(--mw-lilac-soft); }
 .notif-panel .notif-item {
+  flex: 1;
+  min-width: 0;
   display: block;
   padding: 0.8em 1em;
-  border-bottom: 1px solid var(--mw-border);
   font-size: 0.85rem;
   color: var(--mw-text);
   line-height: 1.4;
 }
-.notif-panel .notif-item:last-child { border-bottom: none; }
-.notif-panel .notif-item:hover { background: var(--mw-lilac-soft); }
+.notif-panel .notif-delete-btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--mw-text-muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 0 0.9em;
+  cursor: pointer;
+}
+.notif-panel .notif-delete-btn:hover { color: #bd4c4c; }
 .notif-panel .notif-empty { padding: 1.2em 1em; text-align: center; color: var(--mw-text-muted); font-size: 0.85rem; }
 .notif-panel .notif-header { padding: 0.7em 1em; font-family: var(--font-heading); font-size: 0.85rem; color: var(--mw-accent-text); border-bottom: 1px solid var(--mw-border); }
 

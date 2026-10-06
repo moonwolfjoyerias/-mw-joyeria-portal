@@ -189,3 +189,20 @@ async function sincronizarNotificacionesConFirestore(lista) {
   batch.set(dbFirestore.collection(NOTIFICACIONES_META_COLECCION).doc(NOTIFICACIONES_META_DOC_ID), { inicializado: true }, { merge: true });
   await batch.commit();
 }
+
+// FEAT-07: borrado manual de UNA notificación — deliberadamente un
+// .delete() de un solo documento, nunca el diff-y-resync de arriba
+// (sincronizarNotificacionesConFirestore), que reconstruye/reescribe en
+// batch TODA la lista y por eso puede tronar entera por un documento
+// ajeno (mismo bug ya corregido en BUG-11/BUG-06). Si la regla la
+// rechaza o ya no existía, no hay nada más que hacer: la suscripción en
+// vivo es la fuente de verdad, así que si de verdad seguía ahí,
+// reaparece sola.
+async function eliminarNotificacionDeFirestore(id) {
+  if (!dbFirestore) return;
+  try {
+    await dbFirestore.collection(NOTIFICACIONES_COLECCION_FIRESTORE).doc(String(id)).delete();
+  } catch (error) {
+    // noop — ver comentario de arriba.
+  }
+}

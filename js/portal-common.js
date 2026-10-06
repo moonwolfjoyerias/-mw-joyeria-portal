@@ -171,7 +171,10 @@ function renderNotifPanelPropio(panel, badge) {
   if (notificaciones.length > 0) {
     panel.innerHTML = '<div class="notif-header">Notificaciones</div>' +
       notificaciones.map(n => `
-        <a class="notif-item" data-notif-id="${n.id}" href="${resolverHrefNotificacion(n)}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
+        <div class="notif-item-row">
+          <a class="notif-item" data-notif-id="${n.id}" href="${resolverHrefNotificacion(n)}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
+          <button type="button" class="notif-delete-btn" data-notif-delete="${n.id}" aria-label="Borrar notificación" title="Borrar">&times;</button>
+        </div>
       `).join('');
   } else {
     panel.innerHTML = '<div class="notif-empty">No tienes notificaciones nuevas.</div>';

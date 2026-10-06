@@ -169,6 +169,33 @@ document.addEventListener('click', (e) => {
   marcarNotificacionLeida(item.getAttribute('data-notif-id'));
 });
 
+// FEAT-07 pedida tras lanzar a producción: borrar una notificación a
+// mano (antes solo se borraba sola, 24h después de leída). Se quita de
+// la caché/panel de inmediato y, aparte, se intenta borrar en
+// Firestore (ver eliminarNotificacionDeFirestore en
+// notificaciones-firestore-sync.js) — un documento suelto, nunca el
+// mismo camino de guardarNotificacionesCompartidas/batch completo, para
+// no repetir el bug ya corregido de un batch que tronaba por tocar
+// documentos ajenos.
+function eliminarNotificacion(id) {
+  const lista = obtenerNotificacionesCompartidas().filter(n => String(n.id) !== String(id));
+  NOTIFICACIONES_CACHE = lista;
+  try { localStorage.setItem(NOTIFICACIONES_STORAGE_KEY, JSON.stringify(lista)); } catch (error) { /* noop */ }
+  if (typeof actualizarPanelNotificacionesEnVivo === 'function') actualizarPanelNotificacionesEnVivo();
+  if (typeof eliminarNotificacionDeFirestore === 'function') eliminarNotificacionDeFirestore(id);
+}
+
+// Mismo patrón de delegación que el de arriba — el botón vive DENTRO
+// del mismo renglón que el <a>, por eso detiene la propagación: un
+// clic en "borrar" no debe además marcarla como leída ni navegar.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest?.('[data-notif-delete]');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (typeof eliminarNotificacion === 'function') eliminarNotificacion(btn.getAttribute('data-notif-delete'));
+});
+
 // Detecta el rol del portal actual a partir de la URL — no depende de
 // que la página defina nada extra. Devuelve null fuera de /portal/.
 function obtenerRolPortalActual() {

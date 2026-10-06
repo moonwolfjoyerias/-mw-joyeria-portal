@@ -151,7 +151,7 @@ function actualizarReloj() {
 function notificarEquipoOperativo(texto, nombrePersona) {
   if (typeof agregarNotificacion !== 'function') return;
   const query = nombrePersona ? `?buscar=${encodeURIComponent(nombrePersona)}` : '';
-  agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff' });
+  agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff', origen: 'emprendedora_lider' });
 }
 
 // BUG reportado tras lanzar a producción: esta vista siempre mostraba el

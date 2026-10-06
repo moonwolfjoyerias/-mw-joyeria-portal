@@ -112,14 +112,19 @@ function obtenerAuditoriaAdmin() {
 // su apartado confirmado — y su link solo tiene sentido dentro de su
 // propio portal; mostrarlos aquí llevaba a un 404). Lo que Admin SÍ debe
 // ver sobre Emprendedoras/Líderes son los avisos que YA le tocan a ella
-// (rolDestino:'admin'): ascensos de rango, solicitudes de inscripción y
-// apartados vencidos — divididos del resto de avisos de Administración
-// (los que le llegan de Encargado) usando el campo "origen".
+// (rolDestino:'admin') MÁS los que le tocan a Staff pero que en
+// realidad son sobre una acción de una Emprendedora/Líder (apartados,
+// depósitos, solicitudes de lista de deseos) — unificados en una sola
+// pestaña "Emprendedoras" usando "roles" (antes era un solo "rol", y la
+// pestaña "Staff" recibía TODO rolDestino:'staff' sin distinguir, mezclando
+// avisos de e/l con los genuinamente internos de Staff — reportado tras
+// lanzar a producción). La pestaña "Staff" queda ahora restringida a
+// origen:'staff' (resurtido, actividades asignadas/"enterado").
 const NOTIF_ADMIN_GRUPOS = [
-  { rol: 'admin', origen: 'emprendedora_lider', titulo: 'Emprendedoras/Líderes' },
-  { rol: 'admin', origen: 'encargado', titulo: 'De Encargado' },
-  { rol: 'staff', titulo: 'Staff' },
-  { rol: 'encargado', titulo: 'Encargado' }
+  { roles: ['admin', 'staff'], origen: 'emprendedora_lider', titulo: 'Emprendedoras' },
+  { roles: ['admin'], origen: 'encargado', titulo: 'De Encargado' },
+  { roles: ['staff'], origen: 'staff', titulo: 'Staff' },
+  { roles: ['encargado'], titulo: 'Encargado' }
 ];
 
 // Las bandejas 'staff' y 'encargado' traen links pensados para mostrarse
@@ -179,7 +184,7 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
   const grupos = NOTIF_ADMIN_GRUPOS.map(g => ({
     ...g,
     items: todas.filter(n =>
-      (n.rolDestino || 'emprendedora_lider') === g.rol &&
+      g.roles.includes(n.rolDestino || 'emprendedora_lider') &&
       (!g.origen || (n.origen || 'emprendedora_lider') === g.origen)
     )
   }));
@@ -213,7 +218,10 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
         </summary>
         <div class="notif-group-items">
           ${g.items.map(n => `
-            <a class="notif-item" data-notif-id="${n.id}" href="${resolverLinkNotifAdmin(n.link)}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
+            <div class="notif-item-row">
+              <a class="notif-item" data-notif-id="${n.id}" href="${resolverLinkNotifAdmin(n.link)}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
+              <button type="button" class="notif-delete-btn" data-notif-delete="${n.id}" aria-label="Borrar notificación" title="Borrar">&times;</button>
+            </div>
           `).join('')}
         </div>
       </details>
