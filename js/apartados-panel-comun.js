@@ -20,6 +20,24 @@ function guardarVentanas() {
   guardarVentanasApartado(ventanas);
 }
 
+// BUG reportado tras lanzar a producción: la fila de detalle de cada
+// pieza mostraba un cuadro morado con el texto literal "MW" en vez de
+// la foto real del producto — mismo criterio de ruta que ya usa
+// normalizarImagenProducto() en staff/encargado/admin-catalogo.js (esta
+// página también vive a dos niveles de /portal/).
+function normalizarImagenApartadoPanel(imagen) {
+  if (!imagen) return '../../assets/images/isotipo-morado.png';
+  if (imagen.startsWith('../assets/')) return `../../${imagen.slice(3)}`;
+  return imagen;
+}
+
+function fotoPiezaApartadoPanel(pieza) {
+  const producto = typeof obtenerCatalogoStaffStorage === 'function'
+    ? obtenerCatalogoStaffStorage().find(p => p.id === pieza.productoId)
+    : null;
+  return normalizarImagenApartadoPanel(producto?.imagen);
+}
+
 // LOG-11 de la auditoría: expandir la fila para ver sus piezas ya
 // cuenta como "revisar" el cambio que la clienta hizo — quita el aviso
 // de la fila sin necesitar un botón aparte. Se llama desde los 3
@@ -113,6 +131,7 @@ function renderTabla() {
 
   actualizarContador(filtradas.length);
   agregarEventosFilas();
+  wirearZoomFotos(tbody);
 
 }
 
@@ -128,7 +147,6 @@ function crearFilaVentana(v) {
     <tr class="ventana-row">
       <td>
         <button type="button" class="client-cell" style="border:0;background:transparent;text-align:left;cursor:pointer;padding:0;width:100%;" data-toggle="${v.id}">
-          <div class="avatar">${obtenerIniciales(v.usuarioNombre)}</div>
           <div>
             <strong>${escapeHTML(v.usuarioNombre)}</strong>
             <small>${escapeHTML(v.telefono || "")}</small>
@@ -176,10 +194,12 @@ function crearFilaDetalle(v) {
   const piezas = !v.apartados.length ? "<small>Sin piezas</small>" : v.apartados.map(p => {
 
     const estadoPieza = obtenerEstadoPieza(p.estado);
+    const foto = fotoPiezaApartadoPanel(p);
+    const generica = /isotipo-morado\.png/.test(foto);
 
     return `
       <div class="piece-cell" style="margin-bottom:10px;align-items:flex-start;">
-        <div class="piece-thumb">MW</div>
+        <div class="piece-thumb"><img src="${foto}" alt="${escapeAttribute(p.producto)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;${generica ? 'opacity:.35;' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(p.producto)}"`}></div>
         <div>
           <strong>${escapeHTML(p.producto)}</strong>
           <small>${escapeHTML(p.variante || "")} · $${Number(p.total).toLocaleString("es-MX")} MXN</small>

@@ -207,10 +207,12 @@ function renderProductos(productos) {
   grid.innerHTML = productos.map((p) => {
     const disponibles = variantesDisponibles(p);
     const metaVariantes = Array.from(new Set(disponibles.map(v => etiquetaVariante(v)).filter(v => v !== 'Única'))).join(' · ');
+    const fotoProducto = normalizarImagenProducto(p.imagen);
+    const fotoGenerica = esFotoGenericaProducto(p.imagen);
     return `
     <div class="catalog-product-card">
       <div class="cp-photo">
-        <img src="${normalizarImagenProducto(p.imagen)}" alt="" class="${esFotoGenericaProducto(p.imagen) ? 'foto-generica' : ''}">
+        <img src="${fotoProducto}" alt="${escapeAttribute(p.nombre)}" class="${fotoGenerica ? 'foto-generica' : ''}" ${fotoGenerica ? '' : `data-zoom="${escapeAttribute(fotoProducto)}" data-zoom-alt="${escapeAttribute(p.nombre)}"`}>
       </div>
       <div class="cp-body">
         <h4>${escapeHTMLCatalogoVariantes(p.nombre)}</h4>
@@ -226,6 +228,8 @@ function renderProductos(productos) {
     </div>
   `;
   }).join('');
+
+  wirearZoomFotos(grid);
 
   grid.querySelectorAll('[data-apartar]').forEach(btn => {
     btn.addEventListener('click', () => abrirModalApartar(btn.getAttribute('data-apartar')));

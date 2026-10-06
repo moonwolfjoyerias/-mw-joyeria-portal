@@ -170,6 +170,16 @@
 }
 :root[data-theme="dark"] .modal-overlay { background: rgba(0, 0, 0, 0.65); }
 
+/* BUG reportado: el degradado de este aviso terminaba siempre en un
+   #fff fijo (nunca ajustado por tema) — en modo oscuro quedaba texto
+   claro (--mw-accent-text-strong) sobre una mitad de la caja blanca,
+   prácticamente ilegible ("Importante: al guardar..." y mensajes
+   similares en los modales de Catálogo/Calendario). */
+:root[data-theme="dark"] .catalog-modal .modal-note {
+  background: linear-gradient(135deg, var(--mw-lilac-soft) 0%, var(--mw-surface-soft) 100%);
+  border-color: var(--mw-border);
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -1353,6 +1363,24 @@ a:hover { color: var(--mw-gold); }
 .modal-close { position: absolute; top: 0.9rem; right: 1rem; background: none; border: none; font-size: 1.4rem; color: var(--mw-text-muted); cursor: pointer; line-height: 1; }
 .modal-note { font-size: 0.76rem; color: var(--mw-accent-text-strong); background: var(--mw-lilac-soft); padding: 0.6em 0.8em; border-radius: var(--radius-sm); margin-bottom: 1.1rem; }
 
+/* ---------- Ver foto en grande (lightbox, js/dom-utils.js) ---------- */
+img.zoomable-photo { cursor: zoom-in; }
+.lightbox-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(20, 14, 24, 0.88);
+  display: none; align-items: center; justify-content: center;
+  padding: 2rem;
+}
+.lightbox-overlay.open { display: flex; }
+.lightbox-overlay .lightbox-img { max-width: min(90vw, 720px); max-height: 86vh; object-fit: contain; border-radius: var(--radius-sm); box-shadow: var(--shadow-hover); }
+.lightbox-overlay .lightbox-close {
+  position: absolute; top: 1rem; right: 1.2rem;
+  background: rgba(255, 255, 255, 0.12); border: none; color: #fff;
+  font-size: 1.8rem; line-height: 1; width: 2.2rem; height: 2.2rem; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.lightbox-overlay .lightbox-close:hover { background: rgba(255, 255, 255, 0.22); }
+
 @media (max-width: 900px) {
   .stat-cards { grid-template-columns: 1fr; }
   .promo-banner { min-height: 240px; }
@@ -1448,9 +1476,16 @@ a:hover { color: var(--mw-gold); }
 .apartado-photo {
   width: 68px; height: 68px; border-radius: var(--radius-sm); flex-shrink: 0;
   background: linear-gradient(155deg, var(--mw-lilac-soft), var(--mw-cream), var(--mw-gold-soft));
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
-.apartado-photo img { width: 40%; opacity: 0.18; filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg); }
+/* BUG reportado: antes esta regla aplicaba SIEMPRE (foto real o no) el
+   mismo tratamiento de icono chico y atenuado pensado solo para el
+   isologo genérico — una foto real de producto se veía igual de
+   borrosa/chica que el placeholder. Ahora el tratamiento de icono solo
+   se aplica con la clase .foto-generica (mismo criterio que ya usa
+   .cp-photo en el catálogo); una foto real ocupa el cuadro completo. */
+.apartado-photo img { width: 100%; height: 100%; object-fit: cover; }
+.apartado-photo img.foto-generica { width: 40%; height: auto; opacity: 0.18; filter: saturate(0) brightness(0) invert(15%) sepia(45%) saturate(1000%) hue-rotate(240deg); }
 .apartado-info { flex: 1; min-width: 0; }
 .apartado-info h4 { font-size: 0.98rem; margin: 0 0 0.2rem; }
 .apartado-info .variant { font-size: 0.8rem; color: var(--mw-text-muted); }
