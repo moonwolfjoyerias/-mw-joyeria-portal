@@ -81,3 +81,43 @@ function wirearZoomFotos(contenedor) {
     });
   });
 }
+
+// ============================================================
+// SONIDO DE NOTIFICACIÓN — NOTIF-04 de la auditoría. Sintetizado con
+// Web Audio API (dos tonos cortos) en vez de un archivo de audio: no
+// hace falta subir ni mantener ningún archivo al repositorio, y suena
+// igual en cualquier dispositivo. Se usa desde
+// notificaciones-firestore-sync.js cuando llega, en vivo, una
+// notificación nueva sin leer para la cuenta con sesión abierta.
+let _audioCtxNotificacion = null;
+function reproducirSonidoNotificacion() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    // Los navegadores no dejan crear/arrancar audio antes de una
+    // interacción del usuario con la página — si todavía no hubo
+    // ninguna, el contexto se crea "suspended" y resume() no hace
+    // nada; no hay manera de evitarlo sin pedir un clic primero, así
+    // que simplemente no suena esa primera vez (nunca truena).
+    if (!_audioCtxNotificacion) _audioCtxNotificacion = new Ctx();
+    const ctx = _audioCtxNotificacion;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+    const ahora = ctx.currentTime;
+    [{ freq: 880, inicio: 0 }, { freq: 1180, inicio: 0.12 }].forEach(({ freq, inicio }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, ahora + inicio);
+      gain.gain.linearRampToValueAtTime(0.18, ahora + inicio + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, ahora + inicio + 0.22);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ahora + inicio);
+      osc.stop(ahora + inicio + 0.24);
+    });
+  } catch (error) {
+    // Nunca debe tronar la página por no poder sonar.
+  }
+}
