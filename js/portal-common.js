@@ -127,9 +127,20 @@ function initNotifPanel() {
   const badge = document.getElementById('notifBadge');
   if (!bell || !panel) return;
 
+  renderNotifPanelPropio(panel, badge);
+  wireNotifBellToggle(bell, panel);
+}
+
+// NOTIF-04 de la auditoría: separado de initNotifPanel para poder
+// repintar la campana cada vez que llega algo nuevo por la suscripción
+// en vivo de notificaciones-firestore-sync.js (ver
+// actualizarPanelNotificacionesEnVivo más abajo) sin volver a enganchar
+// el clic de abrir/cerrar — wireNotifBellToggle no es idempotente
+// (apila un listener nuevo cada vez que se llama), así que solo se
+// llama UNA vez, desde initNotifPanel.
+function renderNotifPanelPropio(panel, badge) {
   if (typeof renderNotificacionesAdminAgrupadas === 'function') {
     renderNotificacionesAdminAgrupadas(panel, badge);
-    wireNotifBellToggle(bell, panel);
     return;
   }
 
@@ -165,8 +176,17 @@ function initNotifPanel() {
   } else {
     panel.innerHTML = '<div class="notif-empty">No tienes notificaciones nuevas.</div>';
   }
+}
 
-  wireNotifBellToggle(bell, panel);
+// Llamada desde notificaciones-firestore-sync.js cada vez que la
+// suscripción en vivo trae un cambio — vuelve a pintar la campana con
+// los datos ya actualizados en NOTIFICACIONES_CACHE, sin esperar a que
+// la persona refresque la página.
+function actualizarPanelNotificacionesEnVivo() {
+  const panel = document.getElementById('notifPanel');
+  const badge = document.getElementById('notifBadge');
+  if (!panel) return;
+  renderNotifPanelPropio(panel, badge);
 }
 
 // Abrir/cerrar el panel al hacer clic en la campana — se reutiliza tal

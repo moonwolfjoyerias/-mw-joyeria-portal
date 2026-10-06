@@ -46,10 +46,7 @@ async function cargarNotificacionesRepo() {
   if (dbFirestore) {
     try {
       const metaSnap = await dbFirestore.collection(NOTIFICACIONES_META_COLECCION).doc(NOTIFICACIONES_META_DOC_ID).get();
-      if (metaSnap.exists) {
-        const snap = await dbFirestore.collection(NOTIFICACIONES_COLECCION_FIRESTORE).get();
-        NOTIFICACIONES_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-      } else {
+      if (!metaSnap.exists) {
         const semilla = notificacionesSemillaLocal();
         await guardarNotificacionesRepo(semilla);
       }
@@ -62,11 +59,51 @@ async function cargarNotificacionesRepo() {
       // toast aquí a propósito (mismo motivo que ya documenta
       // guardarNotificacionesRepo: no interrumpir lo que se estaba
       // haciendo por un aviso que no cargó).
-      NOTIFICACIONES_CACHE = [];
     }
-  } else {
-    NOTIFICACIONES_CACHE = notificacionesDesdeLocalStorage();
+
+    // NOTIF-04 de la auditoría: antes esto era un .get() de una sola
+    // vez — una notificación nueva (de otra cuenta, o generada por un
+    // "tick" de admin-comun.js) nunca se veía hasta refrescar la
+    // página. onSnapshot deja la suscripción abierta: cualquier cambio
+    // en la colección completa (de cualquier dispositivo) vuelve a
+    // pintar la campana aquí mismo, y si lo que llegó es nuevo y sin
+    // leer para ESTA cuenta, suena un aviso (contarNotificacionesRelevantesNoLeidas,
+    // ver notificaciones-modelo.js — nunca en el primer snapshot, que es
+    // solo la carga inicial de lo que ya existía).
+    return new Promise((resolve) => {
+      let primerSnapshot = true;
+      dbFirestore.collection(NOTIFICACIONES_COLECCION_FIRESTORE).onSnapshot((snap) => {
+        const noLeidasAntes = (!primerSnapshot && typeof contarNotificacionesRelevantesNoLeidas === 'function')
+          ? contarNotificacionesRelevantesNoLeidas()
+          : 0;
+
+        NOTIFICACIONES_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        try { localStorage.setItem(NOTIFICACIONES_STORAGE_KEY, JSON.stringify(NOTIFICACIONES_CACHE)); } catch (error) { /* noop */ }
+
+        if (!primerSnapshot) {
+          if (typeof contarNotificacionesRelevantesNoLeidas === 'function' && contarNotificacionesRelevantesNoLeidas() > noLeidasAntes
+            && typeof reproducirSonidoNotificacion === 'function') {
+            reproducirSonidoNotificacion();
+          }
+          if (typeof actualizarPanelNotificacionesEnVivo === 'function') actualizarPanelNotificacionesEnVivo();
+        } else {
+          primerSnapshot = false;
+          resolve(NOTIFICACIONES_CACHE);
+        }
+      }, (error) => {
+        // Error de reglas/red en la suscripción (ej. se perdió la
+        // sesión) — mismo criterio que el catch de arriba: se deja
+        // vacío, nunca se rellena con local.
+        if (primerSnapshot) {
+          NOTIFICACIONES_CACHE = [];
+          primerSnapshot = false;
+          resolve(NOTIFICACIONES_CACHE);
+        }
+      });
+    });
   }
+
+  NOTIFICACIONES_CACHE = notificacionesDesdeLocalStorage();
   try { localStorage.setItem(NOTIFICACIONES_STORAGE_KEY, JSON.stringify(NOTIFICACIONES_CACHE)); } catch (error) { /* noop */ }
   return NOTIFICACIONES_CACHE;
 }
