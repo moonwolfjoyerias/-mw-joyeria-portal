@@ -562,6 +562,7 @@ function actualizarAsignacionActividadStaff(id, cambios, { usuarioId, usuarioNom
             texto: `${e.nombre}, tienes una nueva actividad${asignacion.tipo === 'temporal' ? ' temporal' : ''} asignada: "${asignacion.nombre}" (${asignacion.zona}). ${detalleFecha}`,
             link: 'misActividades',
             rolDestino: 'staff',
+            origen: 'staff',
             paraId: e.id
           });
         });
@@ -741,6 +742,7 @@ function anunciarAsignacionesActividadStaff(ids, { usuarioId, usuarioNombre, usu
           texto: `${e.nombre}, tienes una nueva actividad${a.tipo === 'temporal' ? ' temporal' : ''} asignada: "${a.nombre}" (${a.zona}). ${detalleFecha}`,
           link: 'misActividades',
           rolDestino: 'staff',
+          origen: 'staff',
           paraId: e.id
         });
       });

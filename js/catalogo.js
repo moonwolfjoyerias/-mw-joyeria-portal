@@ -407,7 +407,7 @@ function mostrarPasoPedirDeposito() {
     if (typeof agregarNotificacion === 'function') {
       const texto = `${usuarioNombreActual || 'Una emprendedora'} avisó que ya pagó su depósito de $50 — confirma el depósito para abrir su ventana.`;
       const query = usuarioNombreActual ? `?buscar=${encodeURIComponent(usuarioNombreActual)}` : '';
-      agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff' });
+      agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff', origen: 'emprendedora_lider' });
     }
     box.innerHTML = `
       <button class="modal-close" data-close>&times;</button>

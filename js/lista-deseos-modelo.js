@@ -313,7 +313,8 @@ function crearSolicitudResurtido({ producto, variante, cantidadSugerida, comenta
       // un nombre de archivo literal), así resuelve bien sin importar
       // desde qué portal se muestre (Staff, o el grupo "Staff" de Admin).
       link: 'deseos',
-      rolDestino: 'staff'
+      rolDestino: 'staff',
+      origen: 'staff'
     });
   }
 
@@ -366,7 +367,8 @@ function marcarResurtidoAtendida(id, { usuarioId, usuarioNombre }) {
       // literal) — cada página la resuelve a SU PROPIA lista de deseos,
       // así el link funciona sin importar desde qué portal se muestre.
       link: 'deseos',
-      rolDestino: solicitud.solicitadoPorRol
+      rolDestino: solicitud.solicitadoPorRol,
+      origen: 'staff'
     });
   }
 
