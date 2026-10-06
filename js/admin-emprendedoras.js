@@ -388,11 +388,13 @@ function renderAccionesPerfil(persona) {
     <button class="btn btn-primary" id="guardarPerfilBtn" type="button">Guardar cambios</button>
     <button class="btn btn-outline" id="cancelarPerfilBtn" type="button">Cancelar</button>
     ${persona.tipo === 'emprendedora' ? `<button class="btn btn-outline" id="convertirLiderBtn" type="button" style="margin-left:auto;">Convertir en Líder</button>` : ''}
+    ${persona.tipo === 'lider' ? `<button class="btn btn-outline" id="convertirEmprendedoraBtn" type="button" style="margin-left:auto;">Convertir en Emprendedora</button>` : ''}
   `;
 
   document.getElementById('guardarPerfilBtn')?.addEventListener('click', () => guardarInformacionPersona(persona));
   document.getElementById('cancelarPerfilBtn')?.addEventListener('click', () => cancelarEdicionPersona(persona));
   document.getElementById('convertirLiderBtn')?.addEventListener('click', () => abrirConfirmarConvertirLider(persona));
+  document.getElementById('convertirEmprendedoraBtn')?.addEventListener('click', () => abrirConfirmarConvertirEmprendedora(persona));
 
 }
 
@@ -803,6 +805,142 @@ function abrirConfirmarConvertirLider(persona) {
       mostrarToastPersonas(`${nombreCompletoPersona(actual)} ahora es Líder.`);
 
     }
+  });
+
+}
+
+// ============================================================
+// CONVERTIR EN EMPRENDEDORA (descender) — simétrico al anterior.
+// Pedido tras lanzar a producción: Admin podía ascender a una
+// Emprendedora a Líder, pero no existía el camino contrario. Si la
+// líder tiene equipo propio, una Emprendedora nunca puede tener
+// equipo — se comprime hacia otra líder primero, mismo criterio que
+// ya usa abrirCompresionEquipoBaja (LOG-03) al dar de baja a una
+// líder con equipo activo.
+// ============================================================
+
+function abrirConfirmarConvertirEmprendedora(persona) {
+
+  const equipo = obtenerPersonas().filter(p => p.liderId === persona.id && p.estado !== 'baja');
+
+  if (equipo.length) {
+    abrirCompresionEquipoDescenso(persona, equipo);
+    return;
+  }
+
+  abrirAutorizacionAdmin({
+    titulo: 'Convertir en Emprendedora',
+    mensaje: `Estás a punto de convertir a ${escapeHTMLPersonas(nombreCompletoPersona(persona))} de Líder a Emprendedora. Esta acción quedará registrada.`,
+    onConfirmar: () => {
+
+      const personas = obtenerPersonas();
+      const actual = personas.find(p => p.id === persona.id);
+      if (!actual) return;
+
+      actual.tipo = 'emprendedora';
+      guardarPersonas(personas);
+
+      registrarAuditoriaAdmin({
+        modulo: 'personas',
+        accion: 'convertir_emprendedora',
+        descripcion: `${nombreCompletoPersona(actual)} fue convertida de Líder a Emprendedora`
+      });
+
+      modoEdicionPersona = false;
+      liderSeleccionadoEdicion = null;
+
+      renderFiltroLideres();
+      aplicarBusquedaPersonas();
+      renderDetallePersona();
+
+      mostrarToastPersonas(`${nombreCompletoPersona(actual)} ahora es Emprendedora.`);
+
+    }
+  });
+
+}
+
+// Mismo patrón que abrirCompresionEquipoBaja: sugiere el líder superior
+// de esta persona como destino del equipo, pero Admin puede cambiarlo
+// o dejarlo sin asignar por ahora. No toca rango/stats/historial de la
+// persona convertida — si algún día vuelve a ser Líder, su historial
+// sigue ahí.
+function abrirCompresionEquipoDescenso(persona, equipo) {
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const superior = persona.liderId ? obtenerPersonaPorId(persona.liderId) : null;
+  const superiorValida = !!(superior && superior.tipo === 'lider' && superior.estado !== 'baja');
+  const opcionesDestino = obtenerPersonas().filter(p => p.tipo === 'lider' && p.id !== persona.id && p.estado !== 'baja');
+
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Convertir a ${escapeHTMLPersonas(nombreCompletoPersona(persona))} en Emprendedora — reasignar su equipo</h3>
+    <p class="modal-sub">${equipo.length} persona${equipo.length === 1 ? '' : 's'} depende${equipo.length === 1 ? '' : 'n'} directamente de ella. Una Emprendedora no puede tener equipo propio — se comprime hacia otra líder antes de continuar, igual que al dar de baja a una líder. Confirma o cambia el destino.</p>
+    <ul style="max-height:160px;overflow-y:auto;margin:10px 0;padding-left:18px;">
+      ${equipo.map(p => `<li>${escapeHTMLPersonas(nombreCompletoPersona(p))}</li>`).join('')}
+    </ul>
+    <div class="form-field">
+      <label>Nuevo líder para este equipo</label>
+      <select id="destinoDescensoSelect">
+        <option value="">— Dejar sin líder por ahora (decidir después) —</option>
+        ${opcionesDestino.map(p => `
+          <option value="${p.id}" ${superiorValida && p.id === superior.id ? 'selected' : ''}>${escapeHTMLPersonas(nombreCompletoPersona(p))}${superiorValida && p.id === superior.id ? ' (líder superior — sugerida)' : ''}</option>
+        `).join('')}
+      </select>
+      ${!superiorValida ? '<small class="field-help">Esta líder no tenía líder superior activa — elige a quién pasa su equipo, o déjalo sin asignar por ahora.</small>' : ''}
+    </div>
+    <div class="modal-note"><strong>Administración.</strong> Esta acción quedará registrada a tu nombre.</div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" id="descensoCancelarBtn" type="button">Cancelar</button>
+      <button class="btn btn-danger" style="flex:1;" id="descensoConfirmarBtn" type="button">Convertir y reasignar equipo</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  document.getElementById('descensoCancelarBtn').addEventListener('click', cerrar);
+
+  document.getElementById('descensoConfirmarBtn').addEventListener('click', () => {
+
+    const destinoId = document.getElementById('destinoDescensoSelect').value || null;
+
+    const personas = obtenerPersonas();
+    const actual = personas.find(p => p.id === persona.id);
+    if (!actual) { cerrar(); return; }
+
+    actual.tipo = 'emprendedora';
+
+    let movidos = 0;
+    personas.forEach(p => {
+      if (p.liderId === persona.id && p.estado !== 'baja') {
+        p.liderId = destinoId;
+        movidos++;
+      }
+    });
+
+    guardarPersonas(personas);
+
+    const nombreDestino = destinoId ? nombreCompletoPersona(obtenerPersonaPorId(destinoId) || {}) : null;
+    registrarAuditoriaAdmin({
+      modulo: 'personas',
+      accion: 'convertir_emprendedora_comprimir_equipo',
+      descripcion: `${nombreCompletoPersona(actual)} convertida de Líder a Emprendedora — equipo de ${movidos} persona${movidos === 1 ? '' : 's'} ${nombreDestino ? `reasignado a ${nombreDestino}` : 'dejado sin líder asignada (pendiente de decidir)'}`
+    });
+
+    cerrar();
+    modoEdicionPersona = false;
+    liderSeleccionadoEdicion = null;
+
+    renderFiltroLideres();
+    aplicarBusquedaPersonas();
+    renderDetallePersona();
+
+    mostrarToastPersonas(`${nombreCompletoPersona(actual)} ahora es Emprendedora. Equipo ${nombreDestino ? `reasignado a ${nombreDestino}` : 'sin líder por ahora'}.`);
+
   });
 
 }

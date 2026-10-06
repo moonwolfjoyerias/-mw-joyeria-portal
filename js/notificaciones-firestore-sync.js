@@ -151,10 +151,22 @@ async function sincronizarNotificacionesConFirestore(lista) {
   if (sesion && sesion.tipo === 'persona') {
     const snapPersona = await coleccion.get();
     const actuales = new Map(snapPersona.docs.map(d => [d.id, d.data()]));
+    const miPersonaId = sesion.personaId || (typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null);
     const batchPersona = dbFirestore.batch();
     let hayCambios = false;
     lista.forEach(notificacion => {
       const anterior = actuales.get(String(notificacion.id));
+      // BUG reportado tras lanzar a producción: "marcar como leída" de
+      // SU PROPIA notificación tronaba el batch COMPLETO (nunca se
+      // marcaba) cuando este arreglo local también traía, de paso, una
+      // notificación AJENA (otro rol/otra persona) cuya copia local no
+      // coincidía con la de Firestore — la regla rechaza esa escritura
+      // ajena, y al ser un batch, Firestore rechaza TODO el batch, no
+      // solo esa línea. Si el documento ya existe y es de otra persona
+      // (paraId puesto y distinto al propio), ni siquiera se compara/
+      // intenta escribir — nunca es algo que esta cuenta pueda cambiar
+      // de verdad, así que incluirlo solo arriesga tronar el resto.
+      if (anterior && anterior.paraId != null && anterior.paraId !== miPersonaId) return;
       if (!anterior || JSON.stringify(anterior) !== JSON.stringify(notificacion)) {
         batchPersona.set(coleccion.doc(String(notificacion.id)), notificacion);
         hayCambios = true;
