@@ -563,6 +563,8 @@ function agregarProducto(datos) {
     abrirRevisionListaDeseosNuevoProducto(nuevoProducto, ENCARGADO_IDENTIDAD);
   }
 
+  if (typeof enviarCorreoNuevoProductoCatalogo === 'function') enviarCorreoNuevoProductoCatalogo(nuevoProducto);
+
 }
 
 function guardarEdicionProducto(id, datos) {

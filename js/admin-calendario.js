@@ -395,6 +395,8 @@ function agregarEvento(datos) {
   registrarAuditoriaAdmin({ modulo: 'calendario', accion: 'agregar_evento', descripcion: `Evento agregado: ${datos.titulo}` });
   mostrarToast(`Evento agregado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
 
+  if (typeof enviarCorreoNuevoEventoCalendario === 'function') enviarCorreoNuevoEventoCalendario(nuevoEvento);
+
 }
 
 function guardarEdicionEvento(id, datos) {
