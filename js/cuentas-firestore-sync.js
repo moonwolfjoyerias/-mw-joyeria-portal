@@ -62,6 +62,22 @@ function firestoreUserACuentaInterna(uid, datos) {
 async function cargarCuentasInternasRepo() {
   if (dbFirestore) {
     try {
+      // BUG reportado tras lanzar a producción: al venir SIEMPRE de
+      // Firestore (que nunca trae password, ver firestoreUserACuentaInterna
+      // de abajo), cada recarga de página pisaba por completo el
+      // localStorage anterior — incluida la contraseña que SÍ se había
+      // guardado aquí mismo al crear la cuenta. "Mostrar/ocultar" pasaba
+      // de verla bien a "(sin contraseña)" con solo navegar a otra
+      // página de Admin y volver, en el mismo dispositivo que la creó.
+      // Se guarda antes de pisarlo y se reinyecta por id — sigue sin
+      // aparecer en OTRO dispositivo (eso sigue siendo intencional, ver
+      // nota de cabecera), pero ya no se pierde sola en el que la creó.
+      const passwordsConocidas = new Map(
+        cuentasInternasDesdeLocalStorage()
+          .filter(c => c.password)
+          .map(c => [c.id, c.password])
+      );
+
       const snap = await dbFirestore.collection('users').where('rol', 'in', ['staff', 'encargado', 'admin']).get();
       // Firestore es la única fuente de verdad en cuanto hay conexión —
       // ya NO se mezclan cuentas locales sin firebaseUid. Antes se hacía
@@ -72,7 +88,12 @@ async function cargarCuentasInternasRepo() {
       // tuviera esa cuenta de ejemplo guardada — el demo sembrado por
       // construirCuentasInternasEjemplo() nunca trae firebaseUid, así
       // que "eliminar" nunca alcanzaba a borrarla de verdad ahí.
-      CUENTAS_INTERNAS_CACHE = snap.docs.map(d => firestoreUserACuentaInterna(d.id, d.data()));
+      CUENTAS_INTERNAS_CACHE = snap.docs.map(d => {
+        const cuenta = firestoreUserACuentaInterna(d.id, d.data());
+        const passwordConocida = passwordsConocidas.get(cuenta.id);
+        if (passwordConocida) cuenta.password = passwordConocida;
+        return cuenta;
+      });
     } catch (error) {
       // La consulta falló (reglas, red) — no se rellena con lo que haya
       // en local: eso podría resucitar cuentas ya eliminadas de

@@ -350,10 +350,21 @@ function cambiarLiderDirectoAdmin(personaId, { liderNuevoId, ejecutadoPorId, eje
 
 }
 
+// BUG reportado tras lanzar a producción: esta función SIEMPRE
+// contestaba { ok: true } y mostraba "Contraseña actualizada" aunque
+// la persona ya tuviera acceso real en Firebase Auth (firebaseUid) —
+// solo guardaba el valor nuevo en la caché local de solo-lectura (ver
+// establecerPasswordPersona/PERSONAS_CREDENCIALES_STORAGE_KEY), sin
+// tocar la contraseña real. Admin creía haberla cambiado, pero la
+// persona seguía sin poder entrar con ella. Mismo criterio que ya usa
+// restablecerPasswordCuentaInterna en cuentas-internas-modelo.js.
 function restablecerPasswordPersona(id, nuevoPassword) {
   const persona = obtenerPersonaPorId(id);
   if (!persona) return { ok: false, error: 'La cuenta no existe.' };
   if (!nuevoPassword) return { ok: false, error: 'La nueva contraseña no puede estar vacía.' };
+  if (persona.firebaseUid) {
+    return { ok: false, error: `Esta cuenta ya tiene acceso real — su contraseña no se puede cambiar desde aquí. Pide a quien tenga la clave de servicio de Firebase que corra: node scripts/resetear-password.js <service-account.json> ${persona.usuario} <nueva-contraseña>` };
+  }
   establecerPasswordPersona(id, nuevoPassword);
   return { ok: true, persona };
 }
