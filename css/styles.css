@@ -257,6 +257,18 @@ a:hover { color: var(--mw-gold); }
 }
 
 /* ---------- Barra superior (sitio público) ---------- */
+/* BUG reportado: su fondo (--mw-purple-dark) nunca cambia con el tema,
+   pero el texto usaba --mw-lilac-soft, que SÍ se oscurece en modo
+   oscuro (de lila claro a casi negro) — quedaba texto oscuro sobre
+   fondo oscuro. Se usa --mw-on-dark-text en su lugar: mismo criterio ya
+   usado en el sidebar del portal (.sidebar .brand-link .logo-sub), para
+   texto sobre un panel que siempre es morado oscuro sin importar el
+   tema. Solo login.html (no las demás páginas públicas) carga
+   auth-guard.js — lo necesita para el "ya hay sesión, redirige al
+   portal" de auth-login.js — y ese archivo aplica el tema guardado
+   (mw-tema-v1) con solo cargarse, sin revisar qué página es (ver
+   js/auth-guard.js). Por eso login.html sí puede salir en modo oscuro
+   si alguien ya lo eligió desde el portal. */
 .topbar {
   display: flex;
   align-items: center;
@@ -292,12 +304,12 @@ a:hover { color: var(--mw-gold); }
   font-size: 0.58rem;
   font-family: var(--font-body);
   letter-spacing: 0.32em;
-  color: var(--mw-lilac-soft);
+  color: var(--mw-on-dark-text);
 }
 .topbar nav a {
   margin-left: 1.5rem;
   font-size: 0.95rem;
-  color: var(--mw-lilac-soft);
+  color: var(--mw-on-dark-text);
 }
 .topbar nav a:hover, .topbar nav a.active { color: var(--mw-gold); }
 .topbar nav { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0; }
@@ -636,9 +648,12 @@ a:hover { color: var(--mw-gold); }
 }
 
 /* ---------- Footer (todas las páginas) ---------- */
+/* BUG reportado: mismo motivo que .topbar (ver su comentario arriba) —
+   fondo fijo morado oscuro + texto en --mw-lilac-soft, que en modo
+   oscuro se vuelve casi negro. Se usa --mw-on-dark-text en su lugar. */
 .site-footer {
   background: var(--mw-purple-dark);
-  color: var(--mw-lilac-soft);
+  color: var(--mw-on-dark-text);
   padding: 3rem 2rem 0;
   margin-top: 2rem;
 }
@@ -655,7 +670,7 @@ a:hover { color: var(--mw-gold); }
 .footer-logo:hover img { opacity: 1; }
 
 .footer-nav { display: flex; flex-direction: column; gap: 0.6rem; }
-.footer-nav a { color: var(--mw-lilac-soft); font-size: 0.9rem; }
+.footer-nav a { color: var(--mw-on-dark-text); font-size: 0.9rem; }
 .footer-nav a:hover { color: var(--mw-gold); }
 
 .footer-contact { display: flex; flex-direction: column; gap: 0.8rem; }
@@ -663,7 +678,7 @@ a:hover { color: var(--mw-gold); }
   display: flex;
   align-items: flex-start;
   gap: 0.6rem;
-  color: var(--mw-lilac-soft);
+  color: var(--mw-on-dark-text);
   font-size: 0.88rem;
   line-height: 1.35;
 }
@@ -695,7 +710,7 @@ a:hover { color: var(--mw-gold); }
   text-align: center;
   padding: 1.1rem 0;
   font-size: 0.78rem;
-  color: var(--mw-lilac-soft);
+  color: var(--mw-on-dark-text);
 }
 
 @media (max-width: 860px) {
