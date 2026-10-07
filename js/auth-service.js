@@ -130,6 +130,22 @@ async function intentarRecuperarUsuarioFirebaseExistente(usuario, password) {
   }
 }
 
+// FEAT-09: el botón "Inscribirse" de login.html lo usa alguien que
+// TODAVÍA no tiene cuenta — pero las reglas de Firestore/Storage exigen
+// "estaAutenticado()" para guardar la solicitud y subir las fotos de
+// INE. El Acceso anónimo de Firebase Auth (hay que activarlo una vez en
+// Firebase Console → Authentication → Sign-in method → Anonymous)
+// resuelve esto sin pedir ningún dato de más: crea una sesión real pero
+// sin identidad, invisible para quien llena el formulario, que
+// simplemente ya "cuenta auténticada" para esas reglas. No reemplaza ni
+// afecta el login real — ver iniciarSesionFirebase arriba, que siempre
+// cambia a la cuenta real con signInWithEmailAndPassword sin importar
+// si había una sesión anónima abierta.
+async function iniciarSesionAnonimaSiFalta() {
+  if (!authFirebase || authFirebase.currentUser) return;
+  await authFirebase.signInAnonymously();
+}
+
 async function cerrarSesionFirebase() {
   try {
     await authFirebase.signOut();
