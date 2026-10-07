@@ -202,22 +202,14 @@ async function enviarRegistroPublico(liderIndicado) {
       await iniciarSesionAnonimaSiFalta();
     }
 
-    // BUG grave evitado a tiempo: tanto personas-firestore-sync.js como
-    // notificaciones-firestore-sync.js intentaron su primera carga al
-    // abrir login.html, SIN sesión todavía — con Firestore real, esa
-    // lectura se rechaza (reglas) y ambas cachés se quedan vacías. Si
-    // crearSolicitudInscripcionPublica (más abajo) escribiera una
-    // notificación nueva con la caché de notificaciones todavía vacía,
-    // agregarNotificacion → guardarNotificacionesCompartidas terminaría
-    // en la rama de "resync completo" de sincronizarNotificacionesConFirestore
-    // (ver notificaciones-firestore-sync.js) creyendo que CUALQUIER
-    // notificación real que exista en Firestore "ya no está en la lista
-    // nueva" — y la borraría del servidor, de TODOS los roles, no solo
-    // de esta cuenta. Se refrescan ambas cachés, ya autenticados, antes
-    // de seguir.
-    if (typeof cargarPersonasRepo === 'function') await cargarPersonasRepo();
-    if (typeof cargarNotificacionesRepo === 'function') await cargarNotificacionesRepo();
-
+    // BUG reportado tras lanzar a producción: aquí antes se refrescaban
+    // personas/notificaciones (cargarPersonasRepo/cargarNotificacionesRepo)
+    // para evitar un riesgo real (ver versión anterior de este archivo) —
+    // pero eso eran DOS idas y vueltas de red más, justo en el momento
+    // del envío, y con conexión lenta se sentía como "no hay internet" o
+    // el botón atascado sin ningún mensaje. Ya no hace falta: la
+    // notificación a Admin usa agregarNotificacionDirecta (ver abajo),
+    // que escribe un solo documento sin depender de ninguna caché local.
     const sufijo = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
     const ineFrenteStoragePath = `solicitudes-ine/${sufijo}-frente`;
     const ineReversoStoragePath = `solicitudes-ine/${sufijo}-reverso`;
@@ -243,8 +235,21 @@ async function enviarRegistroPublico(liderIndicado) {
     mostrarPantallaConfirmacionRegistro(liderIndicado);
 
   } catch (error) {
+    // BUG reportado: siempre decía "revisa tu conexión", aunque la
+    // causa real más probable no sea de red — el error más común aquí
+    // es que el proveedor "Anonymous" de Firebase Auth todavía no esté
+    // activado (Firebase Console → Authentication → Sign-in method),
+    // necesario para que iniciarSesionAnonimaSiFalta funcione — y ESE
+    // error sí distingue código ('auth/operation-not-allowed'). console.error
+    // deja el detalle real para quien revise la consola del navegador.
+    console.error('No se pudo enviar la solicitud de inscripción:', error);
     const errorEl = document.getElementById('regPaso2Error');
-    if (errorEl) { errorEl.textContent = 'No se pudo enviar tu solicitud. Revisa tu conexión e inténtalo de nuevo.'; errorEl.style.display = 'block'; }
+    if (errorEl) {
+      errorEl.textContent = (error && error.code === 'auth/operation-not-allowed')
+        ? 'No se pudo enviar tu solicitud — falta un paso de configuración en el sitio. Avísale a soporte.'
+        : 'No se pudo enviar tu solicitud. Espera unos segundos e inténtalo de nuevo.';
+      errorEl.style.display = 'block';
+    }
     botones.forEach(b => { b.disabled = false; });
   }
 

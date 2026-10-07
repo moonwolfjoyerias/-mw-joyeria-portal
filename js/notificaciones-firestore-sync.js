@@ -206,3 +206,27 @@ async function eliminarNotificacionDeFirestore(id) {
     // noop — ver comentario de arriba.
   }
 }
+
+// FEAT-09: mismo motivo que eliminarNotificacionDeFirestore — un
+// .set() de UN SOLO documento nuevo, nunca sincronizarNotificacionesConFirestore
+// (que compara TODA la lista local contra Firestore). Se necesitaba
+// porque crearSolicitudInscripcionPublica (login.html → "Inscribirse")
+// corre en una página donde NOTIFICACIONES_CACHE casi nunca está al
+// día — nadie ha iniciado sesión todavía, así que el primer intento de
+// cargarla (al abrir la página, sin sesión) se rechaza por las reglas y
+// se queda vacía. Si esa notificación se agregara por el camino normal
+// (agregarNotificacion → guardarNotificacionesCompartidas), el resync
+// completo vería la lista local casi vacía y BORRARÍA de Firestore
+// cualquier notificación real que no reconociera ahí — de TODOS los
+// roles, no solo de esta cuenta. Devuelve true/false para que quien
+// llama sepa si de verdad se guardó (ver agregarNotificacionDirecta en
+// notificaciones-modelo.js).
+async function agregarNotificacionDirectaAFirestore(notificacion) {
+  if (!dbFirestore) return false;
+  try {
+    await dbFirestore.collection(NOTIFICACIONES_COLECCION_FIRESTORE).doc(String(notificacion.id)).set(notificacion);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
