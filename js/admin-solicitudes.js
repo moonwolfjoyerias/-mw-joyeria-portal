@@ -85,7 +85,9 @@ async function renderListaSolicitudesAdmin() {
     <tr>
       <td><span class="badge">${s._tipo === 'evento' ? 'Evento' : 'Inscripción'}</span></td>
       <td><strong>${escapeHTMLSolAdmin(s._titulo)}</strong></td>
-      <td>${escapeHTMLSolAdmin(s.solicitanteNombre)}${s.solicitanteRol ? ` <span class="badge">${s.solicitanteRol === 'lider' ? 'Líder' : 'Emprendedora'}</span>` : ''}</td>
+      <td>${s.origen === 'publico'
+        ? `<span class="badge">Se registró ella misma</span> <small class="bp-sub">${s.liderIndicado ? `líder: ${escapeHTMLSolAdmin(s.liderIndicado)}` : 'sin líder'}</small>`
+        : `${escapeHTMLSolAdmin(s.solicitanteNombre)}${s.solicitanteRol ? ` <span class="badge">${s.solicitanteRol === 'lider' ? 'Líder' : 'Emprendedora'}</span>` : ''}`}</td>
       <td><span class="badge estado-badge ${s.estado}">${ESTADOS_SOLICITUD[s.estado] || s.estado}</span></td>
       <td>${formatearFechaSolAdmin(s.fechaSolicitud)}</td>
       <td><button class="action-btn detail-action" data-ver="${s.id}" data-tipo="${s._tipo}">Ver detalle</button></td>
@@ -123,13 +125,22 @@ async function abrirDetalleSolicitudAdmin(id) {
     <h3>Solicitud de inscripción</h3>
     <p class="modal-sub">Revisada como parte del proceso de alta de nuevas Emprendedoras.</p>
 
-    <h4 class="profile-section-title">Solicitante</h4>
-    <div class="detail-grid">
-      <div><span>Nombre</span><strong>${escapeHTMLSolAdmin(solicitud.solicitanteNombre)}</strong></div>
-      <div><span>Rol</span><strong>${solicitud.solicitanteRol === 'lider' ? 'Líder' : 'Emprendedora'}</strong></div>
-      <div><span>ID / cuenta</span><strong>${escapeHTMLSolAdmin(solicitud.solicitanteId)}</strong></div>
-      <div><span>Fecha de solicitud</span><strong>${formatearFechaSolAdmin(solicitud.fechaSolicitud)}</strong></div>
-    </div>
+    ${solicitud.origen === 'publico' ? `
+      <h4 class="profile-section-title">Cómo llegó</h4>
+      <div class="detail-grid">
+        <div class="full" style="grid-column:1/-1;"><span>Origen</span><strong>Se registró directamente desde el sitio (nadie con cuenta la refirió)</strong></div>
+        <div class="full" style="grid-column:1/-1;"><span>Líder que indicó</span><strong>${solicitud.liderIndicado ? escapeHTMLSolAdmin(solicitud.liderIndicado) + ' (sin verificar)' : 'No indicó — pidió que el equipo le asigne uno'}</strong></div>
+        <div><span>Fecha de solicitud</span><strong>${formatearFechaSolAdmin(solicitud.fechaSolicitud)}</strong></div>
+      </div>
+    ` : `
+      <h4 class="profile-section-title">Solicitante</h4>
+      <div class="detail-grid">
+        <div><span>Nombre</span><strong>${escapeHTMLSolAdmin(solicitud.solicitanteNombre)}</strong></div>
+        <div><span>Rol</span><strong>${solicitud.solicitanteRol === 'lider' ? 'Líder' : 'Emprendedora'}</strong></div>
+        <div><span>ID / cuenta</span><strong>${escapeHTMLSolAdmin(solicitud.solicitanteId)}</strong></div>
+        <div><span>Fecha de solicitud</span><strong>${formatearFechaSolAdmin(solicitud.fechaSolicitud)}</strong></div>
+      </div>
+    `}
 
     <h4 class="profile-section-title" style="margin-top:18px;">Nueva persona</h4>
     <div class="detail-grid">
@@ -230,7 +241,9 @@ function abrirConfirmarAprobarAdmin(solicitud) {
 
   abrirAutorizacionAdmin({
     titulo: 'Aprobar solicitud',
-    mensaje: `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora y ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} quedará registrado(a) como su líder directa.`,
+    mensaje: solicitud.origen === 'publico'
+      ? `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora SIN líder asignada todavía${solicitud.liderIndicado ? ` (indicó que su líder es "${escapeHTMLSolAdmin(solicitud.liderIndicado)}" — verifícalo y asígnalo desde Emprendedoras/Líderes si corresponde)` : ' — pidió que el equipo le asigne una'}.`
+      : `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora y ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} quedará registrado(a) como su líder directa.`,
     onConfirmar: async () => {
 
       const resultado = await aprobarSolicitud(solicitud.id, {
@@ -270,7 +283,9 @@ function mostrarPantallaCredencialesAdmin({ solicitud, persona, credenciales }) 
       <div><span>Usuario</span><strong id="credUsuario">${escapeHTMLSolAdmin(credenciales.usuario)}</strong></div>
       <div><span>Contraseña temporal</span><strong id="credPassword">${escapeHTMLSolAdmin(credenciales.passwordTemporal)}</strong></div>
       <div><span>Rol</span><strong>Emprendedora</strong></div>
-      <div><span>Líder</span><strong>${escapeHTMLSolAdmin(solicitud.solicitanteNombre)}</strong></div>
+      <div><span>Líder</span><strong>${solicitud.origen === 'publico'
+        ? (solicitud.liderIndicado ? `${escapeHTMLSolAdmin(solicitud.liderIndicado)} (sin verificar — asígnalo desde Emprendedoras/Líderes)` : 'Sin asignar')
+        : escapeHTMLSolAdmin(solicitud.solicitanteNombre)}</strong></div>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
@@ -307,7 +322,7 @@ function abrirModalRechazarAdmin(solicitud) {
     <button class="modal-close" data-close>&times;</button>
     <div class="auth-icon danger">!</div>
     <h3>Rechazar solicitud</h3>
-    <p class="modal-sub">Explica por qué se rechaza la solicitud de <strong>${escapeHTMLSolAdmin(solicitud.nombreCompleto)}</strong>. ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} podrá ver este motivo.</p>
+    <p class="modal-sub">Explica por qué se rechaza la solicitud de <strong>${escapeHTMLSolAdmin(solicitud.nombreCompleto)}</strong>.${solicitud.origen === 'publico' ? '' : ` ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} podrá ver este motivo.`}</p>
 
     <label for="motivoRechazoInput">Motivo del rechazo *</label>
     <textarea id="motivoRechazoInput" rows="3" placeholder="Ej. La información proporcionada está incompleta." style="width:100%;border:1px solid #ddd5e3;border-radius:7px;padding:10px 12px;font:inherit;color:var(--mw-heading-d);resize:vertical;"></textarea>

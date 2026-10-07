@@ -142,6 +142,15 @@ service cloud.firestore {
     // Por eso esta regla es intencionalmente amplia (cualquier cuenta
     // autenticada puede leer y escribir) en vez de comparar
     // solicitanteId == request.auth.uid, que hoy nunca coincidiría.
+    //
+    // FEAT-09: el botón "Inscribirse" de login.html (alguien SIN cuenta
+    // todavía, autoregistro) también escribe aquí — ver
+    // crearSolicitudInscripcionPublica. Como nunca hay una cuenta real
+    // de por medio, se destraba con una sesión anónima de Firebase Auth
+    // (iniciarSesionAnonimaSiFalta en js/auth-service.js), que para
+    // estaAutenticado() es indistinguible de cualquier otra sesión —
+    // nunca hizo falta tocar esta regla. Requiere activar el proveedor
+    // "Anonymous" en Firebase Console → Authentication → Sign-in method.
     match /solicitudesInscripcion/{id} {
       allow read, write: if estaAutenticado();
     }

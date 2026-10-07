@@ -214,6 +214,99 @@ async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, sol
 
 }
 
+// FEAT-09 pedida tras lanzar a producción: botón "Inscribirse" en
+// login.html, para que alguien SIN cuenta todavía se registre ella
+// misma — a diferencia de crearSolicitudInscripcion (siempre disparada
+// por una Emprendedora/Líder YA con cuenta, refiriendo a otra persona),
+// aquí quien llena el formulario ES la persona que se quiere inscribir.
+// Por eso solicitanteId queda null (nunca existió una cuenta/sesión real
+// de por medio) y "líder" es un nombre libre que ella misma escribe, sin
+// verificar contra ninguna cuenta — Admin lo revisa en Solicitudes y, si
+// aprueba, usa "Cambiar líder directo" (Emprendedoras/Líderes) para
+// asignar al líder real si corresponde. Ver js/registro-publico.js
+// (login.html) para el formulario de 2 pasos que llama a esto.
+async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, correo, ineFrenteUrl, ineReversoUrl, liderIndicado }) {
+
+  nombreCompleto = String(nombreCompleto || '').trim();
+  telefono = String(telefono || '').trim();
+  correo = String(correo || '').trim();
+  liderIndicado = String(liderIndicado || '').trim();
+
+  if (!nombreCompleto) return { ok: false, error: 'Escribe tu nombre completo.' };
+  if (!telefono) return { ok: false, error: 'Escribe tu número de celular.' };
+  if (!correoValido(correo)) return { ok: false, error: 'Escribe un correo electrónico válido.' };
+  if (!ineFrenteUrl) return { ok: false, error: 'Adjunta la foto del frente de tu identificación oficial (INE).' };
+  if (!ineReversoUrl) return { ok: false, error: 'Adjunta la foto del reverso de tu identificación oficial (INE).' };
+
+  const telefonoNorm = telefono.replace(/\D/g, '');
+  const correoNorm = correo.toLowerCase();
+
+  const solicitudesExistentes = await obtenerSolicitudes();
+  const yaPendiente = solicitudesExistentes.some(s =>
+    s.estado === 'pendiente' &&
+    (s.correo.toLowerCase() === correoNorm || s.telefono.replace(/\D/g, '') === telefonoNorm)
+  );
+  if (yaPendiente) {
+    return { ok: false, error: 'Ya existe una solicitud pendiente con este correo o teléfono.' };
+  }
+
+  if (typeof existePersonaConCorreoOTelefono === 'function' && existePersonaConCorreoOTelefono(correo, telefono)) {
+    return { ok: false, error: 'Ya existe una cuenta registrada con ese correo o teléfono.' };
+  }
+
+  const datosSolicitud = {
+    solicitanteId: null,
+    solicitanteNombre: nombreCompleto,
+    solicitanteRol: null,
+    origen: 'publico',
+    liderIndicado: liderIndicado || null,
+
+    nombreCompleto,
+    telefono,
+    correo,
+    ineFrenteUrl,
+    ineReversoUrl,
+
+    estado: 'pendiente',
+
+    revisadoPor: null,
+    fechaRevision: null,
+
+    motivoRechazo: null,
+
+    emprendedoraCreadaId: null,
+    credenciales: null
+  };
+
+  let solicitud;
+
+  if (dbFirestore) {
+    const docRef = await dbFirestore.collection(SOLICITUDES_COLECCION_FIRESTORE).add({
+      ...datosSolicitud,
+      fechaSolicitud: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    solicitud = { ...datosSolicitud, id: docRef.id, fechaSolicitud: new Date().toISOString() };
+  } else {
+    solicitud = { ...datosSolicitud, id: `SOL-${Date.now()}`, fechaSolicitud: new Date().toISOString() };
+    const solicitudes = obtenerSolicitudesLocal();
+    solicitudes.unshift(solicitud);
+    guardarSolicitudesLocal(solicitudes);
+  }
+
+  if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_creada'))) {
+    agregarNotificacion({
+      texto: `${nombreCompleto} se registró directamente desde el sitio${liderIndicado ? ` — indicó que su líder es "${liderIndicado}"` : ' — no indicó líder'}. Revisa su solicitud.`,
+      link: `admin-solicitudes.html?solicitud=${solicitud.id}`,
+      paraId: 'admin01',
+      rolDestino: 'admin',
+      origen: 'emprendedora_lider'
+    });
+  }
+
+  return { ok: true, solicitud };
+
+}
+
 // ============================================================
 // GENERACIÓN DE CUENTA (usuario + contraseña temporal)
 // ============================================================
@@ -360,11 +453,19 @@ async function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
       rol: 'admin',
       modulo: 'solicitudes',
       accion: 'aprobacion',
-      descripcion: `Solicitud de "${solicitud.nombreCompleto}" aprobada — cuenta ${credenciales.usuario} creada, líder directa: ${solicitud.solicitanteNombre}`
+      descripcion: solicitud.origen === 'publico'
+        ? `Solicitud de "${solicitud.nombreCompleto}" (autoregistro) aprobada — cuenta ${credenciales.usuario} creada, sin líder asignada todavía${solicitud.liderIndicado ? ` (indicó como líder a "${solicitud.liderIndicado}", sin verificar)` : ''}`
+        : `Solicitud de "${solicitud.nombreCompleto}" aprobada — cuenta ${credenciales.usuario} creada, líder directa: ${solicitud.solicitanteNombre}`
     });
   }
 
-  if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_aprobada'))) {
+  // FEAT-09: una solicitud de autoregistro (origen 'publico', ver
+  // crearSolicitudInscripcionPublica) nunca tiene solicitanteId — quien
+  // la llenó todavía no tenía ninguna cuenta en el portal, así que no
+  // hay a quién avisarle aquí (y un paraId vacío haría que CUALQUIER
+  // Emprendedora/Líder viera este aviso, ver obtenerNotificacionesPorRol
+  // en notificaciones-modelo.js).
+  if (solicitud.solicitanteId && typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_aprobada'))) {
     agregarNotificacion({
       texto: `Solicitud aprobada: la solicitud para inscribir a ${solicitud.nombreCompleto} fue aprobada. La nueva Emprendedora ya tiene una cuenta y ha sido agregada a tu equipo.`,
       link: 'cuenta',
@@ -418,7 +519,10 @@ async function rechazarSolicitud(solicitudId, { adminId, adminNombre, motivo }) 
     });
   }
 
-  if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_rechazada'))) {
+  // Mismo motivo que en aprobarSolicitud: una solicitud de autoregistro
+  // (origen 'publico') no tiene solicitanteId — no hay una cuenta del
+  // portal a la que avisarle.
+  if (solicitud.solicitanteId && typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_rechazada'))) {
     agregarNotificacion({
       texto: `Solicitud rechazada: la solicitud para inscribir a ${solicitud.nombreCompleto} fue rechazada. Motivo: ${motivo}`,
       link: 'cuenta',
