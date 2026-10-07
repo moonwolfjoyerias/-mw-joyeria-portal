@@ -1497,8 +1497,9 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
           ${lideresParaSelect.map(l => `<option value="${l.id}">${escapeHTMLPersonas(nombreCompletoPersona(l))}</option>`).join('')}
         </select>
       </label>
+      <label class="cfg-span-2">Contraseña (opcional)<input type="text" id="cfgNuevaPasswordPersona" placeholder="Déjalo vacío para usar la automática"></label>
     </div>
-    <div class="modal-note">El usuario y la contraseña temporal se generan automáticamente — mismo esquema que ya usa Solicitudes de inscripción (usuario MW#### + iniciales del nombre).</div>
+    <div class="modal-note">El usuario se genera automáticamente (MW#### + iniciales del nombre). Si no escribes una contraseña aquí, también se genera automáticamente con ese mismo esquema.</div>
     <div id="cfgCrearPersonaError" class="auth-error" style="display:none;"></div>
     <div style="display:flex;gap:10px;margin-top:14px;">
       <button class="btn btn-outline" style="flex:1;" id="cfgCancelarCrearPersonaBtn" type="button">Cancelar</button>
@@ -1519,6 +1520,7 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
     const correo = document.getElementById('cfgNuevoCorreo').value.trim();
     const tipo = document.getElementById('cfgNuevoTipo').value;
     const liderId = document.getElementById('cfgNuevoLiderId').value || null;
+    const passwordPersonalizada = document.getElementById('cfgNuevaPasswordPersona').value.trim();
     const error = document.getElementById('cfgCrearPersonaError');
     const btnConfirmar = document.getElementById('cfgConfirmarCrearPersonaBtn');
 
@@ -1532,19 +1534,30 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
       error.textContent = 'Ya existe una cuenta con ese correo o teléfono.';
       return;
     }
+    if (passwordPersonalizada && passwordPersonalizada.length < 6) {
+      error.style.display = 'block';
+      error.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+      return;
+    }
 
     error.style.display = 'none';
     if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'Creando...'; }
 
     const nombreCompleto = [nombre, apellidos].filter(Boolean).join(' ');
     const credenciales = await generarCredenciales(nombreCompleto);
+    // BUG reportado tras lanzar a producción: este modal nunca tuvo un
+    // campo de contraseña — siempre forzaba la automática (usuario +
+    // iniciales), sin forma de ponerle una a mano. passwordPersonalizada
+    // (capturado arriba) la sustituye cuando Admin escribió algo; si la
+    // deja vacía, el comportamiento es exactamente el de antes.
+    const passwordFinal = passwordPersonalizada || credenciales.passwordTemporal;
 
     const nuevaPersona = crearPersonaEjemplo({
       id: `persona-${Date.now()}`,
       nombre, apellidos, tipo, categoria: 'normal', estado: 'activa',
       telefono, correo,
       usuario: credenciales.usuario,
-      password: credenciales.passwordTemporal,
+      password: passwordFinal,
       numeroCuenta: credenciales.numeroCuenta,
       liderId, invitadaPor: liderId
     });
@@ -1555,7 +1568,7 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
     // nada local a medias — igual que ya hace crearCuentaInterna.
     if (typeof crearAccesoFirebaseParaPersona === 'function') {
       try {
-        await crearAccesoFirebaseParaPersona(nuevaPersona, credenciales.passwordTemporal);
+        await crearAccesoFirebaseParaPersona(nuevaPersona, passwordFinal);
       } catch (err) {
         error.style.display = 'block';
         error.textContent = (err && err.code === 'auth/email-already-in-use')
@@ -1590,7 +1603,7 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
       <p class="modal-sub">${escapeHTMLPersonas(nombreCompleto)} — ${tipo === 'lider' ? 'Líder' : 'Emprendedora'}</p>
       <div class="cfg-form-grid" style="margin-top:10px;">
         <label class="cfg-span-2">Usuario<input type="text" readonly value="${escapeAttributePersonas(credenciales.usuario)}"></label>
-        <label class="cfg-span-2">Contraseña temporal<input type="text" readonly value="${escapeAttributePersonas(credenciales.passwordTemporal)}"></label>
+        <label class="cfg-span-2">Contraseña${passwordPersonalizada ? '' : ' temporal'}<input type="text" readonly value="${escapeAttributePersonas(passwordFinal)}"></label>
       </div>
       <div class="modal-note">Anótalo o compártelo ahora — puedes volver a consultarlo/restablecerlo después desde su perfil en Emprendedoras/Líderes.</div>
       <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="cfgCerrarCredencialesPersonaBtn" type="button">Listo</button>
@@ -1803,6 +1816,7 @@ function abrirModalResetPassword(tipo, id) {
     <label class="cfg-field-label">Nueva contraseña</label>
     <input type="text" id="cfgNuevaPasswordInput" value="${escapeAttributePersonas(sugerida)}">
     <div class="modal-note"><strong>Compártela de forma segura.</strong> Quedará guardada aquí mismo por si la necesitas consultar después.</div>
+    <div id="cfgResetPasswordError" class="auth-error" style="display:none;"></div>
     <div style="display:flex;gap:10px;margin-top:14px;">
       <button class="btn btn-outline" style="flex:1;" id="cfgCancelarResetBtn" type="button">Cancelar</button>
       <button class="btn btn-primary" style="flex:1;" id="cfgConfirmarResetBtn" type="button">Guardar</button>
@@ -1817,10 +1831,19 @@ function abrirModalResetPassword(tipo, id) {
   document.getElementById('cfgConfirmarResetBtn')?.addEventListener('click', () => {
 
     const nueva = document.getElementById('cfgNuevaPasswordInput').value.trim();
+    const errorEl = document.getElementById('cfgResetPasswordError');
     if (!nueva) return;
 
     const resultado = tipo === 'persona' ? restablecerPasswordPersona(id, nueva) : restablecerPasswordCuentaInterna(id, nueva);
-    if (!resultado.ok) return;
+    // BUG reportado tras lanzar a producción: cuando esto fallaba (ej.
+    // una cuenta con acceso real en Firebase, ver ambas funciones de
+    // restablecerPassword*), el clic simplemente no hacía nada — ningún
+    // mensaje, el modal se quedaba ahí tal cual, como si el botón
+    // estuviera roto. Ahora SÍ se muestra el motivo.
+    if (!resultado.ok) {
+      if (errorEl) { errorEl.style.display = 'block'; errorEl.textContent = resultado.error || 'No se pudo cambiar la contraseña.'; }
+      return;
+    }
 
     if (tipo === 'persona' && typeof registrarAuditoriaAdmin === 'function') {
       registrarAuditoriaAdmin({

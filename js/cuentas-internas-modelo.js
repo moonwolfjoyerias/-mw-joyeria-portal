@@ -369,7 +369,7 @@ function restablecerPasswordCuentaInterna(id, nuevoPassword) {
   if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
   if (!nuevoPassword) return { ok: false, error: 'La nueva contraseña no puede estar vacía.' };
   if (cuenta.firebaseUid) {
-    return { ok: false, error: 'Esta cuenta ya tiene acceso real — su contraseña no se puede cambiar desde aquí. Pide el cambio directamente a quien administra Firebase.' };
+    return { ok: false, error: `Esta cuenta ya tiene acceso real — su contraseña no se puede cambiar desde aquí. Pide a quien tenga la clave de servicio de Firebase que corra: node scripts/resetear-password.js <service-account.json> ${cuenta.usuario} <nueva-contraseña>` };
   }
 
   cuenta.password = nuevoPassword;
