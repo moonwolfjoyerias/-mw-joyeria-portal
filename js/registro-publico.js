@@ -236,18 +236,33 @@ async function enviarRegistroPublico(liderIndicado) {
 
   } catch (error) {
     // BUG reportado: siempre decía "revisa tu conexión", aunque la
-    // causa real más probable no sea de red — el error más común aquí
-    // es que el proveedor "Anonymous" de Firebase Auth todavía no esté
-    // activado (Firebase Console → Authentication → Sign-in method),
-    // necesario para que iniciarSesionAnonimaSiFalta funcione — y ESE
-    // error sí distingue código ('auth/operation-not-allowed'). console.error
-    // deja el detalle real para quien revise la consola del navegador.
+    // causa real casi nunca es de red. Dos sospechosos conocidos, cada
+    // uno con su propio código de error:
+    //  - 'auth/operation-not-allowed': el proveedor "Anonymous" de
+    //    Firebase Auth no está activado (Firebase Console →
+    //    Authentication → Sign-in method) — necesario para
+    //    iniciarSesionAnonimaSiFalta.
+    //  - cualquier 'storage/...': Cloud Storage for Firebase nunca se
+    //    activó del todo — SETUP-FIREBASE.md ya documentaba que este
+    //    paso se saltó a propósito ("si pide Blaze, ignóralo, no lo
+    //    necesitas para esta fase"), pero las fotos de INE (aquí y en
+    //    el "Solicitar inscripción" de Mi cuenta de Emprendedora/Líder,
+    //    mismo guardarBlobDocumento) sí lo necesitan en cuanto hay
+    //    Firebase real conectado — storageFirebase SÍ queda truthy con
+    //    solo llamar firebase.storage() (no valida nada del lado del
+    //    servidor en ese momento), así que el error solo aparece hasta
+    //    este primer intento real de subir un archivo.
+    // console.error deja el detalle completo para la consola del navegador.
     console.error('No se pudo enviar la solicitud de inscripción:', error);
     const errorEl = document.getElementById('regPaso2Error');
     if (errorEl) {
-      errorEl.textContent = (error && error.code === 'auth/operation-not-allowed')
-        ? 'No se pudo enviar tu solicitud — falta un paso de configuración en el sitio. Avísale a soporte.'
-        : 'No se pudo enviar tu solicitud. Espera unos segundos e inténtalo de nuevo.';
+      if (error && error.code === 'auth/operation-not-allowed') {
+        errorEl.textContent = 'No se pudo enviar tu solicitud — falta activar el acceso anónimo en Firebase. Avísale a soporte.';
+      } else if (error && typeof error.code === 'string' && error.code.startsWith('storage/')) {
+        errorEl.textContent = 'No se pudo subir tu identificación — falta activar Cloud Storage en Firebase. Avísale a soporte.';
+      } else {
+        errorEl.textContent = 'No se pudo enviar tu solicitud. Espera unos segundos e inténtalo de nuevo.';
+      }
       errorEl.style.display = 'block';
     }
     botones.forEach(b => { b.disabled = false; });
