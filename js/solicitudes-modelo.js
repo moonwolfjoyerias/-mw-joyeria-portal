@@ -293,8 +293,11 @@ async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, corr
     guardarSolicitudesLocal(solicitudes);
   }
 
-  if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_creada'))) {
-    agregarNotificacion({
+  // agregarNotificacionDirecta (no agregarNotificacion): esta función
+  // corre en login.html, sin sesión hasta hace un instante — ver su
+  // comentario en notificaciones-modelo.js.
+  if (typeof agregarNotificacionDirecta === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_creada'))) {
+    await agregarNotificacionDirecta({
       texto: `${nombreCompleto} se registró directamente desde el sitio${liderIndicado ? ` — indicó que su líder es "${liderIndicado}"` : ' — no indicó líder'}. Revisa su solicitud.`,
       link: `admin-solicitudes.html?solicitud=${solicitud.id}`,
       paraId: 'admin01',

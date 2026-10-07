@@ -125,9 +125,8 @@ function guardarNotificacionesCompartidas(lista) {
 // del catálogo para que el panel de notificaciones (portal-common.js)
 // arme el link directo a apartarlo (?apartar=), no solo un aviso
 // genérico que la obliga a buscarlo ella misma.
-function agregarNotificacion({ texto, link, paraId, rolDestino, tipo, origen, productoId }) {
-  const lista = obtenerNotificacionesCompartidas();
-  const nueva = normalizarNotificacion({
+function construirNotificacion({ texto, link, paraId, rolDestino, tipo, origen, productoId }) {
+  return normalizarNotificacion({
     id: `NOTIF-${Date.now()}`,
     texto,
     link: link || '',
@@ -138,10 +137,43 @@ function agregarNotificacion({ texto, link, paraId, rolDestino, tipo, origen, pr
     productoId: productoId || null,
     rolDestino: ROLES_NOTIF_VALIDOS.includes(rolDestino) ? rolDestino : 'emprendedora_lider'
   });
+}
+
+function agregarNotificacion(datos) {
+  const lista = obtenerNotificacionesCompartidas();
+  const nueva = construirNotificacion(datos);
 
   const claveNueva = claveUnicaNotificacion(nueva);
   if (lista.some(notificacion => claveUnicaNotificacion(notificacion) === claveNueva)) return;
 
+  lista.unshift(nueva);
+  guardarNotificacionesCompartidas(lista);
+}
+
+// FEAT-09: variante segura para cuando quien llama NO puede garantizar
+// que NOTIFICACIONES_CACHE esté al día — hoy solo login.html →
+// "Inscribirse" (crearSolicitudInscripcionPublica), una página donde
+// nadie ha iniciado sesión todavía, así que la primera carga de esa
+// caché (sin sesión) se rechaza por las reglas y queda vacía. El camino
+// normal (agregarNotificacion → guardarNotificacionesCompartidas)
+// reescribe TODA la colección comparándola contra esa lista local — si
+// está vacía o incompleta, borraría de Firestore cualquier notificación
+// real que no reconozca ahí, de TODOS los roles. Esta variante escribe
+// SOLO el documento nuevo (ver agregarNotificacionDirectaAFirestore en
+// notificaciones-firestore-sync.js), sin tocar ni depender de nada más
+// que ya exista. Nunca truena: si no hay Firebase conectado (modo
+// demo) usa el camino normal de siempre, que ahí sí es seguro.
+async function agregarNotificacionDirecta(datos) {
+  const nueva = construirNotificacion(datos);
+
+  if (typeof dbFirestore !== 'undefined' && dbFirestore) {
+    if (typeof agregarNotificacionDirectaAFirestore === 'function') {
+      await agregarNotificacionDirectaAFirestore(nueva);
+    }
+    return;
+  }
+
+  const lista = obtenerNotificacionesCompartidas();
   lista.unshift(nueva);
   guardarNotificacionesCompartidas(lista);
 }
