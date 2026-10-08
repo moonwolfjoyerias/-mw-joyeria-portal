@@ -3036,6 +3036,65 @@ img.zoomable-photo { cursor: zoom-in; }
   box-shadow: 0 8px 18px rgba(94, 26, 138, 0.08);
 }
 
+/* Galería de fotos de producto (varias fotos, cada variante elige cuál
+   usar) — sustituye la foto única en el formulario de Admin/Encargado/
+   Staff. */
+.product-gallery-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--mw-border);
+  background: linear-gradient(135deg, var(--mw-surface-soft), var(--mw-lilac-soft));
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+
+.product-gallery-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gallery-thumb {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--mw-border);
+  overflow: hidden;
+}
+
+.gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-thumb-empty img {
+  object-fit: contain;
+  padding: 10px;
+  opacity: 0.5;
+}
+
+.gallery-thumb-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  line-height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+.gallery-thumb-remove:hover { background: rgba(0, 0, 0, 0.75); }
+
 .catalog-modal.modal-box {
   width: min(620px, 100%);
   border-radius: 15px;
@@ -3179,6 +3238,41 @@ img.zoomable-photo { cursor: zoom-in; }
   .variante-campos { grid-template-columns: 1fr; align-items: stretch; }
   .variante-quitar { width: 100%; }
 }
+
+/* Selector de foto por variante (dentro de cada fila de variante) —
+   miniaturas clicables de la galería ya cargada del producto. */
+.variante-foto-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.variante-foto-picker-label {
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  color: var(--mwv-776c82);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 4px;
+}
+
+.variante-foto-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface);
+  opacity: 0.6;
+  transition: border-color 0.15s ease, opacity 0.15s ease;
+}
+.variante-foto-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.variante-foto-thumb:hover { opacity: 0.85; }
+.variante-foto-thumb.selected { border-color: var(--mwv-8b55ad); opacity: 1; }
 
 .variante-stock-row {
   display: flex;
@@ -3479,6 +3573,39 @@ img.zoomable-photo { cursor: zoom-in; }
 .detail-grid strong {
   font-size: 11px;
   color: var(--mwv-39224f);
+}
+
+/* Modal enriquecido de Apartar (solo Emprendedora/Líder, ver
+   js/catalogo.js → abrirModalDetalleProducto) — foto grande a un lado
+   y la info completa del artículo al otro; apilado en celular. */
+.detalle-producto-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 22px;
+  align-items: start;
+}
+
+.detalle-producto-foto {
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--mw-surface-soft);
+  border: 1px solid var(--mw-border);
+  aspect-ratio: 1 / 1;
+}
+
+.detalle-producto-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.detalle-producto-foto img.foto-generica { opacity: 0.35; }
+
+.detalle-producto-info h3 { margin: 0 0 10px; }
+
+@media (max-width: 720px) {
+  .detalle-producto-layout { grid-template-columns: 1fr; }
 }
 
 .section-head {

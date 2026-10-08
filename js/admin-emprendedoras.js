@@ -992,7 +992,7 @@ function renderSeccionComprasPersona(persona) {
           <strong>${escapeHTMLPersonas(pieza.producto)}</strong>
           <strong>$${formatearDineroPersonas(pieza.total)} MXN</strong>
         </div>
-        <small>${escapeHTMLPersonas(pieza.variante || 'Sin variante')} · Ventana ${escapeHTMLPersonas(ventana.id)} · ${formatearFechaPersonas(pieza.fechaSolicitud || ventana.fechaInicio)}</small>
+        <small>${escapeHTMLPersonas([pieza.colorOro, pieza.variante].filter(Boolean).join(' · ') || 'Sin variante')} · Ventana ${escapeHTMLPersonas(ventana.id)} · ${formatearFechaPersonas(pieza.fechaSolicitud || ventana.fechaInicio)}</small>
       </div>
     `).join('')}
   `;
@@ -1039,7 +1039,7 @@ function renderSeccionApartadosPersona(persona) {
         <div class="apartado-piezas">
           ${(v.apartados || []).map(pieza => `
             <div class="apartado-pieza-row">
-              <span>${escapeHTMLPersonas(pieza.producto)} ${pieza.variante ? `· ${escapeHTMLPersonas(pieza.variante)}` : ''}</span>
+              <span>${escapeHTMLPersonas(pieza.producto)}${[pieza.colorOro, pieza.variante].filter(Boolean).length ? ` · ${escapeHTMLPersonas([pieza.colorOro, pieza.variante].filter(Boolean).join(' · '))}` : ''}</span>
               <span>$${formatearDineroPersonas(pieza.saldo)} MXN saldo · ${ESTADOS_PIEZA_MODELO[pieza.estado] || pieza.estado}</span>
             </div>
           `).join('') || '<div class="apartado-pieza-row"><span>Sin piezas registradas</span></div>'}

@@ -189,6 +189,7 @@ function abrirModalNuevaVentana() {
         productoId, varianteId,
         producto: productoElegido.nombre,
         variante: etiquetaVariante(varianteElegida),
+        colorOro: productoElegido.colorOro || '',
         personaId: personaSeleccionadaNuevaVentana ? personaSeleccionadaNuevaVentana.id : null
       }
     });
@@ -520,7 +521,7 @@ async function ejecutarAccion(personal) {
 
   if (accionPendiente.tipo === "nueva-ventana") {
 
-    const { nombre, telefono, categoria, producto, variante, total, productoId, varianteId, personaId } = accionPendiente.datos;
+    const { nombre, telefono, categoria, producto, variante, colorOro, total, productoId, varianteId, personaId } = accionPendiente.datos;
     // LOG-10: si Staff eligió una cuenta real del autocompletado, usa
     // su id real (igual que ya hace catalogo.js para el autoservicio)
     // en vez del slug derivado del nombre — así esta ventana también
@@ -534,7 +535,7 @@ async function ejecutarAccion(personal) {
 
     if (ventanaExistente) {
 
-      const resultadoPiezaExistente = await agregarPiezaAVentana(ventanaExistente, { producto, variante, total, productoId, varianteId }, personal);
+      const resultadoPiezaExistente = await agregarPiezaAVentana(ventanaExistente, { producto, variante, colorOro, total, productoId, varianteId }, personal);
 
       if (!resultadoPiezaExistente.ok) {
         cerrarModal();
@@ -564,7 +565,7 @@ async function ejecutarAccion(personal) {
     }
 
     const nuevaVentana = abrirVentanaApartado({ usuarioId, usuarioNombre: nombre, telefono, categoria }, personal);
-    const resultadoPieza = await agregarPiezaAVentana(nuevaVentana, { producto, variante, total, productoId, varianteId }, personal);
+    const resultadoPieza = await agregarPiezaAVentana(nuevaVentana, { producto, variante, colorOro, total, productoId, varianteId }, personal);
 
     if (!resultadoPieza.ok) {
       cerrarModal();

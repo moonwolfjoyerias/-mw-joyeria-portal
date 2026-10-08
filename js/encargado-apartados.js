@@ -182,6 +182,7 @@ function abrirModalNuevaVentana() {
 
     const producto = productoElegido.nombre;
     const variante = etiquetaVariante(varianteElegida);
+    const colorOro = productoElegido.colorOro || '';
 
     const personaId = personaSeleccionadaNuevaVentana ? personaSeleccionadaNuevaVentana.id : null;
     const usuarioId = personaId || slugUsuarioId(nombre);
@@ -192,14 +193,14 @@ function abrirModalNuevaVentana() {
       mensaje: tieneCredito
         ? `Estás a punto de abrir una nueva ventana de apartado para "${nombre}", reutilizando su crédito guardado.`
         : `Estás a punto de abrir una nueva ventana de apartado para "${nombre}" con la pieza "${producto}".`,
-      onConfirmar: () => ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total, productoId, varianteId, personaId })
+      onConfirmar: () => ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, colorOro, total, productoId, varianteId, personaId })
     });
 
   });
 
 }
 
-async function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, total, productoId, varianteId, personaId }) {
+async function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, colorOro, total, productoId, varianteId, personaId }) {
 
   const usuarioId = personaId || slugUsuarioId(nombre);
 
@@ -210,7 +211,7 @@ async function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, var
 
   if (ventanaExistente) {
 
-    const resultadoPiezaExistente = await agregarPiezaAVentana(ventanaExistente, { producto, variante, total, productoId, varianteId }, ENCARGADO_EMPLEADO);
+    const resultadoPiezaExistente = await agregarPiezaAVentana(ventanaExistente, { producto, variante, colorOro, total, productoId, varianteId }, ENCARGADO_EMPLEADO);
 
     if (!resultadoPiezaExistente.ok) {
       cerrarModal();
@@ -235,7 +236,7 @@ async function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, var
   }
 
   const nuevaVentana = abrirVentanaApartado({ usuarioId, usuarioNombre: nombre, telefono, categoria }, ENCARGADO_EMPLEADO);
-  const resultadoPieza = await agregarPiezaAVentana(nuevaVentana, { producto, variante, total, productoId, varianteId }, ENCARGADO_EMPLEADO);
+  const resultadoPieza = await agregarPiezaAVentana(nuevaVentana, { producto, variante, colorOro, total, productoId, varianteId }, ENCARGADO_EMPLEADO);
 
   if (!resultadoPieza.ok) {
     cerrarModal();

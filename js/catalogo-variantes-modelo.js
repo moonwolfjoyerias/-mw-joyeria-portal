@@ -1,17 +1,25 @@
-// MW JOYERÍA — Catálogo: variantes reales Modelo → Color → Talla
+// MW JOYERÍA — Catálogo: variantes reales Modelo → Color(piedra) → Talla
 //
 // Antes cada producto era un registro plano con UN solo colorOro, UNA
 // sola talla y UN solo stock — imposible reflejar que "Anillo Corazón"
 // existe en Amarillo talla 6 (18 piezas) Y en Blanco talla 7 (5 piezas)
 // a la vez. Ahora cada producto ("modelo") tiene un arreglo `variantes`:
-// cada elemento es una combinación Color+Talla con su propio stock —
-// exactamente la jerarquía Modelo→Color→Talla que pide la Sección 4.3
-// del documento de requisitos ("cantidad por combinación color+talla").
+// cada elemento es una combinación Color(piedra)+Talla con su propio
+// stock — la jerarquía Modelo→Color→Talla que pide la Sección 4.3 del
+// documento de requisitos ("cantidad por combinación color+talla").
 //
-// Productos sin color relevante (acero, exhibidores, souvenirs...) o sin
-// talla (la mayoría fuera de Anillos/Cadenas) simplemente guardan
-// colorOro/talla vacíos en su(s) variante(s) — la forma es la misma para
-// todos, solo cambia si esos campos están vacíos o no.
+// El color de ORO (laminado) es del PRODUCTO, no de la variante
+// (producto.colorOro) — llegan piezas con el mismo laminado pero
+// zirconias/piedras de distinto color, y esas sí son variantes reales
+// (variante.color, texto libre, sin lista fija). El producto también
+// tiene una `galeria` (array de {id, src}) — cada variante puede elegir
+// cuál foto de esa galería le corresponde (`variante.fotoId`); sin
+// elegir ninguna, se usa la primera foto de la galería.
+//
+// Productos sin color de piedra relevante (acero, exhibidores,
+// souvenirs...) o sin talla (la mayoría fuera de Anillos/Cadenas)
+// simplemente guardan color/talla vacíos en su(s) variante(s) — la forma
+// es la misma para todos, solo cambia si esos campos están vacíos o no.
 //
 // Comparten este módulo los 3 controladores de catálogo operativo
 // (staff/encargado/admin-catalogo.js — casi copias entre sí, ver sus
@@ -33,29 +41,69 @@
 function crearVarianteProducto(datos = {}) {
   return {
     id: datos.id || `v-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    colorOro: datos.colorOro || '',
+    color: datos.color || '', // color de la piedra/zirconia (texto libre) — el color de oro ya no vive aquí, ver producto.colorOro
     talla: datos.talla || '',
-    stock: Math.max(0, Math.floor(Number(datos.stock) || 0))
+    stock: Math.max(0, Math.floor(Number(datos.stock) || 0)),
+    fotoId: datos.fotoId || null // referencia a una foto de producto.galeria; null = usa la foto principal del producto
   };
 }
 
-// Compatibilidad hacia atrás: un producto sembrado antes de esta
-// migración solo tiene colorOro/talla/stock planos — se convierte a una
-// única variante en el momento de leerlo, nunca se pierde información.
+// Compatibilidad hacia atrás, migración progresiva (nunca se pierde
+// información, nunca se escribe a Firestore aquí — solo en memoria al
+// leer; el próximo guardado real de este producto persiste la forma
+// nueva completa):
+// - colorOro pasa de la variante al producto (si el producto no lo
+//   tenía ya, lo toma de la primera variante vieja).
+// - galeria (array de fotos) se deriva de la antigua foto única
+//   `imagen` si el producto no tenía ya un array de galería.
+// - cada variante gana un campo `color` (piedra/zirconia) aunque antes
+//   solo tuviera colorOro — colorOro de la variante vieja se deja intacto,
+//   sin usarse, por si algo no migrado todavía lo lee.
 function migrarProductoAVariantes(producto) {
-  if (Array.isArray(producto.variantes)) return producto;
-  return {
-    ...producto,
-    variantes: [crearVarianteProducto({
-      colorOro: producto.colorOro || '',
-      talla: producto.talla || '',
-      stock: producto.stock || 0
-    })]
-  };
+  const variantesOriginales = Array.isArray(producto.variantes)
+    ? producto.variantes
+    : [crearVarianteProducto({
+        colorOro: producto.colorOro || '',
+        talla: producto.talla || '',
+        stock: producto.stock || 0
+      })];
+
+  const colorOro = producto.colorOro !== undefined && producto.colorOro !== null
+    ? producto.colorOro
+    : (variantesOriginales[0]?.colorOro || '');
+
+  const galeria = Array.isArray(producto.galeria)
+    ? producto.galeria
+    : (producto.imagen ? [{ id: 'foto-legado', src: producto.imagen }] : []);
+
+  const variantes = variantesOriginales.map(v => ({
+    ...v,
+    color: v.color !== undefined ? v.color : '',
+    fotoId: v.fotoId !== undefined ? v.fotoId : null
+  }));
+
+  return { ...producto, colorOro, galeria, variantes };
 }
 
 function etiquetaVariante(variante) {
-  return [variante.colorOro, variante.talla].filter(Boolean).join(' · ') || 'Única';
+  return [variante.color, variante.talla].filter(Boolean).join(' · ') || 'Única';
+}
+
+// Primera foto de la galería (ya migrada) del producto, o '' si no tiene ninguna.
+function fotoPrincipalProducto(producto) {
+  const p = migrarProductoAVariantes(producto);
+  return p.galeria[0]?.src || '';
+}
+
+// Foto asignada a esta variante (por fotoId) si existe en la galería del
+// producto; si la variante no tiene foto propia, usa la foto principal.
+function fotoVarianteProducto(producto, variante) {
+  const p = migrarProductoAVariantes(producto);
+  if (variante && variante.fotoId) {
+    const foto = p.galeria.find(f => f.id === variante.fotoId);
+    if (foto) return foto.src;
+  }
+  return fotoPrincipalProducto(p);
 }
 
 function stockTotalProducto(producto) {

@@ -170,7 +170,7 @@ function fotoPiezaApartado(pieza) {
   const producto = typeof obtenerCatalogoStaffStorage === 'function'
     ? obtenerCatalogoStaffStorage().find(p => p.id === pieza.productoId)
     : null;
-  return normalizarImagenApartado(producto?.imagen);
+  return normalizarImagenApartado(producto && typeof fotoPrincipalProducto === 'function' ? fotoPrincipalProducto(producto) : producto?.imagen);
 }
 
 function esFotoGenericaApartado(foto) {
@@ -203,7 +203,7 @@ function renderApartados() {
       <div class="apartado-photo"><img src="${foto}" alt="${escapeAttribute(pieza.producto)}" class="${generica ? 'foto-generica' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(pieza.producto)}"`}></div>
       <div class="apartado-info">
         <h4>${escapeHTML(pieza.producto)}</h4>
-        <span class="variant">${escapeHTML(pieza.variante)}</span>
+        <span class="variant">${escapeHTML([pieza.colorOro, pieza.variante].filter(Boolean).join(' · '))}</span>
       </div>
       <div class="apartado-prices">
         <span class="price-emprendedora">$${pieza.total} MXN</span>

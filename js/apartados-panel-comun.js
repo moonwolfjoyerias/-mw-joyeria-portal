@@ -35,7 +35,7 @@ function fotoPiezaApartadoPanel(pieza) {
   const producto = typeof obtenerCatalogoStaffStorage === 'function'
     ? obtenerCatalogoStaffStorage().find(p => p.id === pieza.productoId)
     : null;
-  return normalizarImagenApartadoPanel(producto?.imagen);
+  return normalizarImagenApartadoPanel(producto && typeof fotoPrincipalProducto === 'function' ? fotoPrincipalProducto(producto) : producto?.imagen);
 }
 
 // LOG-11 de la auditoría: expandir la fila para ver sus piezas ya
@@ -202,7 +202,7 @@ function crearFilaDetalle(v) {
         <div class="piece-thumb"><img src="${foto}" alt="${escapeAttribute(p.producto)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;${generica ? 'opacity:.35;' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(p.producto)}"`}></div>
         <div>
           <strong>${escapeHTML(p.producto)}</strong>
-          <small>${escapeHTML(p.variante || "")} · $${Number(p.total).toLocaleString("es-MX")} MXN</small>
+          <small>${escapeHTML([p.colorOro, p.variante].filter(Boolean).join(" · "))} · $${Number(p.total).toLocaleString("es-MX")} MXN</small>
           <div style="margin-top:4px;">
             <span class="status ${estadoPieza.clase}">${estadoPieza.texto}</span>
           </div>

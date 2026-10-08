@@ -188,9 +188,10 @@ function renderProducto(p) {
     stockClass = 'stock-low';
   }
 
-  const imagen = normalizarImagenProducto(p.imagen);
+  const imagen = normalizarImagenProducto(p);
   const disponibilidad = stockTotal > 0 ? 'Disponible' : 'Agotado';
-  const colorTalla = p.variantes.map(v => `${etiquetaVariante(v)} (${v.stock})`).join(' · ') || 'Sin variantes';
+  const variantesTxt = p.variantes.map(v => `${etiquetaVariante(v)} (${v.stock})`).join(' · ') || 'Sin variantes';
+  const colorTalla = p.colorOro ? `${p.colorOro} · ${variantesTxt}` : variantesTxt;
 
   return `
     <tr>
@@ -231,8 +232,10 @@ function renderProducto(p) {
 // de guardar sí la pide, con el nombre real del producto.
 // ============================================================
 
-let imagenTemporalAdmin = '';
+let galeriaTemporalAdmin = [];
 let variantesTemporalAdmin = [];
+const CATALOGO_GALERIA_MAX_FOTOS = 5;
+const CATALOGO_GALERIA_TAMANO_MAX = 700000; // suma de caracteres base64 de la galería — ver nota en catalogo-firestore-sync.js (1 doc por producto, límite ~1MB)
 
 function abrirModalProducto(producto = null) {
 
@@ -245,10 +248,10 @@ function abrirModalProducto(producto = null) {
   // quita en cerrarModal() para no afectar a los demás.
   box.classList.add('modal-box-wide');
 
-  imagenProcesandoFoto = null;
+  fotosProcesandoAdmin = [];
 
   const editando = !!producto;
-  imagenTemporalAdmin = normalizarImagenProducto(producto?.imagen);
+  galeriaTemporalAdmin = producto ? migrarProductoAVariantes(producto).galeria.map(f => ({ ...f })) : [];
   variantesTemporalAdmin = producto?.variantes?.length
     ? producto.variantes.map(v => ({ ...v }))
     : [crearVarianteProducto()];
@@ -263,18 +266,16 @@ function abrirModalProducto(producto = null) {
     <h3>${editando ? 'Editar producto' : 'Agregar producto'}</h3>
     <p class="modal-sub">${editando ? 'Modifica la información del artículo.' : 'Agrega un nuevo artículo al catálogo de MW Joyería.'}</p>
 
-    <div class="product-image-upload">
-      <div class="image-preview" id="imagePreview">
-        <img src="${imagenTemporalAdmin}" id="previewImage" alt="">
-      </div>
+    <div class="product-gallery-upload">
+      <div class="product-gallery-grid" id="galeriaGrid"></div>
       <div class="image-upload-info">
-        <strong>Foto del artículo</strong>
+        <strong>Fotos del artículo</strong>
         <label class="upload-image-btn">
           <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.2-1.8a1.5 1.5 0 011.25-.7h3.1a1.5 1.5 0 011.25.7L16 7h2.5A1.5 1.5 0 0120 8.5v9A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5v-9z"/><circle cx="12" cy="13" r="3.4"/></svg></span>
-          Seleccionar imagen
-          <input type="file" id="productoImagen" accept="image/*" hidden>
+          Agregar foto
+          <input type="file" id="productoGaleriaInput" accept="image/*" multiple hidden>
         </label>
-        <small>JPG, PNG o WEBP · Vista de demostración</small>
+        <small>JPG, PNG o WEBP · Máximo ${CATALOGO_GALERIA_MAX_FOTOS} fotos · Cada variante puede elegir cuál usar</small>
       </div>
     </div>
 
@@ -304,6 +305,14 @@ function abrirModalProducto(producto = null) {
       </div>
 
       <div class="form-field">
+        <label>Color de oro</label>
+        <select id="productoColorOro">
+          <option value="">Sin color</option>
+          ${COLORES_ORO_STAFF.map(c => `<option value="${c}" ${producto?.colorOro === c ? 'selected' : ''}>${c}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="form-field">
         <label>Código del producto</label>
         <input id="productoCodigo" type="text" placeholder="Ej. AN-045" value="${escapeAttribute(producto?.codigo || '')}">
         <small class="field-help">Solo lo ven Staff, Encargado y Admin (columna "ID del producto") — nunca Emprendedora/Líder.</small>
@@ -317,10 +326,10 @@ function abrirModalProducto(producto = null) {
       </div>
 
       <div class="form-field full">
-        <label>Variantes (color / talla y existencia) *</label>
+        <label>Variantes (color de piedra / talla y existencia) *</label>
         <div id="variantesLista"></div>
         <button type="button" class="btn btn-outline" id="agregarVarianteBtn" style="width:100%;margin-top:8px;">+ Agregar variante</button>
-        <small class="field-help">Una fila por cada combinación real de color y talla en inventario. Si el artículo no tiene color o talla, deja esos campos vacíos — solo captura la existencia. Esta cantidad solo es visible para Staff, Encargado y Admin.</small>
+        <small class="field-help">Una fila por cada combinación real de color de piedra/zirconia y talla en inventario (el color de oro ya se captura arriba, a nivel del artículo completo). Si el artículo no tiene color de piedra o talla, deja esos campos vacíos — solo captura la existencia. Esta cantidad solo es visible para Staff, Encargado y Admin.</small>
       </div>
 
       <div class="form-field">
@@ -354,6 +363,7 @@ function abrirModalProducto(producto = null) {
 
   overlay.classList.add('open');
 
+  renderGaleriaTemporalAdmin();
   renderVariantesTemporalAdmin();
 
   document.getElementById('agregarVarianteBtn')?.addEventListener('click', () => {
@@ -361,7 +371,7 @@ function abrirModalProducto(producto = null) {
     renderVariantesTemporalAdmin();
   });
 
-  document.getElementById('productoImagen')?.addEventListener('change', manejarImagen);
+  document.getElementById('productoGaleriaInput')?.addEventListener('change', manejarGaleria);
 
   document.getElementById('productoMaterial')?.addEventListener('change', (e) => {
     const select = document.getElementById('productoDescuentoSelect');
@@ -380,7 +390,7 @@ function abrirModalProducto(producto = null) {
 
   document.getElementById('guardarProductoBtn')?.addEventListener('click', async () => {
 
-    if (imagenProcesandoFoto) await imagenProcesandoFoto;
+    if (fotosProcesandoAdmin.length) await Promise.all(fotosProcesandoAdmin);
 
     const datos = obtenerDatosProducto();
     if (!datos) return;
@@ -403,7 +413,7 @@ function abrirModalProducto(producto = null) {
 
 
 // ============================================================
-// REPETIDOR DE VARIANTES (color / talla / existencia)
+// REPETIDOR DE VARIANTES (color de piedra / talla / existencia / foto)
 // ============================================================
 
 function renderVariantesTemporalAdmin() {
@@ -417,10 +427,7 @@ function renderVariantesTemporalAdmin() {
       <div class="variante-campos">
         <div class="variante-field">
           <label>Color</label>
-          <select class="variante-color" data-campo="colorOro" data-id="${v.id}">
-            <option value="">Sin color</option>
-            ${COLORES_ORO_STAFF.map(c => `<option value="${c}" ${v.colorOro === c ? 'selected' : ''}>${c}</option>`).join('')}
-          </select>
+          <input class="variante-color" type="text" placeholder="Ej. Azul (opcional)" data-campo="color" data-id="${v.id}" value="${escapeAttribute(v.color || '')}">
         </div>
         <div class="variante-field">
           <label>Talla</label>
@@ -432,6 +439,19 @@ function renderVariantesTemporalAdmin() {
         </div>
         <button type="button" class="variante-quitar" data-quitar-variante="${v.id}" title="Quitar variante">× Eliminar</button>
       </div>
+      ${galeriaTemporalAdmin.length ? `
+        <div class="variante-foto-picker">
+          <span class="variante-foto-picker-label">Foto de esta variante:</span>
+          <button type="button" class="variante-foto-thumb ${!v.fotoId ? 'selected' : ''}" data-elegir-foto="" data-variante-id="${v.id}" title="Usar la foto principal del producto">
+            <img src="${galeriaTemporalAdmin[0].src}" alt="">
+          </button>
+          ${galeriaTemporalAdmin.map(f => `
+            <button type="button" class="variante-foto-thumb ${v.fotoId === f.id ? 'selected' : ''}" data-elegir-foto="${f.id}" data-variante-id="${v.id}" title="Usar esta foto para la variante">
+              <img src="${f.src}" alt="">
+            </button>
+          `).join('')}
+        </div>
+      ` : ''}
     </div>
   `).join('');
 
@@ -455,47 +475,95 @@ function renderVariantesTemporalAdmin() {
     });
   });
 
+  cont.querySelectorAll('[data-elegir-foto]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const variante = variantesTemporalAdmin.find(v => v.id === btn.dataset.varianteId);
+      if (!variante) return;
+      variante.fotoId = btn.dataset.elegirFoto || null;
+      renderVariantesTemporalAdmin();
+    });
+  });
+
 }
 
 
 // ============================================================
-// IMAGEN
+// GALERÍA DE FOTOS
 // ============================================================
 
-// BUG reportado tras lanzar a producción: comprimir la foto es async
-// (comprimirImagenAProductoDataURL) pero nada impedía dar clic en
-// "Guardar" ANTES de que terminara — se guardaba el placeholder que
-// traía el modal (la ruta del isologo) como si fuera la foto real, en
-// vez de esperar/avisar. imagenProcesandoFoto guarda esa promesa para
-// que el botón de Guardar la espere si hace falta (ver su listener).
-let imagenProcesandoFoto = null;
+// BUG-04 (ya corregido para la foto única, mismo criterio aquí):
+// comprimir cada foto es async (comprimirImagenAProductoDataURL) pero
+// nada impedía dar clic en "Guardar" ANTES de que terminaran — se
+// guardaba la galería incompleta. fotosProcesandoAdmin guarda un
+// arreglo de esas promesas (puede haber varias fotos subiéndose a la
+// vez) para que el botón de Guardar las espere todas si hace falta.
+let fotosProcesandoAdmin = [];
 
-async function manejarImagen(e) {
+function renderGaleriaTemporalAdmin() {
 
-  const archivo = e.target.files?.[0];
-  if (!archivo) return;
+  const cont = document.getElementById('galeriaGrid');
+  if (!cont) return;
 
-  if (!archivo.type.startsWith('image/')) {
-    mostrarToast('Selecciona una imagen válida.');
+  if (!galeriaTemporalAdmin.length) {
+    cont.innerHTML = `<div class="gallery-thumb gallery-thumb-empty"><img src="../../assets/images/isotipo-morado.png" alt=""></div>`;
+    return;
+  }
+
+  cont.innerHTML = galeriaTemporalAdmin.map(f => `
+    <div class="gallery-thumb">
+      <img src="${f.src}" alt="">
+      <button type="button" class="gallery-thumb-remove" data-quitar-foto="${f.id}" title="Quitar foto">×</button>
+    </div>
+  `).join('');
+
+  cont.querySelectorAll('[data-quitar-foto]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const fotoId = btn.dataset.quitarFoto;
+      galeriaTemporalAdmin = galeriaTemporalAdmin.filter(f => f.id !== fotoId);
+      variantesTemporalAdmin.forEach(v => { if (v.fotoId === fotoId) v.fotoId = null; });
+      renderGaleriaTemporalAdmin();
+      renderVariantesTemporalAdmin();
+    });
+  });
+
+}
+
+async function manejarGaleria(e) {
+
+  const archivos = Array.from(e.target.files || []);
+  e.target.value = '';
+  if (!archivos.length) return;
+
+  const validos = archivos.filter(a => a.type.startsWith('image/'));
+  if (validos.length < archivos.length) mostrarToast('Algún archivo no era una imagen válida y se omitió.');
+  if (!validos.length) return;
+
+  if (galeriaTemporalAdmin.length + validos.length > CATALOGO_GALERIA_MAX_FOTOS) {
+    mostrarToast(`Un producto admite máximo ${CATALOGO_GALERIA_MAX_FOTOS} fotos.`);
     return;
   }
 
   const boton = document.getElementById('guardarProductoBtn');
   const textoBotonOriginal = boton?.textContent;
-  if (boton) { boton.disabled = true; boton.textContent = 'Procesando foto...'; }
+  if (boton) { boton.disabled = true; boton.textContent = 'Procesando fotos...'; }
 
-  imagenProcesandoFoto = (async () => {
-    try {
-      imagenTemporalAdmin = await comprimirImagenAProductoDataURL(archivo);
-      const preview = document.getElementById('previewImage');
-      if (preview) preview.src = imagenTemporalAdmin;
-    } catch (error) {
-      mostrarToast('No se pudo procesar esa imagen. Intenta con otra.');
-    } finally {
-      if (boton) { boton.disabled = false; boton.textContent = textoBotonOriginal; }
-      imagenProcesandoFoto = null;
+  const tarea = (async () => {
+    for (const archivo of validos) {
+      try {
+        const src = await comprimirImagenAProductoDataURL(archivo);
+        galeriaTemporalAdmin.push({ id: `foto-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, src });
+      } catch (error) {
+        mostrarToast('No se pudo procesar una de las imágenes.');
+      }
     }
+    renderGaleriaTemporalAdmin();
+    renderVariantesTemporalAdmin();
   })();
+
+  fotosProcesandoAdmin.push(tarea);
+  await tarea;
+  fotosProcesandoAdmin = fotosProcesandoAdmin.filter(t => t !== tarea);
+  if (boton) { boton.disabled = false; boton.textContent = textoBotonOriginal; }
 
 }
 
@@ -510,6 +578,7 @@ function obtenerDatosProducto() {
   const descripcion = document.getElementById('productoDescripcion')?.value.trim();
   const material = document.getElementById('productoMaterial')?.value;
   const categoria = document.getElementById('productoCategoria')?.value;
+  const colorOro = document.getElementById('productoColorOro')?.value || '';
   const codigo = document.getElementById('productoCodigo')?.value.trim();
   const calidad = document.getElementById('productoCalidad')?.value;
   const precioEtiqueta = Number(document.getElementById('productoPrecioEtiqueta')?.value);
@@ -527,13 +596,20 @@ function obtenerDatosProducto() {
   if (Number.isNaN(precioEtiqueta) || precioEtiqueta < 0) { mostrarToast('El precio etiqueta no es válido.'); return null; }
   if (Number.isNaN(descuento) || descuento < 0 || descuento > 100) { mostrarToast('El descuento no es válido (0 a 100).'); return null; }
 
+  const tamanoGaleria = galeriaTemporalAdmin.reduce((suma, f) => suma + (f.src?.length || 0), 0);
+  if (tamanoGaleria > CATALOGO_GALERIA_TAMANO_MAX) {
+    mostrarToast('Las fotos de este producto pesan demasiado juntas. Quita alguna o usa fotos más pequeñas.');
+    return null;
+  }
+
   const variantes = variantesTemporalAdmin.map(v => crearVarianteProducto(v));
 
   return {
-    nombre, descripcion, material, categoria, calidad, codigo,
+    nombre, descripcion, material, categoria, calidad, codigo, colorOro,
     variantes, precioEtiqueta, descuento,
     disponible: variantes.some(v => v.stock > 0),
-    imagen: imagenTemporalAdmin
+    galeria: galeriaTemporalAdmin,
+    imagen: galeriaTemporalAdmin[0]?.src || ''
   };
 
 }
@@ -633,6 +709,7 @@ function abrirModalStock(producto) {
     <div class="modal-context">
       <span>Existencia total actual</span>
       <strong>${stockTotalProducto(producto)} piezas</strong>
+      ${producto.colorOro ? `<span>Color de oro</span><strong>${escapeHTML(producto.colorOro)}</strong>` : ''}
       <span>Último cambio</span>
       <strong>${producto.ultimaAccion?.empleado || 'Sin registro'}</strong>
     </div>
@@ -723,7 +800,9 @@ function formatearPrecio(numero) {
   return Number(numero || 0).toLocaleString('es-MX');
 }
 
-function normalizarImagenProducto(imagen) {
+function normalizarImagenProducto(producto) {
+
+  const imagen = fotoPrincipalProducto(producto);
 
   if (!imagen) return '../../assets/images/isotipo-morado.png';
 
