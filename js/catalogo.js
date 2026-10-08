@@ -184,8 +184,8 @@ function aplicarFiltros() {
     if (filtro.materiales.size > 0 && !filtro.materiales.has(p.material)) return false;
     if (filtro.categorias.size > 0 && !filtro.categorias.has(p.categoria)) return false;
     if (filtro.calidades.size > 0 && !filtro.calidades.has(p.calidad)) return false;
+    if (filtro.coloresOro.size > 0 && !filtro.coloresOro.has(p.colorOro)) return false;
     const variantes = p.variantes || [];
-    if (filtro.coloresOro.size > 0 && !variantes.some(v => filtro.coloresOro.has(v.colorOro))) return false;
     if (filtro.talla && !variantes.some(v => v.talla === filtro.talla)) return false;
     return true;
   });
@@ -207,16 +207,16 @@ function renderProductos(productos) {
   grid.innerHTML = productos.map((p) => {
     const disponibles = variantesDisponibles(p);
     const metaVariantes = Array.from(new Set(disponibles.map(v => etiquetaVariante(v)).filter(v => v !== 'Única'))).join(' · ');
-    const fotoProducto = normalizarImagenProducto(p.imagen);
-    const fotoGenerica = esFotoGenericaProducto(p.imagen);
+    const fotoProducto = normalizarImagenProducto(p);
+    const fotoGenerica = esFotoGenericaProducto(p);
     return `
     <div class="catalog-product-card">
-      <div class="cp-photo">
-        <img src="${fotoProducto}" alt="${escapeAttribute(p.nombre)}" class="${fotoGenerica ? 'foto-generica' : ''}" ${fotoGenerica ? '' : `data-zoom="${escapeAttribute(fotoProducto)}" data-zoom-alt="${escapeAttribute(p.nombre)}"`}>
+      <div class="cp-photo" data-detalle="${p.id}" style="${fotoGenerica ? '' : 'cursor:pointer;'}">
+        <img src="${fotoProducto}" alt="${escapeAttribute(p.nombre)}" class="${fotoGenerica ? 'foto-generica' : ''}">
       </div>
       <div class="cp-body">
         <h4>${escapeHTMLCatalogoVariantes(p.nombre)}</h4>
-        <div class="cp-meta">${escapeHTMLCatalogoVariantes([p.categoria, metaVariantes].filter(Boolean).join(' · ')) || '&nbsp;'}</div>
+        <div class="cp-meta">${escapeHTMLCatalogoVariantes([p.colorOro, p.categoria, metaVariantes].filter(Boolean).join(' · ')) || '&nbsp;'}</div>
         <div class="cp-price">
           <span class="price-public">$${p.precioEtiqueta} MXN</span>
           <span class="price-emprendedora">$${precioConDescuento(p)} MXN</span>
@@ -229,17 +229,35 @@ function renderProductos(productos) {
   `;
   }).join('');
 
-  wirearZoomFotos(grid);
+  grid.querySelectorAll('[data-detalle]').forEach(el => {
+    el.addEventListener('click', () => abrirModalDetalleProducto(el.getAttribute('data-detalle')));
+  });
 
+  // El botón "Apartar" conserva su atajo de siempre: con una sola
+  // variante disponible va directo a confirmar, sin abrir ningún modal.
+  // Con varias, ahora abre el mismo modal enriquecido (antes era un
+  // <select> simple) — ver abrirModalDetalleProducto.
   grid.querySelectorAll('[data-apartar]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalApartar(btn.getAttribute('data-apartar')));
+    btn.addEventListener('click', () => {
+      const productoId = btn.getAttribute('data-apartar');
+      const producto = obtenerCatalogoReal().find(p => p.id === productoId);
+      if (!producto) return;
+      const disponibles = variantesDisponibles(producto);
+      if (!disponibles.length) { mostrarToast('Ya no hay existencia de esta pieza.'); return; }
+      if (disponibles.length === 1) { mostrarPasoConfirmarApartar(producto, disponibles[0]); return; }
+      abrirModalDetalleProducto(productoId);
+    });
   });
 }
 
-// Paso 1: si el producto tiene varias variantes con existencia, primero
-// hay que elegir color/talla (igual que hace Staff al crear una
-// ventana). Si solo hay una, se salta directo a confirmar.
-function abrirModalApartar(productoId) {
+// Modal enriquecido de Apartar (solo Emprendedora/Líder — Staff,
+// Encargado y Admin conservan su lightbox simple sin cambios): foto
+// grande + toda la información del artículo + selector de color de
+// piedra/talla que cambia la foto mostrada. Lo abre tanto el clic en la
+// foto de la tarjeta como el botón "Apartar" cuando hay más de una
+// variante disponible (con una sola, ese botón salta directo a
+// mostrarPasoConfirmarApartar sin pasar por aquí).
+function abrirModalDetalleProducto(productoId) {
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
@@ -248,35 +266,57 @@ function abrirModalApartar(productoId) {
   if (!producto) return;
 
   const disponibles = variantesDisponibles(producto);
-  if (!disponibles.length) {
-    mostrarToast('Ya no hay existencia de esta pieza.');
-    return;
-  }
+  const material = MATERIALES.find(m => m.key === producto.material)?.label || producto.material || '';
+  const fotoGenerica = esFotoGenericaProducto(producto);
+  const seleccionUnica = disponibles.length === 1 ? disponibles[0] : null;
 
-  if (disponibles.length === 1) {
-    mostrarPasoConfirmarApartar(producto, disponibles[0]);
-    return;
-  }
+  box.classList.add('modal-box-xwide');
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <h3>Apartar: ${escapeHTMLCatalogoVariantes(producto.nombre)}</h3>
-    <p class="modal-sub">Elige la variante que quieres apartar.</p>
-    <label for="apartarVarianteSelect">Color / talla</label>
-    <select id="apartarVarianteSelect" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
-      <option value="">Selecciona...</option>
-      ${disponibles.map(v => `<option value="${v.id}">${escapeHTMLCatalogoVariantes(etiquetaVariante(v))}</option>`).join('')}
-    </select>
-    <button class="btn btn-primary" style="width:100%;margin-top:12px;" id="continuarApartarBtn" disabled>Continuar</button>
+    <div class="detalle-producto-layout">
+      <div class="detalle-producto-foto">
+        <img id="detalleProductoImg" src="${seleccionUnica ? fotoVarianteProducto(producto, seleccionUnica) : normalizarImagenProducto(producto)}" alt="${escapeAttribute(producto.nombre)}" class="${fotoGenerica ? 'foto-generica' : ''}">
+      </div>
+      <div class="detalle-producto-info">
+        <h3>${escapeHTMLCatalogoVariantes(producto.nombre)}</h3>
+        <div class="detail-grid">
+          <div class="full" style="grid-column:1/-1;"><span>Descripción</span><strong>${escapeHTMLCatalogoVariantes(producto.descripcion || 'Sin descripción')}</strong></div>
+          <div><span>Categoría</span><strong>${escapeHTMLCatalogoVariantes(producto.categoria || 'Sin categoría')}</strong></div>
+          <div><span>Material</span><strong>${escapeHTMLCatalogoVariantes(material)}</strong></div>
+          <div><span>Calidad</span><strong>${producto.calidad === 'premium' ? 'Premium' : 'Estándar'}</strong></div>
+          ${producto.colorOro ? `<div><span>Color de oro</span><strong>${escapeHTMLCatalogoVariantes(producto.colorOro)}</strong></div>` : ''}
+          <div><span>Precio etiqueta</span><strong>$${producto.precioEtiqueta} MXN</strong></div>
+          <div><span>Descuento</span><strong>${producto.descuento || 0}% ($${precioConDescuento(producto)} MXN)</strong></div>
+        </div>
+
+        ${disponibles.length ? `
+          <label for="detalleVarianteSelect">Color / talla</label>
+          <select id="detalleVarianteSelect" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
+            ${seleccionUnica ? '' : '<option value="">Selecciona...</option>'}
+            ${disponibles.map(v => `<option value="${v.id}" ${seleccionUnica && seleccionUnica.id === v.id ? 'selected' : ''}>${escapeHTMLCatalogoVariantes(etiquetaVariante(v))}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary" style="width:100%;margin-top:12px;" id="detalleApartarBtn" ${seleccionUnica ? '' : 'disabled'}>Apartar</button>
+        ` : `<p class="modal-sub">Ya no hay existencia de esta pieza.</p>`}
+      </div>
+    </div>
   `;
   overlay.classList.add('open');
 
-  const select = document.getElementById('apartarVarianteSelect');
-  const continuarBtn = document.getElementById('continuarApartarBtn');
-  select.addEventListener('change', () => { continuarBtn.disabled = !select.value; });
-  continuarBtn.addEventListener('click', () => {
+  const select = document.getElementById('detalleVarianteSelect');
+  const apartarBtn = document.getElementById('detalleApartarBtn');
+  const img = document.getElementById('detalleProductoImg');
+
+  select?.addEventListener('change', () => {
     const variante = buscarVariante(producto, select.value);
-    if (variante) mostrarPasoConfirmarApartar(producto, variante);
+    if (img) img.src = variante ? fotoVarianteProducto(producto, variante) : normalizarImagenProducto(producto);
+    if (apartarBtn) apartarBtn.disabled = !select.value;
+  });
+
+  apartarBtn?.addEventListener('click', () => {
+    const variante = buscarVariante(producto, select.value);
+    if (!variante) return;
+    mostrarPasoConfirmarApartar(producto, variante);
   });
 }
 
@@ -288,7 +328,7 @@ async function mostrarPasoConfirmarApartar(producto, variante) {
   if (!usuarioIdActual) { mostrarToast('No se pudo identificar tu cuenta — vuelve a iniciar sesión.'); return; }
 
   const datosPieza = {
-    producto: producto.nombre, variante: etiquetaVariante(variante),
+    producto: producto.nombre, variante: etiquetaVariante(variante), colorOro: producto.colorOro || '',
     total: precioConDescuento(producto), productoId: producto.id, varianteId: variante.id
   };
 
@@ -348,6 +388,7 @@ function notificarDisponibilidadCondicionadaADeposito(ventana) {
 function mostrarPasoExito(mensaje) {
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
+  box.classList.remove('modal-box-xwide'); // por si venía del modal enriquecido de detalle (ver abrirModalDetalleProducto)
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     <div class="confirm-box">
@@ -365,6 +406,7 @@ function mostrarPasoExito(mensaje) {
 function mostrarPasoPedirDeposito() {
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
+  box.classList.remove('modal-box-xwide'); // por si venía del modal enriquecido de detalle (ver abrirModalDetalleProducto)
   const mensajeWa = encodeURIComponent('¡Hola! Te envío mi comprobante de pago');
 
   box.innerHTML = `
@@ -426,7 +468,9 @@ function mostrarPasoPedirDeposito() {
 // La tarjeta de producto nunca mostraba la foto real que sube Staff/
 // Admin — siempre el logo MW fijo. Mismo respaldo que ya usa
 // admin/encargado/staff-catalogo.js.
-function normalizarImagenProducto(imagen) {
+function normalizarImagenProducto(producto) {
+
+  const imagen = fotoPrincipalProducto(producto);
 
   if (!imagen) return '../../assets/images/isotipo-morado.png';
 
@@ -441,10 +485,11 @@ function normalizarImagenProducto(imagen) {
 
 }
 
-// true si "imagen" no es una foto real (vacío, o la ruta del logo MW
-// que trae la semilla de ejemplo) — para decidir si se pinta como
-// marca de agua desvanecida (clase "foto-generica" en css/styles.css)
-// o como foto completa.
-function esFotoGenericaProducto(imagen) {
+// true si la foto principal no es una foto real (vacía, o la ruta del
+// logo MW que trae la semilla de ejemplo) — para decidir si se pinta
+// como marca de agua desvanecida (clase "foto-generica" en
+// css/styles.css) o como foto completa.
+function esFotoGenericaProducto(producto) {
+  const imagen = fotoPrincipalProducto(producto);
   return !imagen || /isotipo-morado\.png/.test(imagen);
 }

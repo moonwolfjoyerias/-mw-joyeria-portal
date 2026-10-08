@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     grid.innerHTML = productos.map((p) => `
       <a class="product-card" href="catalogo-publico.html?producto=${encodeURIComponent(p.id)}">
         <div class="product-photo">
-          <img src="${normalizarImagenProductoPublico(p.imagen)}" alt="" class="${esFotoGenericaProductoPublico(p.imagen) ? 'foto-generica' : ''}">
+          <img src="${normalizarImagenProductoPublico(p)}" alt="" class="${esFotoGenericaProductoPublico(p) ? 'foto-generica' : ''}">
         </div>
         <h4>${escapeHTMLColecciones(p.nombre)}</h4>
         <p class="product-price">$${p.precioEtiqueta} MXN</p>
@@ -48,16 +48,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Mismo respaldo que ya usan admin/encargado/staff-catalogo.js, pero
 // esta página vive en la raíz del sitio (un nivel menos que /portal/).
-function normalizarImagenProductoPublico(imagen) {
+function normalizarImagenProductoPublico(producto) {
+  const imagen = fotoPrincipalProducto(producto);
   if (!imagen) return 'assets/images/isotipo-morado.png';
   if (imagen.startsWith('../assets/')) return imagen.slice(3);
   return imagen;
 }
 
-// true si "imagen" no es una foto real (vacío, o la ruta del logo MW
-// que trae la semilla de ejemplo) — ver esFotoGenericaProducto en
-// js/catalogo.js (mismo criterio).
-function esFotoGenericaProductoPublico(imagen) {
+// true si la foto principal no es una foto real (vacía, o la ruta del
+// logo MW que trae la semilla de ejemplo) — ver esFotoGenericaProducto
+// en js/catalogo.js (mismo criterio).
+function esFotoGenericaProductoPublico(producto) {
+  const imagen = fotoPrincipalProducto(producto);
   return !imagen || /isotipo-morado\.png/.test(imagen);
 }
 

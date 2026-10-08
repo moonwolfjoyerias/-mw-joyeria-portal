@@ -137,6 +137,11 @@ function crearApartadoPieza(datos = {}) {
     varianteId: datos.varianteId || '',
     producto: datos.producto || '',
     variante: datos.variante || '',
+    // Color de oro del producto al momento de apartar — mismo criterio
+    // que "material" abajo: se congela aquí porque ya no vive en la
+    // variante (ver catalogo-variantes-modelo.js) y es la única forma en
+    // que Staff/Encargado/Admin lo ven al revisar un apartado ya hecho.
+    colorOro: datos.colorOro || '',
     // Material del producto al momento de apartar (Sección 4) — es la
     // base real para saber si esta pieza es Souvenir o normal; nunca
     // se recalcula después, aunque el producto cambie de categoría.

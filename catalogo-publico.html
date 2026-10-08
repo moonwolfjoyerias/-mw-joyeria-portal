@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Catálogo — MW Joyería</title>
   <meta name="description" content="Catálogo público de joyería MW con piezas en oro laminado y acero inoxidable.">
-  <link rel="stylesheet" href="css/styles.css?v=36">
+  <link rel="stylesheet" href="css/styles.css?v=37">
   <link rel="icon" type="image/png" href="assets/images/favicon.png">
 </head>
 <body>
@@ -133,7 +133,7 @@
   <script src="js/staff-catalogo-ejemplo.js?v=3"></script>
   <script src="js/catalogo-firestore-sync.js?v=3"></script>
   <script src="js/dom-utils.js?v=4"></script>
-  <script src="js/catalogo-variantes-modelo.js?v=5"></script>
+  <script src="js/catalogo-variantes-modelo.js?v=6"></script>
   <script>
     // Antes este bloque traía un arreglo fijo CATALOGO_PUBLICO con 8
     // piezas inventadas (sin conexión al catálogo real) — ver misma
@@ -152,16 +152,18 @@
       talla: ''
     };
 
-    function normalizarImagenPublico(imagen) {
+    function normalizarImagenPublico(producto) {
+      const imagen = fotoPrincipalProducto(producto);
       if (!imagen) return 'assets/images/isotipo-morado.png';
       if (imagen.startsWith('../assets/')) return imagen.slice(3);
       return imagen;
     }
 
-    // true si "imagen" no es una foto real (vacío, o la ruta del logo
-    // MW que trae la semilla de ejemplo) — mismo criterio que
+    // true si la foto principal no es una foto real (vacía, o la ruta
+    // del logo MW que trae la semilla de ejemplo) — mismo criterio que
     // esFotoGenericaProducto en js/catalogo.js.
-    function esFotoGenericaPublico(imagen) {
+    function esFotoGenericaPublico(producto) {
+      const imagen = fotoPrincipalProducto(producto);
       return !imagen || /isotipo-morado\.png/.test(imagen);
     }
 
@@ -289,12 +291,9 @@
       if (filtro.materiales.size > 0 && !filtro.materiales.has(p.material)) return false;
       if (filtro.categorias.size > 0 && !filtro.categorias.has(p.categoria)) return false;
       if (filtro.calidades.size > 0 && !filtro.calidades.has(p.calidad)) return false;
-      if (filtro.coloresOro.size === 0 && !filtro.talla) return true;
-      return variantesDisponibles(p).some((v) => {
-        if (filtro.coloresOro.size > 0 && !filtro.coloresOro.has(v.colorOro)) return false;
-        if (filtro.talla && v.talla !== filtro.talla) return false;
-        return true;
-      });
+      if (filtro.coloresOro.size > 0 && !filtro.coloresOro.has(p.colorOro)) return false;
+      if (!filtro.talla) return true;
+      return variantesDisponibles(p).some((v) => v.talla === filtro.talla);
     }
 
     function aplicarFiltros() {
@@ -315,11 +314,11 @@
 
       grid.innerHTML = productos.map((p) => {
         const variantes = variantesDisponibles(p);
-        const meta = [p.categoria, ...variantes.map(etiquetaVariante)].filter(Boolean).join(' · ');
+        const meta = [p.colorOro, p.categoria, ...variantes.map(etiquetaVariante)].filter(Boolean).join(' · ');
         return `
         <article class="catalog-product-card">
           <div class="cp-photo">
-            <img src="${normalizarImagenPublico(p.imagen)}" alt="${escapeHTMLPublico(p.nombre)}" class="${esFotoGenericaPublico(p.imagen) ? 'foto-generica' : ''}">
+            <img src="${normalizarImagenPublico(p)}" alt="${escapeHTMLPublico(p.nombre)}" class="${esFotoGenericaPublico(p) ? 'foto-generica' : ''}">
           </div>
           <div class="cp-body">
             <h4>${escapeHTMLPublico(p.nombre)}</h4>
