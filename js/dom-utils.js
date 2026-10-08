@@ -83,65 +83,60 @@ function wirearZoomFotos(contenedor) {
 }
 
 // ============================================================
-// SONIDO DE NOTIFICACIÓN — NOTIF-04 de la auditoría. Sintetizado con
-// Web Audio API (dos tonos cortos) en vez de un archivo de audio: no
-// hace falta subir ni mantener ningún archivo al repositorio, y suena
-// igual en cualquier dispositivo. Se usa desde
+// SONIDO DE NOTIFICACIÓN — NOTIF-04 de la auditoría. Antes era un tono
+// sintetizado con Web Audio API (no hacía falta subir ningún archivo);
+// ahora reproduce notificacion.mp3 (subido por el cliente a la raíz
+// del repositorio), el mismo para e/l y s/e/a. Se usa desde
 // notificaciones-firestore-sync.js cuando llega, en vivo, una
 // notificación nueva sin leer para la cuenta con sesión abierta.
-let _audioCtxNotificacion = null;
+let _audioNotificacion = null;
 
-// BUG reportado tras lanzar a producción: el sonido nunca se oía,
-// aunque la campana sí se actualizaba en vivo. Causa real — los
-// navegadores solo dejan "destrabar" un AudioContext suspendido
-// DENTRO del mismo gesto del usuario (clic/tecla/toque); un
-// resume() llamado después, desde un callback asíncrono como el de
-// Firestore, nunca lo logra, así que el contexto se queda
-// "suspended" para siempre y las notas programadas simplemente no
-// suenan (sin ningún error visible). Se intenta destrabar en el
-// primer clic/tecla/toque que haya en cualquier página del portal —
-// casi siempre ocurre mucho antes de que llegue la primera
-// notificación — y se deja de escuchar en cuanto se logra.
-function _obtenerCtxAudioNotificacion() {
-  if (_audioCtxNotificacion) return _audioCtxNotificacion;
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  if (!Ctx) return null;
-  _audioCtxNotificacion = new Ctx();
-  return _audioCtxNotificacion;
+// notificacion.mp3 vive en la raíz del repositorio, pero este mismo
+// archivo (dom-utils.js) se carga tanto desde páginas públicas
+// (profundidad 0, ej. index.html) como desde /portal/<rol>/
+// (profundidad 2) — mismo criterio de ruta por profundidad que ya usa
+// auth-guard.js.
+function _rutaAudioNotificacion() {
+  return /\/portal\//.test(window.location.pathname) ? '../../notificacion.mp3' : 'notificacion.mp3';
 }
+
+function _obtenerAudioNotificacion() {
+  if (_audioNotificacion) return _audioNotificacion;
+  _audioNotificacion = new Audio(_rutaAudioNotificacion());
+  _audioNotificacion.preload = 'auto';
+  return _audioNotificacion;
+}
+
+// BUG ya corregido antes para el tono sintetizado, mismo motivo aquí:
+// los navegadores solo dejan reproducir audio si ya hubo un gesto del
+// usuario (clic/tecla/toque) en la página — un play() disparado después,
+// desde un callback asíncrono como el de Firestore, nunca lo logra la
+// primera vez. Se reproduce en silencio en el primer gesto para
+// "destrabarlo" — casi siempre ocurre mucho antes de que llegue la
+// primera notificación real — y se restaura el volumen enseguida.
 function _destrabarAudioNotificacionConGesto() {
-  const ctx = _obtenerCtxAudioNotificacion();
-  if (!ctx) return;
-  if (ctx.state === 'suspended') {
-    ctx.resume().catch(() => {});
-  }
+  const audio = _obtenerAudioNotificacion();
+  const volumenOriginal = audio.volume;
+  audio.volume = 0;
+  audio.play().then(() => {
+    audio.pause();
+    audio.currentTime = 0;
+    audio.volume = volumenOriginal;
+  }).catch(() => {
+    audio.volume = volumenOriginal;
+  });
   ['pointerdown', 'keydown'].forEach(evento => document.removeEventListener(evento, _destrabarAudioNotificacionConGesto));
 }
 ['pointerdown', 'keydown'].forEach(evento => document.addEventListener(evento, _destrabarAudioNotificacionConGesto));
 
 function reproducirSonidoNotificacion() {
   try {
-    const ctx = _obtenerCtxAudioNotificacion();
-    if (!ctx) return;
-    // Si todavía no hubo ningún gesto del usuario en esta página, el
-    // contexto sigue "suspended" y este resume() tampoco va a
-    // lograrlo (mismo motivo de arriba) — no truena, solo no suena
-    // esa primera vez en particular.
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-
-    const ahora = ctx.currentTime;
-    [{ freq: 880, inicio: 0 }, { freq: 1180, inicio: 0.12 }].forEach(({ freq, inicio }) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, ahora + inicio);
-      gain.gain.linearRampToValueAtTime(0.18, ahora + inicio + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.001, ahora + inicio + 0.22);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(ahora + inicio);
-      osc.stop(ahora + inicio + 0.24);
+    const audio = _obtenerAudioNotificacion();
+    audio.currentTime = 0;
+    audio.play().catch(() => {
+      // Todavía no hubo gesto del usuario en esta página — no truena,
+      // solo no suena esa vez en particular (mismo caso que ya pasaba
+      // con el tono sintetizado).
     });
   } catch (error) {
     // Nunca debe tronar la página por no poder sonar.
