@@ -8,14 +8,22 @@
 // y lo asigna de verdad después si corresponde — ver
 // crearSolicitudInscripcionPublica en js/solicitudes-modelo.js).
 //
-// Depende de: documentos-modelo.js (subir las 2 fotos de INE),
-// solicitudes-modelo.js (crearSolicitudInscripcionPublica) y, si hay
-// Firebase real, auth-service.js (iniciarSesionAnonimaSiFalta — las
-// reglas de Firestore/Storage exigen una sesión, aunque sea anónima,
-// para poder escribir).
+// Decisión de negocio: las inscripciones PÚBLICAS (este formulario, sin
+// sesión previa) ya no piden identificación oficial (INE) — a
+// diferencia de crearSolicitudInscripcion (invitación hecha por una
+// cuenta YA existente, en js/solicitudes-ui.js), que sigue
+// requiriéndola sin cambios. Como ya no se sube ninguna foto, este
+// flujo tampoco necesita Cloud Storage. La contraparte de quitar esa
+// verificación de identidad es la señal de riesgo que agrega
+// crearSolicitudInscripcionPublica cuando varias solicitudes públicas
+// recientes indican a la misma líder — ver su comentario en
+// js/solicitudes-modelo.js.
+//
+// Depende de: solicitudes-modelo.js (crearSolicitudInscripcionPublica)
+// y, si hay Firebase real, auth-service.js (iniciarSesionAnonimaSiFalta
+// — las reglas de Firestore exigen una sesión, aunque sea anónima, para
+// poder escribir).
 
-let registroIneFrenteArchivo = null;
-let registroIneReversoArchivo = null;
 let registroDatosPaso1 = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -43,8 +51,6 @@ function abrirModalRegistroPaso1() {
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
 
-  registroIneFrenteArchivo = null;
-  registroIneReversoArchivo = null;
   registroDatosPaso1 = null;
 
   box.style.maxWidth = '460px';
@@ -62,13 +68,6 @@ function abrirModalRegistroPaso1() {
     <label for="regCorreo">Correo electrónico *</label>
     <input id="regCorreo" type="email" placeholder="correo@ejemplo.com">
 
-    <label for="regIneFrente">Foto de identificación oficial (INE) — frente *</label>
-    <input id="regIneFrente" type="file" accept="image/*">
-
-    <label for="regIneReverso">Foto de identificación oficial (INE) — reverso *</label>
-    <input id="regIneReverso" type="file" accept="image/*">
-    <small class="field-help">Información confidencial: solo el personal Administrativo autorizado podrá verla. Sube las dos caras para que se pueda validar sin problema.</small>
-
     <label style="display:flex;align-items:flex-start;gap:8px;margin-top:14px;cursor:pointer;">
       <input type="checkbox" id="regAutorizo" style="margin-top:3px;flex-shrink:0;">
       <span style="font-size:0.85rem;line-height:1.4;">Autorizo que MOONWOLF JOYERÍA guarde mis datos conforme a los Términos y condiciones.</span>
@@ -80,32 +79,6 @@ function abrirModalRegistroPaso1() {
   `;
 
   overlay.classList.add('open');
-
-  document.getElementById('regIneFrente')?.addEventListener('change', (e) => {
-    const archivo = e.target.files?.[0];
-    if (!archivo) { registroIneFrenteArchivo = null; return; }
-    const validacion = validarArchivoDocumento(archivo);
-    if (!validacion.ok) {
-      mostrarErrorRegistro(validacion.error);
-      e.target.value = '';
-      registroIneFrenteArchivo = null;
-      return;
-    }
-    registroIneFrenteArchivo = archivo;
-  });
-
-  document.getElementById('regIneReverso')?.addEventListener('change', (e) => {
-    const archivo = e.target.files?.[0];
-    if (!archivo) { registroIneReversoArchivo = null; return; }
-    const validacion = validarArchivoDocumento(archivo);
-    if (!validacion.ok) {
-      mostrarErrorRegistro(validacion.error);
-      e.target.value = '';
-      registroIneReversoArchivo = null;
-      return;
-    }
-    registroIneReversoArchivo = archivo;
-  });
 
   document.getElementById('continuarRegistroBtn')?.addEventListener('click', () => validarYContinuarPaso1());
 
@@ -121,8 +94,6 @@ function validarYContinuarPaso1() {
   if (!nombreCompleto) return mostrarErrorRegistro('Escribe tu nombre completo.');
   if (!telefono) return mostrarErrorRegistro('Escribe tu número de celular.');
   if (!correo) return mostrarErrorRegistro('Escribe tu correo electrónico.');
-  if (!registroIneFrenteArchivo) return mostrarErrorRegistro('Adjunta la foto del frente de tu identificación oficial (INE).');
-  if (!registroIneReversoArchivo) return mostrarErrorRegistro('Adjunta la foto del reverso de tu identificación oficial (INE).');
   if (!autorizo) return mostrarErrorRegistro('Debes autorizar el uso de tus datos para continuar.');
 
   registroDatosPaso1 = { nombreCompleto, telefono, correo };
@@ -202,30 +173,12 @@ async function enviarRegistroPublico(liderIndicado) {
       await iniciarSesionAnonimaSiFalta();
     }
 
-    // BUG reportado tras lanzar a producción: aquí antes se refrescaban
-    // personas/notificaciones (cargarPersonasRepo/cargarNotificacionesRepo)
-    // para evitar un riesgo real (ver versión anterior de este archivo) —
-    // pero eso eran DOS idas y vueltas de red más, justo en el momento
-    // del envío, y con conexión lenta se sentía como "no hay internet" o
-    // el botón atascado sin ningún mensaje. Ya no hace falta: la
-    // notificación a Admin usa agregarNotificacionDirecta (ver abajo),
-    // que escribe un solo documento sin depender de ninguna caché local.
-    const sufijo = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-    const ineFrenteStoragePath = `solicitudes-ine/${sufijo}-frente`;
-    const ineReversoStoragePath = `solicitudes-ine/${sufijo}-reverso`;
-    await guardarBlobDocumento(ineFrenteStoragePath, registroIneFrenteArchivo);
-    await guardarBlobDocumento(ineReversoStoragePath, registroIneReversoArchivo);
-
     const resultado = await crearSolicitudInscripcionPublica({
       ...registroDatosPaso1,
-      liderIndicado,
-      ineFrenteUrl: ineFrenteStoragePath,
-      ineReversoUrl: ineReversoStoragePath
+      liderIndicado
     });
 
     if (!resultado.ok) {
-      await eliminarBlobDocumento(ineFrenteStoragePath);
-      await eliminarBlobDocumento(ineReversoStoragePath);
       const error = document.getElementById('regPaso2Error');
       if (error) { error.textContent = resultado.error; error.style.display = 'block'; }
       botones.forEach(b => { b.disabled = false; });
@@ -236,30 +189,17 @@ async function enviarRegistroPublico(liderIndicado) {
 
   } catch (error) {
     // BUG reportado: siempre decía "revisa tu conexión", aunque la
-    // causa real casi nunca es de red. Dos sospechosos conocidos, cada
-    // uno con su propio código de error:
-    //  - 'auth/operation-not-allowed': el proveedor "Anonymous" de
-    //    Firebase Auth no está activado (Firebase Console →
-    //    Authentication → Sign-in method) — necesario para
-    //    iniciarSesionAnonimaSiFalta.
-    //  - cualquier 'storage/...': Cloud Storage for Firebase nunca se
-    //    activó del todo — SETUP-FIREBASE.md ya documentaba que este
-    //    paso se saltó a propósito ("si pide Blaze, ignóralo, no lo
-    //    necesitas para esta fase"), pero las fotos de INE (aquí y en
-    //    el "Solicitar inscripción" de Mi cuenta de Emprendedora/Líder,
-    //    mismo guardarBlobDocumento) sí lo necesitan en cuanto hay
-    //    Firebase real conectado — storageFirebase SÍ queda truthy con
-    //    solo llamar firebase.storage() (no valida nada del lado del
-    //    servidor en ese momento), así que el error solo aparece hasta
-    //    este primer intento real de subir un archivo.
+    // causa real casi nunca es de red. Único sospechoso conocido desde
+    // que este formulario dejó de pedir INE (y de depender de Storage):
+    // 'auth/operation-not-allowed' — el proveedor "Anonymous" de
+    // Firebase Auth no está activado (Firebase Console → Authentication
+    // → Sign-in method) — necesario para iniciarSesionAnonimaSiFalta.
     // console.error deja el detalle completo para la consola del navegador.
     console.error('No se pudo enviar la solicitud de inscripción:', error);
     const errorEl = document.getElementById('regPaso2Error');
     if (errorEl) {
       if (error && error.code === 'auth/operation-not-allowed') {
         errorEl.textContent = 'No se pudo enviar tu solicitud — falta activar el acceso anónimo en Firebase. Avísale a soporte.';
-      } else if (error && typeof error.code === 'string' && error.code.startsWith('storage/')) {
-        errorEl.textContent = 'No se pudo subir tu identificación — falta activar Cloud Storage en Firebase. Avísale a soporte.';
       } else {
         errorEl.textContent = 'No se pudo enviar tu solicitud. Espera unos segundos e inténtalo de nuevo.';
       }

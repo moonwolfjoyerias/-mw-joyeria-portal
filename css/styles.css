@@ -4039,6 +4039,26 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   font-weight: 600;
 }
 
+/* Aviso de "posible riesgo de equipo inflado" en el detalle de una
+   solicitud pública — ver admin-solicitudes.js. Mismo estilo que
+   .auth-warning (catalog-modal) pero sin depender de esa clase
+   ancestro, porque este modal usa .modal-box simple. */
+.risk-warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 13px;
+  border-radius: 10px;
+  border: 1px solid #f2dcc0;
+  background: linear-gradient(135deg, #fffaf0 0%, #fff5df 100%);
+  margin: 0 0 16px;
+}
+.risk-warning-banner span.icon-inline { font-size: 1.1rem; line-height: 1; margin-top: 1px; }
+.risk-warning-banner strong { display: block; color: #7b5a1d; font-size: 0.78rem; }
+.risk-warning-banner small { display: block; color: #8d7650; margin-top: 3px; line-height: 1.5; }
+
+.badge-riesgo { background: #fff5df; color: #7b5a1d; }
+
 .ine-preview-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
