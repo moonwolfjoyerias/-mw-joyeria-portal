@@ -86,7 +86,7 @@ async function renderListaSolicitudesAdmin() {
       <td><span class="badge">${s._tipo === 'evento' ? 'Evento' : 'Inscripción'}</span></td>
       <td><strong>${escapeHTMLSolAdmin(s._titulo)}</strong></td>
       <td>${s.origen === 'publico'
-        ? `<span class="badge">Se registró ella misma</span> <small class="bp-sub">${s.liderIndicado ? `líder: ${escapeHTMLSolAdmin(s.liderIndicado)}` : 'sin líder'}</small>`
+        ? `<span class="badge">Se registró ella misma</span> <small class="bp-sub">${s.liderIndicado ? `líder: ${escapeHTMLSolAdmin(s.liderIndicado)}` : 'sin líder'}</small>${s.riesgoEquipoInflado ? ` <span class="badge badge-riesgo" title="Ya hay ${s.riesgoEquipoInfladoConteo} solicitudes recientes indicando a esta misma líder">⚠ Riesgo</span>` : ''}`
         : `${escapeHTMLSolAdmin(s.solicitanteNombre)}${s.solicitanteRol ? ` <span class="badge">${s.solicitanteRol === 'lider' ? 'Líder' : 'Emprendedora'}</span>` : ''}`}</td>
       <td><span class="badge estado-badge ${s.estado}">${ESTADOS_SOLICITUD[s.estado] || s.estado}</span></td>
       <td>${formatearFechaSolAdmin(s.fechaSolicitud)}</td>
@@ -127,6 +127,15 @@ async function abrirDetalleSolicitudAdmin(id) {
 
     ${solicitud.origen === 'publico' ? `
       <h4 class="profile-section-title">Cómo llegó</h4>
+      ${solicitud.riesgoEquipoInflado ? `
+        <div class="risk-warning-banner">
+          <span class="icon-inline">⚠️</span>
+          <div>
+            <strong>Posible riesgo de equipo inflado</strong>
+            <small>Ya hay ${solicitud.riesgoEquipoInfladoConteo} solicitudes públicas recientes (pendientes, o aprobadas en los últimos ${RIESGO_EQUIPO_INFLADO_DIAS} días) que indican a esta misma líder — sin identificación de por medio, nada garantiza que sean personas distintas. Verifica antes de aprobar (ej. llámale por teléfono a cada una).</small>
+          </div>
+        </div>
+      ` : ''}
       <div class="detail-grid">
         <div class="full" style="grid-column:1/-1;"><span>Origen</span><strong>Se registró directamente desde el sitio (nadie con cuenta la refirió)</strong></div>
         <div class="full" style="grid-column:1/-1;"><span>Líder que indicó</span><strong>${solicitud.liderIndicado ? escapeHTMLSolAdmin(solicitud.liderIndicado) + ' (sin verificar)' : 'No indicó — pidió que el equipo le asigne uno'}</strong></div>
@@ -150,21 +159,25 @@ async function abrirDetalleSolicitudAdmin(id) {
       <div><span>Estado</span><strong>${ESTADOS_SOLICITUD[solicitud.estado] || solicitud.estado}</strong></div>
     </div>
 
-    <div class="modal-note confidential-warning">
-      <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span> Información confidencial. Uso exclusivo administrativo.
-    </div>
-    <div class="ine-preview-grid">
-      <div class="ine-preview">
-        <small class="field-help">Frente</small>
-        <img id="inePreviewFrenteImg" src="" alt="INE (frente) de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}" style="display:none;">
-        <p class="bp-sub" id="inePreviewFrenteCargando" style="margin:0;">Cargando identificación…</p>
+    ${(solicitud.ineFrenteUrl || solicitud.ineReversoUrl) ? `
+      <div class="modal-note confidential-warning">
+        <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span> Información confidencial. Uso exclusivo administrativo.
       </div>
-      <div class="ine-preview">
-        <small class="field-help">Reverso</small>
-        <img id="inePreviewReversoImg" src="" alt="INE (reverso) de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}" style="display:none;">
-        <p class="bp-sub" id="inePreviewReversoCargando" style="margin:0;">Cargando identificación…</p>
+      <div class="ine-preview-grid">
+        <div class="ine-preview">
+          <small class="field-help">Frente</small>
+          <img id="inePreviewFrenteImg" src="" alt="INE (frente) de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}" style="display:none;">
+          <p class="bp-sub" id="inePreviewFrenteCargando" style="margin:0;">Cargando identificación…</p>
+        </div>
+        <div class="ine-preview">
+          <small class="field-help">Reverso</small>
+          <img id="inePreviewReversoImg" src="" alt="INE (reverso) de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}" style="display:none;">
+          <p class="bp-sub" id="inePreviewReversoCargando" style="margin:0;">Cargando identificación…</p>
+        </div>
       </div>
-    </div>
+    ` : `
+      <p class="bp-sub">Esta solicitud se registró sin identificación oficial (INE) — las inscripciones públicas ya no la piden.</p>
+    `}
 
     ${!esPendiente ? construirResolucionHTML(solicitud) : ''}
 
@@ -183,8 +196,8 @@ async function abrirDetalleSolicitudAdmin(id) {
     document.getElementById('rechazarSolicitudBtn')?.addEventListener('click', () => abrirModalRechazarAdmin(solicitud));
   }
 
-  await cargarPreviewIne(solicitud.ineFrenteUrl, 'inePreviewFrenteImg', 'inePreviewFrenteCargando');
-  await cargarPreviewIne(solicitud.ineReversoUrl, 'inePreviewReversoImg', 'inePreviewReversoCargando');
+  if (solicitud.ineFrenteUrl) await cargarPreviewIne(solicitud.ineFrenteUrl, 'inePreviewFrenteImg', 'inePreviewFrenteCargando');
+  if (solicitud.ineReversoUrl) await cargarPreviewIne(solicitud.ineReversoUrl, 'inePreviewReversoImg', 'inePreviewReversoCargando');
 
 }
 

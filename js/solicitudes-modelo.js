@@ -31,6 +31,13 @@
 const SOLICITUDES_STORAGE_KEY = 'mw-solicitudes-inscripcion-v1';
 const SOLICITUDES_COLECCION_FIRESTORE = 'solicitudesInscripcion';
 
+// Umbral de la señal de "riesgo de equipo inflado" que usa
+// crearSolicitudInscripcionPublica — ver su comentario. Nunca bloquea
+// el envío, solo marca la solicitud para que Staff/Admin la revise con
+// más cuidado.
+const RIESGO_EQUIPO_INFLADO_TOPE = 3;
+const RIESGO_EQUIPO_INFLADO_DIAS = 7;
+
 const ESTADOS_SOLICITUD = {
   pendiente: 'Pendiente',
   aprobada: 'Aprobada',
@@ -225,7 +232,16 @@ async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, sol
 // aprueba, usa "Cambiar líder directo" (Emprendedoras/Líderes) para
 // asignar al líder real si corresponde. Ver js/registro-publico.js
 // (login.html) para el formulario de 2 pasos que llama a esto.
-async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, correo, ineFrenteUrl, ineReversoUrl, liderIndicado }) {
+//
+// Decisión de negocio: esta solicitud (origen "publico") ya NO pide
+// identificación oficial (INE) — a diferencia de crearSolicitudInscripcion
+// (invitación hecha por una cuenta YA existente), que sigue
+// requiriéndola sin cambios. Sin esa verificación de identidad, nada
+// impide que una sola persona mande varias solicitudes (nombres
+// distintos, mismo teléfono/correo reciclado con variaciones) indicando
+// siempre a la misma líder, para inflarle el equipo — ver el marcado de
+// riesgoEquipoInflado más abajo.
+async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, correo, liderIndicado }) {
 
   nombreCompleto = String(nombreCompleto || '').trim();
   telefono = String(telefono || '').trim();
@@ -235,8 +251,6 @@ async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, corr
   if (!nombreCompleto) return { ok: false, error: 'Escribe tu nombre completo.' };
   if (!telefono) return { ok: false, error: 'Escribe tu número de celular.' };
   if (!correoValido(correo)) return { ok: false, error: 'Escribe un correo electrónico válido.' };
-  if (!ineFrenteUrl) return { ok: false, error: 'Adjunta la foto del frente de tu identificación oficial (INE).' };
-  if (!ineReversoUrl) return { ok: false, error: 'Adjunta la foto del reverso de tu identificación oficial (INE).' };
 
   const telefonoNorm = telefono.replace(/\D/g, '');
   const correoNorm = correo.toLowerCase();
@@ -254,6 +268,31 @@ async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, corr
     return { ok: false, error: 'Ya existe una cuenta registrada con ese correo o teléfono.' };
   }
 
+  // Señal de riesgo (nunca bloquea — una líder real también puede
+  // reclutar a varias personas de golpe): si ya hay
+  // RIESGO_EQUIPO_INFLADO_TOPE o más solicitudes públicas recientes
+  // (pendientes, o aprobadas en los últimos RIESGO_EQUIPO_INFLADO_DIAS
+  // días) indicando a esta MISMA líder, se marca para que Staff/Admin
+  // lo vea resaltado al revisar y decida si investiga (ver
+  // admin-solicitudes.js) — ej. llamarle por teléfono a cada una antes
+  // de aprobar todas de un jalón.
+  let riesgoEquipoInflado = false;
+  let riesgoEquipoInfladoConteo = null;
+  const liderNorm = liderIndicado.toLowerCase();
+  if (liderNorm) {
+    const limiteFecha = Date.now() - RIESGO_EQUIPO_INFLADO_DIAS * 24 * 60 * 60 * 1000;
+    const relacionadas = solicitudesExistentes.filter(s =>
+      s.origen === 'publico' &&
+      String(s.liderIndicado || '').trim().toLowerCase() === liderNorm &&
+      (s.estado === 'pendiente' || (s.estado === 'aprobada' && new Date(s.fechaRevision || s.fechaSolicitud).getTime() >= limiteFecha))
+    );
+    const conteo = relacionadas.length + 1; // +1 por esta misma solicitud nueva
+    if (conteo >= RIESGO_EQUIPO_INFLADO_TOPE) {
+      riesgoEquipoInflado = true;
+      riesgoEquipoInfladoConteo = conteo;
+    }
+  }
+
   const datosSolicitud = {
     solicitanteId: null,
     solicitanteNombre: nombreCompleto,
@@ -264,8 +303,9 @@ async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, corr
     nombreCompleto,
     telefono,
     correo,
-    ineFrenteUrl,
-    ineReversoUrl,
+
+    riesgoEquipoInflado,
+    riesgoEquipoInfladoConteo,
 
     estado: 'pendiente',
 
@@ -298,7 +338,7 @@ async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, corr
   // comentario en notificaciones-modelo.js.
   if (typeof agregarNotificacionDirecta === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_creada'))) {
     await agregarNotificacionDirecta({
-      texto: `${nombreCompleto} se registró directamente desde el sitio${liderIndicado ? ` — indicó que su líder es "${liderIndicado}"` : ' — no indicó líder'}. Revisa su solicitud.`,
+      texto: `${nombreCompleto} se registró directamente desde el sitio${liderIndicado ? ` — indicó que su líder es "${liderIndicado}"` : ' — no indicó líder'}. ${riesgoEquipoInflado ? `⚠️ Ya hay ${riesgoEquipoInfladoConteo} solicitudes recientes indicando a esta misma líder — revísala con cuidado.` : 'Revisa su solicitud.'}`,
       link: `admin-solicitudes.html?solicitud=${solicitud.id}`,
       paraId: 'admin01',
       rolDestino: 'admin',
