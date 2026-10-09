@@ -155,33 +155,56 @@ function abrirModalRegistroPaso2() {
 // ENVÍO
 // ============================================================
 
+// BUG reportado: "el botón se queda sin hacer nada" y la consola del
+// navegador no muestra NINGÚN error — ni una promesa rechazada, ni una
+// excepción. La explicación más probable es que algo fuera de este
+// código (un bloqueador de anuncios/privacidad, una red restrictiva)
+// frena en silencio la conexión hacia Firebase Auth/Firestore: ni la
+// deja completarse ni la deja fallar, así que el await de abajo se
+// queda esperando para siempre y el botón nunca se vuelve a habilitar.
+// Sin un límite de tiempo, eso es indistinguible de "no hace nada".
+// Con este límite, a los 12 segundos se da por fallida la operación y
+// se explica la causa más probable en vez de quedarse pegado.
+function conTiempoLimiteRegistro(promesa) {
+  return new Promise((resolve, reject) => {
+    const limite = setTimeout(() => reject(new Error('TIEMPO_AGOTADO')), 12000);
+    promesa.then(
+      (valor) => { clearTimeout(limite); resolve(valor); },
+      (error) => { clearTimeout(limite); reject(error); }
+    );
+  });
+}
+
 async function enviarRegistroPublico(liderIndicado) {
 
   const botones = ['terminarRegistroBtn', 'sinLiderBtn'].map(id => document.getElementById(id)).filter(Boolean);
   if (botones.some(b => b.disabled)) return;
-  botones.forEach(b => { b.disabled = true; });
+  const textosOriginales = botones.map(b => b.textContent);
+  botones.forEach(b => { b.disabled = true; b.textContent = 'Enviando...'; });
+
+  const restaurarBotones = () => botones.forEach((b, i) => { b.disabled = false; b.textContent = textosOriginales[i]; });
 
   try {
 
-    // Las reglas de Firestore/Storage exigen una sesión — quien llena
-    // este formulario nunca ha iniciado sesión, así que se destraba con
-    // una sesión anónima (ver iniciarSesionAnonimaSiFalta en
+    // Las reglas de Firestore exigen una sesión — quien llena este
+    // formulario nunca ha iniciado sesión, así que se destraba con una
+    // sesión anónima (ver iniciarSesionAnonimaSiFalta en
     // auth-service.js). Si no hay Firebase real conectado (modo demo),
     // esta función no hace nada y se sigue por localStorage/IndexedDB
     // como siempre.
     if (typeof iniciarSesionAnonimaSiFalta === 'function') {
-      await iniciarSesionAnonimaSiFalta();
+      await conTiempoLimiteRegistro(iniciarSesionAnonimaSiFalta());
     }
 
-    const resultado = await crearSolicitudInscripcionPublica({
+    const resultado = await conTiempoLimiteRegistro(crearSolicitudInscripcionPublica({
       ...registroDatosPaso1,
       liderIndicado
-    });
+    }));
 
     if (!resultado.ok) {
       const error = document.getElementById('regPaso2Error');
       if (error) { error.textContent = resultado.error; error.style.display = 'block'; }
-      botones.forEach(b => { b.disabled = false; });
+      restaurarBotones();
       return;
     }
 
@@ -189,23 +212,28 @@ async function enviarRegistroPublico(liderIndicado) {
 
   } catch (error) {
     // BUG reportado: siempre decía "revisa tu conexión", aunque la
-    // causa real casi nunca es de red. Único sospechoso conocido desde
-    // que este formulario dejó de pedir INE (y de depender de Storage):
-    // 'auth/operation-not-allowed' — el proveedor "Anonymous" de
-    // Firebase Auth no está activado (Firebase Console → Authentication
-    // → Sign-in method) — necesario para iniciarSesionAnonimaSiFalta.
+    // causa real casi nunca es de red. Sospechosos conocidos, cada uno
+    // con su propio texto:
+    //  - 'auth/operation-not-allowed': el proveedor "Anonymous" de
+    //    Firebase Auth no está activado (Firebase Console →
+    //    Authentication → Sign-in method) — necesario para
+    //    iniciarSesionAnonimaSiFalta.
+    //  - 'TIEMPO_AGOTADO': ver conTiempoLimiteRegistro arriba — algo
+    //    frenó la conexión en silencio, sin error visible.
     // console.error deja el detalle completo para la consola del navegador.
     console.error('No se pudo enviar la solicitud de inscripción:', error);
     const errorEl = document.getElementById('regPaso2Error');
     if (errorEl) {
       if (error && error.code === 'auth/operation-not-allowed') {
         errorEl.textContent = 'No se pudo enviar tu solicitud — falta activar el acceso anónimo en Firebase. Avísale a soporte.';
+      } else if (error && error.message === 'TIEMPO_AGOTADO') {
+        errorEl.textContent = 'Se está tardando demasiado en enviar tu solicitud — puede ser tu conexión o un bloqueador de anuncios/privacidad deteniéndola. Desactívalo o prueba desde otra red e inténtalo de nuevo.';
       } else {
         errorEl.textContent = 'No se pudo enviar tu solicitud. Espera unos segundos e inténtalo de nuevo.';
       }
       errorEl.style.display = 'block';
     }
-    botones.forEach(b => { b.disabled = false; });
+    restaurarBotones();
   }
 
 }
