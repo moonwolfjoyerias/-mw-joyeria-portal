@@ -41,6 +41,33 @@ const CATALOGO_META_DOC_ID = 'estado';
 
 let CATALOGO_CACHE = [];
 
+// Opción A acordada para convivir con BRILLO MW (el sistema de caja e
+// inventario, repositorio brillomw), que también agrega y edita
+// productos en esta misma colección: esta página ya NO reescribe el
+// catálogo completo en cada guardado. Recuerda cómo estaba cada producto
+// en el servidor la última vez que lo leyó o lo guardó (aquí, como texto
+// con las claves ordenadas) y en cada guardado:
+// - escribe SOLO los productos que cambiaron en esta página;
+// - borra SOLO los que esta página tenía y ya no están (eliminados aquí);
+// - NUNCA toca un producto que no conoce (por ejemplo, uno que BRILLO
+//   agregó después de que se abrió esta página).
+// Así un guardado de aquí no deshace ni borra lo que se hizo en BRILLO.
+let _catalogoEnServidor = new Map();
+
+function _textoEstable(valor) {
+  if (Array.isArray(valor)) return '[' + valor.map(_textoEstable).join(',') + ']';
+  if (valor && typeof valor === 'object') {
+    return '{' + Object.keys(valor).sort()
+      .filter(k => valor[k] !== undefined)
+      .map(k => JSON.stringify(k) + ':' + _textoEstable(valor[k])).join(',') + '}';
+  }
+  return JSON.stringify(valor === undefined ? null : valor);
+}
+
+function _recordarCatalogoEnServidor(productos) {
+  _catalogoEnServidor = new Map(productos.map(p => [String(p.id), _textoEstable(p)]));
+}
+
 function catalogoSemillaLocal() {
   return (typeof CATALOGO_EJEMPLO !== 'undefined' ? CATALOGO_EJEMPLO : []).map(p => ({ ...p }));
 }
@@ -61,6 +88,7 @@ async function cargarCatalogoRepo() {
       const snap = await dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE).get();
       if (!snap.empty) {
         CATALOGO_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        _recordarCatalogoEnServidor(CATALOGO_CACHE);
       } else {
         // Colección vacía: puede ser la primera vez que este proyecto de
         // Firestore recibe catálogo, O alguien borró todo a propósito.
@@ -93,11 +121,10 @@ async function cargarCatalogoRepo() {
   return CATALOGO_CACHE;
 }
 
-// Reemplaza el catálogo completo (mismo patrón que ya usaba
-// guardarCatalogoStaffStorage): guarda siempre en localStorage como
-// caché/respaldo, y si hay Firestore real, sincroniza la colección
-// completa — agrega/actualiza lo que sigue en `catalogo` y borra los
-// documentos cuyo producto ya no está en el arreglo (eliminado).
+// Recibe el catálogo completo (mismo contrato de siempre para todos los
+// controladores): guarda siempre en localStorage como caché/respaldo, y
+// si hay Firestore real, envía SOLO las diferencias contra lo que esta
+// página sabe que hay en el servidor — ver _catalogoEnServidor arriba.
 //
 // Cada controlador llama esto sin esperar (varios clics seguidos —
 // borrar, agregar — disparan varias llamadas casi al mismo tiempo). Si
@@ -125,20 +152,33 @@ async function guardarCatalogoRepo(catalogo) {
 
 async function sincronizarCatalogoConFirestore(catalogo) {
   const coleccion = dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE);
-  const snap = await coleccion.get();
-  const idsNuevos = new Set(catalogo.map(p => String(p.id)));
   const batch = dbFirestore.batch();
-  snap.docs.forEach(doc => {
-    if (!idsNuevos.has(doc.id)) batch.delete(doc.ref);
-  });
+  const escritos = new Map();
+  const borrados = [];
+
   catalogo.forEach(producto => {
-    batch.set(coleccion.doc(String(producto.id)), producto);
+    const id = String(producto.id);
+    const texto = _textoEstable(producto);
+    if (_catalogoEnServidor.get(id) === texto) return; // sin cambios en esta página
+    batch.set(coleccion.doc(id), producto);
+    escritos.set(id, texto);
   });
+
+  const idsNuevos = new Set(catalogo.map(p => String(p.id)));
+  _catalogoEnServidor.forEach((texto, id) => {
+    if (!idsNuevos.has(id)) {
+      batch.delete(coleccion.doc(id)); // lo eliminó esta página
+      borrados.push(id);
+    }
+  });
+
   // Sella que este proyecto ya tuvo catálogo real — así una colección
   // vacía después de esto se sabe que es a propósito, no "sin sembrar".
   batch.set(dbFirestore.collection(CATALOGO_META_COLECCION).doc(CATALOGO_META_DOC_ID), { inicializado: true }, { merge: true });
   try {
     await batch.commit();
+    escritos.forEach((texto, id) => _catalogoEnServidor.set(id, texto));
+    borrados.forEach(id => _catalogoEnServidor.delete(id));
   } catch (error) {
     // Firestore aplica el batch completo o nada: si un solo producto
     // falla (ej. una foto demasiado pesada), NINGÚN cambio de este
