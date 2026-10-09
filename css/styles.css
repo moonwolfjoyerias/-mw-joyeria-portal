@@ -1396,6 +1396,7 @@ a:hover { color: var(--mw-gold); }
   box-sizing: border-box;
 }
 .modal-box textarea { resize: vertical; }
+.modal-box input[readonly] { background: var(--mw-surface-soft); color: var(--mw-text-muted); cursor: default; }
 .modal-close { position: absolute; top: 0.9rem; right: 1rem; background: none; border: none; font-size: 1.4rem; color: var(--mw-text-muted); cursor: pointer; line-height: 1; }
 .modal-note { font-size: 0.76rem; color: var(--mw-accent-text-strong); background: var(--mw-lilac-soft); padding: 0.6em 0.8em; border-radius: var(--radius-sm); margin-bottom: 1.1rem; }
 
@@ -3301,6 +3302,39 @@ img.zoomable-photo { cursor: zoom-in; }
   border-color: var(--mwv-8b55ad);
   box-shadow: 0 0 0 3px #8b55ad14;
 }
+
+/* Carrito del modal "Liquidar apartado" (Staff/Encargado/Admin) — una
+   fila por pieza activa, con checkbox, para elegir cuáles liquidar sin
+   cerrar la ventana por completo — ver abrirModalLiquidar en
+   staff/encargado/admin-apartados.js. */
+.piezas-liquidar-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 14px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.pieza-liquidar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--mw-border-d);
+  border-radius: 8px;
+  background: var(--mw-surface-soft);
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--mw-heading-d);
+}
+.pieza-liquidar-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--mwv-8b55ad);
+  flex-shrink: 0;
+}
+.pieza-liquidar-row .pieza-liquidar-info { flex: 1; min-width: 0; }
+.pieza-liquidar-row strong { flex-shrink: 0; color: var(--mw-accent-text); }
 
 .price-input {
   display: flex;

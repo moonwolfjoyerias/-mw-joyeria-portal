@@ -13,9 +13,21 @@
 // (apartados-ejemplo.js) sigue usándose solo para los datos bancarios a
 // mostrar, y reutiliza el modal genérico (#modalOverlay/#modalBox).
 //
-// El apartado se paga completo, no por pieza: no hay selección
-// individual, "Pagar todo mi apartado" cobra el total de todas las
-// piezas activas juntas de UNA ventana (la ventana activa vigente).
+// CARRITO (decisión de negocio): antes el apartado se pagaba completo,
+// no por pieza. Ahora la persona puede elegir, con un checkbox por
+// pieza, cuáles paga ahora — las que elige se liquidan y salen del
+// apartado (igual que siempre al liquidar), las que no elige siguen
+// apartadas con normalidad, con el mismo plazo/depósito de siempre.
+// Solo las piezas de la ventana PAGABLE (obtenerVentanaActivaPrincipal
+// — la que ya tiene depósito confirmado y corre su plazo) muestran
+// checkbox; piezas de una ventana todavía pendiente de depósito no son
+// pagables aún. seleccionCarrito/piezasVistasCarrito viven solo en
+// memoria de esta pestaña (se reinician al recargar la página) — toda
+// pieza pagable nueva nace preseleccionada (como un carrito normal,
+// donde todo lo que tienes ya está "en el carrito" por default) y se
+// respeta si la persona la desmarca, mientras siga existiendo.
+let seleccionCarrito = new Set();
+let piezasVistasCarrito = new Set();
 
 let usuarioIdActual = '';
 
@@ -189,17 +201,36 @@ function renderApartados() {
   if (items.length === 0) {
     if (wrap) wrap.style.display = 'none';
     if (empty) empty.style.display = 'block';
+    seleccionCarrito.clear();
+    piezasVistasCarrito.clear();
     actualizarResumen();
     return;
   }
   if (wrap) wrap.style.display = '';
   if (empty) empty.style.display = 'none';
 
+  const ventanaPago = obtenerVentanaActivaPrincipal();
+  const idsPagables = new Set(ventanaPago ? obtenerPiezasActivas(ventanaPago).map(p => p.id) : []);
+
+  // Toda pieza pagable nueva nace preseleccionada; una ya quitada/pagada
+  // se limpia de ambos sets. Una pieza que la persona desmarcó a mano
+  // sigue sin seleccionarse mientras exista (ya está en piezasVistasCarrito).
+  idsPagables.forEach(id => {
+    if (!piezasVistasCarrito.has(id)) {
+      seleccionCarrito.add(id);
+      piezasVistasCarrito.add(id);
+    }
+  });
+  Array.from(seleccionCarrito).forEach(id => { if (!idsPagables.has(id)) seleccionCarrito.delete(id); });
+  Array.from(piezasVistasCarrito).forEach(id => { if (!idsPagables.has(id)) piezasVistasCarrito.delete(id); });
+
   list.innerHTML = items.map(({ pieza }) => {
     const foto = fotoPiezaApartado(pieza);
     const generica = esFotoGenericaApartado(foto);
+    const pagable = idsPagables.has(pieza.id);
     return `
     <div class="apartado-row" data-id="${pieza.id}">
+      ${pagable ? `<input type="checkbox" data-seleccionar="${pieza.id}" ${seleccionCarrito.has(pieza.id) ? 'checked' : ''} title="Pagar esta pieza ahora">` : ''}
       <div class="apartado-photo"><img src="${foto}" alt="${escapeAttribute(pieza.producto)}" class="${generica ? 'foto-generica' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(pieza.producto)}"`}></div>
       <div class="apartado-info">
         <h4>${escapeHTML(pieza.producto)}</h4>
@@ -224,18 +255,30 @@ function renderApartados() {
   list.querySelectorAll('[data-editar]').forEach(btn => {
     btn.addEventListener('click', () => abrirModalEditar(btn.getAttribute('data-editar')));
   });
+  list.querySelectorAll('[data-seleccionar]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = cb.getAttribute('data-seleccionar');
+      if (cb.checked) seleccionCarrito.add(id); else seleccionCarrito.delete(id);
+      actualizarResumen();
+    });
+  });
 
   actualizarResumen();
 }
 
 function actualizarResumen() {
   const items = obtenerPiezasPropiasConVentana();
-  const total = items.reduce((sum, { pieza }) => sum + Number(pieza.total || 0), 0);
-  setText('summaryCount', `${items.length} pieza${items.length === 1 ? '' : 's'} en tu apartado`);
+  const seleccionadas = items.filter(({ pieza }) => seleccionCarrito.has(pieza.id));
+  const total = seleccionadas.reduce((sum, { pieza }) => sum + Number(pieza.total || 0), 0);
+  setText('summaryCount', `${seleccionadas.length} pieza${seleccionadas.length === 1 ? '' : 's'} seleccionada${seleccionadas.length === 1 ? '' : 's'}`);
   setText('summaryTotal', `$${total} MXN`);
   const btn = document.getElementById('pagarSeleccionadasBtn');
-  const ventanaPago = obtenerVentanaActivaPrincipal();
-  if (btn) btn.disabled = !ventanaPago || obtenerPiezasActivas(ventanaPago).length === 0;
+  if (btn) {
+    btn.disabled = seleccionadas.length === 0;
+    btn.textContent = seleccionadas.length
+      ? `Pagar ${seleccionadas.length} pieza${seleccionadas.length === 1 ? '' : 's'}`
+      : 'Pagar piezas seleccionadas';
+  }
 }
 
 // ---------- Quitar / Editar ----------
@@ -358,16 +401,24 @@ async function cambiarVariantePiezaApartada(ventanaId, piezaId, nuevaVarianteId)
 }
 
 // ---------- Pago ----------
-function mostrarModalPagoConMonto(ventana, piezas, totalFinal, notaExtra, decisionDeposito) {
+// pagaTodo = la selección cubre TODAS las piezas activas de la ventana
+// (va a dejarla sin ninguna pieza activa) — solo en ese caso el
+// depósito se resuelve (ver abrirModalPago); si es una selección
+// parcial, el depósito sigue intacto y la ventana no se cierra.
+function mostrarModalPagoConMonto(ventana, piezas, totalFinal, notaExtra, decisionDeposito, pagaTodo) {
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
   const mensajeWa = encodeURIComponent('¡Hola! Te envío mi comprobante de pago');
   const nombrePersona = ventana.usuarioNombre;
+  const totalActivas = obtenerPiezasActivas(ventana).length;
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <h3>Pagar tu apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'})</h3>
+    <h3>${pagaTodo
+      ? `Pagar tu apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'})`
+      : `Pagar ${piezas.length} de ${totalActivas} piezas de tu apartado`}</h3>
     <p class="modal-sub">Total a pagar: <strong style="color:var(--mw-purple)">$${totalFinal} MXN</strong></p>
+    ${!pagaTodo ? `<p class="modal-sub" style="margin-top:-.35rem;">Las piezas que no elegiste se quedan apartadas con normalidad, con el mismo plazo de siempre.</p>` : ''}
     ${notaExtra ? `<p class="modal-sub" style="margin-top:-.35rem; color:var(--mw-purple); font-weight:600;">${notaExtra}</p>` : ''}
 
     <div class="bank-details-box">
@@ -411,16 +462,23 @@ function mostrarModalPagoConMonto(ventana, piezas, totalFinal, notaExtra, decisi
       : decisionDeposito === 'credito'
         ? ' — decidió guardar su depósito como crédito'
         : '';
-    // Se guarda la hora en que la persona declaró haber pagado — es una
+    // Se guarda la hora en que la persona declaró haber pagado y
+    // EXACTAMENTE qué piezas eligió (piezasDeclaradasPago) — es una
     // señal informativa para Staff/Encargado/Admin (por ejemplo, si dos
-    // personas reclaman la misma pieza, quién avisó primero), pero
-    // nunca sustituye la confirmación manual de Staff con la hora real
-    // en que se recibió el depósito (eso se registra aparte al liquidar).
+    // personas reclaman la misma pieza, quién avisó primero, o cuáles
+    // de las piezas activas son las que debe marcar en el carrito al
+    // liquidar), pero nunca sustituye la confirmación manual de Staff
+    // con la hora real en que se recibió el depósito (eso se registra
+    // aparte al liquidar).
     mutarVentanaPropia(ventana.id, v => {
       v.fechaDeclaracionPago = new Date().toISOString();
       v.montoDeclaradoPago = totalFinal;
+      v.piezasDeclaradasPago = piezas.map(p => p.id);
     });
-    notificarEquipoOperativo(`${nombrePersona} avisó que ya transfirió el pago de su apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${totalFinal} MXN)${notaDeposito} — confirma el depósito y liquida el apartado en el sistema.`, nombrePersona);
+    const descripcionPiezas = pagaTodo
+      ? `su apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'})`
+      : `${piezas.length} de ${totalActivas} piezas de su apartado`;
+    notificarEquipoOperativo(`${nombrePersona} avisó que ya transfirió el pago de ${descripcionPiezas} ($${totalFinal} MXN)${notaDeposito} — confirma el depósito y liquida en el sistema.`, nombrePersona);
     box.innerHTML = `
       <button class="modal-close" data-close>&times;</button>
       <div class="confirm-box">
@@ -438,14 +496,21 @@ function mostrarModalPagoConMonto(ventana, piezas, totalFinal, notaExtra, decisi
 function abrirModalPago() {
   const ventana = obtenerVentanaActivaPrincipal();
   if (!ventana) return;
-  const piezas = obtenerPiezasActivas(ventana);
+  const piezasActivas = obtenerPiezasActivas(ventana);
+  const piezas = piezasActivas.filter(p => seleccionCarrito.has(p.id));
   if (!piezas.length) return;
 
   const total = piezas.reduce((sum, p) => sum + Number(p.total || 0), 0);
   const esVip = ventana.categoria === 'vip';
+  // El depósito respalda TODA la ventana — solo tiene sentido
+  // preguntar qué hacer con él cuando este pago la deja sin NINGUNA
+  // pieza activa (ver liquidarPiezasSeleccionadas en
+  // apartados-modelo.js). Si es una selección parcial del carrito, el
+  // depósito sigue intacto y no hay nada que decidir todavía.
+  const pagaTodo = piezas.length === piezasActivas.length;
 
-  if (esVip || !ventana.depositoApartadoDisponible) {
-    mostrarModalPagoConMonto(ventana, piezas, total, esVip ? 'Este apartado es VIP, así que no aplica depósito.' : null);
+  if (esVip || !ventana.depositoApartadoDisponible || !pagaTodo) {
+    mostrarModalPagoConMonto(ventana, piezas, total, esVip ? 'Este apartado es VIP, así que no aplica depósito.' : null, null, pagaTodo);
     return;
   }
 
@@ -479,10 +544,10 @@ function abrirModalPago() {
 
     if (usarDeposito) {
       notificarEquipoOperativo(`${nombrePersona} decidió usar su depósito de $${montoDeposito} en este pago (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${totalFinal} MXN).`, nombrePersona);
-      mostrarModalPagoConMonto(ventana, piezas, totalFinal, `Se descontará tu depósito de $${montoDeposito} y se notificó al equipo.`, 'aplicar');
+      mostrarModalPagoConMonto(ventana, piezas, totalFinal, `Se descontará tu depósito de $${montoDeposito} y se notificó al equipo.`, 'aplicar', true);
     } else {
       notificarEquipoOperativo(`${nombrePersona} guardará su depósito de $${montoDeposito} como crédito y pagará el total completo de su apartado (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${total} MXN).`, nombrePersona);
-      mostrarModalPagoConMonto(ventana, piezas, total, 'Tu depósito quedó guardado como crédito y se notificó al equipo.', 'credito');
+      mostrarModalPagoConMonto(ventana, piezas, total, 'Tu depósito quedó guardado como crédito y se notificó al equipo.', 'credito', true);
     }
   });
 }

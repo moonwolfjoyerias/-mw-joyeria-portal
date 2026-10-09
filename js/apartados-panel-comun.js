@@ -287,7 +287,11 @@ function obtenerAccionesVentana(v) {
 
 
 // ============================================================
-// LIQUIDAR APARTADO COMPLETO (con resolución del depósito)
+// LIQUIDAR APARTADO (CARRITO) — la elección de qué hacer con el
+// depósito (si aplica) ya vive DENTRO de abrirModalLiquidar, porque
+// depende de si la selección de piezas termina cubriendo TODAS las
+// activas o no — antes se preguntaba aquí, antes de saber qué se iba
+// a pagar, porque el apartado solo se podía liquidar completo.
 // ============================================================
 
 function iniciarLiquidacionVentana(ventanaId) {
@@ -295,34 +299,7 @@ function iniciarLiquidacionVentana(ventanaId) {
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v || !obtenerPiezasActivas(v).length) return;
 
-  if (v.depositoApartadoDisponible > 0) {
-    abrirModalResolucionDeposito(v);
-  } else {
-    abrirModalLiquidar(v, null);
-  }
-
-}
-
-
-function abrirModalResolucionDeposito(v) {
-
-  const overlay = document.getElementById("modalOverlay");
-  const box = document.getElementById("modalBox");
-
-  box.innerHTML = `
-    <button class="modal-close" onclick="cerrarModal()">×</button>
-    <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
-    <h3>¿Qué hacer con el depósito?</h3>
-    <p class="modal-sub">Vas a liquidar el apartado completo de ${escapeHTML(v.usuarioNombre)}. Tiene $${v.depositoApartadoDisponible} MXN de depósito disponible.</p>
-
-    <button class="btn btn-primary" style="width:100%;" id="aplicarDepositoBtn">Aplicar a esta compra (−$${v.depositoApartadoDisponible} MXN)</button>
-    <button class="btn btn-outline" style="width:100%;" id="guardarCreditoBtn">Guardar como crédito para su próximo apartado</button>
-  `;
-
-  overlay.classList.add("open");
-
-  document.getElementById("aplicarDepositoBtn").addEventListener("click", () => abrirModalLiquidar(v, "aplicar"));
-  document.getElementById("guardarCreditoBtn").addEventListener("click", () => abrirModalLiquidar(v, "credito"));
+  abrirModalLiquidar(v);
 
 }
 
