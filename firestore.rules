@@ -478,6 +478,19 @@ service cloud.firestore {
       allow update, delete: if esInterno();
     }
 
+    // BRILLO MW — sistema de caja e inventario (repositorio brillomw).
+    // Comparte este proyecto de Firebase con la página, pero escribe solo en
+    // sus propias colecciones, cuyos nombres empiezan con "brillo" seguido de
+    // mayúscula (brilloVentas, brilloTurnosCaja, ...). Este bloque no cambia
+    // ninguna regla de las colecciones de la página: para cualquier otro
+    // nombre de colección la condición es falsa y no concede nada.
+    // Solo el personal interno (Staff, Encargado, Administrativo) las lee y
+    // escribe. Las reglas finas de cada colección (quién cancela una venta,
+    // qué registros no se pueden borrar) se agregan con cada módulo.
+    match /{coleccion}/{id} {
+      allow read, write: if coleccion.matches('brillo[A-Z].*') && esInterno();
+    }
+
     // Todo lo que no esté arriba sigue en localStorage — se deniega por
     // defecto hasta que tenga su propia migración y sus propias reglas.
     match /{document=**} {
