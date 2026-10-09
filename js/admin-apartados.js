@@ -415,21 +415,19 @@ function ejecutarConfirmarDeposito(ventanaId, datos) {
 
 
 // ============================================================
-// LIQUIDAR APARTADO COMPLETO (con resolución del depósito) — el
-// arranque del flujo (iniciarLiquidacionVentana/
-// abrirModalResolucionDeposito) es común y vive en
-// apartados-panel-comun.js; solo el paso final que pide la
-// autorización se queda aquí.
+// LIQUIDAR APARTADO (CARRITO) — checkbox por pieza activa; la
+// resolución del depósito solo aparece si la selección actual cubre
+// TODAS las piezas activas (va a dejar la ventana sin ninguna) — ver
+// liquidarPiezasSeleccionadas en apartados-modelo.js. El arranque
+// (iniciarLiquidacionVentana) es común y vive en
+// apartados-panel-comun.js; solo este modal y la autorización final
+// se quedan aquí.
 // ============================================================
 
-function abrirModalLiquidar(v, decisionDeposito) {
+function abrirModalLiquidar(v) {
 
   const piezasActivas = obtenerPiezasActivas(v);
-  const totalActivas = piezasActivas.reduce((suma, p) => suma + p.saldo, 0);
-
-  const montoEsperado = decisionDeposito === "aplicar"
-    ? Math.max(0, totalActivas - v.depositoApartadoDisponible)
-    : totalActivas;
+  const idsDeclarados = new Set(Array.isArray(v.piezasDeclaradasPago) ? v.piezasDeclaradasPago : []);
 
   const overlay = document.getElementById("modalOverlay");
   const box = document.getElementById("modalBox");
@@ -440,14 +438,38 @@ function abrirModalLiquidar(v, decisionDeposito) {
     <h3>Liquidar apartado</h3>
     <p class="modal-sub">${escapeHTML(v.usuarioNombre)} · ${piezasActivas.length} pieza${piezasActivas.length === 1 ? "" : "s"}</p>
 
-    ${v.fechaDeclaracionPago ? `<div class="modal-note">${escapeHTML(v.usuarioNombre)} avisó que ya pagó el ${formatearFechaHora(v.fechaDeclaracionPago)} (informativo — confirma con la hora real del depósito recibido).</div>` : ""}
+    ${v.fechaDeclaracionPago ? `<div class="modal-note">${escapeHTML(v.usuarioNombre)} avisó que ya pagó el ${formatearFechaHora(v.fechaDeclaracionPago)}${idsDeclarados.size && idsDeclarados.size < piezasActivas.length ? ` — solo ${idsDeclarados.size} de ${piezasActivas.length} piezas (ya marcadas abajo)` : ''} (informativo — confirma con la hora real del depósito recibido).</div>` : ""}
 
-    ${decisionDeposito === "aplicar" ?`<div class="auth-warning"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span><div><strong>Depósito aplicado</strong><small>Se descontaron $${v.depositoApartadoDisponible} MXN del total.</small></div></div>` : ""}
+    <label>Piezas a liquidar</label>
+    <div id="piezasLiquidarLista" class="piezas-liquidar-lista">
+      ${piezasActivas.map(p => `
+        <label class="pieza-liquidar-row">
+          <input type="checkbox" data-pieza-liquidar="${p.id}" ${idsDeclarados.size ? (idsDeclarados.has(p.id) ? "checked" : "") : "checked"}>
+          <span class="pieza-liquidar-info">${escapeHTML(p.producto)}${p.variante ? ` · ${escapeHTML(p.variante)}` : ""}</span>
+          <strong>$${p.saldo} MXN</strong>
+        </label>
+      `).join("")}
+    </div>
 
-    <label for="liquidarMonto">Monto a cobrar</label>
-    <input id="liquidarMonto" type="number" min="0" step="0.01" value="${montoEsperado}">
+    <div id="depositoLiquidarBox" style="display:none;margin-top:10px;">
+      <div class="auth-warning">
+        <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span>
+        <div>
+          <strong>Esta selección paga TODO el apartado — ¿qué hacer con el depósito de $${v.depositoApartadoDisponible} MXN?</strong>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:400;">
+            <input type="radio" name="decisionDepositoLiquidar" value="aplicar" checked> Aplicarlo a esta compra
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:4px;font-weight:400;">
+            <input type="radio" name="decisionDepositoLiquidar" value="credito"> Guardarlo como crédito
+          </label>
+        </div>
+      </div>
+    </div>
 
-    ${montoEsperado > 0 ? `
+    <label for="liquidarMonto" style="margin-top:10px;">Monto a cobrar</label>
+    <input id="liquidarMonto" type="number" min="0" step="0.01" value="0" readonly>
+
+    <div id="liquidarPagoCampos" style="display:none;">
       <label for="liquidarMetodo">Método de pago</label>
       <select id="liquidarMetodo" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
         <option value="">Selecciona una opción</option>
@@ -456,7 +478,8 @@ function abrirModalLiquidar(v, decisionDeposito) {
       </select>
       <label for="liquidarReferencia">Número de referencia</label>
       <input id="liquidarReferencia" type="text" placeholder="Obligatoria para transferencia">
-    ` : `<p class="modal-sub">El depósito cubre el total — no se requiere pago adicional.</p>`}
+    </div>
+    <p class="modal-sub" id="liquidarSinPagoNota" style="display:none;">El depósito cubre el total — no se requiere pago adicional.</p>
 
     <div id="formError" class="auth-error" style="display:none;"></div>
 
@@ -465,16 +488,45 @@ function abrirModalLiquidar(v, decisionDeposito) {
 
   overlay.classList.add("open");
 
+  function recalcularLiquidar() {
+    const idsSeleccionados = Array.from(box.querySelectorAll("[data-pieza-liquidar]:checked")).map(cb => cb.getAttribute("data-pieza-liquidar"));
+    const seleccionadas = piezasActivas.filter(p => idsSeleccionados.includes(p.id));
+    const totalSeleccion = seleccionadas.reduce((suma, p) => suma + p.saldo, 0);
+    const cubreTodo = piezasActivas.length > 0 && seleccionadas.length === piezasActivas.length;
+    const hayDeposito = cubreTodo && v.depositoApartadoDisponible > 0;
+
+    const depositoBox = document.getElementById("depositoLiquidarBox");
+    if (depositoBox) depositoBox.style.display = hayDeposito ? "" : "none";
+
+    const decision = hayDeposito ? (box.querySelector('input[name="decisionDepositoLiquidar"]:checked')?.value || "aplicar") : null;
+    const montoEsperado = decision === "aplicar" ? Math.max(0, totalSeleccion - v.depositoApartadoDisponible) : totalSeleccion;
+
+    const montoInput = document.getElementById("liquidarMonto");
+    if (montoInput) montoInput.value = montoEsperado;
+
+    const camposPago = document.getElementById("liquidarPagoCampos");
+    const sinPagoNota = document.getElementById("liquidarSinPagoNota");
+    if (camposPago) camposPago.style.display = montoEsperado > 0 ? "" : "none";
+    if (sinPagoNota) sinPagoNota.style.display = montoEsperado > 0 ? "none" : "";
+
+    return { idsSeleccionados, cubreTodo, decision, montoEsperado };
+  }
+
+  recalcularLiquidar();
+
+  box.querySelectorAll("[data-pieza-liquidar]").forEach(cb => cb.addEventListener("change", recalcularLiquidar));
+  box.querySelectorAll('input[name="decisionDepositoLiquidar"]').forEach(r => r.addEventListener("change", recalcularLiquidar));
+
   document.getElementById("continuarLiquidarBtn").addEventListener("click", () => {
 
-    const monto = Number(document.getElementById("liquidarMonto").value);
+    const { idsSeleccionados, cubreTodo, decision, montoEsperado } = recalcularLiquidar();
     const metodo = document.getElementById("liquidarMetodo")?.value || null;
     const referencia = document.getElementById("liquidarReferencia")?.value.trim() || null;
     const error = document.getElementById("formError");
 
-    if (!Number.isFinite(monto) || monto !== montoEsperado) {
+    if (!idsSeleccionados.length) {
       error.style.display = "block";
-      error.textContent = `El monto debe ser exactamente $${montoEsperado} MXN.`;
+      error.textContent = "Elige al menos una pieza para liquidar.";
       return;
     }
 
@@ -492,26 +544,28 @@ function abrirModalLiquidar(v, decisionDeposito) {
       return;
     }
 
-    let mensaje = `Estás a punto de liquidar el apartado de "${v.usuarioNombre}" por $${monto} MXN.`;
-    if (decisionDeposito === "aplicar") mensaje += ` Se aplicará su depósito de $${v.depositoApartadoDisponible} MXN a la compra.`;
-    if (decisionDeposito === "credito") mensaje += ` Su depósito de $${v.depositoApartadoDisponible} MXN se guardará como crédito.`;
+    let mensaje = cubreTodo
+      ? `Estás a punto de liquidar el apartado completo de "${v.usuarioNombre}" por $${montoEsperado} MXN.`
+      : `Estás a punto de liquidar ${idsSeleccionados.length} de ${piezasActivas.length} piezas de "${v.usuarioNombre}" por $${montoEsperado} MXN — el resto sigue apartado con normalidad.`;
+    if (decision === "aplicar") mensaje += ` Se aplicará su depósito de $${v.depositoApartadoDisponible} MXN a la compra.`;
+    if (decision === "credito") mensaje += ` Su depósito de $${v.depositoApartadoDisponible} MXN se guardará como crédito.`;
 
     abrirAutorizacionAdmin({
       titulo: "Autorizar liquidación",
       mensaje,
-      onConfirmar: () => ejecutarLiquidar(v.id, { monto, metodo, referencia }, decisionDeposito)
+      onConfirmar: () => ejecutarLiquidar(v.id, idsSeleccionados, { monto: montoEsperado, metodo, referencia }, decision)
     });
 
   });
 
 }
 
-function ejecutarLiquidar(ventanaId, datos, decisionDeposito) {
+function ejecutarLiquidar(ventanaId, piezaIds, datos, decisionDeposito) {
 
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v) return;
 
-  const resultado = liquidarVentanaCompleta(v, datos, ADMIN_EMPLEADO);
+  const resultado = liquidarPiezasSeleccionadas(v, piezaIds, datos, ADMIN_EMPLEADO);
 
   if (resultado?.requiereResolucionDeposito && decisionDeposito) {
     resolverDepositoVentana(v, decisionDeposito, ADMIN_EMPLEADO);
@@ -522,7 +576,7 @@ function ejecutarLiquidar(ventanaId, datos, decisionDeposito) {
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaAdmin({ modulo: "apartados", accion: "liquidar_ventana", descripcion: `Apartado de ${v.usuarioNombre} liquidado por $${datos.monto}` });
+  registrarAuditoriaAdmin({ modulo: "apartados", accion: "liquidar_ventana", descripcion: `Apartado de ${v.usuarioNombre} liquidado por $${datos.monto} (${piezaIds.length} pieza${piezaIds.length === 1 ? '' : 's'})` });
   mostrarToast(`Apartado liquidado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
 
 }

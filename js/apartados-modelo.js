@@ -8,18 +8,29 @@
 //
 // LÓGICA DEL DEPÓSITO (ventana de apartado):
 // El depósito de $50+ respalda TODA la ventana (no una pieza
-// individual), y el apartado se liquida o cancela completo, no por
-// pieza — o pagan/desapartan todo, o nada.
+// individual) — se registra una sola vez al abrir y solo se resuelve
+// (aplicarlo a una compra, o guardarlo como crédito) cuando la ventana
+// se queda sin NINGUNA pieza activa, sea porque se liquidaron todas o
+// porque se canceló el apartado completo.
 // - Se registra una sola vez al abrir la ventana (o se reutiliza un
 //   crédito guardado de una ventana anterior de la misma persona). El
 //   plazo de vencimiento empieza a correr desde que se confirma el
 //   depósito, no desde que se solicitó la pieza.
-// - Mientras existan piezas activas, el depósito no se toca.
-// - Cuando se LIQUIDA el apartado completo (se pagan todas las piezas
-//   activas juntas), se pregunta: aplicar el depósito a esa compra, o
-//   guardarlo como crédito para la próxima vez.
-// - Cuando se CANCELA el apartado completo (no hubo compra), el
-//   depósito se guarda como crédito automáticamente, sin preguntar.
+// - Mientras existan piezas activas, el depósito no se toca (salvo el
+//   excedente sobre $50, que se puede aplicar antes de liquidar nada —
+//   ver aplicarExcedenteDeposito).
+// - CARRITO: liquidarPiezasSeleccionadas permite pagar una o varias
+//   piezas activas elegidas SIN cerrar la ventana, mientras queden
+//   otras piezas activas sin pagar — el depósito sigue intacto y el
+//   vencimiento no cambia (decisión de negocio: antes el apartado solo
+//   se podía liquidar completo de un jalón). Si la selección cubre
+//   TODAS las piezas activas que quedaban, se comporta exactamente
+//   igual que liquidar el apartado completo siempre hizo: pregunta qué
+//   hacer con el depósito y cierra la ventana (Staff/Encargado/Admin
+//   le pasan los ids de TODAS las piezas activas para ese caso).
+// - CANCELAR el apartado sigue siendo todo o nada (no hay "cancelar
+//   una pieza suelta") — nunca aplica el depósito a una compra, lo
+//   guarda como crédito automáticamente, sin preguntar.
 // - Que la ventana llegue a su fecha de vencimiento NO pierde nada
 //   automáticamente: solo se muestra como "vencida" (piezas y
 //   depósito intactos, se puede seguir liquidando con normalidad).
@@ -452,29 +463,45 @@ async function restaurarStockPiezasCanceladas(piezas) {
   await Promise.all(piezas.map(pieza => restaurarStockVariante(pieza.productoId, pieza.varianteId)));
 }
 
-// Liquida (paga) TODAS las piezas activas de la ventana juntas — el
-// apartado se paga completo, no por pieza. `monto` es el total ya
-// decidido por la interfaz (si se va a aplicar el depósito, debe venir
-// con ese descuento restado). Regresa si hace falta preguntar qué
-// hacer con el depósito (siempre que quede disponible, porque esta
-// acción deja la ventana sin piezas activas).
-function liquidarVentanaCompleta(ventana, { monto, metodo, referencia }, empleado) {
+// CARRITO: liquida (paga) solo las piezas ACTIVAS elegidas (piezaIds),
+// permitiendo pagar una parte del apartado sin cerrar la ventana si
+// quedan otras piezas activas sin pagar. `monto` es el total ya
+// decidido por la interfaz (la suma de los saldos de las piezas
+// elegidas — si se va a aplicar el depósito, debe venir con ese
+// descuento restado) — solo se usa para la bitácora, el pago real de
+// cada pieza siempre es su propio saldo completo (no hay abono parcial
+// a una pieza individual). Si al terminar YA NO queda ninguna pieza
+// activa en la ventana, se comporta exactamente igual que liquidar el
+// apartado completo siempre hizo: puede requerir resolver el depósito
+// (ver resolverDepositoVentana) y cierra la ventana.
+function liquidarPiezasSeleccionadas(ventana, piezaIds, { monto, metodo, referencia }, empleado) {
 
+  const idsElegidos = new Set(piezaIds);
   const piezasActivas = obtenerPiezasActivas(ventana);
-  if (!piezasActivas.length) return null;
+  const piezasElegidas = piezasActivas.filter(p => idsElegidos.has(p.id));
+  if (!piezasElegidas.length) return null;
 
   const fecha = new Date().toISOString();
 
-  piezasActivas.forEach(pieza => {
+  piezasElegidas.forEach(pieza => {
     pieza.pagos.push({ monto: pieza.saldo, tipo: 'liquidacion', metodo: metodo || null, referencia: referencia || null, fecha });
     pieza.saldo = 0;
     pieza.estado = 'liquidada';
   });
 
+  const siguenActivas = piezasActivas.length - piezasElegidas.length;
+
   ventana.auditoria.push(registrarAuditoriaVentana(
-    `Apartado liquidado por completo (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'}) — $${monto}${referencia ? ` — referencia ${referencia}` : ''}`,
+    (siguenActivas > 0
+      ? `${piezasElegidas.length} pieza${piezasElegidas.length === 1 ? '' : 's'} liquidada${piezasElegidas.length === 1 ? '' : 's'} del carrito (quedan ${siguenActivas} activa${siguenActivas === 1 ? '' : 's'})`
+      : `Apartado liquidado por completo (${piezasElegidas.length} pieza${piezasElegidas.length === 1 ? '' : 's'})`
+    ) + ` — $${monto}${referencia ? ` — referencia ${referencia}` : ''}`,
     empleado
   ));
+
+  if (siguenActivas > 0) {
+    return { requiereResolucionDeposito: false, ventanaCerrada: false };
+  }
 
   const requiereResolucionDeposito = ventana.depositoApartadoDisponible > 0;
 
@@ -482,16 +509,16 @@ function liquidarVentanaCompleta(ventana, { monto, metodo, referencia }, emplead
     cerrarVentana(ventana, 'no_aplica');
   }
 
-  return { requiereResolucionDeposito };
+  return { requiereResolucionDeposito, ventanaCerrada: !requiereResolucionDeposito };
 
 }
 
 // Resuelve el depósito de una ventana que se quedó sin piezas activas
 // por PAGO (no por cancelación). decision: 'aplicar' | 'credito'.
-// Debe llamarse DESPUÉS de liquidarVentanaCompleta cuando esta reporte
-// requiereResolucionDeposito=true (si se eligió "aplicar", el efectivo
-// cobrado en liquidarVentanaCompleta ya debió venir con el descuento
-// restado).
+// Debe llamarse DESPUÉS de liquidarPiezasSeleccionadas cuando esta
+// reporte requiereResolucionDeposito=true (si se eligió "aplicar", el
+// efectivo cobrado en liquidarPiezasSeleccionadas ya debió venir con el
+// descuento restado).
 function resolverDepositoVentana(ventana, decision, empleado) {
 
   const monto = ventana.depositoApartadoDisponible;
