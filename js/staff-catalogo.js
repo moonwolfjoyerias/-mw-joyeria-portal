@@ -1260,7 +1260,7 @@ function solicitarAutorizacion(tipo, id, datos = null) {
 // VALIDAR CREDENCIALES
 // ============================================================
 
-function validarAutorizacion() {
+async function validarAutorizacion() {
 
   const usuario =
     document.getElementById('staffUsuario')
@@ -1283,8 +1283,9 @@ function validarAutorizacion() {
         u.password === password
     )
     // También acepta cuentas creadas desde Admin → Configuración →
-    // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js).
-    || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null);
+    // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js), ahora
+    // verificadas contra Firebase Auth real (verificarCredencialEmpleado).
+    || (typeof verificarCredencialEmpleado === 'function' ? await verificarCredencialEmpleado(usuario, password) : null);
 
 
   if (!empleado) {

@@ -56,14 +56,14 @@ function formatearFechaHoraMisAct(iso) {
 // IDENTIFICACIÓN (usuario + contraseña — misma fuente que Apartados)
 // ============================================================
 
-function identificarStaffActual() {
+async function identificarStaffActual() {
 
   const usuario = document.getElementById('actIdUsuario')?.value.trim();
   const password = document.getElementById('actIdPassword')?.value;
   const error = document.getElementById('actIdError');
 
   const personal = (typeof PERSONAL_EJEMPLO !== 'undefined' ? PERSONAL_EJEMPLO.find(p => p.usuario === usuario && p.password === password) : null)
-    || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null);
+    || (typeof verificarCredencialEmpleado === 'function' ? await verificarCredencialEmpleado(usuario, password) : null);
 
   if (!personal) {
     if (error) { error.style.display = 'block'; error.textContent = 'Usuario o contraseña incorrectos.'; }

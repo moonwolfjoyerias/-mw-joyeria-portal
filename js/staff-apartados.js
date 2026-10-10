@@ -538,16 +538,19 @@ function abrirAutorizacion(accion) {
 }
 
 
-function validarAutorizacion() {
+async function validarAutorizacion() {
 
   const usuario = document.getElementById("authUsuario")?.value.trim();
   const password = document.getElementById("authPassword")?.value;
   const error = document.getElementById("authError");
 
   // También acepta cuentas creadas desde Admin → Configuración →
-  // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js).
+  // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js), ahora
+  // verificadas contra Firebase Auth real (verificarCredencialEmpleado)
+  // en vez del campo local `password` (desactualizado/vacío fuera del
+  // dispositivo donde se creó la cuenta).
   const personal = PERSONAL_EJEMPLO.find(p => p.usuario === usuario && p.password === password)
-    || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null);
+    || (typeof verificarCredencialEmpleado === 'function' ? await verificarCredencialEmpleado(usuario, password) : null);
 
   if (!personal) {
     if (error) {

@@ -583,14 +583,14 @@ function abrirAutorizacionListaDeseos(accion) {
 
 }
 
-function validarAutorizacionListaDeseos() {
+async function validarAutorizacionListaDeseos() {
 
   const usuario = document.getElementById('ldAuthUsuario')?.value.trim();
   const password = document.getElementById('ldAuthPassword')?.value;
   const error = document.getElementById('ldAuthError');
 
   const personal = PERSONAL_EJEMPLO.find(p => p.usuario === usuario && p.password === password)
-    || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null);
+    || (typeof verificarCredencialEmpleado === 'function' ? await verificarCredencialEmpleado(usuario, password) : null);
 
   if (!personal) {
     if (error) {

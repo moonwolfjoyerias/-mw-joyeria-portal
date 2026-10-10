@@ -590,21 +590,22 @@ function solicitarAutorizacionCalendario(tipo, id, datos = null) {
 }
 
 
-function validarAutorizacionCalendario() {
+async function validarAutorizacionCalendario() {
 
   const usuario = document.getElementById('calendarioUsuario')?.value.trim();
   const password = document.getElementById('calendarioPassword')?.value;
   const error = document.getElementById('authError');
 
   // También acepta cuentas creadas desde Admin → Configuración →
-  // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js) y
-  // cuentas de Líderes/Emprendedoras (js/personas-ejemplo.js) — por
+  // Usuarios y permisos → Cuentas (js/cuentas-internas-modelo.js, ahora
+  // verificadas contra Firebase Auth real vía verificarCredencialEmpleado)
+  // y cuentas de Líderes/Emprendedoras (js/personas-ejemplo.js) — por
   // ejemplo MW0005 (María Camila Sánchez Calles), con su propia
   // contraseña de Líder, sin duplicarla aquí con una distinta.
   const empleado = CALENDARIO_USUARIOS_EJEMPLO.find(
     u => u.usuario === usuario && u.password === password
   )
-    || (typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null)
+    || (typeof verificarCredencialEmpleado === 'function' ? await verificarCredencialEmpleado(usuario, password) : null)
     || (typeof verificarCredencialPersona === 'function' ? verificarCredencialPersona(usuario, password) : null);
 
   if (!empleado) {
