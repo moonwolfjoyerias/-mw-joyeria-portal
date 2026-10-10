@@ -433,10 +433,6 @@ function mostrarModalPagoConMonto(ventana, piezas, totalFinal, notaExtra, decisi
         <button data-copy="${DATOS_BANCARIOS_EJEMPLO.clabe}">Copiar</button>
       </div>
       <div class="copy-field">
-        <span><span class="cf-label">Cuenta</span><span class="cf-value">${DATOS_BANCARIOS_EJEMPLO.cuenta}</span></span>
-        <button data-copy="${DATOS_BANCARIOS_EJEMPLO.cuenta}">Copiar</button>
-      </div>
-      <div class="copy-field">
         <span><span class="cf-label">Concepto</span><span class="cf-value">Tu nombre completo</span></span>
     </div>
 
