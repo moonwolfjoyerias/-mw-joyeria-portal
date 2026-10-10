@@ -7,8 +7,8 @@
 
 // Datos bancarios de ejemplo — reemplazar por los reales de MW Joyería
 const DATOS_BANCARIOS_EJEMPLO = {
-  banco: 'BBVA (ejemplo)',
-  titular: 'MW Joyería y Accesorios',
-  clabe: '0121800123456789',
+  banco: 'Banorte',
+  titular: 'Claudia Chávez Jurado',
+  clabe: '072700013511749308',
   cuenta: '0123456789',
 };
