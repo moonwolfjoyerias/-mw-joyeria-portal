@@ -130,6 +130,57 @@ async function intentarRecuperarUsuarioFirebaseExistente(usuario, password) {
   }
 }
 
+// BUG: las reautorizaciones (Apartados, Catálogo, Lista de deseos,
+// Calendario, Actividad del Staff) pedían usuario/contraseña otra vez y
+// los comparaban contra verificarCredencialInterna (texto plano, en
+// js/cuentas-internas-modelo.js) — ese campo `password` NUNCA se guarda
+// en Firestore a propósito (ver cuentas-firestore-sync.js) y solo
+// sobrevive en el localStorage del dispositivo donde se creó la cuenta.
+// En cualquier otro dispositivo, o después de cualquier cambio real de
+// contraseña, ese campo queda vacío o viejo y la reautorización rechaza
+// credenciales que el login normal sí aceptó segundos antes. Esta
+// función verifica contra el mismo Firebase Auth real que usa el login,
+// con una instancia de app aparte (mismo patrón que
+// intentarRecuperarUsuarioFirebaseExistente) para no cerrar la sesión
+// real de quien está reautorizando. Regresa el uid si la credencial es
+// válida, o null si no.
+async function verificarCredencialFirebaseSinPerderSesion(usuario, password) {
+  const nombreAppTemporal = 'verificar-cuenta-' + Date.now();
+  const appTemporal = firebase.initializeApp(FIREBASE_CONFIG, nombreAppTemporal);
+  try {
+    const credencial = await appTemporal.auth().signInWithEmailAndPassword(usuarioAEmailAuth(usuario), password);
+    return credencial.user.uid;
+  } catch (error) {
+    return null;
+  } finally {
+    await appTemporal.auth().signOut().catch(() => {});
+    await appTemporal.delete().catch(() => {});
+  }
+}
+
+// Punto único que deben usar las reautorizaciones en vez de llamar
+// directo a verificarCredencialInterna. Con Firebase real configurado,
+// verifica la credencial contra Firebase Auth (igual que el login) y
+// busca la cuenta interna correspondiente por firebaseUid (o por
+// usuario, si esa cuenta todavía no tiene firebaseUid enlazado) para
+// devolver el mismo tipo de objeto que ya devolvía
+// verificarCredencialInterna. Sin Firebase configurado (modo demo),
+// cae al comparador local de siempre sin cambiar nada.
+async function verificarCredencialEmpleado(usuario, password) {
+  if (typeof authFirebase === 'undefined' || !authFirebase || typeof FIREBASE_CONFIG === 'undefined') {
+    return typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null;
+  }
+
+  const uid = await verificarCredencialFirebaseSinPerderSesion(usuario, password);
+  if (!uid) return null;
+
+  const cuentas = typeof obtenerCuentasInternas === 'function' ? obtenerCuentasInternas() : [];
+  const cuenta = cuentas.find(c => c.firebaseUid === uid) || cuentas.find(c => c.usuario === usuario);
+  if (!cuenta || cuenta.activa === false) return null;
+
+  return cuenta;
+}
+
 // FEAT-09: el botón "Inscribirse" de login.html lo usa alguien que
 // TODAVÍA no tiene cuenta — pero las reglas de Firestore/Storage exigen
 // "estaAutenticado()" para guardar la solicitud y subir las fotos de
