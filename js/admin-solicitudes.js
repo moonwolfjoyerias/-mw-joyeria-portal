@@ -169,11 +169,12 @@ async function abrirDetalleSolicitudAdmin(id) {
           <img id="inePreviewFrenteImg" src="" alt="INE (frente) de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}" style="display:none;">
           <p class="bp-sub" id="inePreviewFrenteCargando" style="margin:0;">Cargando identificación…</p>
         </div>
+        ${solicitud.ineReversoUrl ? `
         <div class="ine-preview">
           <small class="field-help">Reverso</small>
           <img id="inePreviewReversoImg" src="" alt="INE (reverso) de ${escapeAttributeSolAdmin(solicitud.nombreCompleto)}" style="display:none;">
           <p class="bp-sub" id="inePreviewReversoCargando" style="margin:0;">Cargando identificación…</p>
-        </div>
+        </div>` : ''}
       </div>
     ` : `
       <p class="bp-sub">Esta solicitud se registró sin identificación oficial (INE) — las inscripciones públicas ya no la piden.</p>
