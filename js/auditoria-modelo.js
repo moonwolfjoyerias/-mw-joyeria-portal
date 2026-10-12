@@ -1,7 +1,7 @@
 // MW JOYERÍA — Bitácora de actividad compartida (Staff / Encargado / Admin)
 //
 // El almacenamiento real ya no vive aquí — ver js/auditoria-firestore-
-// sync.js (AUDITORIA_CACHE, auditoriaRepoListo, registrarAuditoriaRepo).
+// sync.js (AUDITORIA_CACHE, cargarAuditoriaParaMostrar, registrarAuditoriaRepo).
 // Este archivo solo expone las mismas dos funciones de siempre para
 // que ninguna página que ya las usa tenga que cambiar cómo las llama.
 

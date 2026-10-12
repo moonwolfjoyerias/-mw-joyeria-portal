@@ -28,6 +28,14 @@ const NOTIFICACIONES_META_DOC_ID = 'estado';
 
 let NOTIFICACIONES_CACHE = [];
 
+// Estado de cada notificación en el servidor (id → { texto, paraId}),
+// mantenido al día por la suscripción en vivo de abajo. Cada guardado se
+// compara contra esto en vez de volver a leer la colección completa, y
+// solo escribe/borra lo que de verdad cambió — antes cada aviso nuevo
+// leía y reescribía TODAS las notificaciones de todo mundo, lo que
+// agotaba el límite diario del plan gratuito de Firestore.
+let _notificacionesEnServidor = new Map();
+
 function notificacionesSemillaLocal() {
   return (typeof NOTIFICACIONES_EJEMPLO !== 'undefined') ? NOTIFICACIONES_EJEMPLO.map(n => ({ ...n })) : [];
 }
@@ -78,6 +86,7 @@ async function cargarNotificacionesRepo() {
           : 0;
 
         NOTIFICACIONES_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        _notificacionesEnServidor = new Map(NOTIFICACIONES_CACHE.map(n => [String(n.id), { texto: textoEstableFirestore(n), paraId: n.paraId }]));
         try { localStorage.setItem(NOTIFICACIONES_STORAGE_KEY, JSON.stringify(NOTIFICACIONES_CACHE)); } catch (error) { /* noop */ }
 
         if (!primerSnapshot) {
@@ -119,8 +128,12 @@ function guardarNotificacionesRepo(lista) {
 
   if (!dbFirestore) return Promise.resolve();
 
+  // Solo se pueden borrar notificaciones que ya se conocían al armar esta
+  // lista — una que llegue en vivo mientras el guardado espera en la cola
+  // no está en `lista` por ser nueva, no porque se haya quitado.
+  const idsConocidos = new Set(_notificacionesEnServidor.keys());
   const tarea = _colaGuardadoNotificaciones.then(() =>
-    sincronizarNotificacionesConFirestore(lista).catch(error => {
+    sincronizarNotificacionesConFirestore(lista, idsConocidos).catch(error => {
       // Sin toast aquí a propósito: una notificación que no se pudo
       // sincronizar no debe interrumpir la acción que la disparó (ej.
       // aprobar una solicitud) — se reintenta sola en el siguiente
@@ -131,63 +144,55 @@ function guardarNotificacionesRepo(lista) {
   return tarea;
 }
 
-async function sincronizarNotificacionesConFirestore(lista) {
+async function sincronizarNotificacionesConFirestore(lista, idsConocidos) {
   const coleccion = dbFirestore.collection(NOTIFICACIONES_COLECCION_FIRESTORE);
 
-  // SEC-08 de la auditoría: una cuenta de Emprendedora/Líder no puede
-  // re-escribir el arreglo COMPLETO de notificaciones (de todo mundo)
-  // en un solo batch — la regla ahora exige ser dueña (paraId ==
-  // su personaId) para TOCAR un documento que ya existía, y ese
-  // arreglo completo siempre trae de vuelta notificaciones ajenas sin
-  // ningún cambio real. En vez de repetir el patrón de "guardar solo lo
-  // propio" (aquí ella también puede estar CREANDO avisos para otra
-  // persona/bandeja, ej. avisar a Staff al cancelar una pieza — eso
-  // sigue permitido para cualquier autenticado), se manda solo lo que
-  // de verdad cambió: documentos nuevos (siempre permitido) o
-  // documentos existentes que SÍ son distintos a lo ya guardado — los
-  // que no cambiaron simplemente no se tocan, así nunca disparan la
-  // regla de propietario por algo que ni siquiera se está editando.
+  // SEC-08 / BUG-11: una cuenta de Emprendedora/Líder solo puede tocar
+  // SUS notificaciones ya existentes (o crear nuevas para quien sea). Un
+  // documento ajeno que ya existe nunca se intenta escribir ni borrar —
+  // si la regla lo rechaza, Firestore rechaza el batch COMPLETO.
   const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
-  if (sesion && sesion.tipo === 'persona') {
-    const snapPersona = await coleccion.get();
-    const actuales = new Map(snapPersona.docs.map(d => [d.id, d.data()]));
-    const miPersonaId = sesion.personaId || (typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null);
-    const batchPersona = dbFirestore.batch();
-    let hayCambios = false;
-    lista.forEach(notificacion => {
-      const anterior = actuales.get(String(notificacion.id));
-      // BUG reportado tras lanzar a producción: "marcar como leída" de
-      // SU PROPIA notificación tronaba el batch COMPLETO (nunca se
-      // marcaba) cuando este arreglo local también traía, de paso, una
-      // notificación AJENA (otro rol/otra persona) cuya copia local no
-      // coincidía con la de Firestore — la regla rechaza esa escritura
-      // ajena, y al ser un batch, Firestore rechaza TODO el batch, no
-      // solo esa línea. Si el documento ya existe y es de otra persona
-      // (paraId puesto y distinto al propio), ni siquiera se compara/
-      // intenta escribir — nunca es algo que esta cuenta pueda cambiar
-      // de verdad, así que incluirlo solo arriesga tronar el resto.
-      if (anterior && anterior.paraId != null && anterior.paraId !== miPersonaId) return;
-      if (!anterior || JSON.stringify(anterior) !== JSON.stringify(notificacion)) {
-        batchPersona.set(coleccion.doc(String(notificacion.id)), notificacion);
-        hayCambios = true;
-      }
+  const esPersona = !!(sesion && sesion.tipo === 'persona');
+  const miPersonaId = esPersona
+    ? (sesion.personaId || (typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null))
+    : null;
+  const esAjena = (anterior) => esPersona && anterior && anterior.paraId != null && anterior.paraId !== miPersonaId;
+
+  const batch = dbFirestore.batch();
+  const escritas = new Map();
+  const borradas = [];
+
+  lista.forEach(notificacion => {
+    const id = String(notificacion.id);
+    const anterior = _notificacionesEnServidor.get(id);
+    if (esAjena(anterior)) return;
+    const texto = textoEstableFirestore(notificacion);
+    if (anterior && anterior.texto === texto) return;
+    batch.set(coleccion.doc(id), notificacion);
+    escritas.set(id, { texto, paraId: notificacion.paraId });
+  });
+
+  // Purga / borrado de lo que ya no está en la lista — solo
+  // Staff/Encargado/Admin, igual que antes (una Emprendedora/Líder nunca
+  // borraba al guardar; ella usa eliminarNotificacionDeFirestore).
+  if (!esPersona) {
+    const idsLista = new Set(lista.map(n => String(n.id)));
+    _notificacionesEnServidor.forEach((anterior, id) => {
+      if (idsLista.has(id) || !idsConocidos.has(id)) return;
+      batch.delete(coleccion.doc(id));
+      borradas.push(id);
     });
-    if (!hayCambios) return;
-    await batchPersona.commit();
-    return;
   }
 
-  const snap = await coleccion.get();
-  const idsNuevos = new Set(lista.map(n => String(n.id)));
-  const batch = dbFirestore.batch();
-  snap.docs.forEach(doc => {
-    if (!idsNuevos.has(doc.id)) batch.delete(doc.ref);
-  });
-  lista.forEach(notificacion => {
-    batch.set(coleccion.doc(String(notificacion.id)), notificacion);
-  });
-  batch.set(dbFirestore.collection(NOTIFICACIONES_META_COLECCION).doc(NOTIFICACIONES_META_DOC_ID), { inicializado: true }, { merge: true });
+  const primeraVez = !esPersona && _notificacionesEnServidor.size === 0;
+  if (primeraVez) {
+    batch.set(dbFirestore.collection(NOTIFICACIONES_META_COLECCION).doc(NOTIFICACIONES_META_DOC_ID), { inicializado: true }, { merge: true });
+  }
+  if (!escritas.size && !borradas.length && !primeraVez) return;
+
   await batch.commit();
+  escritas.forEach((valor, id) => _notificacionesEnServidor.set(id, valor));
+  borradas.forEach(id => _notificacionesEnServidor.delete(id));
 }
 
 // FEAT-07: borrado manual de UNA notificación — deliberadamente un

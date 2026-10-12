@@ -206,7 +206,7 @@ async function renderActividadRecienteDash() {
   const wrap = document.getElementById('dashActividadReciente');
   if (!wrap) return;
 
-  if (typeof auditoriaRepoListo !== 'undefined') await auditoriaRepoListo;
+  if (typeof cargarAuditoriaParaMostrar === 'function') await cargarAuditoriaParaMostrar(6);
 
   const registros = (typeof obtenerAuditoriaCompartida === 'function' ? obtenerAuditoriaCompartida() : []).slice(0, 6);
 

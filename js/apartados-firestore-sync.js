@@ -43,6 +43,17 @@ const ID_PRUEBA_8000 = 'VENT-PRUEBA-8000-CLAUDIA';
 let APARTADOS_CACHE = [];
 let CREDITOS_CACHE = {};
 
+// Cómo está cada ventana en el servidor (texto estable por id) la última
+// vez que esta página la leyó o la guardó. Cada guardado escribe SOLO las
+// ventanas que cambiaron y no vuelve a leer la colección: antes cada
+// acción leía y reescribía TODAS las ventanas, y con el plan gratuito de
+// Firestore eso agotaba el límite diario de lecturas/escrituras.
+let _ventanasEnServidor = new Map();
+
+function _recordarVentanasEnServidor(ventanas) {
+  _ventanasEnServidor = new Map(ventanas.map(v => [String(v.id), textoEstableFirestore(v)]));
+}
+
 function apartadosSemillaLocal() {
   return typeof construirVentanasApartadoEjemplo === 'function' ? construirVentanasApartadoEjemplo() : [];
 }
@@ -106,6 +117,7 @@ async function cargarApartadosRepo() {
       if (metaSnap.exists) {
         const snapVentanas = await dbFirestore.collection(APARTADOS_COLECCION_FIRESTORE).get();
         APARTADOS_CACHE = snapVentanas.docs.map(d => ({ ...d.data(), id: d.id }));
+        _recordarVentanasEnServidor(APARTADOS_CACHE);
 
         const docCreditos = await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).get();
         CREDITOS_CACHE = docCreditos.exists ? (docCreditos.data() || {}) : {};
@@ -189,37 +201,35 @@ async function sincronizarVentanasConFirestore(ventanas) {
   // personaId) — igual que ya exige la regla de ventanasApartado.
   // guardarVentanasApartado() recibe el arreglo COMPLETO (todas las
   // ventanas de todas las clientas, no solo las suyas — ver
-  // mutarVentanaPropia en js/apartados.js), así que recorrerlo entero
-  // en un solo batch (como sí hace Staff/Encargado/Admin abajo) haría
-  // que Firestore rechace el batch ENTERO por las ventanas ajenas —
-  // mismo motivo y misma solución que ya se aplicó en
-  // personas-firestore-sync.js para SEC-01.
+  // mutarVentanaPropia en js/apartados.js), así que se filtra a las
+  // propias para que Firestore no rechace el batch entero por una ajena.
   const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
-  if (sesion && sesion.tipo === 'persona' && sesion.personaId) {
-    const propias = ventanas.filter(v => v.usuarioId === sesion.personaId);
-    if (!propias.length) return;
-    const batchPropio = dbFirestore.batch();
-    propias.forEach(ventana => {
-      batchPropio.set(coleccion.doc(String(ventana.id)), ventana);
-    });
-    await batchPropio.commit();
-    return;
-  }
+  const esPersona = !!(sesion && sesion.tipo === 'persona' && sesion.personaId);
+  const candidatas = esPersona ? ventanas.filter(v => v.usuarioId === sesion.personaId) : ventanas;
 
-  const snap = await coleccion.get();
-  const idsNuevos = new Set(ventanas.map(v => String(v.id)));
   const batch = dbFirestore.batch();
-  snap.docs.forEach(doc => {
-    if (!idsNuevos.has(doc.id)) batch.delete(doc.ref);
+  const escritas = new Map();
+  candidatas.forEach(ventana => {
+    const id = String(ventana.id);
+    const texto = textoEstableFirestore(ventana);
+    if (_ventanasEnServidor.get(id) === texto) return;
+    batch.set(coleccion.doc(id), ventana);
+    escritas.set(id, texto);
   });
-  ventanas.forEach(ventana => {
-    batch.set(coleccion.doc(String(ventana.id)), ventana);
-  });
-  batch.set(dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID), { inicializado: true }, { merge: true });
+
+  // Las ventanas nunca se borran (solo cambian de estado), así que aquí
+  // no se borra nada. El marcador "ya se sembró" solo hace falta la
+  // primera vez.
+  const primeraVez = !esPersona && _ventanasEnServidor.size === 0;
+  if (primeraVez) {
+    batch.set(dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID), { inicializado: true }, { merge: true });
+  }
+  if (!escritas.size && !primeraVez) return;
+
   await batch.commit();
+  escritas.forEach((texto, id) => _ventanasEnServidor.set(id, texto));
 }
 
 async function sincronizarCreditosConFirestore(creditos) {
   await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).set(creditos);
-  await dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID).set({ inicializado: true }, { merge: true });
 }
