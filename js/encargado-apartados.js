@@ -619,6 +619,27 @@ function ejecutarCancelar(ventanaId) {
 
 }
 
+// Llamado desde el modal común de "Quitar pieza" (apartados-panel-comun.js),
+// que ya es la confirmación — con motivo — de esta acción.
+function confirmarQuitarPiezaRol(ventanaId, piezaId, motivo) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  const resultado = quitarPiezaDeApartado(v, piezaId, motivo, ENCARGADO_EMPLEADO);
+  if (!resultado) { cerrarModal(); mostrarToast("Esa pieza ya no está activa en el apartado."); return; }
+
+  notificarPiezaQuitada(v, resultado.pieza, motivo);
+  guardarVentanas();
+  actualizarResumen();
+  renderTabla();
+  cerrarModal();
+
+  registrarAuditoriaEncargado({ modulo: "apartados", accion: "quitar_pieza_apartado", descripcion: `Pieza ${resultado.pieza.producto} quitada del apartado de ${v.usuarioNombre} — motivo: ${motivo}` });
+  mostrarToast(`Pieza quitada del apartado por ${ENCARGADO_IDENTIDAD.usuarioNombre}.`);
+
+}
+
 function confirmarAprobarVip(ventanaId) {
 
   const v = ventanas.find(x => x.id === ventanaId);

@@ -473,6 +473,11 @@ function abrirModalLiquidar(v) {
 // AUTORIZACIÓN
 // ============================================================
 
+// Llamado desde el modal común de "Quitar pieza" (apartados-panel-comun.js).
+function confirmarQuitarPiezaRol(ventanaId, piezaId, motivo) {
+  abrirAutorizacion({ tipo: "quitar-pieza", ventanaId, piezaId, motivo });
+}
+
 function abrirAutorizacion(accion) {
 
   accionPendiente = accion;
@@ -488,10 +493,11 @@ function abrirAutorizacion(accion) {
     "liquidar-ventana": "Autorizar liquidación",
     "aplicar-excedente-ventana": "Aplicar excedente de depósito",
     "cancelar-ventana": "Autorizar cancelación",
-    "desapartar-ventana": "Autorizar desapartar"
+    "desapartar-ventana": "Autorizar desapartar",
+    "quitar-pieza": "Autorizar quitar pieza"
   };
 
-  const esPeligrosa = accion.tipo === "cancelar-ventana" || accion.tipo === "desapartar-ventana";
+  const esPeligrosa = accion.tipo === "cancelar-ventana" || accion.tipo === "desapartar-ventana" || accion.tipo === "quitar-pieza";
   const nombrePersona = v?.usuarioNombre || accion.datos?.nombre || "";
 
   box.innerHTML = `
@@ -725,6 +731,16 @@ async function ejecutarAccion(personal) {
     mensaje = `Apartado desapartado por ${personal.nombre}.`;
     auditoriaAccion = 'desapartar_ventana';
     auditoriaDescripcion = `Apartado vencido de ${v.usuarioNombre} desapartado`;
+
+  } else if (accionPendiente.tipo === "quitar-pieza") {
+
+    const { piezaId, motivo } = accionPendiente;
+    const resultadoQuitar = quitarPiezaDeApartado(v, piezaId, motivo, personal);
+    if (!resultadoQuitar) { cerrarModal(); mostrarToast("Esa pieza ya no está activa en el apartado."); accionPendiente = null; return; }
+    notificarPiezaQuitada(v, resultadoQuitar.pieza, motivo);
+    mensaje = `Pieza quitada del apartado por ${personal.nombre}.`;
+    auditoriaAccion = 'quitar_pieza_apartado';
+    auditoriaDescripcion = `Pieza ${resultadoQuitar.pieza.producto} quitada del apartado de ${v.usuarioNombre} — motivo: ${motivo}`;
 
   }
 

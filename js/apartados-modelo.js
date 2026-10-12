@@ -573,6 +573,50 @@ function cancelarVentanaCompleta(ventana, empleado) {
 
 }
 
+// Quita UNA pieza activa del apartado (por ejemplo, ya no hay existencia
+// física de ella). A diferencia de cancelar, NO regresa existencia al
+// catálogo: la pieza no está en el local. Lo que ya se le hubiera
+// abonado (excedente aplicado) vuelve al excedente del depósito. Si era
+// la última pieza activa, la ventana se cierra igual que al cancelar: el
+// depósito se guarda como crédito, porque la clienta no tuvo la culpa.
+function quitarPiezaDeApartado(ventana, piezaId, motivo, empleado) {
+
+  const pieza = obtenerPiezasActivas(ventana).find(p => p.id === piezaId);
+  if (!pieza) return null;
+
+  const abonado = (pieza.pagos || []).reduce((suma, pago) => suma + Number(pago.monto || 0), 0);
+
+  pieza.estado = 'cancelada';
+  pieza.retiro = { motivo, fecha: new Date().toISOString(), usuario: empleado?.nombre || 'Sistema' };
+
+  ventana.auditoria.push(registrarAuditoriaVentana(`Pieza quitada del apartado: ${pieza.producto} — motivo: ${motivo}`, empleado));
+
+  if (abonado > 0) {
+    ventana.depositoExcedente = Number(ventana.depositoExcedente || 0) + abonado;
+    ventana.depositoApartadoDisponible = Number(ventana.depositoPiso || 0) + ventana.depositoExcedente;
+    ventana.auditoria.push(registrarAuditoriaVentana(`$${abonado} ya abonados a esa pieza regresaron al depósito`, empleado));
+  }
+
+  let ventanaCerrada = false;
+  if (!obtenerPiezasActivas(ventana).length) {
+    ventanaCerrada = true;
+    if (ventana.depositoApartadoDisponible > 0) {
+      const monto = ventana.depositoApartadoDisponible;
+      establecerCredito(ventana.usuarioId, monto);
+      cerrarVentana(ventana, 'credito');
+      ventana.depositoPiso = 0;
+      ventana.depositoExcedente = 0;
+      ventana.depositoApartadoDisponible = 0;
+      ventana.auditoria.push(registrarAuditoriaVentana(`Depósito de $${monto} guardado como crédito`, empleado));
+    } else {
+      cerrarVentana(ventana, 'no_aplica');
+    }
+  }
+
+  return { pieza, ventanaCerrada };
+
+}
+
 function cerrarVentana(ventana, resolucion) {
   ventana.estado = 'cerrada';
   ventana.resolucionDeposito = resolucion;
