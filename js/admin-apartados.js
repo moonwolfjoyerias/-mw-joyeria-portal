@@ -29,7 +29,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await apartadosRepoListo; // FASE 2 (Firebase): espera a que obtenerVentanasApartado() tenga datos reales, no un caché vacío
 
+  if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
+
   ventanas = calcularVentanasStaffActuales();
+  sincronizarNombresVentanas();
   verificarApartadosVencidosPendientes();
   if (typeof verificarApartadosPorVencerPendientes === 'function') verificarApartadosPorVencerPendientes();
 
