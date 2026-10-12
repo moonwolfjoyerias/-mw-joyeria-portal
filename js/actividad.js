@@ -80,7 +80,6 @@ function renderActividad() {
 
 function renderFilaActividad(r) {
 
-  const inicial = (r.usuarioNombre || '?').trim().charAt(0).toUpperCase();
   const rolLabel = ROLES_ACTIVIDAD[r.rol] || r.rol || '';
   const moduloLabel = MODULOS_ACTIVIDAD[r.modulo] || r.modulo || '';
 
@@ -88,7 +87,6 @@ function renderFilaActividad(r) {
     <tr>
       <td>
         <div class="activity-person">
-          <span class="activity-avatar">${escapeHTMLActividad(inicial)}</span>
           <div>
             <strong>${escapeHTMLActividad(r.usuarioNombre || 'Usuario')}</strong>
             <span class="badge">${escapeHTMLActividad(rolLabel)}</span>
