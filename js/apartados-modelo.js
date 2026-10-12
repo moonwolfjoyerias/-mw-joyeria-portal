@@ -617,6 +617,25 @@ function quitarPiezaDeApartado(ventana, piezaId, motivo, empleado) {
 
 }
 
+// "No depositó": la ventana nunca recibió su depósito, así que se cancela
+// completa. A diferencia de quitar pieza, las piezas sí existen en el
+// local, así que su existencia regresa al catálogo.
+function cancelarVentanaSinDeposito(ventana, empleado) {
+
+  const piezasActivas = obtenerPiezasActivas(ventana);
+  piezasActivas.forEach(pieza => { pieza.estado = 'cancelada'; });
+  restaurarStockPiezasCanceladas(piezasActivas);
+
+  cerrarVentana(ventana, 'sin_deposito');
+  ventana.auditoria.push(registrarAuditoriaVentana(
+    `Apartado cancelado: no se recibió el depósito (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'} regresaron al inventario)`,
+    empleado
+  ));
+
+  return piezasActivas;
+
+}
+
 function cerrarVentana(ventana, resolucion) {
   ventana.estado = 'cerrada';
   ventana.resolucionDeposito = resolucion;

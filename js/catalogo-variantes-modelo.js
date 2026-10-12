@@ -149,6 +149,15 @@ function obtenerCatalogoStaffStorage() {
   return CATALOGO_CACHE.map(migrarProductoAVariantes);
 }
 
+// El código del producto es obligatorio y único en todo el catálogo
+// (sin distinguir mayúsculas ni espacios). idExcluir es el producto que
+// se está editando, para que no choque consigo mismo.
+function productoConCodigo(catalogo, codigo, idExcluir) {
+  const normalizado = String(codigo || '').trim().toLowerCase();
+  if (!normalizado) return null;
+  return catalogo.find(p => p.id !== idExcluir && String(p.codigo || '').trim().toLowerCase() === normalizado) || null;
+}
+
 function guardarCatalogoStaffStorage(catalogo) {
   guardarCatalogoRepo(catalogo); // async, sin esperar — mismo patrón "fire and forget" que ya tenía este guardado
 }

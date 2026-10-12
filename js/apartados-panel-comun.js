@@ -145,12 +145,13 @@ function renderTabla() {
 
 }
 
-// Bolsita y "quitar de la vista" son iguales para los 3 roles y no
-// piden reautorización (no mueven dinero ni existencias) — solo un modal
-// de confirmación, y quedan en el historial de la ventana con el nombre
-// de la sesión activa. "Quitar pieza" sí pasa por el flujo de
-// autorización de cada rol (confirmarQuitarPiezaRol, en cada
-// controlador), porque cambia el apartado de la clienta.
+// Bolsita, "quitar de la vista"/"volver a mostrar" y "quitar pieza"
+// quedan en Actividad con el nombre de quien lo hizo. Cada controlador
+// decide cómo se confirma (pedirConfirmacionPanelRol /
+// confirmarQuitarPiezaRol): Encargado/Admin con un modal de
+// confirmación (su cuenta ya es individual); Staff con usuario/
+// contraseña, porque su cuenta es compartida y solo así se sabe qué
+// persona lo hizo. onConfirmar recibe al empleado identificado.
 function agregarEventosComunesFilas() {
 
   document.querySelectorAll("[data-bolsita-pieza]").forEach(btn => {
@@ -158,22 +159,143 @@ function agregarEventosComunesFilas() {
   });
 
   document.querySelectorAll("[data-ocultar-ventana]").forEach(btn => {
-    btn.addEventListener("click", () => confirmarOcultarVentana(btn.dataset.ocultarVentana));
+    btn.addEventListener("click", () => confirmarOcultarVentana(btn.dataset.ocultarVentana, true));
   });
 
   document.querySelectorAll("[data-mostrar-ventana]").forEach(btn => {
-    btn.addEventListener("click", () => alternarVentanaOculta(btn.dataset.mostrarVentana, false));
+    btn.addEventListener("click", () => confirmarOcultarVentana(btn.dataset.mostrarVentana, false));
   });
 
   document.querySelectorAll("[data-quitar-pieza]").forEach(btn => {
     btn.addEventListener("click", () => abrirModalQuitarPieza(btn.dataset.ventana, btn.dataset.quitarPieza));
   });
 
+  document.querySelectorAll("[data-pedir-comprobante]").forEach(btn => {
+    btn.addEventListener("click", () => iniciarPedirComprobante(btn.dataset.pedirComprobante));
+  });
+
+  document.querySelectorAll("[data-no-deposito]").forEach(btn => {
+    btn.addEventListener("click", () => confirmarNoDeposito(btn.dataset.noDeposito));
+  });
+
 }
 
-function empleadoSesionPanel() {
-  const sesion = typeof obtenerSesionActiva === "function" ? obtenerSesionActiva() : null;
-  return { nombre: sesion?.nombre || "Sistema" };
+// wa.me necesita el número con lada de país: los teléfonos de 10 dígitos
+// se guardan sin ella, así que se les antepone 52 (México).
+function numeroWhatsapp(telefono) {
+  const digitos = String(telefono || "").replace(/\D/g, "");
+  if (digitos.length === 10) return "52" + digitos;
+  return digitos.length > 10 ? digitos : "";
+}
+
+function mensajeComprobanteDeposito(v) {
+  const nombre = String(v.usuarioNombre || "").trim().split(/\s+/)[0];
+  return `¡Hola${nombre ? `, ${nombre}` : ""}! Vimos que apartaste piezas en la página, pero todavía no recibimos tu comprobante de depósito. Te recordamos que, para asegurar tus piezas, es necesario un depósito mínimo de $${DEPOSITO_BASE}. Cuando lo tengas, envíanos tu comprobante por aquí. ¡Quedamos al pendiente!`;
+}
+
+// Staff se identifica primero (cuenta compartida); Encargado/Admin pasan
+// directo (sinConfirmacion). Lo que queda en Actividad es abrir el enlace.
+function iniciarPedirComprobante(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  if (!numeroWhatsapp(v.telefono)) {
+    mostrarToast(`${v.usuarioNombre} no tiene un teléfono válido registrado.`);
+    return;
+  }
+
+  pedirConfirmacionPanelRol({
+    ventanaId,
+    titulo: "Pedir comprobante por WhatsApp",
+    mensaje: `Identifícate para enviarle a ${escapeHTML(v.usuarioNombre)} el recordatorio de su comprobante de depósito.`,
+    sinConfirmacion: true,
+    onConfirmar: (empleado) => abrirModalComprobanteWhatsapp(ventanaId, empleado)
+  });
+
+}
+
+function abrirModalComprobanteWhatsapp(ventanaId, empleado) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  const mensaje = mensajeComprobanteDeposito(v);
+  const enlace = `https://wa.me/${numeroWhatsapp(v.telefono)}?text=${encodeURIComponent(mensaje)}`;
+
+  const overlay = document.getElementById("modalOverlay");
+  const box = document.getElementById("modalBox");
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModal()">×</button>
+    <div class="auth-icon">↗</div>
+    <h3>Pedir comprobante por WhatsApp</h3>
+    <div class="modal-context">
+      <span>Emprendedora/Líder</span><strong>${escapeHTML(v.usuarioNombre)}</strong>
+      <span>Teléfono</span><strong>${escapeHTML(v.telefono || "")}</strong>
+    </div>
+    <label>Mensaje</label>
+    <div class="modal-note" style="white-space:pre-wrap;">${escapeHTML(mensaje)}</div>
+    <a class="btn btn-primary" style="width:100%;display:grid;place-items:center;text-decoration:none;margin-top:12px;" href="${escapeAttribute(enlace)}" target="_blank" rel="noopener" id="abrirWhatsappComprobanteBtn">Abrir WhatsApp</a>
+  `;
+
+  overlay.classList.add("open");
+
+  document.getElementById("abrirWhatsappComprobanteBtn").addEventListener("click", () => {
+    v.auditoria.push(registrarAuditoriaVentana("Se le pidió el comprobante de depósito por WhatsApp", empleado));
+    registrarActividadApartadosRol({ accion: "pedir_comprobante_whatsapp", descripcion: `Pidió por WhatsApp el comprobante de depósito a ${v.usuarioNombre}` }, empleado);
+    guardarVentanas();
+    cerrarModal();
+    renderTabla();
+  });
+
+}
+
+function confirmarNoDeposito(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  const piezas = obtenerPiezasActivas(v).length;
+
+  pedirConfirmacionPanelRol({
+    ventanaId,
+    titulo: "No depositó",
+    mensaje: `Se cancelará el apartado de ${escapeHTML(v.usuarioNombre)} porque no se recibió su depósito. ${piezas === 1 ? "Su pieza regresa" : `Sus ${piezas} piezas regresan`} al inventario, desaparece${piezas === 1 ? "" : "n"} de su portal y le llegará una notificación con el motivo.`,
+    textoBoton: "Cancelar apartado",
+    peligrosa: true,
+    onConfirmar: (empleado) => ejecutarNoDeposito(ventanaId, empleado)
+  });
+
+}
+
+function ejecutarNoDeposito(ventanaId, empleado) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v || v.estado !== "pendiente_deposito") return;
+
+  const piezas = cancelarVentanaSinDeposito(v, empleado);
+
+  if (typeof agregarNotificacion === "function") {
+    agregarNotificacion({
+      texto: `Cancelamos tu apartado porque no recibimos tu depósito mínimo de $${DEPOSITO_BASE}. Tus piezas quedaron liberadas; si todavía las quieres, puedes volver a apartarlas desde el catálogo.`,
+      link: "apartados",
+      paraId: v.usuarioId,
+      rolDestino: "emprendedora_lider"
+    });
+  }
+
+  registrarActividadApartadosRol({
+    accion: "cancelar_por_no_deposito",
+    descripcion: `Canceló el apartado de ${v.usuarioNombre} porque no depositó (${piezas.length} pieza${piezas.length === 1 ? "" : "s"} regresaron al inventario)`
+  }, empleado);
+
+  filasExpandidas.delete(v.id);
+  guardarVentanas();
+  actualizarResumen();
+  renderTabla();
+  mostrarToast(`Apartado de ${v.usuarioNombre} cancelado por falta de depósito.`);
+
 }
 
 function abrirConfirmacionPanel({ titulo, mensaje, textoBoton, peligrosa, onConfirmar }) {
@@ -207,35 +329,46 @@ function confirmarBolsitaPieza(ventanaId, piezaId) {
   const pieza = v?.apartados.find(p => p.id === piezaId);
   if (!pieza) return;
 
-  abrirConfirmacionPanel(pieza.enBolsita
+  pedirConfirmacionPanelRol(pieza.enBolsita
     ? {
+      ventanaId,
       titulo: "Quitar marca de bolsita",
       mensaje: `"${escapeHTML(pieza.producto)}" de ${escapeHTML(v.usuarioNombre)} dejará de aparecer como guardada en su bolsita.`,
       textoBoton: "Quitar marca",
       peligrosa: true,
-      onConfirmar: () => alternarBolsitaPieza(ventanaId, piezaId)
+      onConfirmar: (empleado) => alternarBolsitaPieza(ventanaId, piezaId, empleado)
     }
     : {
+      ventanaId,
       titulo: "Guardar en bolsita",
       mensaje: `¿Confirmas que "${escapeHTML(pieza.producto)}" de ${escapeHTML(v.usuarioNombre)} ya está guardada en su bolsita física en el local?`,
       textoBoton: "Sí, ya está guardada",
-      onConfirmar: () => alternarBolsitaPieza(ventanaId, piezaId)
+      onConfirmar: (empleado) => alternarBolsitaPieza(ventanaId, piezaId, empleado)
     });
 
 }
 
-function confirmarOcultarVentana(ventanaId) {
+function confirmarOcultarVentana(ventanaId, ocultar) {
 
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v) return;
 
-  abrirConfirmacionPanel({
-    titulo: "Quitar de la vista",
-    mensaje: `La ventana de ${escapeHTML(v.usuarioNombre)} dejará de aparecer en la tabla. No se borra nada: podrás consultarla en el filtro "Quitadas de la vista".`,
-    textoBoton: "Quitar de la vista",
-    peligrosa: true,
-    onConfirmar: () => alternarVentanaOculta(ventanaId, true)
-  });
+  pedirConfirmacionPanelRol(ocultar
+    ? {
+      ventanaId,
+      titulo: "Quitar de la vista",
+      mensaje: `La ventana de ${escapeHTML(v.usuarioNombre)} dejará de aparecer en la tabla. No se borra nada: podrás consultarla en el filtro "Quitadas de la vista".`,
+      textoBoton: "Quitar de la vista",
+      peligrosa: true,
+      onConfirmar: (empleado) => alternarVentanaOculta(ventanaId, true, empleado)
+    }
+    : {
+      ventanaId,
+      titulo: "Volver a mostrar",
+      mensaje: `La ventana de ${escapeHTML(v.usuarioNombre)} volverá a aparecer en la tabla.`,
+      textoBoton: "Volver a mostrar",
+      onConfirmar: (empleado) => alternarVentanaOculta(ventanaId, false, empleado)
+    });
 
 }
 
@@ -301,40 +434,41 @@ function notificarPiezaQuitada(v, pieza, motivo) {
   });
 }
 
-function alternarBolsitaPieza(ventanaId, piezaId) {
+function alternarBolsitaPieza(ventanaId, piezaId, empleado) {
 
   const v = ventanas.find(x => x.id === ventanaId);
   const pieza = v?.apartados.find(p => p.id === piezaId);
   if (!pieza) return;
 
-  const empleado = empleadoSesionPanel();
-
   if (pieza.enBolsita) {
     delete pieza.enBolsita;
     v.auditoria.push(registrarAuditoriaVentana(`${pieza.producto}: se quitó la marca de "guardada en bolsita"`, empleado));
+    registrarActividadApartadosRol({ accion: "quitar_marca_bolsita", descripcion: `Quitó la marca de bolsita a ${pieza.producto} (apartado de ${v.usuarioNombre})` }, empleado);
   } else {
     pieza.enBolsita = { fecha: new Date().toISOString(), usuario: empleado.nombre };
     v.auditoria.push(registrarAuditoriaVentana(`${pieza.producto}: guardada en la bolsita física`, empleado));
+    registrarActividadApartadosRol({ accion: "guardar_en_bolsita", descripcion: `Guardó ${pieza.producto} en la bolsita física (apartado de ${v.usuarioNombre})` }, empleado);
   }
 
   guardarVentanas();
   renderTabla();
+  mostrarToast(pieza.enBolsita ? `Marcada en bolsita por ${empleado.nombre}.` : `Marca de bolsita quitada por ${empleado.nombre}.`);
 
 }
 
-function alternarVentanaOculta(ventanaId, ocultar) {
+function alternarVentanaOculta(ventanaId, ocultar, empleado) {
 
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v) return;
 
-  const empleado = empleadoSesionPanel();
-
   if (ocultar) {
     v.ocultaEnPanel = { fecha: new Date().toISOString(), usuario: empleado.nombre };
     v.auditoria.push(registrarAuditoriaVentana("Ventana quitada de la vista", empleado));
+    registrarActividadApartadosRol({ accion: "quitar_ventana_de_vista", descripcion: `Quitó de la vista la ventana de ${v.usuarioNombre}` }, empleado);
   } else {
     delete v.ocultaEnPanel;
     v.auditoria.push(registrarAuditoriaVentana("Ventana devuelta a la vista", empleado));
+    registrarActividadApartadosRol({ accion: "mostrar_ventana_en_vista", descripcion: `Volvió a mostrar la ventana de ${v.usuarioNombre}` }, empleado);
   }
 
   filasExpandidas.delete(v.id);
@@ -473,6 +607,8 @@ function obtenerAccionesVentana(v) {
 
   if (v.estado === "pendiente_deposito") {
     html += `<button class="action-btn primary-action" data-confirmar-deposito="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Confirmar depósito</button>`;
+    html += `<button class="action-btn detail-action" data-pedir-comprobante="${v.id}"><span>↗</span> Pedir comprobante por WhatsApp</button>`;
+    html += `<button class="action-btn danger-action" data-no-deposito="${v.id}"><span>×</span> No depositó</button>`;
   }
 
   if (v.estado === "pendiente_aprobacion") {
@@ -550,7 +686,7 @@ function abrirContactoWhatsapp(v) {
   const overlay = document.getElementById("modalOverlay");
   const box = document.getElementById("modalBox");
 
-  const numero = (v.telefono || "").replace(/\D/g, "");
+  const numero = numeroWhatsapp(v.telefono);
   const enlace = numero ? `https://wa.me/${numero}?text=${encodeURIComponent(MENSAJE_WHATSAPP_VENCIDO)}` : "#";
 
   box.innerHTML = `
@@ -627,7 +763,8 @@ function obtenerTextoResolucion(resolucion) {
     aplicado: "Depósito aplicado a la compra",
     credito: "Depósito guardado como crédito",
     perdido: "Depósito perdido por vencimiento",
-    no_aplica: "Sin depósito que resolver"
+    no_aplica: "Sin depósito que resolver",
+    sin_deposito: "Cancelada: no depositó"
   };
 
   return textos[resolucion] || "";

@@ -478,6 +478,24 @@ function confirmarQuitarPiezaRol(ventanaId, piezaId, motivo) {
   abrirAutorizacion({ tipo: "quitar-pieza", ventanaId, piezaId, motivo });
 }
 
+// Bolsita / quitar de la vista (apartados-panel-comun.js): la cuenta de
+// Staff es compartida, así que se pide usuario/contraseña para que
+// Actividad registre a la persona real, no a la cuenta.
+function pedirConfirmacionPanelRol({ ventanaId, titulo, mensaje, peligrosa, onConfirmar }) {
+  abrirAutorizacion({ tipo: "accion-panel", ventanaId, titulo, mensaje, peligrosa, ejecutar: onConfirmar });
+}
+
+function registrarActividadApartadosRol({ accion, descripcion }, personal) {
+  registrarAuditoria({
+    usuarioId: personal.usuario,
+    usuarioNombre: personal.nombre,
+    rol: 'staff',
+    modulo: 'apartados',
+    accion,
+    descripcion
+  });
+}
+
 function abrirAutorizacion(accion) {
 
   accionPendiente = accion;
@@ -497,18 +515,19 @@ function abrirAutorizacion(accion) {
     "quitar-pieza": "Autorizar quitar pieza"
   };
 
-  const esPeligrosa = accion.tipo === "cancelar-ventana" || accion.tipo === "desapartar-ventana" || accion.tipo === "quitar-pieza";
+  const esPeligrosa = accion.tipo === "cancelar-ventana" || accion.tipo === "desapartar-ventana" || accion.tipo === "quitar-pieza" || !!accion.peligrosa;
   const nombrePersona = v?.usuarioNombre || accion.datos?.nombre || "";
+  const titulo = accion.titulo || titulos[accion.tipo];
 
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon ${esPeligrosa ? "danger" : ""}">${esPeligrosa ? "!" : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg>'}</div>
-    <h3>${titulos[accion.tipo] || "Autorizar acción"}</h3>
-    <p class="modal-sub">Ingresa tus credenciales para registrar quién realizó este cambio.</p>
+    <h3>${titulo || "Autorizar acción"}</h3>
+    <p class="modal-sub">${accion.mensaje || "Ingresa tus credenciales para registrar quién realizó este cambio."}</p>
 
     <div class="modal-context">
       <span>Persona</span><strong>${escapeHTML(nombrePersona)}</strong>
-      <span>Acción</span><strong>${titulos[accion.tipo] || "Modificación"}</strong>
+      <span>Acción</span><strong>${titulo || "Modificación"}</strong>
     </div>
 
     <div class="auth-warning">
@@ -578,6 +597,14 @@ async function validarAutorizacion() {
 async function ejecutarAccion(personal) {
 
   if (!accionPendiente) return;
+
+  if (accionPendiente.tipo === "accion-panel") {
+    const { ejecutar } = accionPendiente;
+    accionPendiente = null;
+    cerrarModal();
+    ejecutar(personal);
+    return;
+  }
 
   let mensaje = "";
 
