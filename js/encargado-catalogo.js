@@ -313,7 +313,7 @@ function abrirModalProducto(producto = null) {
       </div>
 
       <div class="form-field">
-        <label>Código del producto</label>
+        <label>Código del producto (opcional)</label>
         <input id="productoCodigo" type="text" placeholder="Ej. AN-045" value="${escapeAttribute(producto?.codigo || '')}">
         <small class="field-help">Solo lo ven Staff, Encargado y Admin (columna "ID del producto") — nunca Emprendedora/Líder.</small>
       </div>

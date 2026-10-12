@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal — Staff MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=39">
+  <link rel="stylesheet" href="../../css/styles.css?v=40">
   <link rel="icon" type="image/png" href="../../assets/images/favicon.png">
   <!-- Fase 2: SDK compat de Firebase — solo se activa si js/firebase-config.js tiene MODO_DEMO=false y credenciales reales; si no, no hace nada. -->
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
@@ -263,7 +263,7 @@
         <h2>Ventanas de apartado</h2>
         <button class="action-btn primary-action" style="width:auto;padding:0 16px;height:36px;" id="nuevaVentanaBtn"><span>+</span> Nueva ventana de apartado</button>
       </div>
-      <div class="toolbar"><select class="filter-select" id="statusSelect"><option value="todos">Todos los estados</option><option value="pendiente_deposito">Pendiente de depósito</option><option value="activa">Activa</option><option value="vencida">Vencida</option><option value="cerrada">Cerrada</option></select><input class="search" id="searchInput" placeholder="Buscar por nombre o pieza..." type="search"></div>
+      <div class="toolbar"><select class="filter-select" id="statusSelect"><option value="todos">Todos los estados</option><option value="pendiente_deposito">Pendiente de depósito</option><option value="activa">Activa</option><option value="vencida">Vencida</option><option value="cerrada">Cerrada</option><option value="ocultas">Quitadas de la vista</option></select><input class="search" id="searchInput" placeholder="Buscar por nombre o pieza..." type="search"></div>
 
       <section class="table-card">
         <div class="table-wrap"><table><thead><tr><th>Emprendedora/Líder</th><th>Categoría</th><th>Depósito</th><th>Estado de Apartado</th><th>Vencimiento</th><th>Acciones</th></tr></thead><tbody id="apartadosTableBody"></tbody></table></div>
@@ -286,7 +286,7 @@
   <script src="../../js/apartados-firestore-sync.js?v=3"></script>
   <script src="../../js/apartados-modelo.js?v=6"></script>
   <script src="../../js/dom-utils.js?v=5"></script>
-  <script src="../../js/apartados-panel-comun.js?v=9"></script>
+  <script src="../../js/apartados-panel-comun.js?v=10"></script>
   <script src="../../js/staff-catalogo-ejemplo.js?v=3"></script>
   <script src="../../js/catalogo-firestore-sync.js?v=3"></script>
   <script src="../../js/catalogo-variantes-modelo.js?v=6"></script>

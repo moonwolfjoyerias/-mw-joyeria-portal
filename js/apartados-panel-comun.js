@@ -85,12 +85,21 @@ function obtenerVentanasFiltradas() {
 
   return ventanas.filter(v => {
 
-    // Una ventana cerrada sin depósito que conservar ya no tiene nada
-    // pendiente para Staff — no se muestra (el registro sigue viviendo
-    // en los datos, solo no se renderiza como fila).
-    if (v.estado === "cerrada" && v.resolucionDeposito !== "credito") return false;
+    // "Quitar de la vista" solo oculta la fila — la ventana, su historial
+    // y su crédito siguen intactos, y se pueden ver con el filtro
+    // "Quitadas de la vista".
+    if (filtroEstado === "ocultas") {
+      if (!v.ocultaEnPanel) return false;
+    } else {
+      if (v.ocultaEnPanel) return false;
 
-    const coincideEstado = filtroEstado === "todos" || v.estado === filtroEstado;
+      // Una ventana cerrada sin depósito que conservar ya no tiene nada
+      // pendiente para Staff — no se muestra (el registro sigue viviendo
+      // en los datos, solo no se renderiza como fila).
+      if (v.estado === "cerrada" && v.resolucionDeposito !== "credito") return false;
+    }
+
+    const coincideEstado = filtroEstado === "todos" || filtroEstado === "ocultas" || v.estado === filtroEstado;
 
     const texto = [v.usuarioNombre, ...v.apartados.map(p => p.producto)].join(" ").toLowerCase();
     const coincideBusqueda = !terminoBusqueda || texto.includes(terminoBusqueda);
@@ -131,7 +140,77 @@ function renderTabla() {
 
   actualizarContador(filtradas.length);
   agregarEventosFilas();
+  agregarEventosComunesFilas();
   wirearZoomFotos(tbody);
+
+}
+
+// Bolsita y "quitar de la vista" son iguales para los 3 roles y no
+// piden reautorización (no mueven dinero ni existencias) — quedan en el
+// historial de la ventana con el nombre de la sesión activa.
+function agregarEventosComunesFilas() {
+
+  document.querySelectorAll("[data-bolsita-pieza]").forEach(btn => {
+    btn.addEventListener("click", () => alternarBolsitaPieza(btn.dataset.ventana, btn.dataset.bolsitaPieza));
+  });
+
+  document.querySelectorAll("[data-ocultar-ventana]").forEach(btn => {
+    btn.addEventListener("click", () => alternarVentanaOculta(btn.dataset.ocultarVentana, true));
+  });
+
+  document.querySelectorAll("[data-mostrar-ventana]").forEach(btn => {
+    btn.addEventListener("click", () => alternarVentanaOculta(btn.dataset.mostrarVentana, false));
+  });
+
+}
+
+function empleadoSesionPanel() {
+  const sesion = typeof obtenerSesionActiva === "function" ? obtenerSesionActiva() : null;
+  return { nombre: sesion?.nombre || "Sistema" };
+}
+
+function alternarBolsitaPieza(ventanaId, piezaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  const pieza = v?.apartados.find(p => p.id === piezaId);
+  if (!pieza) return;
+
+  const empleado = empleadoSesionPanel();
+
+  if (pieza.enBolsita) {
+    delete pieza.enBolsita;
+    v.auditoria.push(registrarAuditoriaVentana(`${pieza.producto}: se quitó la marca de "guardada en bolsita"`, empleado));
+  } else {
+    pieza.enBolsita = { fecha: new Date().toISOString(), usuario: empleado.nombre };
+    v.auditoria.push(registrarAuditoriaVentana(`${pieza.producto}: guardada en la bolsita física`, empleado));
+  }
+
+  guardarVentanas();
+  renderTabla();
+
+}
+
+function alternarVentanaOculta(ventanaId, ocultar) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  const empleado = empleadoSesionPanel();
+
+  if (ocultar) {
+    v.ocultaEnPanel = { fecha: new Date().toISOString(), usuario: empleado.nombre };
+    v.auditoria.push(registrarAuditoriaVentana("Ventana quitada de la vista", empleado));
+  } else {
+    delete v.ocultaEnPanel;
+    v.auditoria.push(registrarAuditoriaVentana("Ventana devuelta a la vista", empleado));
+  }
+
+  filasExpandidas.delete(v.id);
+  guardarVentanas();
+  renderTabla();
+  mostrarToast(ocultar
+    ? 'Ventana quitada de la vista. Puedes verla en el filtro "Quitadas de la vista".'
+    : "La ventana volvió a la vista.");
 
 }
 
@@ -142,6 +221,8 @@ function crearFilaVentana(v) {
   const categoria = obtenerReglaCategoria(v.categoria);
   const expandida = filasExpandidas.has(v.id);
   const vencidaAviso = v.estado === "activa" && ventanaEstaVencida(v);
+  const piezasActivas = obtenerPiezasActivas(v);
+  const sinBolsita = piezasActivas.filter(p => !p.enBolsita).length;
 
   return `
     <tr class="ventana-row">
@@ -151,6 +232,9 @@ function crearFilaVentana(v) {
             <strong>${escapeHTML(v.usuarioNombre)}</strong>
             <small>${escapeHTML(v.telefono || "")}</small>
             <small style="color:#5b1689;font-weight:600;">${expandida ? "▾" : "▸"} Ver piezas (${v.apartados.length})</small>
+            ${piezasActivas.length ? (sinBolsita
+              ? `<small style="display:block;margin-top:3px;color:#9a6a00;font-weight:600;">${sinBolsita} de ${piezasActivas.length} sin guardar en bolsita</small>`
+              : `<small style="display:block;margin-top:3px;color:#3f7a2a;font-weight:600;">✓ Todas en bolsita</small>`) : ""}
             ${v.cambioClienteSinRevisar ? `<small style="display:block;margin-top:3px;color:#9a6a00;background:#fff4da;border-radius:6px;padding:2px 6px;font-weight:600;">⚠ ${escapeHTML(v.cambioClienteSinRevisar.texto)} — sin revisar</small>` : ""}
           </div>
         </button>
@@ -197,15 +281,24 @@ function crearFilaDetalle(v) {
     const foto = fotoPiezaApartadoPanel(p);
     const generica = /isotipo-morado\.png/.test(foto);
 
+    // Solo las piezas activas siguen apartadas en el local; una liquidada
+    // o cancelada conserva su marca de bolsita (si la tuvo) pero ya no se
+    // puede cambiar.
+    const bolsita = p.estado === "activa"
+      ? `<button type="button" class="action-btn ${p.enBolsita ? "primary-action" : "detail-action"} bolsita-btn" data-ventana="${v.id}" data-bolsita-pieza="${p.id}" title="${p.enBolsita ? "Clic para quitar la marca" : "Marcar cuando la pieza ya esté guardada en su bolsita en el local"}">${p.enBolsita ? "✓ En bolsita" : "Guardar en bolsita"}</button>`
+      : (p.enBolsita ? `<span class="status status-active">✓ Estuvo en bolsita</span>` : "");
+
     return `
       <div class="piece-cell" style="margin-bottom:10px;align-items:flex-start;">
         <div class="piece-thumb"><img src="${foto}" alt="${escapeAttribute(p.producto)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;${generica ? 'opacity:.35;' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(p.producto)}"`}></div>
-        <div>
+        <div style="flex:1;">
           <strong>${escapeHTML(p.producto)}</strong>
           <small>${escapeHTML([p.colorOro, p.variante].filter(Boolean).join(" · "))} · $${Number(p.total).toLocaleString("es-MX")} MXN</small>
-          <div style="margin-top:4px;">
+          <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
             <span class="status ${estadoPieza.clase}">${estadoPieza.texto}</span>
+            ${bolsita}
           </div>
+          ${p.enBolsita ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">En bolsita desde ${formatearFechaHora(p.enBolsita.fecha)} · ${escapeHTML(p.enBolsita.usuario || "")}</small>` : ""}
         </div>
       </div>
     `;
@@ -279,6 +372,14 @@ function obtenerAccionesVentana(v) {
       html += `<button class="action-btn danger-action" data-desapartar-ventana="${v.id}"><span>×</span> Desapartar</button>`;
     }
 
+  }
+
+  // "vencida" es el estado final tras Desapartar; "cerrada" tras liquidar
+  // o cancelar — en ambos ya no queda nada pendiente con la ventana.
+  if (v.estado === "cerrada" || v.estado === "vencida") {
+    html += v.ocultaEnPanel
+      ? `<button class="action-btn detail-action" data-mostrar-ventana="${v.id}"><span>↺</span> Volver a mostrar</button>`
+      : `<button class="action-btn detail-action" data-ocultar-ventana="${v.id}"><span>×</span> Quitar de la vista</button>`;
   }
 
   return html;
