@@ -2498,20 +2498,6 @@ img.zoomable-photo { cursor: zoom-in; }
   align-items: center;
   gap: 10px;
 }
-.activity-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--mw-lilac-soft);
-  color: var(--mw-accent-text);
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
 .activity-person strong { display: block; color: var(--mw-heading-e); font-size: 0.75rem; }
 .activity-person .badge { margin-top: 2px; }
 .activity-modulo { display: block; font-weight: 600; color: var(--mw-accent-text); font-size: 0.72rem; }
