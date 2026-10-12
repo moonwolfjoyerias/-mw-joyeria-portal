@@ -43,6 +43,27 @@ const ID_PRUEBA_8000 = 'VENT-PRUEBA-8000-CLAUDIA';
 let APARTADOS_CACHE = [];
 let CREDITOS_CACHE = {};
 
+// Opción A (convivencia con BRILLO MW, que también maneja apartados en
+// estas mismas colecciones): esta página ya NO reescribe todas las
+// ventanas ni el documento completo de créditos en cada guardado.
+// Recuerda cómo estaba cada ventana y cada crédito en el servidor la
+// última vez que los leyó o guardó, y en cada guardado envía SOLO lo que
+// cambió aquí; nunca borra una ventana que no conoce (por ejemplo, una
+// abierta desde BRILLO después de cargar esta página) ni pisa créditos
+// de otras personas que no tocó.
+let _ventanasEnServidor = new Map();
+let _creditosEnServidor = {};
+
+function _textoEstableApartados(valor) {
+  if (Array.isArray(valor)) return '[' + valor.map(_textoEstableApartados).join(',') + ']';
+  if (valor && typeof valor === 'object') {
+    return '{' + Object.keys(valor).sort()
+      .filter(k => valor[k] !== undefined)
+      .map(k => JSON.stringify(k) + ':' + _textoEstableApartados(valor[k])).join(',') + '}';
+  }
+  return JSON.stringify(valor === undefined ? null : valor);
+}
+
 function apartadosSemillaLocal() {
   return typeof construirVentanasApartadoEjemplo === 'function' ? construirVentanasApartadoEjemplo() : [];
 }
@@ -106,9 +127,11 @@ async function cargarApartadosRepo() {
       if (metaSnap.exists) {
         const snapVentanas = await dbFirestore.collection(APARTADOS_COLECCION_FIRESTORE).get();
         APARTADOS_CACHE = snapVentanas.docs.map(d => ({ ...d.data(), id: d.id }));
+        _ventanasEnServidor = new Map(APARTADOS_CACHE.map(v => [String(v.id), _textoEstableApartados(v)]));
 
         const docCreditos = await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).get();
         CREDITOS_CACHE = docCreditos.exists ? (docCreditos.data() || {}) : {};
+        _creditosEnServidor = { ...CREDITOS_CACHE };
       } else {
         // Primera vez que este proyecto de Firestore ve Apartados: siembra
         // las compras de ejemplo + la prueba de $8,000 + el crédito demo,
@@ -188,38 +211,56 @@ async function sincronizarVentanasConFirestore(ventanas) {
   // solo puede escribir SUS PROPIAS ventanas (usuarioId == su
   // personaId) — igual que ya exige la regla de ventanasApartado.
   // guardarVentanasApartado() recibe el arreglo COMPLETO (todas las
-  // ventanas de todas las clientas, no solo las suyas — ver
-  // mutarVentanaPropia en js/apartados.js), así que recorrerlo entero
-  // en un solo batch (como sí hace Staff/Encargado/Admin abajo) haría
-  // que Firestore rechace el batch ENTERO por las ventanas ajenas —
-  // mismo motivo y misma solución que ya se aplicó en
-  // personas-firestore-sync.js para SEC-01.
+  // ventanas de todas las clientas), así que se filtra a las suyas.
   const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
-  if (sesion && sesion.tipo === 'persona' && sesion.personaId) {
-    const propias = ventanas.filter(v => v.usuarioId === sesion.personaId);
-    if (!propias.length) return;
-    const batchPropio = dbFirestore.batch();
-    propias.forEach(ventana => {
-      batchPropio.set(coleccion.doc(String(ventana.id)), ventana);
+  const esPersona = Boolean(sesion && sesion.tipo === 'persona' && sesion.personaId);
+  const candidatas = esPersona ? ventanas.filter(v => v.usuarioId === sesion.personaId) : ventanas;
+
+  // Opción A: solo las ventanas que cambiaron en esta página.
+  const batch = dbFirestore.batch();
+  const escritas = new Map();
+  candidatas.forEach(ventana => {
+    const id = String(ventana.id);
+    const texto = _textoEstableApartados(ventana);
+    if (_ventanasEnServidor.get(id) === texto) return;
+    batch.set(coleccion.doc(id), ventana);
+    escritas.set(id, texto);
+  });
+
+  // Solo se borra lo que esta página conocía y quitó — nunca una ventana
+  // que no conoce. Las Emprendedoras/Líderes nunca borran ventanas.
+  const borradas = [];
+  if (!esPersona) {
+    const idsNuevos = new Set(ventanas.map(v => String(v.id)));
+    _ventanasEnServidor.forEach((texto, id) => {
+      if (!idsNuevos.has(id)) {
+        batch.delete(coleccion.doc(id));
+        borradas.push(id);
+      }
     });
-    await batchPropio.commit();
-    return;
   }
 
-  const snap = await coleccion.get();
-  const idsNuevos = new Set(ventanas.map(v => String(v.id)));
-  const batch = dbFirestore.batch();
-  snap.docs.forEach(doc => {
-    if (!idsNuevos.has(doc.id)) batch.delete(doc.ref);
-  });
-  ventanas.forEach(ventana => {
-    batch.set(coleccion.doc(String(ventana.id)), ventana);
-  });
-  batch.set(dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID), { inicializado: true }, { merge: true });
+  if (!escritas.size && !borradas.length) return;
+  if (!esPersona) {
+    batch.set(dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID), { inicializado: true }, { merge: true });
+  }
   await batch.commit();
+  escritas.forEach((texto, id) => _ventanasEnServidor.set(id, texto));
+  borradas.forEach(id => _ventanasEnServidor.delete(id));
 }
 
 async function sincronizarCreditosConFirestore(creditos) {
-  await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).set(creditos);
+  // Opción A: solo los créditos que cambiaron en esta página, con merge,
+  // para no pisar los de otras personas que se movieron desde BRILLO.
+  const cambios = {};
+  Object.keys(creditos).forEach(usuarioId => {
+    if (_creditosEnServidor[usuarioId] !== creditos[usuarioId]) cambios[usuarioId] = creditos[usuarioId];
+  });
+  Object.keys(_creditosEnServidor).forEach(usuarioId => {
+    if (!(usuarioId in creditos)) cambios[usuarioId] = firebase.firestore.FieldValue.delete();
+  });
+  if (!Object.keys(cambios).length) return;
+  await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).set(cambios, { merge: true });
   await dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID).set({ inicializado: true }, { merge: true });
+  _creditosEnServidor = { ...creditos };
 }
