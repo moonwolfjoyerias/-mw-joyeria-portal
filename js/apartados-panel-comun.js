@@ -145,12 +145,13 @@ function renderTabla() {
 
 }
 
-// Bolsita y "quitar de la vista" son iguales para los 3 roles y no
-// piden reautorización (no mueven dinero ni existencias) — solo un modal
-// de confirmación, y quedan en el historial de la ventana con el nombre
-// de la sesión activa. "Quitar pieza" sí pasa por el flujo de
-// autorización de cada rol (confirmarQuitarPiezaRol, en cada
-// controlador), porque cambia el apartado de la clienta.
+// Bolsita, "quitar de la vista"/"volver a mostrar" y "quitar pieza"
+// quedan en Actividad con el nombre de quien lo hizo. Cada controlador
+// decide cómo se confirma (pedirConfirmacionPanelRol /
+// confirmarQuitarPiezaRol): Encargado/Admin con un modal de
+// confirmación (su cuenta ya es individual); Staff con usuario/
+// contraseña, porque su cuenta es compartida y solo así se sabe qué
+// persona lo hizo. onConfirmar recibe al empleado identificado.
 function agregarEventosComunesFilas() {
 
   document.querySelectorAll("[data-bolsita-pieza]").forEach(btn => {
@@ -158,22 +159,17 @@ function agregarEventosComunesFilas() {
   });
 
   document.querySelectorAll("[data-ocultar-ventana]").forEach(btn => {
-    btn.addEventListener("click", () => confirmarOcultarVentana(btn.dataset.ocultarVentana));
+    btn.addEventListener("click", () => confirmarOcultarVentana(btn.dataset.ocultarVentana, true));
   });
 
   document.querySelectorAll("[data-mostrar-ventana]").forEach(btn => {
-    btn.addEventListener("click", () => alternarVentanaOculta(btn.dataset.mostrarVentana, false));
+    btn.addEventListener("click", () => confirmarOcultarVentana(btn.dataset.mostrarVentana, false));
   });
 
   document.querySelectorAll("[data-quitar-pieza]").forEach(btn => {
     btn.addEventListener("click", () => abrirModalQuitarPieza(btn.dataset.ventana, btn.dataset.quitarPieza));
   });
 
-}
-
-function empleadoSesionPanel() {
-  const sesion = typeof obtenerSesionActiva === "function" ? obtenerSesionActiva() : null;
-  return { nombre: sesion?.nombre || "Sistema" };
 }
 
 function abrirConfirmacionPanel({ titulo, mensaje, textoBoton, peligrosa, onConfirmar }) {
@@ -207,35 +203,46 @@ function confirmarBolsitaPieza(ventanaId, piezaId) {
   const pieza = v?.apartados.find(p => p.id === piezaId);
   if (!pieza) return;
 
-  abrirConfirmacionPanel(pieza.enBolsita
+  pedirConfirmacionPanelRol(pieza.enBolsita
     ? {
+      ventanaId,
       titulo: "Quitar marca de bolsita",
       mensaje: `"${escapeHTML(pieza.producto)}" de ${escapeHTML(v.usuarioNombre)} dejará de aparecer como guardada en su bolsita.`,
       textoBoton: "Quitar marca",
       peligrosa: true,
-      onConfirmar: () => alternarBolsitaPieza(ventanaId, piezaId)
+      onConfirmar: (empleado) => alternarBolsitaPieza(ventanaId, piezaId, empleado)
     }
     : {
+      ventanaId,
       titulo: "Guardar en bolsita",
       mensaje: `¿Confirmas que "${escapeHTML(pieza.producto)}" de ${escapeHTML(v.usuarioNombre)} ya está guardada en su bolsita física en el local?`,
       textoBoton: "Sí, ya está guardada",
-      onConfirmar: () => alternarBolsitaPieza(ventanaId, piezaId)
+      onConfirmar: (empleado) => alternarBolsitaPieza(ventanaId, piezaId, empleado)
     });
 
 }
 
-function confirmarOcultarVentana(ventanaId) {
+function confirmarOcultarVentana(ventanaId, ocultar) {
 
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v) return;
 
-  abrirConfirmacionPanel({
-    titulo: "Quitar de la vista",
-    mensaje: `La ventana de ${escapeHTML(v.usuarioNombre)} dejará de aparecer en la tabla. No se borra nada: podrás consultarla en el filtro "Quitadas de la vista".`,
-    textoBoton: "Quitar de la vista",
-    peligrosa: true,
-    onConfirmar: () => alternarVentanaOculta(ventanaId, true)
-  });
+  pedirConfirmacionPanelRol(ocultar
+    ? {
+      ventanaId,
+      titulo: "Quitar de la vista",
+      mensaje: `La ventana de ${escapeHTML(v.usuarioNombre)} dejará de aparecer en la tabla. No se borra nada: podrás consultarla en el filtro "Quitadas de la vista".`,
+      textoBoton: "Quitar de la vista",
+      peligrosa: true,
+      onConfirmar: (empleado) => alternarVentanaOculta(ventanaId, true, empleado)
+    }
+    : {
+      ventanaId,
+      titulo: "Volver a mostrar",
+      mensaje: `La ventana de ${escapeHTML(v.usuarioNombre)} volverá a aparecer en la tabla.`,
+      textoBoton: "Volver a mostrar",
+      onConfirmar: (empleado) => alternarVentanaOculta(ventanaId, false, empleado)
+    });
 
 }
 
@@ -301,40 +308,41 @@ function notificarPiezaQuitada(v, pieza, motivo) {
   });
 }
 
-function alternarBolsitaPieza(ventanaId, piezaId) {
+function alternarBolsitaPieza(ventanaId, piezaId, empleado) {
 
   const v = ventanas.find(x => x.id === ventanaId);
   const pieza = v?.apartados.find(p => p.id === piezaId);
   if (!pieza) return;
 
-  const empleado = empleadoSesionPanel();
-
   if (pieza.enBolsita) {
     delete pieza.enBolsita;
     v.auditoria.push(registrarAuditoriaVentana(`${pieza.producto}: se quitó la marca de "guardada en bolsita"`, empleado));
+    registrarActividadApartadosRol({ accion: "quitar_marca_bolsita", descripcion: `Quitó la marca de bolsita a ${pieza.producto} (apartado de ${v.usuarioNombre})` }, empleado);
   } else {
     pieza.enBolsita = { fecha: new Date().toISOString(), usuario: empleado.nombre };
     v.auditoria.push(registrarAuditoriaVentana(`${pieza.producto}: guardada en la bolsita física`, empleado));
+    registrarActividadApartadosRol({ accion: "guardar_en_bolsita", descripcion: `Guardó ${pieza.producto} en la bolsita física (apartado de ${v.usuarioNombre})` }, empleado);
   }
 
   guardarVentanas();
   renderTabla();
+  mostrarToast(pieza.enBolsita ? `Marcada en bolsita por ${empleado.nombre}.` : `Marca de bolsita quitada por ${empleado.nombre}.`);
 
 }
 
-function alternarVentanaOculta(ventanaId, ocultar) {
+function alternarVentanaOculta(ventanaId, ocultar, empleado) {
 
   const v = ventanas.find(x => x.id === ventanaId);
   if (!v) return;
 
-  const empleado = empleadoSesionPanel();
-
   if (ocultar) {
     v.ocultaEnPanel = { fecha: new Date().toISOString(), usuario: empleado.nombre };
     v.auditoria.push(registrarAuditoriaVentana("Ventana quitada de la vista", empleado));
+    registrarActividadApartadosRol({ accion: "quitar_ventana_de_vista", descripcion: `Quitó de la vista la ventana de ${v.usuarioNombre}` }, empleado);
   } else {
     delete v.ocultaEnPanel;
     v.auditoria.push(registrarAuditoriaVentana("Ventana devuelta a la vista", empleado));
+    registrarActividadApartadosRol({ accion: "mostrar_ventana_en_vista", descripcion: `Volvió a mostrar la ventana de ${v.usuarioNombre}` }, empleado);
   }
 
   filasExpandidas.delete(v.id);

@@ -619,6 +619,15 @@ function ejecutarCancelar(ventanaId) {
 
 }
 
+// Bolsita / quitar de la vista (apartados-panel-comun.js).
+function pedirConfirmacionPanelRol(config) {
+  abrirConfirmacionPanel({ ...config, onConfirmar: () => config.onConfirmar(ENCARGADO_EMPLEADO) });
+}
+
+function registrarActividadApartadosRol({ accion, descripcion }) {
+  registrarAuditoriaEncargado({ modulo: "apartados", accion, descripcion });
+}
+
 // Llamado desde el modal común de "Quitar pieza" (apartados-panel-comun.js),
 // que ya es la confirmación — con motivo — de esta acción.
 function confirmarQuitarPiezaRol(ventanaId, piezaId, motivo) {
