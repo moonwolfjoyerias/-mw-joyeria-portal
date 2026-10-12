@@ -146,20 +146,27 @@ function renderTabla() {
 }
 
 // Bolsita y "quitar de la vista" son iguales para los 3 roles y no
-// piden reautorización (no mueven dinero ni existencias) — quedan en el
-// historial de la ventana con el nombre de la sesión activa.
+// piden reautorización (no mueven dinero ni existencias) — solo un modal
+// de confirmación, y quedan en el historial de la ventana con el nombre
+// de la sesión activa. "Quitar pieza" sí pasa por el flujo de
+// autorización de cada rol (confirmarQuitarPiezaRol, en cada
+// controlador), porque cambia el apartado de la clienta.
 function agregarEventosComunesFilas() {
 
   document.querySelectorAll("[data-bolsita-pieza]").forEach(btn => {
-    btn.addEventListener("click", () => alternarBolsitaPieza(btn.dataset.ventana, btn.dataset.bolsitaPieza));
+    btn.addEventListener("click", () => confirmarBolsitaPieza(btn.dataset.ventana, btn.dataset.bolsitaPieza));
   });
 
   document.querySelectorAll("[data-ocultar-ventana]").forEach(btn => {
-    btn.addEventListener("click", () => alternarVentanaOculta(btn.dataset.ocultarVentana, true));
+    btn.addEventListener("click", () => confirmarOcultarVentana(btn.dataset.ocultarVentana));
   });
 
   document.querySelectorAll("[data-mostrar-ventana]").forEach(btn => {
     btn.addEventListener("click", () => alternarVentanaOculta(btn.dataset.mostrarVentana, false));
+  });
+
+  document.querySelectorAll("[data-quitar-pieza]").forEach(btn => {
+    btn.addEventListener("click", () => abrirModalQuitarPieza(btn.dataset.ventana, btn.dataset.quitarPieza));
   });
 
 }
@@ -167,6 +174,131 @@ function agregarEventosComunesFilas() {
 function empleadoSesionPanel() {
   const sesion = typeof obtenerSesionActiva === "function" ? obtenerSesionActiva() : null;
   return { nombre: sesion?.nombre || "Sistema" };
+}
+
+function abrirConfirmacionPanel({ titulo, mensaje, textoBoton, peligrosa, onConfirmar }) {
+
+  const overlay = document.getElementById("modalOverlay");
+  const box = document.getElementById("modalBox");
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModal()">×</button>
+    <div class="auth-icon ${peligrosa ? "danger" : ""}">${peligrosa ? "!" : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg>'}</div>
+    <h3>${titulo}</h3>
+    <p class="modal-sub">${mensaje}</p>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" type="button" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn ${peligrosa ? "btn-danger" : "btn-primary"}" style="flex:1;" type="button" id="confirmarPanelBtn">${textoBoton}</button>
+    </div>
+  `;
+
+  overlay.classList.add("open");
+
+  document.getElementById("confirmarPanelBtn").addEventListener("click", () => {
+    cerrarModal();
+    onConfirmar();
+  });
+
+}
+
+function confirmarBolsitaPieza(ventanaId, piezaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  const pieza = v?.apartados.find(p => p.id === piezaId);
+  if (!pieza) return;
+
+  abrirConfirmacionPanel(pieza.enBolsita
+    ? {
+      titulo: "Quitar marca de bolsita",
+      mensaje: `"${escapeHTML(pieza.producto)}" de ${escapeHTML(v.usuarioNombre)} dejará de aparecer como guardada en su bolsita.`,
+      textoBoton: "Quitar marca",
+      peligrosa: true,
+      onConfirmar: () => alternarBolsitaPieza(ventanaId, piezaId)
+    }
+    : {
+      titulo: "Guardar en bolsita",
+      mensaje: `¿Confirmas que "${escapeHTML(pieza.producto)}" de ${escapeHTML(v.usuarioNombre)} ya está guardada en su bolsita física en el local?`,
+      textoBoton: "Sí, ya está guardada",
+      onConfirmar: () => alternarBolsitaPieza(ventanaId, piezaId)
+    });
+
+}
+
+function confirmarOcultarVentana(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  abrirConfirmacionPanel({
+    titulo: "Quitar de la vista",
+    mensaje: `La ventana de ${escapeHTML(v.usuarioNombre)} dejará de aparecer en la tabla. No se borra nada: podrás consultarla en el filtro "Quitadas de la vista".`,
+    textoBoton: "Quitar de la vista",
+    peligrosa: true,
+    onConfirmar: () => alternarVentanaOculta(ventanaId, true)
+  });
+
+}
+
+const MOTIVO_QUITAR_PIEZA_DEFAULT = "Sin existencia disponible";
+
+function abrirModalQuitarPieza(ventanaId, piezaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  const pieza = v ? obtenerPiezasActivas(v).find(p => p.id === piezaId) : null;
+  if (!pieza) return;
+
+  const esUltima = obtenerPiezasActivas(v).length === 1;
+  const notaCierre = esUltima
+    ? (v.depositoApartadoDisponible > 0
+      ? ` Es su última pieza activa: la ventana se cerrará y su depósito de $${v.depositoApartadoDisponible} MXN se guardará como crédito.`
+      : " Es su última pieza activa: la ventana se cerrará.")
+    : "";
+
+  const overlay = document.getElementById("modalOverlay");
+  const box = document.getElementById("modalBox");
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModal()">×</button>
+    <div class="auth-icon danger">!</div>
+    <h3>Quitar pieza del apartado</h3>
+    <p class="modal-sub">"${escapeHTML(pieza.producto)}" se quitará del apartado de ${escapeHTML(v.usuarioNombre)} y le llegará una notificación con el motivo.${notaCierre}</p>
+
+    <label for="motivoQuitarPieza">Motivo</label>
+    <textarea id="motivoQuitarPieza" rows="2" style="width:100%;">${escapeHTML(MOTIVO_QUITAR_PIEZA_DEFAULT)}</textarea>
+
+    <div class="modal-note">La existencia del catálogo no cambia. Si el inventario está mal, corrígelo en Catálogo.</div>
+
+    <div id="quitarPiezaError" class="auth-error" style="display:none;"></div>
+
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" type="button" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-danger" style="flex:1;" type="button" id="confirmarQuitarPiezaBtn">Quitar pieza</button>
+    </div>
+  `;
+
+  overlay.classList.add("open");
+
+  document.getElementById("confirmarQuitarPiezaBtn").addEventListener("click", () => {
+    const motivo = document.getElementById("motivoQuitarPieza").value.trim();
+    if (!motivo) {
+      const error = document.getElementById("quitarPiezaError");
+      error.style.display = "block";
+      error.textContent = "Escribe el motivo.";
+      return;
+    }
+    confirmarQuitarPiezaRol(ventanaId, piezaId, motivo);
+  });
+
+}
+
+function notificarPiezaQuitada(v, pieza, motivo) {
+  if (typeof agregarNotificacion !== "function") return;
+  agregarNotificacion({
+    texto: `Quitamos "${pieza.producto}" de tu apartado. Motivo: ${motivo.replace(/[.\s]+$/, "")}.`,
+    link: "apartados",
+    paraId: v.usuarioId,
+    rolDestino: "emprendedora_lider"
+  });
 }
 
 function alternarBolsitaPieza(ventanaId, piezaId) {
@@ -285,7 +417,8 @@ function crearFilaDetalle(v) {
     // o cancelada conserva su marca de bolsita (si la tuvo) pero ya no se
     // puede cambiar.
     const bolsita = p.estado === "activa"
-      ? `<button type="button" class="action-btn ${p.enBolsita ? "primary-action" : "detail-action"} bolsita-btn" data-ventana="${v.id}" data-bolsita-pieza="${p.id}" title="${p.enBolsita ? "Clic para quitar la marca" : "Marcar cuando la pieza ya esté guardada en su bolsita en el local"}">${p.enBolsita ? "✓ En bolsita" : "Guardar en bolsita"}</button>`
+      ? `<button type="button" class="action-btn ${p.enBolsita ? "primary-action" : "detail-action"} bolsita-btn" data-ventana="${v.id}" data-bolsita-pieza="${p.id}" title="${p.enBolsita ? "Clic para quitar la marca" : "Marcar cuando la pieza ya esté guardada en su bolsita en el local"}">${p.enBolsita ? "✓ En bolsita" : "Guardar en bolsita"}</button>
+         <button type="button" class="action-btn danger-action bolsita-btn" data-ventana="${v.id}" data-quitar-pieza="${p.id}" title="Quitar esta pieza del apartado (por ejemplo, si ya no hay existencia)">× Quitar pieza</button>`
       : (p.enBolsita ? `<span class="status status-active">✓ Estuvo en bolsita</span>` : "");
 
     return `
@@ -299,6 +432,7 @@ function crearFilaDetalle(v) {
             ${bolsita}
           </div>
           ${p.enBolsita ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">En bolsita desde ${formatearFechaHora(p.enBolsita.fecha)} · ${escapeHTML(p.enBolsita.usuario || "")}</small>` : ""}
+          ${p.retiro ? `<small style="display:block;margin-top:4px;color:#b94d4d;">Quitada del apartado: ${escapeHTML(p.retiro.motivo)} · ${escapeHTML(p.retiro.usuario || "")} · ${formatearFechaHora(p.retiro.fecha)}</small>` : ""}
         </div>
       </div>
     `;
