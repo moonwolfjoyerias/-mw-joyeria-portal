@@ -28,6 +28,24 @@ const NOTIFICACIONES_META_DOC_ID = 'estado';
 
 let NOTIFICACIONES_CACHE = [];
 
+// Opción A (convivencia con BRILLO MW, que también crea notificaciones —
+// por ejemplo, a una Emprendedora cuando se quita una pieza de su
+// apartado): el guardado de Staff/Encargado/Admin ya NO reescribe toda la
+// colección ni borra lo que no reconoce. Se compara contra lo que hay en
+// el servidor según la última foto en vivo (onSnapshot) y solo se envía
+// lo que cambió aquí; solo se borra lo que esta página quitó a propósito.
+let _notificacionesEnServidor = new Map();
+
+function _textoEstableNotificacion(valor) {
+  if (Array.isArray(valor)) return '[' + valor.map(_textoEstableNotificacion).join(',') + ']';
+  if (valor && typeof valor === 'object') {
+    return '{' + Object.keys(valor).sort()
+      .filter(k => valor[k] !== undefined)
+      .map(k => JSON.stringify(k) + ':' + _textoEstableNotificacion(valor[k])).join(',') + '}';
+  }
+  return JSON.stringify(valor === undefined ? null : valor);
+}
+
 function notificacionesSemillaLocal() {
   return (typeof NOTIFICACIONES_EJEMPLO !== 'undefined') ? NOTIFICACIONES_EJEMPLO.map(n => ({ ...n })) : [];
 }
@@ -78,6 +96,7 @@ async function cargarNotificacionesRepo() {
           : 0;
 
         NOTIFICACIONES_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        _notificacionesEnServidor = new Map(NOTIFICACIONES_CACHE.map(n => [String(n.id), _textoEstableNotificacion(n)]));
         try { localStorage.setItem(NOTIFICACIONES_STORAGE_KEY, JSON.stringify(NOTIFICACIONES_CACHE)); } catch (error) { /* noop */ }
 
         if (!primerSnapshot) {
@@ -177,15 +196,23 @@ async function sincronizarNotificacionesConFirestore(lista) {
     return;
   }
 
-  const snap = await coleccion.get();
+  // Opción A: solo lo que cambió aquí; solo se borra lo que esta página
+  // conocía (según la última foto en vivo) y quitó a propósito.
   const idsNuevos = new Set(lista.map(n => String(n.id)));
   const batch = dbFirestore.batch();
-  snap.docs.forEach(doc => {
-    if (!idsNuevos.has(doc.id)) batch.delete(doc.ref);
+  let hayCambios = false;
+  _notificacionesEnServidor.forEach((texto, id) => {
+    if (!idsNuevos.has(id)) {
+      batch.delete(coleccion.doc(id));
+      hayCambios = true;
+    }
   });
   lista.forEach(notificacion => {
+    if (_notificacionesEnServidor.get(String(notificacion.id)) === _textoEstableNotificacion(notificacion)) return;
     batch.set(coleccion.doc(String(notificacion.id)), notificacion);
+    hayCambios = true;
   });
+  if (!hayCambios) return;
   batch.set(dbFirestore.collection(NOTIFICACIONES_META_COLECCION).doc(NOTIFICACIONES_META_DOC_ID), { inicializado: true }, { merge: true });
   await batch.commit();
 }
