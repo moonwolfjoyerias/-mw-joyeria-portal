@@ -313,7 +313,7 @@ function abrirModalProducto(producto = null) {
       </div>
 
       <div class="form-field">
-        <label>Código del producto (opcional)</label>
+        <label>Código del producto *</label>
         <input id="productoCodigo" type="text" placeholder="Ej. AN-045" value="${escapeAttribute(producto?.codigo || '')}">
         <small class="field-help">Solo lo ven Staff, Encargado y Admin (columna "ID del producto") — nunca Emprendedora/Líder.</small>
       </div>
@@ -392,7 +392,7 @@ function abrirModalProducto(producto = null) {
 
     if (fotosProcesandoAdmin.length) await Promise.all(fotosProcesandoAdmin);
 
-    const datos = obtenerDatosProducto();
+    const datos = obtenerDatosProducto(producto?.id);
     if (!datos) return;
 
     const mensaje = editando
@@ -572,7 +572,7 @@ async function manejarGaleria(e) {
 // OBTENER DATOS DEL FORMULARIO
 // ============================================================
 
-function obtenerDatosProducto() {
+function obtenerDatosProducto(idEditando) {
 
   const nombre = document.getElementById('productoNombre')?.value.trim();
   const descripcion = document.getElementById('productoDescripcion')?.value.trim();
@@ -589,6 +589,9 @@ function obtenerDatosProducto() {
 
   if (!nombre) { mostrarToast('Escribe el nombre del producto.'); return null; }
   if (!descripcion) { mostrarToast('Agrega una descripción.'); return null; }
+  if (!codigo) { mostrarToast('Escribe el código del producto.'); return null; }
+  const productoMismoCodigo = productoConCodigo(catalogoAdmin, codigo, idEditando);
+  if (productoMismoCodigo) { mostrarToast(`El código "${codigo}" ya lo tiene "${productoMismoCodigo.nombre}". Usa un código distinto.`); return null; }
   if (!variantesTemporalAdmin.length || variantesTemporalAdmin.some(v => Number.isNaN(Number(v.stock)) || Number(v.stock) < 0)) {
     mostrarToast('La existencia de alguna variante no es válida.');
     return null;

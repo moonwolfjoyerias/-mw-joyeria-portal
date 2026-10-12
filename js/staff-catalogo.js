@@ -558,7 +558,7 @@ function abrirModalProducto(producto = null) {
 
       <div class="form-field">
 
-        <label>Código del producto (opcional)</label>
+        <label>Código del producto *</label>
 
         <input id="productoCodigo" type="text" placeholder="Ej. AN-045" value="${escapeAttribute(producto?.codigo || '')}">
 
@@ -731,7 +731,7 @@ function abrirModalProducto(producto = null) {
 
       if (fotosProcesando.length) await Promise.all(fotosProcesando);
 
-      const datos = obtenerDatosProducto();
+      const datos = obtenerDatosProducto(producto?.id);
 
       if (!datos) return;
 
@@ -915,7 +915,7 @@ async function manejarGaleria(e) {
 // OBTENER DATOS
 // ============================================================
 
-function obtenerDatosProducto() {
+function obtenerDatosProducto(idEditando) {
 
   const nombre =
     document.getElementById('productoNombre')?.value.trim();
@@ -969,6 +969,26 @@ function obtenerDatosProducto() {
   if (!descripcion) {
 
     mostrarToast('Agrega una descripción.');
+
+    return null;
+
+  }
+
+
+  if (!codigo) {
+
+    mostrarToast('Escribe el código del producto.');
+
+    return null;
+
+  }
+
+
+  const productoMismoCodigo = productoConCodigo(catalogoStaff, codigo, idEditando);
+
+  if (productoMismoCodigo) {
+
+    mostrarToast(`El código "${codigo}" ya lo tiene "${productoMismoCodigo.nombre}". Usa un código distinto.`);
 
     return null;
 

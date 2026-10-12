@@ -621,6 +621,7 @@ function ejecutarCancelar(ventanaId) {
 
 // Bolsita / quitar de la vista (apartados-panel-comun.js).
 function pedirConfirmacionPanelRol(config) {
+  if (config.sinConfirmacion) { config.onConfirmar(ENCARGADO_EMPLEADO); return; }
   abrirConfirmacionPanel({ ...config, onConfirmar: () => config.onConfirmar(ENCARGADO_EMPLEADO) });
 }
 
