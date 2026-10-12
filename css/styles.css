@@ -2458,6 +2458,8 @@ img.zoomable-photo { cursor: zoom-in; }
 
 .catalog-actions .action-btn { width: 120px; }
 
+.action-btn.bolsita-btn { width: auto; padding: 0 12px; }
+
 .catalog-empty-cell {
   height: 180px;
   text-align: center;

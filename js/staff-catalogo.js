@@ -558,7 +558,7 @@ function abrirModalProducto(producto = null) {
 
       <div class="form-field">
 
-        <label>Código del producto</label>
+        <label>Código del producto (opcional)</label>
 
         <input id="productoCodigo" type="text" placeholder="Ej. AN-045" value="${escapeAttribute(producto?.codigo || '')}">
 
