@@ -1475,6 +1475,13 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
 
+  const normalizarBusquedaLider = (texto) => String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const lideresOrdenados = lideresParaSelect
+    .map(l => ({ id: l.id, nombre: nombreCompletoPersona(l) }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+  const opcionesLider = (lista) => `<option value="">— Ninguna (es líder raíz) —</option>` +
+    lista.map(l => `<option value="${escapeAttributePersonas(l.id)}">${escapeHTMLPersonas(l.nombre)}</option>`).join('');
+
   box.style.maxWidth = '460px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
@@ -1491,11 +1498,10 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
           <option value="lider">Líder</option>
         </select>
       </label>
-      <label>Líder directa
-        <select id="cfgNuevoLiderId">
-          <option value="">— Ninguna (es líder raíz) —</option>
-          ${lideresParaSelect.map(l => `<option value="${l.id}">${escapeHTMLPersonas(nombreCompletoPersona(l))}</option>`).join('')}
-        </select>
+      <label class="cfg-span-2">Líder directa
+        <input type="search" id="cfgBuscarLider" placeholder="Buscar líder por nombre..." autocomplete="off">
+        <select id="cfgNuevoLiderId" style="margin-top:6px;">${opcionesLider(lideresOrdenados)}</select>
+        <small class="field-help" id="cfgBuscarLiderAyuda" style="display:none;"></small>
       </label>
       <label class="cfg-span-2">Contraseña (opcional)<input type="text" id="cfgNuevaPasswordPersona" placeholder="Déjalo vacío para usar la automática"></label>
     </div>
@@ -1511,6 +1517,26 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
   const cerrar = () => overlay.classList.remove('open');
   box.querySelector('[data-close]')?.addEventListener('click', cerrar);
   document.getElementById('cfgCancelarCrearPersonaBtn')?.addEventListener('click', cerrar);
+
+  // Al buscar, el select solo muestra las coincidencias; si la líder
+  // elegida ya no coincide, se selecciona la primera coincidencia para que
+  // lo que se ve en el select sea siempre lo que se va a guardar.
+  document.getElementById('cfgBuscarLider')?.addEventListener('input', (e) => {
+    const termino = normalizarBusquedaLider(e.target.value.trim());
+    const select = document.getElementById('cfgNuevoLiderId');
+    const ayuda = document.getElementById('cfgBuscarLiderAyuda');
+    const seleccionPrevia = select.value;
+    const coincidencias = termino ? lideresOrdenados.filter(l => normalizarBusquedaLider(l.nombre).includes(termino)) : lideresOrdenados;
+
+    select.innerHTML = opcionesLider(coincidencias);
+    if (coincidencias.some(l => l.id === seleccionPrevia)) select.value = seleccionPrevia;
+    else select.value = termino && coincidencias.length ? coincidencias[0].id : '';
+
+    ayuda.style.display = termino ? 'block' : 'none';
+    ayuda.textContent = coincidencias.length
+      ? `${coincidencias.length} coincidencia${coincidencias.length === 1 ? '' : 's'}`
+      : 'Ninguna líder coincide con la búsqueda.';
+  });
 
   document.getElementById('cfgConfirmarCrearPersonaBtn')?.addEventListener('click', async () => {
 
