@@ -142,14 +142,21 @@ async function intentarRecuperarUsuarioFirebaseExistente(usuario, password) {
 // función verifica contra el mismo Firebase Auth real que usa el login,
 // con una instancia de app aparte (mismo patrón que
 // intentarRecuperarUsuarioFirebaseExistente) para no cerrar la sesión
-// real de quien está reautorizando. Regresa el uid si la credencial es
-// válida, o null si no.
+// real de quien está reautorizando. El perfil users/{uid} se lee con
+// esa MISMA instancia aparte (ya autenticada como la cuenta que se está
+// verificando): las reglas solo dejan leer perfiles ajenos a Admin, así
+// que desde una sesión de Staff/Encargado la lista de cuentas internas
+// (obtenerCuentasInternas) llega vacía — pero cada cuenta sí puede leer
+// su propio perfil. Regresa { uid, perfil } si la credencial es válida,
+// o null si no.
 async function verificarCredencialFirebaseSinPerderSesion(usuario, password) {
   const nombreAppTemporal = 'verificar-cuenta-' + Date.now();
   const appTemporal = firebase.initializeApp(FIREBASE_CONFIG, nombreAppTemporal);
   try {
     const credencial = await appTemporal.auth().signInWithEmailAndPassword(usuarioAEmailAuth(usuario), password);
-    return credencial.user.uid;
+    const uid = credencial.user.uid;
+    const perfilDoc = await appTemporal.firestore().collection('users').doc(uid).get();
+    return { uid, perfil: perfilDoc.exists ? perfilDoc.data() : null };
   } catch (error) {
     return null;
   } finally {
@@ -161,24 +168,28 @@ async function verificarCredencialFirebaseSinPerderSesion(usuario, password) {
 // Punto único que deben usar las reautorizaciones en vez de llamar
 // directo a verificarCredencialInterna. Con Firebase real configurado,
 // verifica la credencial contra Firebase Auth (igual que el login) y
-// busca la cuenta interna correspondiente por firebaseUid (o por
-// usuario, si esa cuenta todavía no tiene firebaseUid enlazado) para
-// devolver el mismo tipo de objeto que ya devolvía
-// verificarCredencialInterna. Sin Firebase configurado (modo demo),
-// cae al comparador local de siempre sin cambiar nada.
+// arma, desde el perfil users/{uid} de esa cuenta, el mismo tipo de
+// objeto que ya devolvía verificarCredencialInterna. Sin Firebase
+// configurado (modo demo), cae al comparador local de siempre.
 async function verificarCredencialEmpleado(usuario, password) {
   if (typeof authFirebase === 'undefined' || !authFirebase || typeof FIREBASE_CONFIG === 'undefined') {
     return typeof verificarCredencialInterna === 'function' ? verificarCredencialInterna(usuario, password) : null;
   }
 
-  const uid = await verificarCredencialFirebaseSinPerderSesion(usuario, password);
-  if (!uid) return null;
+  const resultado = await verificarCredencialFirebaseSinPerderSesion(usuario, password);
+  const perfil = resultado && resultado.perfil;
+  if (!perfil || perfil.activa === false) return null;
+  if (!['staff', 'encargado', 'admin'].includes(perfil.rol)) return null;
 
-  const cuentas = typeof obtenerCuentasInternas === 'function' ? obtenerCuentasInternas() : [];
-  const cuenta = cuentas.find(c => c.firebaseUid === uid) || cuentas.find(c => c.usuario === usuario);
-  if (!cuenta || cuenta.activa === false) return null;
-
-  return cuenta;
+  return {
+    id: perfil.cuentaId || resultado.uid,
+    firebaseUid: resultado.uid,
+    usuario: perfil.usuario || usuario,
+    nombre: perfil.nombre || perfil.usuario || usuario,
+    rol: perfil.rol,
+    activa: true,
+    empleadoNominaId: perfil.empleadoNominaId || null
+  };
 }
 
 // FEAT-09: el botón "Inscribirse" de login.html lo usa alguien que
