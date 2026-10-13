@@ -43,12 +43,16 @@ const ID_PRUEBA_8000 = 'VENT-PRUEBA-8000-CLAUDIA';
 let APARTADOS_CACHE = [];
 let CREDITOS_CACHE = {};
 
-// Cómo está cada ventana en el servidor (texto estable por id) la última
-// vez que esta página la leyó o la guardó. Cada guardado escribe SOLO las
-// ventanas que cambiaron y no vuelve a leer la colección: antes cada
-// acción leía y reescribía TODAS las ventanas, y con el plan gratuito de
-// Firestore eso agotaba el límite diario de lecturas/escrituras.
+// Opción A (convivencia con BRILLO MW, que también maneja apartados en
+// estas mismas colecciones) y cuota diaria de Firestore: esta página ya NO
+// lee ni reescribe todas las ventanas, ni el documento completo de
+// créditos, en cada guardado. Recuerda cómo estaba cada ventana y cada
+// crédito en el servidor la última vez que los leyó o guardó, y en cada
+// guardado envía SOLO lo que cambió aquí; nunca borra una ventana que no
+// conoce (por ejemplo, una abierta desde BRILLO después de cargar esta
+// página) ni pisa créditos de otras personas que no tocó.
 let _ventanasEnServidor = new Map();
+let _creditosEnServidor = {};
 
 function _recordarVentanasEnServidor(ventanas) {
   _ventanasEnServidor = new Map(ventanas.map(v => [String(v.id), textoEstableFirestore(v)]));
@@ -121,6 +125,7 @@ async function cargarApartadosRepo() {
 
         const docCreditos = await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).get();
         CREDITOS_CACHE = docCreditos.exists ? (docCreditos.data() || {}) : {};
+        _creditosEnServidor = { ...CREDITOS_CACHE };
       } else {
         // Primera vez que este proyecto de Firestore ve Apartados: siembra
         // las compras de ejemplo + la prueba de $8,000 + el crédito demo,
@@ -200,13 +205,12 @@ async function sincronizarVentanasConFirestore(ventanas) {
   // solo puede escribir SUS PROPIAS ventanas (usuarioId == su
   // personaId) — igual que ya exige la regla de ventanasApartado.
   // guardarVentanasApartado() recibe el arreglo COMPLETO (todas las
-  // ventanas de todas las clientas, no solo las suyas — ver
-  // mutarVentanaPropia en js/apartados.js), así que se filtra a las
-  // propias para que Firestore no rechace el batch entero por una ajena.
+  // ventanas de todas las clientas), así que se filtra a las suyas.
   const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
-  const esPersona = !!(sesion && sesion.tipo === 'persona' && sesion.personaId);
+  const esPersona = Boolean(sesion && sesion.tipo === 'persona' && sesion.personaId);
   const candidatas = esPersona ? ventanas.filter(v => v.usuarioId === sesion.personaId) : ventanas;
 
+  // Opción A: solo las ventanas que cambiaron en esta página.
   const batch = dbFirestore.batch();
   const escritas = new Map();
   candidatas.forEach(ventana => {
@@ -217,19 +221,43 @@ async function sincronizarVentanasConFirestore(ventanas) {
     escritas.set(id, texto);
   });
 
-  // Las ventanas nunca se borran (solo cambian de estado), así que aquí
-  // no se borra nada. El marcador "ya se sembró" solo hace falta la
-  // primera vez.
+  // Solo se borra lo que esta página conocía y quitó — nunca una ventana
+  // que no conoce. Las Emprendedoras/Líderes nunca borran ventanas.
+  const borradas = [];
+  if (!esPersona) {
+    const idsNuevos = new Set(ventanas.map(v => String(v.id)));
+    _ventanasEnServidor.forEach((texto, id) => {
+      if (!idsNuevos.has(id)) {
+        batch.delete(coleccion.doc(id));
+        borradas.push(id);
+      }
+    });
+  }
+
+  // El marcador "ya se sembró" solo hace falta la primera vez (cada
+  // escritura cuenta contra la cuota diaria).
   const primeraVez = !esPersona && _ventanasEnServidor.size === 0;
   if (primeraVez) {
     batch.set(dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID), { inicializado: true }, { merge: true });
   }
-  if (!escritas.size && !primeraVez) return;
+  if (!escritas.size && !borradas.length && !primeraVez) return;
 
   await batch.commit();
   escritas.forEach((texto, id) => _ventanasEnServidor.set(id, texto));
+  borradas.forEach(id => _ventanasEnServidor.delete(id));
 }
 
 async function sincronizarCreditosConFirestore(creditos) {
-  await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).set(creditos);
+  // Opción A: solo los créditos que cambiaron en esta página, con merge,
+  // para no pisar los de otras personas que se movieron desde BRILLO.
+  const cambios = {};
+  Object.keys(creditos).forEach(usuarioId => {
+    if (_creditosEnServidor[usuarioId] !== creditos[usuarioId]) cambios[usuarioId] = creditos[usuarioId];
+  });
+  Object.keys(_creditosEnServidor).forEach(usuarioId => {
+    if (!(usuarioId in creditos)) cambios[usuarioId] = firebase.firestore.FieldValue.delete();
+  });
+  if (!Object.keys(cambios).length) return;
+  await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).set(cambios, { merge: true });
+  _creditosEnServidor = { ...creditos };
 }

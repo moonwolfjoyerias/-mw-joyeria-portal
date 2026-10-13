@@ -28,12 +28,12 @@ const NOTIFICACIONES_META_DOC_ID = 'estado';
 
 let NOTIFICACIONES_CACHE = [];
 
-// Estado de cada notificación en el servidor (id → { texto, paraId}),
+// Estado de cada notificación en el servidor (id → { texto, paraId }),
 // mantenido al día por la suscripción en vivo de abajo. Cada guardado se
 // compara contra esto en vez de volver a leer la colección completa, y
-// solo escribe/borra lo que de verdad cambió — antes cada aviso nuevo
-// leía y reescribía TODAS las notificaciones de todo mundo, lo que
-// agotaba el límite diario del plan gratuito de Firestore.
+// solo escribe/borra lo que de verdad cambió aquí (cuota diaria de
+// Firestore), y nunca borra lo que no reconoce — por ejemplo, avisos que
+// BRILLO MW crea para una Emprendedora mientras esta página está abierta.
 let _notificacionesEnServidor = new Map();
 
 function notificacionesSemillaLocal() {
