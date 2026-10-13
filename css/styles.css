@@ -1554,6 +1554,23 @@ img.zoomable-photo { cursor: zoom-in; }
 .cart-summary-bar .summary-total { font-size: 0.9rem; color: var(--mw-text-muted); }
 .cart-summary-bar .summary-total strong { font-family: var(--font-heading); color: var(--mw-accent-text); font-size: 1.3rem; display: block; }
 .cart-summary-bar button:disabled { opacity: 0.45; cursor: not-allowed; }
+.cart-summary-bar .summary-envio { display: block; margin-top: 2px; font-size: 0.78rem; font-weight: 600; color: var(--mw-accent-text); }
+.cart-summary-bar .summary-envio.summary-envio--logrado { color: #3f7a2a; }
+.cart-summary-bar .summary-envio[hidden] { display: none; }
+
+.envio-gratis-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: var(--mw-lilac-soft);
+  color: var(--mw-accent-text);
+  font-size: 0.9rem;
+}
+.envio-gratis-banner svg { width: 22px; height: 22px; flex-shrink: 0; }
+.envio-gratis-banner[hidden] { display: none; }
 
 .bank-details-box { background: var(--mw-lilac-soft); border-radius: var(--radius-sm); padding: 1rem 1.1rem; margin-bottom: 1.1rem; }
 .copy-field { display: flex; align-items: center; justify-content: space-between; padding: 0.4em 0; font-size: 0.85rem; }
