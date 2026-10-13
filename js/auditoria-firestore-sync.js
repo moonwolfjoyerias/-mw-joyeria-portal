@@ -36,10 +36,15 @@ function guardarAuditoriaCacheLocal() {
   try { localStorage.setItem(AUDITORIA_CACHE_STORAGE_KEY, JSON.stringify(AUDITORIA_CACHE)); } catch (error) { /* noop */ }
 }
 
-async function cargarAuditoriaRepo() {
+// Solo la piden las pantallas que la muestran (Actividad e Inicio de
+// Admin), y solo las más recientes: la bitácora crece con cada acción y
+// antes se descargaba COMPLETA al abrir cualquiera de las ~30 páginas que
+// solo escriben en ella, lo que agotaba el límite diario de lecturas del
+// plan gratuito de Firestore.
+async function cargarAuditoriaParaMostrar(limite) {
   if (dbFirestore) {
     try {
-      const snap = await dbFirestore.collection(AUDITORIA_COLECCION_FIRESTORE).orderBy('fecha', 'desc').get();
+      const snap = await dbFirestore.collection(AUDITORIA_COLECCION_FIRESTORE).orderBy('fecha', 'desc').limit(limite).get();
       AUDITORIA_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
       guardarAuditoriaCacheLocal();
     } catch (error) {
@@ -51,7 +56,7 @@ async function cargarAuditoriaRepo() {
       AUDITORIA_CACHE = [];
     }
   } else {
-    AUDITORIA_CACHE = auditoriaDesdeLocalStorage();
+    AUDITORIA_CACHE = auditoriaDesdeLocalStorage().slice(0, limite);
   }
   return AUDITORIA_CACHE;
 }
@@ -70,6 +75,3 @@ async function registrarAuditoriaRepo(registro) {
     }
   }
 }
-
-// Cada página espera esto UNA vez antes de su primer render.
-const auditoriaRepoListo = cargarAuditoriaRepo();

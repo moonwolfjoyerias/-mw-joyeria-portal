@@ -44,24 +44,18 @@ let APARTADOS_CACHE = [];
 let CREDITOS_CACHE = {};
 
 // Opción A (convivencia con BRILLO MW, que también maneja apartados en
-// estas mismas colecciones): esta página ya NO reescribe todas las
-// ventanas ni el documento completo de créditos en cada guardado.
-// Recuerda cómo estaba cada ventana y cada crédito en el servidor la
-// última vez que los leyó o guardó, y en cada guardado envía SOLO lo que
-// cambió aquí; nunca borra una ventana que no conoce (por ejemplo, una
-// abierta desde BRILLO después de cargar esta página) ni pisa créditos
-// de otras personas que no tocó.
+// estas mismas colecciones) y cuota diaria de Firestore: esta página ya NO
+// lee ni reescribe todas las ventanas, ni el documento completo de
+// créditos, en cada guardado. Recuerda cómo estaba cada ventana y cada
+// crédito en el servidor la última vez que los leyó o guardó, y en cada
+// guardado envía SOLO lo que cambió aquí; nunca borra una ventana que no
+// conoce (por ejemplo, una abierta desde BRILLO después de cargar esta
+// página) ni pisa créditos de otras personas que no tocó.
 let _ventanasEnServidor = new Map();
 let _creditosEnServidor = {};
 
-function _textoEstableApartados(valor) {
-  if (Array.isArray(valor)) return '[' + valor.map(_textoEstableApartados).join(',') + ']';
-  if (valor && typeof valor === 'object') {
-    return '{' + Object.keys(valor).sort()
-      .filter(k => valor[k] !== undefined)
-      .map(k => JSON.stringify(k) + ':' + _textoEstableApartados(valor[k])).join(',') + '}';
-  }
-  return JSON.stringify(valor === undefined ? null : valor);
+function _recordarVentanasEnServidor(ventanas) {
+  _ventanasEnServidor = new Map(ventanas.map(v => [String(v.id), textoEstableFirestore(v)]));
 }
 
 function apartadosSemillaLocal() {
@@ -127,7 +121,7 @@ async function cargarApartadosRepo() {
       if (metaSnap.exists) {
         const snapVentanas = await dbFirestore.collection(APARTADOS_COLECCION_FIRESTORE).get();
         APARTADOS_CACHE = snapVentanas.docs.map(d => ({ ...d.data(), id: d.id }));
-        _ventanasEnServidor = new Map(APARTADOS_CACHE.map(v => [String(v.id), _textoEstableApartados(v)]));
+        _recordarVentanasEnServidor(APARTADOS_CACHE);
 
         const docCreditos = await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).get();
         CREDITOS_CACHE = docCreditos.exists ? (docCreditos.data() || {}) : {};
@@ -221,7 +215,7 @@ async function sincronizarVentanasConFirestore(ventanas) {
   const escritas = new Map();
   candidatas.forEach(ventana => {
     const id = String(ventana.id);
-    const texto = _textoEstableApartados(ventana);
+    const texto = textoEstableFirestore(ventana);
     if (_ventanasEnServidor.get(id) === texto) return;
     batch.set(coleccion.doc(id), ventana);
     escritas.set(id, texto);
@@ -240,10 +234,14 @@ async function sincronizarVentanasConFirestore(ventanas) {
     });
   }
 
-  if (!escritas.size && !borradas.length) return;
-  if (!esPersona) {
+  // El marcador "ya se sembró" solo hace falta la primera vez (cada
+  // escritura cuenta contra la cuota diaria).
+  const primeraVez = !esPersona && _ventanasEnServidor.size === 0;
+  if (primeraVez) {
     batch.set(dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID), { inicializado: true }, { merge: true });
   }
+  if (!escritas.size && !borradas.length && !primeraVez) return;
+
   await batch.commit();
   escritas.forEach((texto, id) => _ventanasEnServidor.set(id, texto));
   borradas.forEach(id => _ventanasEnServidor.delete(id));
@@ -261,6 +259,5 @@ async function sincronizarCreditosConFirestore(creditos) {
   });
   if (!Object.keys(cambios).length) return;
   await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).set(cambios, { merge: true });
-  await dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID).set({ inicializado: true }, { merge: true });
   _creditosEnServidor = { ...creditos };
 }

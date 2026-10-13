@@ -25,9 +25,11 @@ const ROLES_ACTIVIDAD = {
 // sin relación con el trabajo diario de Staff.
 const MODULOS_ACTIVIDAD_VISIBLES_STAFF = ['catalogo', 'apartados', 'calendario', 'lista_deseos'];
 
+const ACTIVIDAD_LIMITE_REGISTROS = 300;
+
 document.addEventListener('DOMContentLoaded', async () => {
 
-  if (typeof auditoriaRepoListo !== 'undefined') await auditoriaRepoListo;
+  await cargarAuditoriaParaMostrar(ACTIVIDAD_LIMITE_REGISTROS);
 
   // ACTIVIDAD_ROL_VISOR lo declara cada portal en su propio <script>
   // inline (admin/encargado/staff-actividad.html). Solo Admin puede ver
@@ -60,7 +62,8 @@ function renderActividad() {
     .filter(r => !rolFiltro || r.rol === rolFiltro);
 
   const count = document.getElementById('actividadCount');
-  if (count) count.textContent = `${registros.length} ${registros.length === 1 ? 'acción' : 'acciones'}`;
+  const recortada = obtenerAuditoriaCompartida().length >= ACTIVIDAD_LIMITE_REGISTROS;
+  if (count) count.textContent = `${registros.length} ${registros.length === 1 ? 'acción' : 'acciones'}${recortada ? ` (de las últimas ${ACTIVIDAD_LIMITE_REGISTROS})` : ''}`;
 
   if (!registros.length) {
     wrap.innerHTML = `

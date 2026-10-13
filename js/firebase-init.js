@@ -11,6 +11,20 @@
 // se quedan en null y cada módulo migrado usa automáticamente su
 // respaldo de localStorage/IndexedDB — no hay que tocar nada más para
 // seguir trabajando en modo demo.
+// Texto de un documento con las claves ordenadas — sirve para saber si
+// un documento cambió respecto a lo último leído/guardado en el servidor
+// y así escribir solo lo que de verdad cambió (el plan gratuito de
+// Firestore cobra cada documento leído/escrito contra un límite diario).
+function textoEstableFirestore(valor) {
+  if (Array.isArray(valor)) return '[' + valor.map(textoEstableFirestore).join(',') + ']';
+  if (valor && typeof valor === 'object') {
+    return '{' + Object.keys(valor).sort()
+      .filter(k => valor[k] !== undefined)
+      .map(k => JSON.stringify(k) + ':' + textoEstableFirestore(valor[k])).join(',') + '}';
+  }
+  return JSON.stringify(valor === undefined ? null : valor);
+}
+
 let dbFirestore = null;
 let authFirebase = null;
 let storageFirebase = null;

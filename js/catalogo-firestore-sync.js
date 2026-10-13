@@ -54,18 +54,8 @@ let CATALOGO_CACHE = [];
 // Así un guardado de aquí no deshace ni borra lo que se hizo en BRILLO.
 let _catalogoEnServidor = new Map();
 
-function _textoEstable(valor) {
-  if (Array.isArray(valor)) return '[' + valor.map(_textoEstable).join(',') + ']';
-  if (valor && typeof valor === 'object') {
-    return '{' + Object.keys(valor).sort()
-      .filter(k => valor[k] !== undefined)
-      .map(k => JSON.stringify(k) + ':' + _textoEstable(valor[k])).join(',') + '}';
-  }
-  return JSON.stringify(valor === undefined ? null : valor);
-}
-
 function _recordarCatalogoEnServidor(productos) {
-  _catalogoEnServidor = new Map(productos.map(p => [String(p.id), _textoEstable(p)]));
+  _catalogoEnServidor = new Map(productos.map(p => [String(p.id), textoEstableFirestore(p)]));
 }
 
 function catalogoSemillaLocal() {
@@ -158,7 +148,7 @@ async function sincronizarCatalogoConFirestore(catalogo) {
 
   catalogo.forEach(producto => {
     const id = String(producto.id);
-    const texto = _textoEstable(producto);
+    const texto = textoEstableFirestore(producto);
     if (_catalogoEnServidor.get(id) === texto) return; // sin cambios en esta página
     batch.set(coleccion.doc(id), producto);
     escritos.set(id, texto);
