@@ -136,7 +136,7 @@ function puedeSolicitarInscripcion(rol) {
   return rol === 'emprendedora' || rol === 'lider';
 }
 
-async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, solicitanteRol, nombreCompleto, telefono, correo, ineFrenteUrl }) {
+async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, solicitanteRol, nombreCompleto, telefono, correo, ineFrenteUrl, viveEnSLP }) {
 
   if (!puedeSolicitarInscripcion(solicitanteRol)) {
     return { ok: false, error: 'Tu cuenta no tiene permiso para enviar solicitudes de inscripción.' };
@@ -149,6 +149,7 @@ async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, sol
   if (!nombreCompleto) return { ok: false, error: 'Escribe el nombre completo de la persona.' };
   if (!telefono) return { ok: false, error: 'Escribe su número de celular.' };
   if (!correoValido(correo)) return { ok: false, error: 'Escribe un correo electrónico válido.' };
+  if (typeof viveEnSLP !== 'boolean') return { ok: false, error: 'Indica si la persona vive en el municipio de San Luis Potosí o zonas cercanas.' };
   if (!ineFrenteUrl) return { ok: false, error: 'Adjunta la foto del frente de la identificación oficial (INE).' };
 
   const telefonoNorm = telefono.replace(/\D/g, '');
@@ -176,6 +177,7 @@ async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, sol
     telefono,
     correo,
     ineFrenteUrl,
+    viveEnSLP,
 
     estado: 'pendiente',
 
@@ -239,7 +241,7 @@ async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, sol
 // distintos, mismo teléfono/correo reciclado con variaciones) indicando
 // siempre a la misma líder, para inflarle el equipo — ver el marcado de
 // riesgoEquipoInflado más abajo.
-async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, correo, liderIndicado }) {
+async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, correo, liderIndicado, viveEnSLP }) {
 
   nombreCompleto = String(nombreCompleto || '').trim();
   telefono = String(telefono || '').trim();
@@ -249,6 +251,7 @@ async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, corr
   if (!nombreCompleto) return { ok: false, error: 'Escribe tu nombre completo.' };
   if (!telefono) return { ok: false, error: 'Escribe tu número de celular.' };
   if (!correoValido(correo)) return { ok: false, error: 'Escribe un correo electrónico válido.' };
+  if (typeof viveEnSLP !== 'boolean') return { ok: false, error: 'Indica si vives en el municipio de San Luis Potosí o zonas cercanas.' };
 
   const telefonoNorm = telefono.replace(/\D/g, '');
   const correoNorm = correo.toLowerCase();
@@ -301,6 +304,7 @@ async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, corr
     nombreCompleto,
     telefono,
     correo,
+    viveEnSLP,
 
     riesgoEquipoInflado,
     riesgoEquipoInfladoConteo,
@@ -438,7 +442,10 @@ async function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
     nombre,
     apellidos,
     tipo: 'emprendedora', // SIEMPRE Emprendedora, aunque el solicitante sea Líder
-    categoria: 'normal',
+    // Si contestó que NO vive en San Luis Potosí o zonas cercanas, la
+    // cuenta nace foránea (15 días de apartado, envío gratis desde $4,000).
+    categoria: solicitud.viveEnSLP === false ? 'foranea' : 'normal',
+    viveEnSLP: typeof solicitud.viveEnSLP === 'boolean' ? solicitud.viveEnSLP : null,
     estado: 'activa',
     telefono: solicitud.telefono,
     correo: solicitud.correo,

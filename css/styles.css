@@ -1385,7 +1385,7 @@ a:hover { color: var(--mw-gold); }
 .modal-box h3 { font-size: 1.25rem; margin-bottom: 0.3rem; }
 .modal-box .modal-sub { color: var(--mw-text-muted); font-size: 0.85rem; margin-bottom: 1.2rem; }
 .modal-box label { display: block; font-size: 0.82rem; color: var(--mw-accent-text); font-family: var(--font-heading); margin-bottom: 0.4rem; }
-.modal-box input[type="text"], .modal-box input[type="tel"], .modal-box input[type="file"], .modal-box textarea {
+.modal-box input[type="text"], .modal-box input[type="tel"], .modal-box input[type="email"], .modal-box input[type="file"], .modal-box textarea {
   width: 100%;
   padding: 0.65em 0.8em;
   border: 1.5px solid var(--mw-border);
@@ -4759,6 +4759,14 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 .cfg-form-grid input[type="email"] {
   font-family: var(--font-body);
 }
+
+/* Pregunta de Sí/No (¿Vive en San Luis Potosí o zonas cercanas?) — se usa
+   en modales sueltos y dentro de .cfg-form-grid, cuyas etiquetas apilan
+   su contenido en columna; aquí cada opción va en renglón. */
+.pregunta-si-no { display: flex; gap: 18px; margin: 4px 0 12px; }
+.pregunta-si-no .opcion-si-no { display: flex; flex-direction: row; align-items: center; gap: 6px; margin: 0; cursor: pointer; font-family: var(--font-body); font-weight: 400; font-size: 0.85rem; color: var(--mw-text); }
+.pregunta-si-no .opcion-si-no input { width: auto; margin: 0; padding: 0; }
+.nota-si-no { display: block; margin-top: -6px; font-size: 0.75rem; color: var(--mw-text-muted); }
 
 .cfg-toggle-row {
   display: flex;

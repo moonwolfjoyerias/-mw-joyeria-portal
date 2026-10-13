@@ -112,6 +112,12 @@ function abrirModalNuevaSolicitud() {
     <label for="solCorreo">Correo electrónico *</label>
     <input id="solCorreo" type="email" placeholder="correo@ejemplo.com">
 
+    <label>¿Vive en el municipio de San Luis Potosí o zonas cercanas? *</label>
+    <div class="pregunta-si-no">
+      <label class="opcion-si-no"><input type="radio" name="solViveEnSLP" value="si"> Sí</label>
+      <label class="opcion-si-no"><input type="radio" name="solViveEnSLP" value="no"> No</label>
+    </div>
+
     <label for="solIneFrente">Foto de identificación oficial (INE) — frente *</label>
     <input id="solIneFrente" type="file" accept="image/*">
 
@@ -159,6 +165,13 @@ async function enviarNuevaSolicitud(identidad) {
   const nombreCompleto = document.getElementById('solNombre')?.value || '';
   const telefono = document.getElementById('solTelefono')?.value || '';
   const correo = document.getElementById('solCorreo')?.value || '';
+  const respuestaSLP = document.querySelector('input[name="solViveEnSLP"]:checked')?.value;
+
+  if (!respuestaSLP) {
+    mostrarErrorSolicitud('Indica si la persona vive en el municipio de San Luis Potosí o zonas cercanas.');
+    if (boton) { boton.disabled = false; boton.textContent = 'Enviar solicitud'; }
+    return;
+  }
 
   if (!ineFrenteArchivoTemporal) {
     mostrarErrorSolicitud('Adjunta la foto del frente de la identificación oficial (INE).');
@@ -177,7 +190,8 @@ async function enviarNuevaSolicitud(identidad) {
     nombreCompleto,
     telefono,
     correo,
-    ineFrenteUrl: ineFrenteStoragePath
+    ineFrenteUrl: ineFrenteStoragePath,
+    viveEnSLP: respuestaSLP === 'si'
   });
 
   if (!resultado.ok) {

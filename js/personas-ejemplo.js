@@ -78,6 +78,9 @@ function crearPersonaEjemplo(datos) {
     apellidos: datos.apellidos || '',
     tipo: datos.tipo || 'emprendedora', // 'emprendedora' | 'lider'
     categoria: datos.categoria || 'normal', // normal | vip | foranea
+    // Respuesta a "¿Vives en el municipio de San Luis Potosí o zonas
+    // cercanas?" (true/false); null en cuentas anteriores a la pregunta.
+    viveEnSLP: typeof datos.viveEnSLP === 'boolean' ? datos.viveEnSLP : null,
     estado: datos.estado || 'activa', // activa | inactiva | baja
     telefono: datos.telefono || '',
     correo: datos.correo || '',

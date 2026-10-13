@@ -68,6 +68,12 @@ function abrirModalRegistroPaso1() {
     <label for="regCorreo">Correo electrónico *</label>
     <input id="regCorreo" type="email" placeholder="correo@ejemplo.com">
 
+    <label>¿Vives en el municipio de San Luis Potosí o zonas cercanas? *</label>
+    <div class="pregunta-si-no">
+      <label class="opcion-si-no"><input type="radio" name="regViveEnSLP" value="si"> Sí</label>
+      <label class="opcion-si-no"><input type="radio" name="regViveEnSLP" value="no"> No</label>
+    </div>
+
     <label style="display:flex;align-items:flex-start;gap:8px;margin-top:14px;cursor:pointer;">
       <input type="checkbox" id="regAutorizo" style="margin-top:3px;flex-shrink:0;">
       <span style="font-size:0.85rem;line-height:1.4;">Autorizo que MOONWOLF JOYERÍA guarde mis datos conforme a los Términos y condiciones.</span>
@@ -89,14 +95,16 @@ function validarYContinuarPaso1() {
   const nombreCompleto = document.getElementById('regNombre')?.value.trim() || '';
   const telefono = document.getElementById('regTelefono')?.value.trim() || '';
   const correo = document.getElementById('regCorreo')?.value.trim() || '';
+  const respuestaSLP = document.querySelector('input[name="regViveEnSLP"]:checked')?.value;
   const autorizo = document.getElementById('regAutorizo')?.checked;
 
   if (!nombreCompleto) return mostrarErrorRegistro('Escribe tu nombre completo.');
   if (!telefono) return mostrarErrorRegistro('Escribe tu número de celular.');
   if (!correo) return mostrarErrorRegistro('Escribe tu correo electrónico.');
+  if (!respuestaSLP) return mostrarErrorRegistro('Indica si vives en el municipio de San Luis Potosí o zonas cercanas.');
   if (!autorizo) return mostrarErrorRegistro('Debes autorizar el uso de tus datos para continuar.');
 
-  registroDatosPaso1 = { nombreCompleto, telefono, correo };
+  registroDatosPaso1 = { nombreCompleto, telefono, correo, viveEnSLP: respuestaSLP === 'si' };
   abrirModalRegistroPaso2();
 
 }
