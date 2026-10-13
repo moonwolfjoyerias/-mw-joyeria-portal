@@ -54,6 +54,87 @@ let CREDITOS_CACHE = {};
 let _ventanasEnServidor = new Map();
 let _creditosEnServidor = {};
 
+// En vivo (onSnapshot): lo que cambie BRILLO u otro dispositivo se ve
+// aquí sin recargar. Para que un arreglo viejo (leído antes de que llegara
+// el cambio) no regrese datos atrasados al guardarse, se recuerdan las
+// versiones del servidor que ya quedaron superadas (no se vuelven a
+// enviar) y las ventanas que llegaron en vivo (esta página nunca las
+// borra por no traerlas en un arreglo viejo).
+const _versionesSuperadas = new Map();
+const _idsRecibidosEnVivo = new Set();
+let _escuchaApartadosActiva = false;
+
+function _marcarVersionSuperada(id, texto) {
+  if (!texto) return;
+  if (!_versionesSuperadas.has(id)) _versionesSuperadas.set(id, new Set());
+  _versionesSuperadas.get(id).add(texto);
+}
+
+function _avisarApartadosActualizados() {
+  try { localStorage.setItem(APARTADOS_STORAGE_KEY, JSON.stringify(APARTADOS_CACHE)); } catch (error) { /* noop */ }
+  try { localStorage.setItem(CREDITOS_STORAGE_KEY, JSON.stringify(CREDITOS_CACHE)); } catch (error) { /* noop */ }
+  window.dispatchEvent(new CustomEvent('mw:apartados-actualizados'));
+}
+
+// Aplica la foto del servidor SOBRE el mismo arreglo/objeto en memoria
+// (los paneles guardan una referencia a él). Una ventana o crédito con
+// un cambio de esta página que todavía no se guarda se respeta: ese
+// guardado sale después, como siempre.
+function _aplicarVentanasEnVivo(snap) {
+  let huboCambios = false;
+  snap.docChanges().forEach(cambio => {
+    const id = String(cambio.doc.id);
+    const enServidorAntes = _ventanasEnServidor.get(id);
+    const i = APARTADOS_CACHE.findIndex(v => String(v.id) === id);
+    const local = i >= 0 ? APARTADOS_CACHE[i] : null;
+    const cambioPendiente = local && _textoEstableApartados(local) !== enServidorAntes;
+
+    if (cambio.type === 'removed') {
+      if (enServidorAntes === undefined) return;
+      _marcarVersionSuperada(id, enServidorAntes);
+      _ventanasEnServidor.delete(id);
+      if (local && !cambioPendiente) { APARTADOS_CACHE.splice(i, 1); huboCambios = true; }
+      return;
+    }
+
+    const ventana = { ...cambio.doc.data(), id: cambio.doc.id };
+    const texto = _textoEstableApartados(ventana);
+    if (texto === enServidorAntes) return;
+    if (enServidorAntes === undefined && !local) _idsRecibidosEnVivo.add(id);
+    _marcarVersionSuperada(id, enServidorAntes);
+    _ventanasEnServidor.set(id, texto);
+    if (cambioPendiente) return;
+    if (local) APARTADOS_CACHE[i] = ventana; else APARTADOS_CACHE.push(ventana);
+    huboCambios = true;
+  });
+  if (huboCambios) _avisarApartadosActualizados();
+}
+
+function _aplicarCreditosEnVivo(doc) {
+  const servidor = doc.exists ? (doc.data() || {}) : {};
+  let huboCambios = false;
+  new Set([...Object.keys(servidor), ...Object.keys(_creditosEnServidor)]).forEach(usuarioId => {
+    const antes = _creditosEnServidor[usuarioId];
+    const ahora = servidor[usuarioId];
+    if (antes === ahora) return;
+    const sinCambioLocal = CREDITOS_CACHE[usuarioId] === antes;
+    if (ahora === undefined) delete _creditosEnServidor[usuarioId]; else _creditosEnServidor[usuarioId] = ahora;
+    if (!sinCambioLocal) return;
+    if (ahora === undefined) delete CREDITOS_CACHE[usuarioId]; else CREDITOS_CACHE[usuarioId] = ahora;
+    huboCambios = true;
+  });
+  if (huboCambios) _avisarApartadosActualizados();
+}
+
+function escucharApartadosEnVivo() {
+  if (!dbFirestore || _escuchaApartadosActiva) return;
+  _escuchaApartadosActiva = true;
+  // Si la escucha falla (sin sesión, sin red) la página sigue como antes:
+  // con lo que cargó al abrir.
+  dbFirestore.collection(APARTADOS_COLECCION_FIRESTORE).onSnapshot(_aplicarVentanasEnVivo, () => {});
+  dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).onSnapshot(_aplicarCreditosEnVivo, () => {});
+}
+
 function _textoEstableApartados(valor) {
   if (Array.isArray(valor)) return '[' + valor.map(_textoEstableApartados).join(',') + ']';
   if (valor && typeof valor === 'object') {
@@ -132,6 +213,7 @@ async function cargarApartadosRepo() {
         const docCreditos = await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).get();
         CREDITOS_CACHE = docCreditos.exists ? (docCreditos.data() || {}) : {};
         _creditosEnServidor = { ...CREDITOS_CACHE };
+        escucharApartadosEnVivo();
       } else {
         // Primera vez que este proyecto de Firestore ve Apartados: siembra
         // las compras de ejemplo + la prueba de $8,000 + el crédito demo,
@@ -179,6 +261,14 @@ function avisarErrorGuardadoApartados(error, detalle) {
 }
 
 async function guardarVentanasRepo(ventanas) {
+  // Un arreglo armado antes de que llegara una ventana en vivo no la trae:
+  // se conserva, para que no desaparezca de la pantalla.
+  if (ventanas !== APARTADOS_CACHE && _idsRecibidosEnVivo.size) {
+    const ids = new Set(ventanas.map(v => String(v.id)));
+    APARTADOS_CACHE.forEach(v => {
+      if (_idsRecibidosEnVivo.has(String(v.id)) && !ids.has(String(v.id))) ventanas.push(v);
+    });
+  }
   APARTADOS_CACHE = ventanas;
   try { localStorage.setItem(APARTADOS_STORAGE_KEY, JSON.stringify(ventanas)); } catch (error) { /* noop */ }
 
@@ -223,6 +313,9 @@ async function sincronizarVentanasConFirestore(ventanas) {
     const id = String(ventana.id);
     const texto = _textoEstableApartados(ventana);
     if (_ventanasEnServidor.get(id) === texto) return;
+    // Copia atrasada de una ventana que ya cambió en el servidor: no se
+    // regresa (pisaría lo que se hizo en BRILLO u otro dispositivo).
+    if (_versionesSuperadas.has(id) && _versionesSuperadas.get(id).has(texto)) return;
     batch.set(coleccion.doc(id), ventana);
     escritas.set(id, texto);
   });
@@ -233,7 +326,7 @@ async function sincronizarVentanasConFirestore(ventanas) {
   if (!esPersona) {
     const idsNuevos = new Set(ventanas.map(v => String(v.id)));
     _ventanasEnServidor.forEach((texto, id) => {
-      if (!idsNuevos.has(id)) {
+      if (!idsNuevos.has(id) && !_idsRecibidosEnVivo.has(id)) {
         batch.delete(coleccion.doc(id));
         borradas.push(id);
       }
@@ -262,5 +355,9 @@ async function sincronizarCreditosConFirestore(creditos) {
   if (!Object.keys(cambios).length) return;
   await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).set(cambios, { merge: true });
   await dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID).set({ inicializado: true }, { merge: true });
-  _creditosEnServidor = { ...creditos };
+  // Solo lo que se envió: otros créditos pudieron cambiar en vivo mientras tanto.
+  Object.keys(cambios).forEach(usuarioId => {
+    if (usuarioId in creditos) _creditosEnServidor[usuarioId] = creditos[usuarioId];
+    else delete _creditosEnServidor[usuarioId];
+  });
 }

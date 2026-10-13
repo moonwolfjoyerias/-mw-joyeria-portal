@@ -549,3 +549,9 @@ function abrirModalPago() {
     }
   });
 }
+
+// En vivo: si Staff mueve el apartado (en la página o en BRILLO MW), esta
+// vista se actualiza sola, sin recargar.
+window.addEventListener('mw:apartados-actualizados', () => {
+  if (typeof renderApartados === 'function') renderApartados();
+});
