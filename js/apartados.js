@@ -31,10 +31,15 @@ let piezasVistasCarrito = new Set();
 
 let usuarioIdActual = '';
 
+// Emprendedoras/Líderes foráneas: el envío sale gratis desde este monto
+// de compra (decisión de negocio).
+const ENVIO_GRATIS_MINIMO = 4000;
+
 document.addEventListener('DOMContentLoaded', async () => {
   usuarioIdActual = (typeof obtenerIdPersonaActualPortal === 'function' && obtenerIdPersonaActualPortal()) || '';
 
   await apartadosRepoListo; // FASE 2 (Firebase): espera a que obtenerVentanasApartado() tenga datos reales, no un caché vacío
+  if (typeof personasRepoListo !== 'undefined') await personasRepoListo; // para saber si la cuenta es foránea (aviso de envío gratis)
   if (typeof catalogoRepoListo !== 'undefined') await catalogoRepoListo; // BUG reportado: sin esto, renderApartados() buscaba la foto real antes de que el catálogo cargara y siempre caía al isologo
 
   renderApartados();
@@ -189,8 +194,22 @@ function esFotoGenericaApartado(foto) {
   return /isotipo-morado\.png/.test(foto);
 }
 
+// La categoría vive en la cuenta, pero también se revisa la de sus
+// ventanas por si se le abrió un apartado como foránea desde Staff.
+function esForaneaActual() {
+  const persona = typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(usuarioIdActual) : null;
+  return persona?.categoria === 'foranea' || obtenerVentanasPropias().some(v => v.categoria === 'foranea');
+}
+
+function formatearPesos(monto) {
+  return '$' + Number(monto || 0).toLocaleString('es-MX');
+}
+
 // ---------- Render de la lista ----------
 function renderApartados() {
+  const banner = document.getElementById('envioGratisBanner');
+  if (banner) banner.hidden = !esForaneaActual();
+
   const list = document.getElementById('apartadosList');
   const wrap = document.getElementById('apartadosWrap');
   const empty = document.getElementById('apartadosEmpty');
@@ -272,6 +291,18 @@ function actualizarResumen() {
   const total = seleccionadas.reduce((sum, { pieza }) => sum + Number(pieza.total || 0), 0);
   setText('summaryCount', `${seleccionadas.length} pieza${seleccionadas.length === 1 ? '' : 's'} seleccionada${seleccionadas.length === 1 ? '' : 's'}`);
   setText('summaryTotal', `$${total} MXN`);
+  const envio = document.getElementById('summaryEnvio');
+  if (envio) {
+    const foranea = esForaneaActual();
+    envio.hidden = !foranea;
+    if (foranea) {
+      const falta = ENVIO_GRATIS_MINIMO - total;
+      envio.classList.toggle('summary-envio--logrado', falta <= 0);
+      envio.textContent = falta > 0
+        ? `Te faltan ${formatearPesos(falta)} para tener tu envío gratis`
+        : '¡Tu envío es gratis!';
+    }
+  }
   const btn = document.getElementById('pagarSeleccionadasBtn');
   if (btn) {
     btn.disabled = seleccionadas.length === 0;
