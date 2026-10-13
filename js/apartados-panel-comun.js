@@ -844,3 +844,17 @@ function cerrarModal() {
   document.getElementById("modalOverlay")?.classList.remove("open");
 }
 
+
+
+// ============================================================
+// EN VIVO — lo que cambie BRILLO MW u otro dispositivo (depósitos,
+// liquidaciones, ventanas nuevas…) se pinta aquí sin recargar la página.
+// Ver escucharApartadosEnVivo() en apartados-firestore-sync.js.
+// ============================================================
+
+window.addEventListener("mw:apartados-actualizados", () => {
+  if (!document.getElementById("apartadosTableBody")) return;
+  ventanas = obtenerVentanasApartado();
+  actualizarResumen();
+  renderTabla();
+});
