@@ -1498,6 +1498,21 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
           <option value="lider">Líder</option>
         </select>
       </label>
+      <label>Categoría
+        <select id="cfgNuevaCategoria">
+          <option value="normal">Normal</option>
+          <option value="foranea">Foránea</option>
+          <option value="vip">VIP</option>
+        </select>
+      </label>
+      <div class="cfg-span-2">
+        <label style="display:block;">¿Vive en el municipio de San Luis Potosí o zonas cercanas? *</label>
+        <div class="pregunta-si-no">
+          <label class="opcion-si-no"><input type="radio" name="cfgViveEnSLP" value="si"> Sí</label>
+          <label class="opcion-si-no"><input type="radio" name="cfgViveEnSLP" value="no"> No</label>
+        </div>
+        <small class="nota-si-no">Si contesta que no, la categoría se cambia a Foránea (puedes elegir VIP si aplica).</small>
+      </div>
       <label class="cfg-span-2">Líder directa
         <input type="search" id="cfgBuscarLider" placeholder="Buscar líder por nombre..." autocomplete="off">
         <select id="cfgNuevoLiderId" style="margin-top:6px;">${opcionesLider(lideresOrdenados)}</select>
@@ -1517,6 +1532,17 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
   const cerrar = () => overlay.classList.remove('open');
   box.querySelector('[data-close]')?.addEventListener('click', cerrar);
   document.getElementById('cfgCancelarCrearPersonaBtn')?.addEventListener('click', cerrar);
+
+  // Quien no vive en San Luis Potosí ni zonas cercanas es foránea; si
+  // vuelve a "Sí", una categoría Foránea puesta por esta regla regresa a
+  // Normal. VIP siempre se respeta.
+  document.querySelectorAll('input[name="cfgViveEnSLP"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const categoria = document.getElementById('cfgNuevaCategoria');
+      if (radio.value === 'no' && categoria.value === 'normal') categoria.value = 'foranea';
+      if (radio.value === 'si' && categoria.value === 'foranea') categoria.value = 'normal';
+    });
+  });
 
   // Al buscar, el select solo muestra las coincidencias; si la líder
   // elegida ya no coincide, se selecciona la primera coincidencia para que
@@ -1545,6 +1571,8 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
     const telefono = document.getElementById('cfgNuevoTelefono').value.trim();
     const correo = document.getElementById('cfgNuevoCorreo').value.trim();
     const tipo = document.getElementById('cfgNuevoTipo').value;
+    const categoria = document.getElementById('cfgNuevaCategoria').value;
+    const respuestaSLP = document.querySelector('input[name="cfgViveEnSLP"]:checked')?.value;
     const liderId = document.getElementById('cfgNuevoLiderId').value || null;
     const passwordPersonalizada = document.getElementById('cfgNuevaPasswordPersona').value.trim();
     const error = document.getElementById('cfgCrearPersonaError');
@@ -1553,6 +1581,11 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
     if (!nombre || !telefono) {
       error.style.display = 'block';
       error.textContent = 'Nombre y teléfono son obligatorios.';
+      return;
+    }
+    if (!respuestaSLP) {
+      error.style.display = 'block';
+      error.textContent = 'Indica si vive en el municipio de San Luis Potosí o zonas cercanas.';
       return;
     }
     if (typeof existePersonaConCorreoOTelefono === 'function' && existePersonaConCorreoOTelefono(correo, telefono)) {
@@ -1580,7 +1613,7 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
 
     const nuevaPersona = crearPersonaEjemplo({
       id: `persona-${Date.now()}`,
-      nombre, apellidos, tipo, categoria: 'normal', estado: 'activa',
+      nombre, apellidos, tipo, categoria, viveEnSLP: respuestaSLP === 'si', estado: 'activa',
       telefono, correo,
       usuario: credenciales.usuario,
       password: passwordFinal,
@@ -1613,7 +1646,7 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
       registrarAuditoriaAdmin({
         modulo: 'cuentas',
         accion: 'crear_cuenta_persona',
-        descripcion: `Cuenta creada desde Configuración: ${nombreCompleto} (${credenciales.usuario}) — ${tipo === 'lider' ? 'Líder' : 'Emprendedora'}`
+        descripcion: `Cuenta creada desde Configuración: ${nombreCompleto} (${credenciales.usuario}) — ${tipo === 'lider' ? 'Líder' : 'Emprendedora'} ${({ normal: 'normal', foranea: 'foránea', vip: 'VIP' })[categoria] || categoria}`
       });
     }
 

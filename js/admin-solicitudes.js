@@ -156,6 +156,7 @@ async function abrirDetalleSolicitudAdmin(id) {
       <div><span>Nombre completo</span><strong>${escapeHTMLSolAdmin(solicitud.nombreCompleto)}</strong></div>
       <div><span>Celular</span><strong>${escapeHTMLSolAdmin(solicitud.telefono)}</strong></div>
       <div><span>Correo</span><strong>${escapeHTMLSolAdmin(solicitud.correo)}</strong></div>
+      <div><span>¿Vive en SLP o zonas cercanas?</span><strong>${solicitud.viveEnSLP === true ? 'Sí' : solicitud.viveEnSLP === false ? 'No — su cuenta será foránea' : 'Sin respuesta'}</strong></div>
       <div><span>Estado</span><strong>${ESTADOS_SOLICITUD[solicitud.estado] || solicitud.estado}</strong></div>
     </div>
 
@@ -255,9 +256,10 @@ function abrirConfirmarAprobarAdmin(solicitud) {
 
   abrirAutorizacionAdmin({
     titulo: 'Aprobar solicitud',
-    mensaje: solicitud.origen === 'publico'
+    mensaje: (solicitud.origen === 'publico'
       ? `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora SIN líder asignada todavía${solicitud.liderIndicado ? ` (indicó que su líder es "${escapeHTMLSolAdmin(solicitud.liderIndicado)}" — verifícalo y asígnalo desde Emprendedoras/Líderes si corresponde)` : ' — pidió que el equipo le asigne una'}.`
-      : `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora y ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} quedará registrado(a) como su líder directa.`,
+      : `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora y ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} quedará registrado(a) como su líder directa.`)
+      + (solicitud.viveEnSLP === false ? ' Como no vive en San Luis Potosí ni zonas cercanas, la cuenta se creará como foránea.' : ''),
     onConfirmar: async () => {
 
       const resultado = await aprobarSolicitud(solicitud.id, {
