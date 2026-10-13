@@ -20,6 +20,24 @@ function guardarVentanas() {
   guardarVentanasApartado(ventanas);
 }
 
+// usuarioNombre es una copia del nombre al abrir la ventana: si la persona
+// tiene cuenta y después le cambiaron el nombre, aquí se pone el actual (y
+// se guarda una sola vez, para que también se vea así en el resto del
+// portal). Las ventanas de clientas sin cuenta se quedan como están.
+function sincronizarNombresVentanas() {
+  if (typeof obtenerPersonaPorId !== "function" || typeof nombreCompletoPersona !== "function") return;
+  let huboCambios = false;
+  ventanas.forEach(v => {
+    const persona = v.usuarioId ? obtenerPersonaPorId(v.usuarioId) : null;
+    const nombreActual = persona ? nombreCompletoPersona(persona).trim() : "";
+    if (nombreActual && nombreActual !== v.usuarioNombre) {
+      v.usuarioNombre = nombreActual;
+      huboCambios = true;
+    }
+  });
+  if (huboCambios) guardarVentanas();
+}
+
 // BUG reportado tras lanzar a producción: la fila de detalle de cada
 // pieza mostraba un cuadro morado con el texto literal "MW" en vez de
 // la foto real del producto — mismo criterio de ruta que ya usa

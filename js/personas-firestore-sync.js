@@ -39,6 +39,42 @@ const PERSONAS_FINANCIERO_CAMPOS = ['datosBancarios', 'constancia', 'rifa'];
 
 let PERSONAS_CACHE = [];
 
+// Cómo está cada documento en el servidor la última vez que esta página
+// lo leyó o lo guardó (texto estable). Cada guardado escribe SOLO lo que
+// cambió: antes cada guardado leía la colección completa y reescribía,
+// por cada persona, su perfil + sus datos financieros + su acceso
+// (users/{uid}) — con el plan gratuito de Firestore eso agotaba el
+// límite diario de lecturas/escrituras.
+let _personasEnServidor = new Map();   // id → personas/{id}
+let _financieroEnServidor = new Map(); // id → personasFinanciero/{id}
+let _usuariosEnServidor = new Map();   // firebaseUid → users/{uid}
+
+function perfilUsuarioPersona(persona) {
+  return {
+    usuario: persona.usuario,
+    nombre: nombreCompletoPersona(persona),
+    rol: persona.tipo,
+    personaId: persona.id,
+    cuentaId: null,
+    correo: persona.correo || '',
+    telefono: persona.telefono || '',
+    activa: persona.estado === 'activa'
+  };
+}
+
+function _recordarPersonasEnServidor(personas) {
+  _personasEnServidor = new Map();
+  _financieroEnServidor = new Map();
+  _usuariosEnServidor = new Map();
+  personas.forEach(persona => {
+    const id = String(persona.id);
+    const { publico, financiero } = separarCamposFinancieroPersona(persona);
+    _personasEnServidor.set(id, textoEstableFirestore(publico));
+    if (Object.keys(financiero).length) _financieroEnServidor.set(id, textoEstableFirestore(financiero));
+    if (persona.firebaseUid) _usuariosEnServidor.set(persona.firebaseUid, textoEstableFirestore(perfilUsuarioPersona(persona)));
+  });
+}
+
 function personasSemillaLocal() {
   return typeof construirPersonasEjemplo === 'function' ? construirPersonasEjemplo() : [];
 }
@@ -61,6 +97,7 @@ async function cargarPersonasRepo() {
         const snap = await dbFirestore.collection(PERSONAS_COLECCION_FIRESTORE).get();
         PERSONAS_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
         await fusionarPersonasFinanciero(PERSONAS_CACHE);
+        _recordarPersonasEnServidor(PERSONAS_CACHE);
       } else {
         // Primera vez que este proyecto de Firestore ve Personas: siembra
         // el ejemplo completo de una vez (misma semilla que ya existía).
@@ -163,61 +200,70 @@ async function sincronizarPersonasConFirestore(personas) {
 
   // Una cuenta de Emprendedora/Líder (sesion.tipo === 'persona') solo
   // puede escribir SU PROPIO documento — igual que ya exige la regla de
-  // personas/{id} (esInterno() || miPerfil().personaId == id). obtenerPersonas()
-  // regresa el arreglo COMPLETO (todas las personas, no solo ella), así
-  // que recorrer ese arreglo completo en un solo batch (como sí hace
-  // Admin/Staff/Encargado abajo) haría que Firestore rechace el batch
-  // ENTERO por los documentos ajenos — por eso aquí se escribe un único
-  // documento en vez del diff-y-resync completo.
-  if (sesion && sesion.tipo === 'persona' && sesion.personaId) {
-    const persona = personas.find(p => String(p.id) === String(sesion.personaId));
-    if (!persona) return;
+  // personas/{id} (esInterno() || miPerfil().personaId == id).
+  // obtenerPersonas() regresa el arreglo COMPLETO, así que se filtra a la
+  // suya para que Firestore no rechace el batch entero por las ajenas.
+  const esPersona = !!(sesion && sesion.tipo === 'persona' && sesion.personaId);
+  const candidatas = esPersona
+    ? personas.filter(p => String(p.id) === String(sesion.personaId))
+    : personas;
+
+  const batch = dbFirestore.batch();
+  const alConfirmar = [];
+
+  candidatas.forEach(persona => {
+    const id = String(persona.id);
     const { publico, financiero } = separarCamposFinancieroPersona(persona);
-    const batchPropio = dbFirestore.batch();
-    batchPropio.set(coleccion.doc(String(persona.id)), publico);
-    if (Object.keys(financiero).length) {
-      batchPropio.set(financieroColeccion.doc(String(persona.id)), financiero, { merge: true });
+
+    const textoPublico = textoEstableFirestore(publico);
+    if (_personasEnServidor.get(id) !== textoPublico) {
+      batch.set(coleccion.doc(id), publico);
+      alConfirmar.push(() => _personasEnServidor.set(id, textoPublico));
     }
-    await batchPropio.commit();
-    return;
+
+    if (Object.keys(financiero).length) {
+      const textoFinanciero = textoEstableFirestore(financiero);
+      if (_financieroEnServidor.get(id) !== textoFinanciero) {
+        batch.set(financieroColeccion.doc(id), financiero, { merge: true });
+        alConfirmar.push(() => _financieroEnServidor.set(id, textoFinanciero));
+      }
+    }
+
+    // Admin edita personas por muchos caminos (reactivar, convertir en
+    // líder, editar información, dar de baja…) y todos terminan aquí: el
+    // acceso users/{uid} de quien YA tiene cuenta real se mantiene al día
+    // desde este único punto. Nunca toca password ni crea accesos nuevos
+    // (eso es crearAccesoFirebaseParaPersona).
+    if (!esPersona && persona.firebaseUid) {
+      const uid = persona.firebaseUid;
+      const perfil = perfilUsuarioPersona(persona);
+      const textoPerfil = textoEstableFirestore(perfil);
+      if (_usuariosEnServidor.get(uid) !== textoPerfil) {
+        batch.set(dbFirestore.collection('users').doc(uid), perfil, { merge: true });
+        alConfirmar.push(() => _usuariosEnServidor.set(uid, textoPerfil));
+      }
+    }
+  });
+
+  // Solo se borran las que esta página tenía y ya no están (eliminadas
+  // aquí) — nunca una que se haya creado en otro dispositivo después.
+  if (!esPersona) {
+    const idsNuevos = new Set(personas.map(p => String(p.id)));
+    _personasEnServidor.forEach((texto, id) => {
+      if (idsNuevos.has(id)) return;
+      batch.delete(coleccion.doc(id));
+      alConfirmar.push(() => _personasEnServidor.delete(id));
+    });
   }
 
-  const snap = await coleccion.get();
-  const idsNuevos = new Set(personas.map(p => String(p.id)));
-  const batch = dbFirestore.batch();
-  snap.docs.forEach(doc => {
-    if (!idsNuevos.has(doc.id)) batch.delete(doc.ref);
-  });
-  personas.forEach(persona => {
-    const { publico, financiero } = separarCamposFinancieroPersona(persona);
-    batch.set(coleccion.doc(String(persona.id)), publico);
-    if (Object.keys(financiero).length) {
-      batch.set(financieroColeccion.doc(String(persona.id)), financiero, { merge: true });
-    }
-  });
-  batch.set(dbFirestore.collection(PERSONAS_META_COLECCION).doc(PERSONAS_META_DOC_ID), { inicializado: true }, { merge: true });
-
-  // Admin edita personas por muchos caminos distintos (reactivar,
-  // convertir en líder, editar información, dar de baja…) y todos pasan
-  // por aquí al final (guardarPersonas guarda el arreglo completo) — en
-  // vez de repetir la sincronización de login en cada uno, se resuelve
-  // una sola vez aquí para cualquier persona que YA tenga acceso real.
-  // Nunca toca password ni crea accesos nuevos (eso es
-  // crearAccesoFirebaseParaPersona, solo al crear la cuenta).
-  personas.filter(p => p.firebaseUid).forEach(persona => {
-    batch.set(dbFirestore.collection('users').doc(persona.firebaseUid), {
-      usuario: persona.usuario,
-      nombre: nombreCompletoPersona(persona),
-      rol: persona.tipo,
-      personaId: persona.id,
-      cuentaId: null,
-      correo: persona.correo || '',
-      telefono: persona.telefono || '',
-      activa: persona.estado === 'activa'
-    }, { merge: true });
-  });
+  const primeraVez = !esPersona && _personasEnServidor.size === 0;
+  if (primeraVez) {
+    batch.set(dbFirestore.collection(PERSONAS_META_COLECCION).doc(PERSONAS_META_DOC_ID), { inicializado: true }, { merge: true });
+  }
+  if (!alConfirmar.length && !primeraVez) return;
 
   await batch.commit();
+  alConfirmar.forEach(aplicar => aplicar());
 }
 
 // Crea la cuenta REAL de Firebase Auth de una persona nueva + su perfil
@@ -248,16 +294,9 @@ async function crearAccesoFirebaseParaPersona(persona, password) {
   }
 
   persona.firebaseUid = uid;
-  await dbFirestore.collection('users').doc(uid).set({
-    usuario: persona.usuario,
-    nombre: nombreCompletoPersona(persona),
-    rol: persona.tipo, // 'emprendedora' | 'lider'
-    personaId: persona.id,
-    cuentaId: null,
-    activa: persona.estado === 'activa',
-    correo: persona.correo || '',
-    telefono: persona.telefono || ''
-  }, { merge: true });
+  const perfil = perfilUsuarioPersona(persona);
+  await dbFirestore.collection('users').doc(uid).set(perfil, { merge: true });
+  _usuariosEnServidor.set(uid, textoEstableFirestore(perfil));
   return uid;
 }
 
