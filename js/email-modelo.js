@@ -8,13 +8,14 @@
 // correo se llegue a mandar.
 //
 // Quién recibe qué (acordado con el equipo):
-//   - Nuevo evento de calendario / nueva pieza en el catálogo →
-//     automático, a todas las Emprendedoras/Líderes activas.
+//   - Nuevo evento de calendario → automático, a todas las
+//     Emprendedoras/Líderes activas. (Ya NO se manda correo por cada
+//     pieza nueva del catálogo — decisión del equipo.)
 //   - Aviso administrativo/marketing → manual, desde Configuración →
 //     Correos, con la audiencia que Admin elija.
-// No se manda correo por cada notificación interna (apartados,
-// solicitudes, etc.) — sería demasiado volumen para el plan gratis de
-// EmailJS y no es lo que se pidió.
+// Las notificaciones personales de cada e/l (apartados, pagos,
+// comisiones…) NO salen de aquí: las manda el servidor de Firebase con
+// Brevo — ver functions/index.js.
 
 let _emailjsListo = false;
 
@@ -106,14 +107,5 @@ function enviarCorreoNuevoEventoCalendario(evento) {
   enviarCorreoMasivo(destinatarios, {
     asunto: `Nuevo evento: ${evento.titulo}`,
     mensaje: `Hay un nuevo evento en el calendario de MW Joyería: "${evento.titulo}". ${detalle}\n\n${evento.descripcion || ''}`.trim()
-  });
-}
-
-function enviarCorreoNuevoProductoCatalogo(producto) {
-  const destinatarios = obtenerDestinatariosCorreoPorAudiencia('emprendedoras_lideres');
-  if (!destinatarios.length) return;
-  enviarCorreoMasivo(destinatarios, {
-    asunto: `Nueva pieza en el catálogo: ${producto.nombre}`,
-    mensaje: `Ya está disponible una nueva pieza en el catálogo de MW Joyería: "${producto.nombre}". ${producto.descripcion || ''}`.trim()
   });
 }

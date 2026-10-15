@@ -645,7 +645,9 @@ function agregarProducto(datos) {
     abrirRevisionListaDeseosNuevoProducto(nuevoProducto, ADMIN_IDENTIDAD);
   }
 
-  if (typeof enviarCorreoNuevoProductoCatalogo === 'function') enviarCorreoNuevoProductoCatalogo(nuevoProducto);
+  // Sin correo por pieza nueva (decisión del equipo: con 3,000 piezas y
+  // 1,000 e/l serían millones de correos). Las piezas nuevas se ven en el
+  // Inicio de e/l ("Nuevas piezas") y en el catálogo.
 
 }
 
