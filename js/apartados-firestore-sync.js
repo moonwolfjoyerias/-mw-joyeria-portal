@@ -255,13 +255,24 @@ function avisarErrorGuardadoApartados(error, detalle) {
 }
 
 async function guardarVentanasRepo(ventanas) {
-  // Un arreglo armado antes de que llegara una ventana en vivo no la trae:
-  // se conserva, para que no desaparezca de la pantalla.
-  if (ventanas !== APARTADOS_CACHE && _idsRecibidosEnVivo.size) {
-    const ids = new Set(ventanas.map(v => String(v.id)));
-    APARTADOS_CACHE.forEach(v => {
-      if (_idsRecibidosEnVivo.has(String(v.id)) && !ids.has(String(v.id))) ventanas.push(v);
-    });
+  // Un arreglo armado antes de que llegara un cambio en vivo: sus copias
+  // atrasadas se cambian por la versión actual y las ventanas que llegaron
+  // en vivo y no trae se conservan, para que la pantalla no muestre datos
+  // viejos ni pierda ventanas.
+  if (ventanas !== APARTADOS_CACHE) {
+    const actuales = new Map(APARTADOS_CACHE.map(v => [String(v.id), v]));
+    if (_versionesSuperadas.size) {
+      ventanas.forEach((v, i) => {
+        const id = String(v.id);
+        if (_versionesSuperadas.has(id) && _versionesSuperadas.get(id).has(textoEstableFirestore(v)) && actuales.has(id)) ventanas[i] = actuales.get(id);
+      });
+    }
+    if (_idsRecibidosEnVivo.size) {
+      const ids = new Set(ventanas.map(v => String(v.id)));
+      APARTADOS_CACHE.forEach(v => {
+        if (_idsRecibidosEnVivo.has(String(v.id)) && !ids.has(String(v.id))) ventanas.push(v);
+      });
+    }
   }
   APARTADOS_CACHE = ventanas;
   try { localStorage.setItem(APARTADOS_STORAGE_KEY, JSON.stringify(ventanas)); } catch (error) { /* noop */ }

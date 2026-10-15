@@ -237,3 +237,9 @@ function confirmarEnteradoMisAct(id) {
   });
 
 }
+
+// En vivo: si Encargado anuncia o firma una actividad (en la página o en
+// BRILLO MW), "Mis actividades" se actualiza sola, sin recargar.
+window.addEventListener('mw:actividades-staff-actualizadas', () => {
+  if (identidadStaffActual) renderMisActividades();
+});

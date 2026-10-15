@@ -184,3 +184,9 @@ function formatearFechaDeseos(iso) {
 function escapeHTMLDeseos(texto) {
   return escapeHTML(texto);
 }
+
+// En vivo: si Staff cambia el estado de una solicitud (en la página o en
+// BRILLO MW), esta vista se actualiza sola, sin recargar.
+window.addEventListener('mw:lista-deseos-actualizada', () => {
+  if (typeof renderSolicitudes === 'function') renderSolicitudes();
+});
