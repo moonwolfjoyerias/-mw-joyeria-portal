@@ -44,6 +44,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function cargarCatalogo() {
   await catalogoRepoListo;
   catalogoStaff = CATALOGO_CACHE.map(migrarProductoAVariantes);
+  // Una sola vez: productos de antes de fechaAlta (ver completarFechaAltaCatalogo).
+  if (completarFechaAltaCatalogo(catalogoStaff)) guardarCatalogo();
 }
 
 
@@ -1366,6 +1368,8 @@ function ejecutarAccion(accion, empleado) {
         Date.now(),
 
       ...accion.datos,
+
+      fechaAlta: new Date().toISOString(),
 
       ultimaAccion: {
         tipo: 'Agregado',

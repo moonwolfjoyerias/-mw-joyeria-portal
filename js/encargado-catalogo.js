@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function cargarCatalogo() {
   await catalogoRepoListo;
   catalogoEncargado = CATALOGO_CACHE.map(migrarProductoAVariantes);
+  // Una sola vez: productos de antes de fechaAlta (ver completarFechaAltaCatalogo).
+  if (completarFechaAltaCatalogo(catalogoEncargado)) guardarCatalogo();
 }
 
 function guardarCatalogo() {
@@ -627,6 +629,7 @@ function agregarProducto(datos) {
   const nuevoProducto = {
     id: 'prod-' + Date.now(),
     ...datos,
+    fechaAlta: new Date().toISOString(), // para "Nuevas piezas" en el Inicio de e/l (ver novedades-inicio.js)
     ultimaAccion: { tipo: 'Agregado', empleado: ENCARGADO_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() }
   };
 
@@ -642,7 +645,9 @@ function agregarProducto(datos) {
     abrirRevisionListaDeseosNuevoProducto(nuevoProducto, ENCARGADO_IDENTIDAD);
   }
 
-  if (typeof enviarCorreoNuevoProductoCatalogo === 'function') enviarCorreoNuevoProductoCatalogo(nuevoProducto);
+  // Sin correo por pieza nueva (decisión del equipo: con 3,000 piezas y
+  // 1,000 e/l serían millones de correos). Las piezas nuevas se ven en el
+  // Inicio de e/l ("Nuevas piezas") y en el catálogo.
 
 }
 

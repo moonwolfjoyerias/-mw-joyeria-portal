@@ -2,3 +2,6 @@ node_modules/
 *-service-account*.json
 serviceAccountKey*.json
 dist/
+
+# Parámetros de las funciones (remitente, región) — se generan al desplegar
+functions/.env*

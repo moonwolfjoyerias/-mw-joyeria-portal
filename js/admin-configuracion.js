@@ -689,10 +689,11 @@ function renderSeccionCorreos() {
       <p class="cfg-card-sub">
         ${activo
           ? 'El envío de correos ya está conectado (EmailJS).'
-          : 'El envío de correos todavía no está conectado — ver js/email-config.js para los pasos. Mientras tanto, los correos de aquí y los automáticos (nuevo evento de calendario, nueva pieza de catálogo) no se mandan, pero el resto del portal sigue funcionando igual.'}
+          : 'El envío de correos todavía no está conectado — ver js/email-config.js para los pasos. Mientras tanto, los correos de aquí y los automáticos (nuevo evento de calendario) no se mandan, pero el resto del portal sigue funcionando igual.'}
       </p>
       <ul class="cfg-card-sub" style="margin:0 0 1.2rem 1.2rem;">
-        <li>Nuevo evento de calendario y nueva pieza de catálogo ya avisan automáticamente por correo a todas las Emprendedoras/Líderes activas.</li>
+        <li>Nuevo evento de calendario avisa automáticamente por correo a todas las Emprendedoras/Líderes activas.</li>
+        <li>Las notificaciones personales de cada Emprendedora/Líder (apartados, pagos, comisiones) llegan también a su correo — las manda el servidor de Firebase con Brevo, no esta sección.</li>
         <li>Para cualquier otro aviso (junta, promoción, etc.), úsalo manualmente aquí abajo.</li>
       </ul>
       <form id="cfgFormCorreo" class="cfg-form-grid">

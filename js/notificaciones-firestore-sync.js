@@ -50,6 +50,75 @@ function notificacionesDesdeLocalStorage() {
   return notificacionesSemillaLocal();
 }
 
+// ============================================================
+// SONIDO DE NOTIFICACIÓN — NOTIF-04 de la auditoría. Reproduce
+// notificacion.mp3 (raíz del repositorio), el mismo para e/l y s/e/a,
+// cuando llega en vivo una notificación nueva sin leer para la cuenta
+// con sesión abierta (ver la suscripción de cargarNotificacionesRepo).
+//
+// BUG reportado ("que las notificaciones suenen en TODOS los
+// portales"): antes esto vivía en dom-utils.js, que no todas las
+// páginas con campana cargan (ej. Mis compras) — ahí la notificación
+// llegaba pero nunca sonaba. Ahora vive junto a la suscripción en
+// vivo, que TODA página con campana carga.
+let _audioNotificacion = null;
+let _audioNotificacionDestrabado = false;
+
+// notificacion.mp3 vive en la raíz del repositorio, pero este archivo se
+// carga tanto desde páginas públicas (profundidad 0, ej. login.html)
+// como desde /portal/<rol>/ (profundidad 2) — mismo criterio de ruta
+// por profundidad que ya usa auth-guard.js.
+function _rutaAudioNotificacion() {
+  return /\/portal\//.test(window.location.pathname) ? '../../notificacion.mp3' : 'notificacion.mp3';
+}
+
+function _obtenerAudioNotificacion() {
+  if (_audioNotificacion) return _audioNotificacion;
+  _audioNotificacion = new Audio(_rutaAudioNotificacion());
+  _audioNotificacion.preload = 'auto';
+  return _audioNotificacion;
+}
+
+// Los navegadores solo dejan reproducir audio si ya hubo un gesto del
+// usuario (clic/tecla/toque) en la página — un play() disparado
+// después, desde el callback de Firestore, no suena si nunca lo hubo.
+// Se reproduce en silencio en el primer gesto para "destrabarlo".
+// Con `muted` y no con `volume = 0`: en iPhone/iPad el volumen es de
+// solo lectura (siempre 1), así que el truco del volumen sonaba de
+// verdad o no destrababa nada. Los escuchas se quitan solo cuando el
+// destrabe funcionó — si el primer gesto no cuenta para el navegador
+// (ej. una tecla que no es de activación), se reintenta en el siguiente.
+const _EVENTOS_GESTO_AUDIO = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'];
+function _destrabarAudioNotificacionConGesto() {
+  if (_audioNotificacionDestrabado) return;
+  const audio = _obtenerAudioNotificacion();
+  audio.muted = true;
+  audio.play().then(() => {
+    audio.pause();
+    audio.currentTime = 0;
+    audio.muted = false;
+    _audioNotificacionDestrabado = true;
+    _EVENTOS_GESTO_AUDIO.forEach(evento => document.removeEventListener(evento, _destrabarAudioNotificacionConGesto, true));
+  }).catch(() => {
+    audio.muted = false;
+  });
+}
+_EVENTOS_GESTO_AUDIO.forEach(evento => document.addEventListener(evento, _destrabarAudioNotificacionConGesto, true));
+
+function reproducirSonidoNotificacion() {
+  try {
+    const audio = _obtenerAudioNotificacion();
+    audio.muted = false;
+    audio.currentTime = 0;
+    audio.play().catch(() => {
+      // Todavía no hubo ningún gesto del usuario en esta página — no
+      // truena, solo no suena esa vez en particular.
+    });
+  } catch (error) {
+    // Nunca debe tronar la página por no poder sonar.
+  }
+}
+
 async function cargarNotificacionesRepo() {
   if (dbFirestore) {
     try {
@@ -75,24 +144,34 @@ async function cargarNotificacionesRepo() {
     // página. onSnapshot deja la suscripción abierta: cualquier cambio
     // en la colección completa (de cualquier dispositivo) vuelve a
     // pintar la campana aquí mismo, y si lo que llegó es nuevo y sin
-    // leer para ESTA cuenta, suena un aviso (contarNotificacionesRelevantesNoLeidas,
+    // leer para ESTA cuenta, suena un aviso (idsNotificacionesRelevantesNoLeidas,
     // ver notificaciones-modelo.js — nunca en el primer snapshot, que es
     // solo la carga inicial de lo que ya existía).
     return new Promise((resolve) => {
       let primerSnapshot = true;
       dbFirestore.collection(NOTIFICACIONES_COLECCION_FIRESTORE).onSnapshot((snap) => {
-        const noLeidasAntes = (!primerSnapshot && typeof contarNotificacionesRelevantesNoLeidas === 'function')
-          ? contarNotificacionesRelevantesNoLeidas()
-          : 0;
+        const idsNoLeidasAntes = (!primerSnapshot && typeof idsNotificacionesRelevantesNoLeidas === 'function')
+          ? idsNotificacionesRelevantesNoLeidas()
+          : null;
 
         NOTIFICACIONES_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
         _notificacionesEnServidor = new Map(NOTIFICACIONES_CACHE.map(n => [String(n.id), { texto: textoEstableFirestore(n), paraId: n.paraId }]));
         try { localStorage.setItem(NOTIFICACIONES_STORAGE_KEY, JSON.stringify(NOTIFICACIONES_CACHE)); } catch (error) { /* noop */ }
 
         if (!primerSnapshot) {
-          if (typeof contarNotificacionesRelevantesNoLeidas === 'function' && contarNotificacionesRelevantesNoLeidas() > noLeidasAntes
-            && typeof reproducirSonidoNotificacion === 'function') {
-            reproducirSonidoNotificacion();
+          // Suena si apareció al menos UNA notificación sin leer para
+          // esta cuenta que antes no estaba. Antes se comparaba solo el
+          // TOTAL de no leídas: si en el mismo cambio llegaba una nueva y
+          // otra se marcaba leída/se purgaba, el total no subía y no
+          // sonaba. Las que acaba de crear esta misma página (escritura
+          // local pendiente, ej. Admin generando un aviso para el
+          // equipo) no suenan — no son noticia para quien las hizo.
+          if (idsNoLeidasAntes && typeof idsNotificacionesRelevantesNoLeidas === 'function') {
+            const creadasAqui = new Set(snap.docChanges()
+              .filter(c => c.doc.metadata?.hasPendingWrites)
+              .map(c => String(c.doc.id)));
+            const hayNueva = [...idsNotificacionesRelevantesNoLeidas()].some(id => !idsNoLeidasAntes.has(id) && !creadasAqui.has(id));
+            if (hayNueva) reproducirSonidoNotificacion();
           }
           if (typeof actualizarPanelNotificacionesEnVivo === 'function') actualizarPanelNotificacionesEnVivo();
         } else {
