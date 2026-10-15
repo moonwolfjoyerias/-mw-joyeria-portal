@@ -208,7 +208,17 @@ ocultarDocumentoMientrasSeDecideSesion();
 if (typeof authFirebase !== 'undefined' && authFirebase) {
   authFirebase.onAuthStateChanged(async (user) => {
     try {
-      if (user) {
+      if (user && user.isAnonymous) {
+        // Sesión anónima del botón "Inscribirse" de login.html (ver
+        // iniciarSesionAnonimaSiFalta en auth-service.js) — no es una
+        // cuenta del portal, así que no hay sesión que guardar, pero
+        // tampoco se cierra: BUG reportado ("se traba el Inscribirse",
+        // TIEMPO_AGOTADO) — cerrarla aquí, justo después de crearla,
+        // dejaba la solicitud que se estaba enviando atorada con un
+        // usuario que ya no existía (Firestore la retenía sin enviarla
+        // nunca) o rechazada por falta de permisos.
+        try { sessionStorage.removeItem(SESION_ACTIVA_STORAGE_KEY); } catch (error) { /* noop */ }
+      } else if (user) {
         const sesion = await construirSesionDesdeUsuarioFirebase(user);
         if (sesion) {
           guardarSesionActiva(sesion);
