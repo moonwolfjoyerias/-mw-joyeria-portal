@@ -268,7 +268,7 @@ function obtenerNotificacionesPorRol(rol) {
   return notificaciones.filter(n => !n.paraId || n.paraId === idActual);
 }
 
-// NOTIF-04 de la auditoría: cuántas notificaciones sin leer le tocan a
+// NOTIF-04 de la auditoría: qué notificaciones sin leer (sus ids) le tocan a
 // ESTA cuenta ahora mismo — usada por notificaciones-firestore-sync.js
 // para decidir si algo que acaba de llegar por la suscripción en vivo
 // es nuevo y suyo (y debe sonar), sin confundirlo con un cambio que
@@ -276,16 +276,18 @@ function obtenerNotificacionesPorRol(rol) {
 // de bandeja (ve 3 divididas, ver admin-comun.js → NOTIF_ADMIN_GRUPOS),
 // así que se detecta por la presencia de esa función/constante en vez
 // de por obtenerRolPortalActual().
-function contarNotificacionesRelevantesNoLeidas() {
+function idsNotificacionesRelevantesNoLeidas() {
+  let relevantes;
   if (typeof NOTIF_ADMIN_GRUPOS !== 'undefined') {
     // Las 4 combinaciones de NOTIF_ADMIN_GRUPOS cubren exactamente todo
     // rolDestino que no sea 'emprendedora_lider' (la única bandeja que
     // Admin nunca ve) — mismo criterio, sin reconstruir los grupos.
-    return obtenerNotificacionesCompartidas().filter(n => !n.leida && (n.rolDestino || 'emprendedora_lider') !== 'emprendedora_lider').length;
+    relevantes = obtenerNotificacionesCompartidas().filter(n => (n.rolDestino || 'emprendedora_lider') !== 'emprendedora_lider');
+  } else {
+    const rolActual = typeof obtenerRolPortalActual === 'function' ? obtenerRolPortalActual() : null;
+    relevantes = rolActual ? obtenerNotificacionesPorRol(rolActual) : [];
   }
-  const rolActual = typeof obtenerRolPortalActual === 'function' ? obtenerRolPortalActual() : null;
-  if (!rolActual) return 0;
-  return obtenerNotificacionesPorRol(rolActual).filter(n => !n.leida).length;
+  return new Set(relevantes.filter(n => !n.leida).map(n => String(n.id)));
 }
 
 // Arranca la carga de notificaciones-firestore-sync.js — tiene que ser

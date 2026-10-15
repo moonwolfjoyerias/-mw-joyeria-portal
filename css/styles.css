@@ -1325,6 +1325,42 @@ a:hover { color: var(--mw-gold); }
 .promo-banner h2 { font-size: 2.2rem; margin-bottom: 0.6rem; }
 .promo-banner p { color: var(--mw-text-muted); margin-bottom: 1.2rem; }
 
+/* "Nuevas piezas" con fotos reales (js/novedades-inicio.js): la foto de
+   la pieza va a la derecha del texto, en una tarjeta con nombre y precio. */
+.promo-banner.con-novedades { min-height: 320px; }
+.novedad-slide { justify-content: flex-end; padding: 18px 5% 30px; }
+.novedad-figura {
+  margin: 0;
+  width: min(40%, 300px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-hover);
+}
+.carousel-slide .novedad-figura img {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: cover;
+  opacity: 1;
+  filter: none;
+}
+.novedad-figura figcaption { padding: 0.5rem 0.8rem 0.6rem; display: flex; flex-direction: column; gap: 0.1rem; }
+.novedad-nombre { font-size: 0.88rem; font-weight: 600; color: var(--mw-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.novedad-precio { font-size: 0.82rem; color: var(--mw-accent-text); }
+.carousel-dots.novedad-dots { left: auto; right: 5%; transform: none; bottom: 9px; }
+@media (max-width: 640px) {
+  .promo-banner.con-novedades { flex-direction: column; align-items: stretch; }
+  .promo-banner.con-novedades .carousel { position: relative; inset: auto; height: 270px; }
+  .promo-banner.con-novedades .novedad-slide { justify-content: center; padding: 16px 16px 28px; }
+  .promo-banner.con-novedades .novedad-figura { width: min(78%, 280px); }
+  .promo-banner.con-novedades .carousel-dots.novedad-dots { right: 50%; transform: translateX(50%); }
+  .promo-banner.con-novedades .promo-content { padding: 1.2rem 1.3rem 1.5rem; max-width: none; }
+}
+
 /* ---------- Próximos eventos ---------- */
 .events-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.6rem; }
 .events-section-header h2 { font-size: 1.3rem; margin: 0; display: flex; align-items: center; gap: 0.5rem; }

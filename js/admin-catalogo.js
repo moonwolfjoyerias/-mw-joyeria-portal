@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function cargarCatalogo() {
   await catalogoRepoListo;
   catalogoAdmin = CATALOGO_CACHE.map(migrarProductoAVariantes);
+  // Una sola vez: productos de antes de fechaAlta (ver completarFechaAltaCatalogo).
+  if (completarFechaAltaCatalogo(catalogoAdmin)) guardarCatalogo();
 }
 
 function guardarCatalogo() {
@@ -627,6 +629,7 @@ function agregarProducto(datos) {
   const nuevoProducto = {
     id: 'prod-' + Date.now(),
     ...datos,
+    fechaAlta: new Date().toISOString(), // para "Nuevas piezas" en el Inicio de e/l (ver novedades-inicio.js)
     ultimaAccion: { tipo: 'Agregado', empleado: ADMIN_IDENTIDAD.usuarioNombre, fecha: new Date().toISOString() }
   };
 

@@ -106,6 +106,25 @@ function fotoVarianteProducto(producto, variante) {
   return fotoPrincipalProducto(p);
 }
 
+// fechaAlta (ISO) — cuándo se dio de alta el producto. La usa "Nuevas
+// piezas" del Inicio de Emprendedora/Líder (js/novedades-inicio.js) para
+// pedirle a Firestore SOLO los productos más recientes en vez del
+// catálogo completo. Los productos dados de alta antes de este campo la
+// recuperan de su id ('prod-' + Date.now() al crearse) la primera vez
+// que Staff/Encargado/Admin abre el Catálogo. Regresa true si cambió
+// algo (para guardar una sola vez).
+function completarFechaAltaCatalogo(catalogo) {
+  let cambio = false;
+  catalogo.forEach(p => {
+    if (p.fechaAlta) return;
+    const marca = /^prod-(\d{12,14})$/.exec(String(p.id || ''));
+    if (!marca) return;
+    p.fechaAlta = new Date(Number(marca[1])).toISOString();
+    cambio = true;
+  });
+  return cambio;
+}
+
 function stockTotalProducto(producto) {
   const p = migrarProductoAVariantes(producto);
   return p.variantes.reduce((suma, v) => suma + (Number(v.stock) || 0), 0);
