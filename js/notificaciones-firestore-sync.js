@@ -119,6 +119,42 @@ function reproducirSonidoNotificacion() {
   }
 }
 
+// La sesión de Firebase se resuelve de forma asíncrona: en una pestaña
+// nueva, auth-guard.js guarda la sesión en sessionStorage un momento
+// después de que carga la página. La e/l la necesita para saber su id.
+function _esperarSesionParaNotificaciones() {
+  return new Promise(resolve => {
+    const inicio = Date.now();
+    (function revisar() {
+      const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+      if (sesion || Date.now() - inicio > 15000) return resolve(sesion);
+      setTimeout(revisar, 150);
+    })();
+  });
+}
+
+// Qué avisos escucha esta página, según la carpeta del portal:
+//  - Emprendedora/Líder: solo los suyos (paraId = su id). Su campana
+//    nunca mostró otros (ver obtenerNotificacionesPorRol).
+//  - Staff/Encargado: las bandejas 'staff' y 'encargado' (se traen las
+//    dos porque normalizarNotificacion pasa a 'staff' casi todo lo que
+//    llega como 'encargado'; cada campana filtra lo suyo como siempre).
+//  - Admin: todo menos la bandeja personal de e/l (que Admin nunca ve —
+//    ver NOTIF_ADMIN_GRUPOS en admin-comun.js).
+//  - Páginas públicas: nada.
+async function consultaNotificacionesDeEstaCuenta() {
+  const coleccion = dbFirestore.collection(NOTIFICACIONES_COLECCION_FIRESTORE);
+  const rol = typeof obtenerRolPortalActual === 'function' ? obtenerRolPortalActual() : null;
+  if (rol === 'emprendedora_lider') {
+    const sesion = await _esperarSesionParaNotificaciones();
+    const personaId = sesion && sesion.tipo === 'persona' ? sesion.personaId : null;
+    return personaId ? coleccion.where('paraId', '==', personaId) : null;
+  }
+  if (rol === 'staff' || rol === 'encargado') return coleccion.where('rolDestino', 'in', ['staff', 'encargado']);
+  if (rol === 'admin') return coleccion.where('rolDestino', 'in', ['staff', 'encargado', 'admin']);
+  return null;
+}
+
 async function cargarNotificacionesRepo() {
   if (dbFirestore) {
     try {
@@ -147,9 +183,21 @@ async function cargarNotificacionesRepo() {
     // leer para ESTA cuenta, suena un aviso (idsNotificacionesRelevantesNoLeidas,
     // ver notificaciones-modelo.js — nunca en el primer snapshot, que es
     // solo la carga inicial de lo que ya existía).
+    // Revisión de cuota de Firestore: antes cada página escuchaba la
+    // colección COMPLETA — cada visita de cada cuenta leía los avisos de
+    // TODO el mundo (con 1,000 e/l, miles de lecturas por página). Ahora
+    // cada cuenta escucha solo los que le pueden tocar (ver
+    // consultaNotificacionesDeEstaCuenta). Las páginas públicas (login)
+    // no escuchan nada.
+    const consulta = await consultaNotificacionesDeEstaCuenta();
+    if (!consulta) {
+      NOTIFICACIONES_CACHE = [];
+      return NOTIFICACIONES_CACHE;
+    }
+
     return new Promise((resolve) => {
       let primerSnapshot = true;
-      dbFirestore.collection(NOTIFICACIONES_COLECCION_FIRESTORE).onSnapshot((snap) => {
+      consulta.onSnapshot((snap) => {
         const idsNoLeidasAntes = (!primerSnapshot && typeof idsNotificacionesRelevantesNoLeidas === 'function')
           ? idsNotificacionesRelevantesNoLeidas()
           : null;
@@ -251,13 +299,16 @@ async function sincronizarNotificacionesConFirestore(lista, idsConocidos) {
     escritas.set(id, { texto, paraId: notificacion.paraId });
   });
 
-  // Purga / borrado de lo que ya no está en la lista — solo
-  // Staff/Encargado/Admin, igual que antes (una Emprendedora/Líder nunca
-  // borraba al guardar; ella usa eliminarNotificacionDeFirestore).
-  if (!esPersona) {
+  // Purga / borrado de lo que ya no está en la lista (ej. avisos leídos
+  // hace más de 24 horas). Staff/Encargado/Admin borran lo de sus
+  // bandejas; una Emprendedora/Líder, solo SUS propios avisos — antes
+  // nunca borraba y dependía de que Staff/Admin (que cargaban la
+  // colección completa) los purgaran; ahora nadie más los carga.
+  {
     const idsLista = new Set(lista.map(n => String(n.id)));
     _notificacionesEnServidor.forEach((anterior, id) => {
       if (idsLista.has(id) || !idsConocidos.has(id)) return;
+      if (esPersona && (!anterior || anterior.paraId !== miPersonaId)) return;
       batch.delete(coleccion.doc(id));
       borradas.push(id);
     });

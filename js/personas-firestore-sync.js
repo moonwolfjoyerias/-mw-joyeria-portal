@@ -89,13 +89,55 @@ function personasDesdeLocalStorage() {
   return personasSemillaLocal();
 }
 
+function _esperarSesionPersonas() {
+  return new Promise(resolve => {
+    const inicio = Date.now();
+    (function revisar() {
+      const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+      if (sesion || Date.now() - inicio > 15000) return resolve(sesion);
+      setTimeout(revisar, 150);
+    })();
+  });
+}
+
+// Revisión de cuota de Firestore: el portal de una Emprendedora solo
+// usa su propio registro y el de su líder (ver cuenta.js, apartados.js,
+// catalogo.js), así que lee esos 2 documentos en vez de la colección
+// completa (con 1,000 e/l eran 1,000 lecturas por cada página que
+// abría). Líder (necesita a todo su equipo para rango/comisiones) y
+// Staff/Encargado/Admin siguen leyendo todo.
+async function _leerPersonasDeEstaPagina() {
+  const coleccion = dbFirestore.collection(PERSONAS_COLECCION_FIRESTORE);
+  // Fuera del portal (login.html) no se usa la lista: el chequeo de
+  // duplicados del registro público ya lo hace Admin al aprobar, y sin
+  // sesión las reglas ni siquiera dejan leerla. Una cuenta con sesión
+  // que pasaba por el login leía a todas las personas sin usarlas.
+  if (!/\/portal\//.test(window.location.pathname)) return [];
+  if (/\/portal\/emprendedora\//.test(window.location.pathname)) {
+    const sesion = await _esperarSesionPersonas();
+    const personaId = sesion && sesion.tipo === 'persona' ? sesion.personaId : null;
+    if (personaId) {
+      const propia = await coleccion.doc(String(personaId)).get();
+      if (!propia.exists) return [];
+      const personas = [{ ...propia.data(), id: propia.id }];
+      const liderId = propia.data().liderId;
+      if (liderId) {
+        const lider = await coleccion.doc(String(liderId)).get();
+        if (lider.exists) personas.push({ ...lider.data(), id: lider.id });
+      }
+      return personas;
+    }
+  }
+  const snap = await coleccion.get();
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+}
+
 async function cargarPersonasRepo() {
   if (dbFirestore) {
     try {
       const metaSnap = await dbFirestore.collection(PERSONAS_META_COLECCION).doc(PERSONAS_META_DOC_ID).get();
       if (metaSnap.exists) {
-        const snap = await dbFirestore.collection(PERSONAS_COLECCION_FIRESTORE).get();
-        PERSONAS_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        PERSONAS_CACHE = await _leerPersonasDeEstaPagina();
         await fusionarPersonasFinanciero(PERSONAS_CACHE);
         _recordarPersonasEnServidor(PERSONAS_CACHE);
       } else {

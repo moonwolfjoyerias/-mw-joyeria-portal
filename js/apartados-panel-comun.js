@@ -849,7 +849,7 @@ function cerrarModal() {
 // ============================================================
 // EN VIVO — lo que cambie BRILLO MW u otro dispositivo (depósitos,
 // liquidaciones, ventanas nuevas…) se pinta aquí sin recargar la página.
-// Ver escucharApartadosEnVivo() en apartados-firestore-sync.js.
+// Ver _primeraRespuestaEnVivo() en apartados-firestore-sync.js.
 // ============================================================
 
 window.addEventListener("mw:apartados-actualizados", () => {

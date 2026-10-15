@@ -42,7 +42,6 @@ let ACTIVIDADES_STAFF_HISTORIAL_CACHE = [];
 const _asEnServidor = new Map();
 const _asVersionesSuperadas = new Map();
 const _asRecibidosEnVivo = new Map();
-let _escuchaActividadesStaffActiva = false;
 let _asEnServidorCargado = false;
 
 function _asMapa(mapa, coleccion, crear) {
@@ -107,13 +106,16 @@ function _asAplicarEnVivo(coleccion, snap) {
   window.dispatchEvent(new CustomEvent('mw:actividades-staff-actualizadas'));
 }
 
-function escucharActividadesStaffEnVivo() {
-  if (!dbFirestore || _escuchaActividadesStaffActiva) return;
-  _escuchaActividadesStaffActiva = true;
-  // Si una escucha falla (sin sesión, sin red) la página sigue como antes:
-  // con lo que cargó.
-  [ACTIVIDADES_STAFF_CATALOGO_COLECCION, ACTIVIDADES_STAFF_COLECCION, ACTIVIDADES_STAFF_HISTORIAL_COLECCION].forEach(coleccion => {
-    dbFirestore.collection(coleccion).onSnapshot(snap => _asAplicarEnVivo(coleccion, snap), () => {});
+// Revisión de cuota de Firestore: antes cada colección se leía completa
+// con .get() y luego OTRA VEZ al abrir su escucha en vivo (Firestore
+// cobra las dos). Ahora la primera respuesta en vivo es la carga inicial.
+function _asCargarEnVivo(coleccion) {
+  return new Promise((resolve, reject) => {
+    let primera = true;
+    dbFirestore.collection(coleccion).onSnapshot(snap => {
+      if (primera) { primera = false; resolve(snap.docs.map(d => ({ ...d.data(), id: d.id }))); return; }
+      _asAplicarEnVivo(coleccion, snap);
+    }, error => { if (primera) { primera = false; reject(error); } });
   });
 }
 
@@ -173,19 +175,15 @@ async function cargarActividadesStaffRepo() {
     try {
       const metaSnap = await dbFirestore.collection(ACTIVIDADES_STAFF_META_COLECCION).doc(ACTIVIDADES_STAFF_META_DOC_ID).get();
       if (metaSnap.exists) {
-        const [snapCatalogo, snapAsignaciones, snapHistorial] = await Promise.all([
-          dbFirestore.collection(ACTIVIDADES_STAFF_CATALOGO_COLECCION).get(),
-          dbFirestore.collection(ACTIVIDADES_STAFF_COLECCION).get(),
-          dbFirestore.collection(ACTIVIDADES_STAFF_HISTORIAL_COLECCION).get()
+        [ACTIVIDADES_STAFF_CATALOGO_CACHE, ACTIVIDADES_STAFF_CACHE, ACTIVIDADES_STAFF_HISTORIAL_CACHE] = await Promise.all([
+          _asCargarEnVivo(ACTIVIDADES_STAFF_CATALOGO_COLECCION),
+          _asCargarEnVivo(ACTIVIDADES_STAFF_COLECCION),
+          _asCargarEnVivo(ACTIVIDADES_STAFF_HISTORIAL_COLECCION)
         ]);
-        ACTIVIDADES_STAFF_CATALOGO_CACHE = snapCatalogo.docs.map(d => ({ ...d.data(), id: d.id }));
-        ACTIVIDADES_STAFF_CACHE = snapAsignaciones.docs.map(d => ({ ...d.data(), id: d.id }));
-        ACTIVIDADES_STAFF_HISTORIAL_CACHE = snapHistorial.docs.map(d => ({ ...d.data(), id: d.id }));
         _asRecordarServidor(ACTIVIDADES_STAFF_CATALOGO_COLECCION, ACTIVIDADES_STAFF_CATALOGO_CACHE);
         _asRecordarServidor(ACTIVIDADES_STAFF_COLECCION, ACTIVIDADES_STAFF_CACHE);
         _asRecordarServidor(ACTIVIDADES_STAFF_HISTORIAL_COLECCION, ACTIVIDADES_STAFF_HISTORIAL_CACHE);
         _asEnServidorCargado = true;
-        escucharActividadesStaffEnVivo();
       } else {
         // Primera vez que este proyecto de Firestore ve Actividades del
         // Staff: solo el catálogo tiene semilla — asignaciones e

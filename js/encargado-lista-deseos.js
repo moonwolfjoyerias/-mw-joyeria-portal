@@ -551,7 +551,7 @@ function abrirDetalleResurtido(id) {
 
 // En vivo: lo que cambie BRILLO MW u otro dispositivo (solicitudes nuevas,
 // cambios de estado, resurtidos) se pinta aquí sin recargar la página.
-// Ver escucharListaDeseosEnVivo() en lista-deseos-firestore-sync.js.
+// Ver _ldPrimeraRespuestaEnVivo() en lista-deseos-firestore-sync.js.
 window.addEventListener('mw:lista-deseos-actualizada', () => {
   renderTablaDeseosEncargado();
   renderTablaResurtidoEncargado();

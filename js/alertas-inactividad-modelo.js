@@ -38,7 +38,7 @@ function obtenerParametrosAlertaInactividad() {
 // Evalúa UNA persona y actualiza persona.alertaInactividad si corresponde
 // (no guarda — quien llama decide cuándo persistir). Devuelve true si
 // hubo un cambio.
-function evaluarAlertaInactividadPersona(persona) {
+function evaluarAlertaInactividadPersona(persona, { notificar = true } = {}) {
 
   if (persona.tipo !== 'emprendedora' || persona.estado === 'baja') return false;
   if (typeof obtenerComprasLiquidadasPersonaDesde !== 'function' || typeof calcularCadenaLideresHaciaArriba !== 'function') return false;
@@ -60,7 +60,7 @@ function evaluarAlertaInactividadPersona(persona) {
     persona.alertaInactividad = { desde: new Date().toISOString() };
 
     const cadena = calcularCadenaLideresHaciaArriba(persona.id, NIVELES_ALERTA_INACTIVIDAD_UPLINE);
-    notificarCadenaLideresAlertaInactividad(persona, cadena, 'sin_actividad', semanas, monto);
+    if (notificar) notificarCadenaLideresAlertaInactividad(persona, cadena, 'sin_actividad', semanas, monto);
 
     return true;
 
@@ -71,7 +71,7 @@ function evaluarAlertaInactividadPersona(persona) {
     const cadena = calcularCadenaLideresHaciaArriba(persona.id, NIVELES_ALERTA_INACTIVIDAD_UPLINE);
     delete persona.alertaInactividad;
 
-    notificarCadenaLideresAlertaInactividad(persona, cadena, 'recuperada');
+    if (notificar) notificarCadenaLideresAlertaInactividad(persona, cadena, 'recuperada');
 
     return true;
 
@@ -108,7 +108,14 @@ function notificarCadenaLideresAlertaInactividad(persona, cadenaLideres, tipo, s
 // — pensada para llamarse junto con los demás verificar...()/procesar...()
 // de Plan MW, tanto desde la campana de Admin (admin-comun.js) como desde
 // el portal de Líder (Mi equipo), que no comparte el mismo "tick".
-function procesarAlertasInactividadTodas() {
+//
+// soloMostrar (portal de Líder, Mi equipo): calcula las alertas en
+// memoria para pintarlas, pero NO manda avisos ni guarda. Una Líder no
+// puede guardar la marca alertaInactividad en otras personas (las reglas
+// solo le dejan escribir su propio registro), así que si mandara avisos
+// desde aquí los volvería a mandar en CADA visita — Admin (admin-comun.js)
+// es quien avisa y deja la marca guardada.
+function procesarAlertasInactividadTodas({ soloMostrar = false } = {}) {
 
   if (typeof obtenerPersonas !== 'function') return false;
 
@@ -116,10 +123,10 @@ function procesarAlertasInactividadTodas() {
   let huboCambios = false;
 
   personas.forEach(persona => {
-    if (evaluarAlertaInactividadPersona(persona)) huboCambios = true;
+    if (evaluarAlertaInactividadPersona(persona, { notificar: !soloMostrar })) huboCambios = true;
   });
 
-  if (huboCambios) guardarPersonas(personas);
+  if (huboCambios && !soloMostrar) guardarPersonas(personas);
 
   return huboCambios;
 

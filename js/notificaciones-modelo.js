@@ -127,7 +127,12 @@ function guardarNotificacionesCompartidas(lista) {
 // genérico que la obliga a buscarlo ella misma.
 function construirNotificacion({ texto, link, paraId, rolDestino, tipo, origen, productoId }) {
   return normalizarNotificacion({
-    id: `NOTIF-${Date.now()}`,
+    // BUG (revisión de cuota de Firestore): solo con Date.now(), varios
+    // avisos creados en el mismo milisegundo (ej. alertas de inactividad
+    // a toda la cadena de líderes, en un ciclo) salían con el MISMO id —
+    // en Firestore se pisaban (sobrevivía solo el último) y cada guardado
+    // los reescribía todos otra vez. El sufijo aleatorio los separa.
+    id: `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     texto,
     link: link || '',
     leida: false,

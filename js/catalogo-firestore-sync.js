@@ -72,9 +72,38 @@ function catalogoDesdeLocalStorage() {
   return catalogoSemillaLocal();
 }
 
+// Revisión de cuota de Firestore: "Mis apartados" de Emprendedora/Líder
+// solo usa el catálogo para la foto/material de SUS piezas apartadas —
+// antes leía el catálogo completo (con 3,000 piezas, 3,000 lecturas por
+// visita). Ahí se leen solo esos productos, uno por uno. En cualquier
+// otra página regresa null y se carga el catálogo completo como siempre.
+async function _productosDeMisApartados() {
+  if (!/\/portal\/(emprendedora|lider)\/(emprendedora|lider)-apartados\.html$/.test(window.location.pathname)) return null;
+  if (typeof apartadosRepoListo === 'undefined' || typeof obtenerVentanasApartado !== 'function') return null;
+  await apartadosRepoListo;
+  // En una pestaña nueva la sesión llega un momento después de cargar.
+  const inicio = Date.now();
+  while (!(typeof obtenerSesionActiva === 'function' && obtenerSesionActiva()) && Date.now() - inicio < 15000) {
+    await new Promise(r => setTimeout(r, 150));
+  }
+  const miId = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
+  const ids = new Set();
+  obtenerVentanasApartado()
+    .filter(v => v.usuarioId === miId)
+    .forEach(v => (v.apartados || []).forEach(p => { if (p.productoId) ids.add(String(p.productoId)); }));
+  const docs = await Promise.all([...ids].map(id => dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE).doc(id).get()));
+  return docs.filter(d => d.exists).map(d => ({ ...d.data(), id: d.id }));
+}
+
 async function cargarCatalogoRepo() {
   if (dbFirestore) {
     try {
+      const soloSusPiezas = await _productosDeMisApartados();
+      if (soloSusPiezas) {
+        CATALOGO_CACHE = soloSusPiezas;
+        _recordarCatalogoEnServidor(CATALOGO_CACHE);
+        return CATALOGO_CACHE;
+      }
       const snap = await dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE).get();
       if (!snap.empty) {
         CATALOGO_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
