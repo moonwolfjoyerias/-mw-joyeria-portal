@@ -174,8 +174,25 @@ async function abrirModalDatosBancarios() {
 
     let caratulaClabeUrl;
     if (caratulaClabeArchivoTemporal) {
+      const boton = document.getElementById('guardarDatosBancariosBtn');
+      if (boton?.disabled) return;
+      if (boton) { boton.disabled = true; boton.textContent = 'Subiendo carátula...'; }
       caratulaClabeUrl = `datos-bancarios/${idActual}-caratula-${Date.now()}`;
-      await guardarBlobDocumento(caratulaClabeUrl, caratulaClabeArchivoTemporal);
+      try {
+        await guardarBlobDocumento(caratulaClabeUrl, caratulaClabeArchivoTemporal);
+      } catch (error) {
+        // Ver guardarBlobDocumento: sin Firebase Storage activado la subida
+        // falla. Se avisa en vez de dejar el botón colgado; los demás
+        // datos no se guardan para que no se pierda la carátula sin aviso.
+        console.error('No se pudo subir la carátula de la CLABE:', error);
+        const errorEl = document.getElementById('datosBancariosError');
+        if (errorEl) { errorEl.textContent = 'No se pudo subir la carátula, así que se quitó. Da clic en Guardar otra vez para guardar tus datos sin ella, o inténtalo más tarde.'; errorEl.style.display = 'block'; }
+        const inputCaratula = document.getElementById('inputCaratulaClabe');
+        if (inputCaratula) inputCaratula.value = '';
+        caratulaClabeArchivoTemporal = null;
+        if (boton) { boton.disabled = false; boton.textContent = 'Guardar'; }
+        return;
+      }
     }
 
     actualizarDatosBancariosPersona(idActual, { titular, banco, clabe, caratulaClabeUrl });

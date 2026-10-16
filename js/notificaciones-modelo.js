@@ -105,7 +105,7 @@ function obtenerNotificacionesCompartidas() {
 }
 
 function guardarNotificacionesCompartidas(lista) {
-  guardarNotificacionesRepo(lista);
+  return guardarNotificacionesRepo(lista);
 }
 
 // paraId: a quién pertenece (usuarioId de la persona). Es opcional y no
@@ -187,23 +187,48 @@ async function agregarNotificacionDirecta(datos) {
 // inmediato para que, al reabrir el panel, ya aparezca atenuada y no
 // cuente en el badge de "sin leer". leidaEn sella el momento exacto —
 // purgarNotificacionesLeidasVencidas la borra sola 24 horas después.
+// Regresa la promesa del guardado (o null si no había nada que marcar).
+// El id se compara como texto: el atributo data-notif-id siempre es
+// texto, y algunos avisos viejos tienen id numérico — con === nunca se
+// encontraban y jamás quedaban marcados.
 function marcarNotificacionLeida(id) {
   const lista = obtenerNotificacionesCompartidas();
-  const notif = lista.find(n => n.id === id);
-  if (!notif || notif.leida) return;
+  const notif = lista.find(n => String(n.id) === String(id));
+  if (!notif || notif.leida) return null;
   notif.leida = true;
   notif.leidaEn = new Date().toISOString();
-  guardarNotificacionesCompartidas(lista);
+  return guardarNotificacionesCompartidas(lista) || null;
 }
 
 // Delegado en document (no en cada panel, que se vuelve a pintar
 // seguido): cualquier .notif-item con data-notif-id, en cualquier
-// portal, se marca como leída al hacer clic — justo antes de que el
-// propio <a> navegue a su link.
+// portal, se marca como leída al hacer clic.
+//
+// BUG reportado ("se marcan como vistas pero al recargar vuelven a no
+// leídas"): el aviso es un <a> que navega a su página EN EL MISMO clic,
+// y salir de la página cortaba el guardado en Firebase antes de que
+// terminara. Ahora, si el clic va a cambiar de página, se espera a que
+// se guarde (máximo NOTIF_ESPERA_GUARDADO_MS) y luego se navega.
+const NOTIF_ESPERA_GUARDADO_MS = 2500;
 document.addEventListener('click', (e) => {
   const item = e.target.closest?.('.notif-item[data-notif-id]');
   if (!item || typeof marcarNotificacionLeida !== 'function') return;
-  marcarNotificacionLeida(item.getAttribute('data-notif-id'));
+  const guardado = marcarNotificacionLeida(item.getAttribute('data-notif-id'));
+  if (!guardado) return;
+
+  const href = (item.getAttribute('href') || '').trim();
+  const abreEnOtraPestana = e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0 || item.target === '_blank';
+  if (item.tagName !== 'A' || abreEnOtraPestana || e.defaultPrevented) return;
+  // Aviso sin link: href="" RECARGA la misma página en el navegador (y
+  // cortaba el guardado igual) — no hay a dónde ir, así que no se navega.
+  if (!href || href === '#' || /^javascript:/i.test(href)) { e.preventDefault(); return; }
+  if (href.startsWith('#')) return;
+
+  e.preventDefault();
+  Promise.race([
+    Promise.resolve(guardado).catch(() => {}),
+    new Promise(resolve => setTimeout(resolve, NOTIF_ESPERA_GUARDADO_MS))
+  ]).then(() => { window.location.href = item.href; });
 });
 
 // FEAT-07 pedida tras lanzar a producción: borrar una notificación a

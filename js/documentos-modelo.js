@@ -48,9 +48,48 @@ function abrirDBDocumentos() {
   return _documentosDbPromise;
 }
 
+// BUG reportado ("se queda en Enviando… y dice que lo bloqueó"): si
+// Firebase Storage no está activado en el proyecto, el navegador rechaza
+// la subida (error de CORS, "blocked by CORS policy") y el SDK la
+// reintenta en silencio hasta por 10 minutos, o falla con 404 si el
+// depósito no existe; en los dos casos el botón se quedaba en
+// "Enviando…". Ahora se cancela si pasan DOCUMENTOS_LIMITE_SUBIDA_MS sin
+// ningún avance, y cualquier falla se lanza con code 'SUBIDA_FALLIDA'
+// para que quien llama decida (seguir sin el archivo o avisar).
+const DOCUMENTOS_LIMITE_SUBIDA_MS = 20000;
+
 async function guardarBlobDocumento(storagePath, blob) {
   if (storageFirebase) {
-    await storageFirebase.ref(storagePath).put(blob);
+    const tarea = storageFirebase.ref(storagePath).put(blob);
+    let temporizador;
+    try {
+      await Promise.race([
+        tarea,
+        new Promise((_, reject) => {
+          // El límite cuenta desde el último avance: una subida lenta pero
+          // que sí avanza (foto grande, datos móviles) no se corta.
+          const reiniciar = () => {
+            clearTimeout(temporizador);
+            temporizador = setTimeout(() => {
+              try { tarea.cancel(); } catch (error) { /* noop */ }
+              reject(new Error('TIEMPO_AGOTADO'));
+            }, DOCUMENTOS_LIMITE_SUBIDA_MS);
+          };
+          reiniciar();
+          if (typeof tarea.on === 'function') {
+            tarea.on('state_changed', snap => { if (snap && snap.bytesTransferred > 0) reiniciar(); }, () => {});
+          }
+        })
+      ]);
+    } catch (error) {
+      try { tarea.cancel(); } catch (e) { /* noop */ }
+      const fallo = new Error('No se pudo subir el archivo (' + (error && (error.code || error.message) || 'error') + ').');
+      fallo.code = 'SUBIDA_FALLIDA';
+      fallo.causa = error;
+      throw fallo;
+    } finally {
+      clearTimeout(temporizador);
+    }
     return;
   }
   const db = await abrirDBDocumentos();
