@@ -174,26 +174,45 @@ async function enviarNuevaSolicitud(identidad) {
   }
 
   // La INE es opcional: solo se guarda si la adjuntaron.
+  // Si la foto no se puede subir (ej. Firebase Storage todavía no está
+  // activado — ver guardarBlobDocumento), la solicitud se envía igual,
+  // sin la foto, y se avisa; antes el botón se quedaba en "Enviando…".
   let ineFrenteStoragePath = null;
+  let ineNoSubida = false;
   if (ineFrenteArchivoTemporal) {
     const sufijo = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
     ineFrenteStoragePath = `solicitudes-ine/${sufijo}-frente`;
-    await guardarBlobDocumento(ineFrenteStoragePath, ineFrenteArchivoTemporal);
+    if (boton) boton.textContent = 'Subiendo foto...';
+    try {
+      await guardarBlobDocumento(ineFrenteStoragePath, ineFrenteArchivoTemporal);
+    } catch (error) {
+      console.error('No se pudo subir la foto de la INE:', error);
+      ineFrenteStoragePath = null;
+      ineNoSubida = true;
+    }
+    if (boton) boton.textContent = 'Enviando...';
   }
 
-  const resultado = await crearSolicitudInscripcion({
-    solicitanteId: identidad.id,
-    solicitanteNombre: identidad.nombre,
-    solicitanteRol: identidad.rol,
-    nombreCompleto,
-    telefono,
-    correo,
-    ineFrenteUrl: ineFrenteStoragePath,
-    viveEnSLP: respuestaSLP === 'si'
-  });
+  let resultado;
+  try {
+    resultado = await crearSolicitudInscripcion({
+      solicitanteId: identidad.id,
+      solicitanteNombre: identidad.nombre,
+      solicitanteRol: identidad.rol,
+      nombreCompleto,
+      telefono,
+      correo,
+      ineFrenteUrl: ineFrenteStoragePath,
+      viveEnSLP: respuestaSLP === 'si'
+    });
+  } catch (error) {
+    // Nunca dejar el botón en "Enviando…" si algo falla (red, reglas).
+    console.error('No se pudo enviar la solicitud de inscripción:', error);
+    resultado = { ok: false, error: 'No se pudo enviar la solicitud. Revisa tu conexión e inténtalo de nuevo.' };
+  }
 
   if (!resultado.ok) {
-    if (ineFrenteStoragePath) await eliminarBlobDocumento(ineFrenteStoragePath);
+    if (ineFrenteStoragePath) await eliminarBlobDocumento(ineFrenteStoragePath).catch(() => {});
     mostrarErrorSolicitud(resultado.error);
     if (boton) { boton.disabled = false; boton.textContent = 'Enviar solicitud'; }
     return;
@@ -207,7 +226,9 @@ async function enviarNuevaSolicitud(identidad) {
   // La solicitud YA quedó creada arriba — el toast de confirmación nunca
   // debe depender de que esta lista cargue bien (ver nota de BUG en
   // obtenerSolicitudesDe, solicitudes-modelo.js).
-  mostrarToast(`Solicitud enviada. Te avisaremos cuando sea revisada.`);
+  mostrarToast(ineNoSubida
+    ? 'Solicitud enviada, pero sin la foto de la INE: por ahora no se pudo subir el archivo. Te avisaremos cuando sea revisada.'
+    : 'Solicitud enviada. Te avisaremos cuando sea revisada.');
   try {
     await renderMisSolicitudes(identidad);
   } catch (error) {
