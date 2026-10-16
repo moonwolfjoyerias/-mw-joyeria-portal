@@ -73,8 +73,11 @@ function cumpleCompraPersonalRangoCuenta(rangoKey, p1, p2, montoRequerido) {
   const valorComparado = soloUnPeriodo ? Math.max(p1, p2) : Math.min(p1, p2);
   return { cumple: valorComparado >= montoRequerido, soloUnPeriodo };
 }
+// Un rango desconocido o todavía sin calcular (ej. una líder sin compras
+// en el periodo) cuenta como "Sin Rango" — antes daba -1 y la página
+// tronaba al leer RANGOS_MW[-1].label, dejando secciones sin pintar.
 function idxRango(key) {
-  return RANGOS_MW.findIndex(r => r.key === key);
+  return Math.max(0, RANGOS_MW.findIndex(r => r.key === key));
 }
 // Admin → Configuración → Comisiones es dueño de este valor (fórmula:
 // comisión = (compra ÷ divisor) × %). Antes este archivo repetía el
@@ -92,7 +95,9 @@ function obtenerIvaDivisorLider() {
 function renderPerfilLider() {
   const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
   const persona = idActual && typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(idActual) : null;
-  const nombre = persona ? nombreCompletoPersona(persona) : PERFIL_LIDER_EJEMPLO.nombre;
+  // Datos de ejemplo solo en modo demo (sin Firebase) — nunca en una cuenta real.
+  const demo = typeof dbFirestore === 'undefined' || !dbFirestore;
+  const nombre = persona ? nombreCompletoPersona(persona) : (demo ? PERFIL_LIDER_EJEMPLO.nombre : '');
 
   const iniciales = typeof obtenerInicialesPerfil === 'function' ? obtenerInicialesPerfil(nombre) : 'L';
 
@@ -105,8 +110,8 @@ function renderPerfilLider() {
 
   setText('perfilNombre', nombre);
   setText('perfilLider', `Líder ${RANGOS_MW[idxRango(persona?.rangoActualKey || 'sin_rango')].label}`);
-  setText('perfilTelefono', persona?.telefono || PERFIL_LIDER_EJEMPLO.telefono);
-  setText('perfilCorreo', persona?.correo || PERFIL_LIDER_EJEMPLO.correo);
+  setText('perfilTelefono', persona?.telefono || (!persona && demo ? PERFIL_LIDER_EJEMPLO.telefono : '—'));
+  setText('perfilCorreo', persona?.correo || (!persona && demo ? PERFIL_LIDER_EJEMPLO.correo : '—'));
 
   const datosBancarios = persona?.datosBancarios;
   setText('perfilDatosBancarios', (datosBancarios && (datosBancarios.titular || datosBancarios.banco || datosBancarios.clabe))

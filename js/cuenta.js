@@ -51,7 +51,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 function renderPerfil() {
   const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
   const persona = idActual && typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(idActual) : null;
-  const nombre = persona ? nombreCompletoPersona(persona) : CUENTA_EJEMPLO.nombre;
+  // Los datos de ejemplo (CUENTA_EJEMPLO) solo se usan en modo demo, sin
+  // Firebase. BUG reportado: una cuenta real sin líder asignada veía
+  // "Ana Torres" (la líder de ejemplo) debajo de su nombre.
+  const demo = typeof dbFirestore === 'undefined' || !dbFirestore;
+  const nombre = persona ? nombreCompletoPersona(persona) : (demo ? CUENTA_EJEMPLO.nombre : '');
   const lider = persona?.liderId ? obtenerPersonaPorId(persona.liderId) : null;
 
   const iniciales = typeof obtenerInicialesPerfil === 'function' ? obtenerInicialesPerfil(nombre) : nombre.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
@@ -64,9 +68,13 @@ function renderPerfil() {
   }
 
   setText('perfilNombre', nombre);
-  setText('perfilLider', lider ? `Equipo de ${nombreCompletoPersona(lider)}` : CUENTA_EJEMPLO.lider);
-  setText('perfilTelefono', persona?.telefono || CUENTA_EJEMPLO.telefono);
-  setText('perfilCorreo', persona?.correo || CUENTA_EJEMPLO.correo);
+  let textoLider = '';
+  if (lider) textoLider = `Equipo de ${nombreCompletoPersona(lider)}`;
+  else if (persona && !persona.liderId) textoLider = 'Sin líder asignada';
+  else if (!persona && demo) textoLider = CUENTA_EJEMPLO.lider;
+  setText('perfilLider', textoLider);
+  setText('perfilTelefono', persona?.telefono || (!persona && demo ? CUENTA_EJEMPLO.telefono : '—'));
+  setText('perfilCorreo', persona?.correo || (!persona && demo ? CUENTA_EJEMPLO.correo : '—'));
 }
 
 // Persona real con sesión abierta, con su Plan MW (Rifa/Constancia) al

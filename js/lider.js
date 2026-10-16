@@ -110,8 +110,11 @@ function abrirModalBeneficios() {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); }, { once: true });
 }
 
+// Un rango desconocido o todavía sin calcular (ej. una líder sin compras
+// en el periodo) cuenta como "Sin Rango" — antes daba -1 y la página
+// tronaba al leer RANGOS_MW[-1].label, dejando secciones sin pintar.
 function idxRango(key) {
-  return RANGOS_MW.findIndex(r => r.key === key);
+  return Math.max(0, RANGOS_MW.findIndex(r => r.key === key));
 }
 
 function fmtMoney(n) {
