@@ -43,7 +43,6 @@ let LISTA_DESEOS_HISTORIAL_CACHE = [];
 const _ldEnServidor = new Map();
 const _ldVersionesSuperadas = new Map();
 const _ldRecibidosEnVivo = new Map();
-let _escuchaListaDeseosActiva = false;
 let _ldEnServidorCargado = false;
 
 function _ldMapa(mapa, coleccion, crear) {
@@ -104,14 +103,50 @@ function _ldAplicarEnVivo(coleccion, snap) {
   window.dispatchEvent(new CustomEvent('mw:lista-deseos-actualizada'));
 }
 
-function escucharListaDeseosEnVivo() {
-  if (!dbFirestore || _escuchaListaDeseosActiva) return;
-  _escuchaListaDeseosActiva = true;
-  // Si una escucha falla (sin sesión, o resurtido para Emprendedora/Líder,
-  // que no lo puede leer) la página sigue como antes: con lo que cargó.
-  [LISTA_DESEOS_COLECCION_FIRESTORE, RESURTIDO_COLECCION_FIRESTORE, LISTA_DESEOS_HISTORIAL_COLECCION_FIRESTORE].forEach(coleccion => {
-    dbFirestore.collection(coleccion).onSnapshot(snap => _ldAplicarEnVivo(coleccion, snap), () => {});
+// Revisión de cuota de Firestore: antes cada colección se leía completa
+// con .get() y luego OTRA VEZ al abrir su escucha en vivo (Firestore
+// cobra las dos). Ahora la primera respuesta en vivo es la carga inicial.
+function _ldPrimeraRespuestaEnVivo(coleccion, consulta) {
+  return new Promise((resolve, reject) => {
+    let primera = true;
+    consulta.onSnapshot(snap => {
+      if (primera) { primera = false; resolve(snap); return; }
+      _ldAplicarEnVivo(coleccion, snap);
+    }, error => { if (primera) { primera = false; reject(error); } });
   });
+}
+
+function _ldEsperarSesion() {
+  return new Promise(resolve => {
+    const inicio = Date.now();
+    (function revisar() {
+      const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+      if (sesion || Date.now() - inicio > 15000) return resolve(sesion);
+      setTimeout(revisar, 150);
+    })();
+  });
+}
+
+// En el portal de Emprendedora/Líder solo se cargan SUS solicitudes y el
+// historial que ella misma registró; resurtido nunca (las reglas solo se
+// lo permiten a Staff/Encargado/Admin — antes esa lectura rechazada
+// tumbaba la carga completa de su Lista de deseos). Staff/Encargado/Admin
+// siguen cargando todo. Regresa null para "no cargar esta colección".
+async function _ldConsultaDeEstaPagina(coleccion) {
+  const ref = dbFirestore.collection(coleccion);
+  if (!/\/portal\/(emprendedora|lider)\//.test(window.location.pathname)) return ref;
+  if (coleccion === RESURTIDO_COLECCION_FIRESTORE) return null;
+  const sesion = await _ldEsperarSesion();
+  const personaId = sesion && sesion.tipo === 'persona' ? sesion.personaId : null;
+  if (!personaId) return null;
+  return ref.where(coleccion === LISTA_DESEOS_COLECCION_FIRESTORE ? 'personaId' : 'usuarioId', '==', personaId);
+}
+
+async function _ldCargarColeccion(coleccion) {
+  const consulta = await _ldConsultaDeEstaPagina(coleccion);
+  if (!consulta) return [];
+  const snap = await _ldPrimeraRespuestaEnVivo(coleccion, consulta);
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 // Un arreglo armado antes de que llegara un cambio en vivo: sus copias
@@ -172,19 +207,15 @@ async function cargarListaDeseosRepo() {
     try {
       const metaSnap = await dbFirestore.collection(LISTA_DESEOS_META_COLECCION).doc(LISTA_DESEOS_META_DOC_ID).get();
       if (metaSnap.exists) {
-        const [snapDeseos, snapResurtido, snapHistorial] = await Promise.all([
-          dbFirestore.collection(LISTA_DESEOS_COLECCION_FIRESTORE).get(),
-          dbFirestore.collection(RESURTIDO_COLECCION_FIRESTORE).get(),
-          dbFirestore.collection(LISTA_DESEOS_HISTORIAL_COLECCION_FIRESTORE).get()
+        [LISTA_DESEOS_CACHE, RESURTIDO_CACHE, LISTA_DESEOS_HISTORIAL_CACHE] = await Promise.all([
+          _ldCargarColeccion(LISTA_DESEOS_COLECCION_FIRESTORE),
+          _ldCargarColeccion(RESURTIDO_COLECCION_FIRESTORE),
+          _ldCargarColeccion(LISTA_DESEOS_HISTORIAL_COLECCION_FIRESTORE)
         ]);
-        LISTA_DESEOS_CACHE = snapDeseos.docs.map(d => ({ ...d.data(), id: d.id }));
-        RESURTIDO_CACHE = snapResurtido.docs.map(d => ({ ...d.data(), id: d.id }));
-        LISTA_DESEOS_HISTORIAL_CACHE = snapHistorial.docs.map(d => ({ ...d.data(), id: d.id }));
         _ldRecordarServidor(LISTA_DESEOS_COLECCION_FIRESTORE, LISTA_DESEOS_CACHE);
         _ldRecordarServidor(RESURTIDO_COLECCION_FIRESTORE, RESURTIDO_CACHE);
         _ldRecordarServidor(LISTA_DESEOS_HISTORIAL_COLECCION_FIRESTORE, LISTA_DESEOS_HISTORIAL_CACHE);
         _ldEnServidorCargado = true;
-        escucharListaDeseosEnVivo();
       } else {
         // Primera vez que este proyecto de Firestore ve Lista de deseos:
         // siembra las dos listas de ejemplo de una vez (el historial
@@ -284,19 +315,22 @@ async function sincronizarColeccionListaDeseos(nombreColeccion, lista) {
   if (nombreColeccion === LISTA_DESEOS_COLECCION_FIRESTORE || nombreColeccion === LISTA_DESEOS_HISTORIAL_COLECCION_FIRESTORE) {
     const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
     if (sesion && sesion.tipo === 'persona') {
-      const snapPersona = await coleccion.get();
-      const actuales = new Map(snapPersona.docs.map(d => [d.id, d.data()]));
+      // Se compara contra lo que ya se sabe del servidor (sus propios
+      // documentos, cargados y escuchados en vivo) en vez de volver a leer
+      // la colección completa en cada guardado. Nunca borra.
+      const enServidorPersona = _ldMapa(_ldEnServidor, nombreColeccion, () => new Map());
       const batchPersona = dbFirestore.batch();
-      let hayCambios = false;
+      const escritosPersona = new Map();
       lista.forEach(item => {
-        const anterior = actuales.get(String(item.id));
-        if (!anterior || JSON.stringify(anterior) !== JSON.stringify(item)) {
-          batchPersona.set(coleccion.doc(String(item.id)), item);
-          hayCambios = true;
-        }
+        const id = String(item.id);
+        const texto = textoEstableFirestore(item);
+        if (enServidorPersona.get(id) === texto) return;
+        batchPersona.set(coleccion.doc(id), item);
+        escritosPersona.set(id, texto);
       });
-      if (!hayCambios) return;
+      if (!escritosPersona.size) return;
       await batchPersona.commit();
+      escritosPersona.forEach((texto, id) => enServidorPersona.set(id, texto));
       return;
     }
   }

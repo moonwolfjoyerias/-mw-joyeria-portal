@@ -178,7 +178,7 @@ async function abrirDetalleSolicitudAdmin(id) {
         </div>` : ''}
       </div>
     ` : `
-      <p class="bp-sub">Esta solicitud se registró sin identificación oficial (INE) — las inscripciones públicas ya no la piden.</p>
+      <p class="bp-sub">Esta solicitud se registró sin identificación oficial (INE) — es opcional.</p>
     `}
 
     ${!esPendiente ? construirResolucionHTML(solicitud) : ''}

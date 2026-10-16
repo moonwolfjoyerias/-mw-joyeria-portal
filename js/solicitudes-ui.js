@@ -12,7 +12,7 @@
 // Guarda los ARCHIVOS reales (no su contenido en base64) — se suben a
 // IndexedDB vía js/documentos-modelo.js recién al enviar la solicitud,
 // nunca se guarda su contenido dentro del registro de la solicitud.
-// Solo se pide el frente de la INE.
+// Solo se pide el frente de la INE, y es opcional.
 let ineFrenteArchivoTemporal = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -118,7 +118,7 @@ function abrirModalNuevaSolicitud() {
       <label class="opcion-si-no"><input type="radio" name="solViveEnSLP" value="no"> No</label>
     </div>
 
-    <label for="solIneFrente">Foto de identificación oficial (INE) — frente *</label>
+    <label for="solIneFrente">Foto de identificación oficial (INE) — frente (opcional)</label>
     <input id="solIneFrente" type="file" accept="image/*">
 
     <small class="field-help">Información confidencial: solo el personal Administrativo autorizado podrá verla.</small>
@@ -173,15 +173,13 @@ async function enviarNuevaSolicitud(identidad) {
     return;
   }
 
-  if (!ineFrenteArchivoTemporal) {
-    mostrarErrorSolicitud('Adjunta la foto del frente de la identificación oficial (INE).');
-    if (boton) { boton.disabled = false; boton.textContent = 'Enviar solicitud'; }
-    return;
+  // La INE es opcional: solo se guarda si la adjuntaron.
+  let ineFrenteStoragePath = null;
+  if (ineFrenteArchivoTemporal) {
+    const sufijo = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    ineFrenteStoragePath = `solicitudes-ine/${sufijo}-frente`;
+    await guardarBlobDocumento(ineFrenteStoragePath, ineFrenteArchivoTemporal);
   }
-
-  const sufijo = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-  const ineFrenteStoragePath = `solicitudes-ine/${sufijo}-frente`;
-  await guardarBlobDocumento(ineFrenteStoragePath, ineFrenteArchivoTemporal);
 
   const resultado = await crearSolicitudInscripcion({
     solicitanteId: identidad.id,
@@ -195,7 +193,7 @@ async function enviarNuevaSolicitud(identidad) {
   });
 
   if (!resultado.ok) {
-    await eliminarBlobDocumento(ineFrenteStoragePath);
+    if (ineFrenteStoragePath) await eliminarBlobDocumento(ineFrenteStoragePath);
     mostrarErrorSolicitud(resultado.error);
     if (boton) { boton.disabled = false; boton.textContent = 'Enviar solicitud'; }
     return;

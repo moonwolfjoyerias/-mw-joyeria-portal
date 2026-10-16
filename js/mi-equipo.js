@@ -17,11 +17,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof apartadosRepoListo !== 'undefined') await apartadosRepoListo;
   if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
 
-  // No hay ningún otro "tick" que corra en el portal de Líder (a
-  // diferencia de Admin, donde admin-comun.js ya lo hace al abrir la
-  // campana) — se corre aquí para que la alerta de inactividad esté al
-  // día apenas la líder entra a Mi equipo.
-  if (typeof procesarAlertasInactividadTodas === 'function') procesarAlertasInactividadTodas();
+  // Se calcula aquí para que la alerta de inactividad esté al día apenas
+  // la líder entra a Mi equipo — solo para mostrarla: los avisos los
+  // manda Admin (admin-comun.js), que sí puede guardar la marca de "ya
+  // avisado" (ver procesarAlertasInactividadTodas).
+  if (typeof procesarAlertasInactividadTodas === 'function') procesarAlertasInactividadTodas({ soloMostrar: true });
 
   equipoMesSeleccionado = mesKeyActualComprasModelo();
   renderEquipoMesSelect();

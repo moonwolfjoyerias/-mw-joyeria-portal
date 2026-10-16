@@ -150,7 +150,7 @@ async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, sol
   if (!telefono) return { ok: false, error: 'Escribe su número de celular.' };
   if (!correoValido(correo)) return { ok: false, error: 'Escribe un correo electrónico válido.' };
   if (typeof viveEnSLP !== 'boolean') return { ok: false, error: 'Indica si la persona vive en el municipio de San Luis Potosí o zonas cercanas.' };
-  if (!ineFrenteUrl) return { ok: false, error: 'Adjunta la foto del frente de la identificación oficial (INE).' };
+  // La foto de la INE es opcional (pedido del equipo).
 
   const telefonoNorm = telefono.replace(/\D/g, '');
   const correoNorm = correo.toLowerCase();
@@ -176,7 +176,7 @@ async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, sol
     nombreCompleto,
     telefono,
     correo,
-    ineFrenteUrl,
+    ineFrenteUrl: ineFrenteUrl || null,
     viveEnSLP,
 
     estado: 'pendiente',

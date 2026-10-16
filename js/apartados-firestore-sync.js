@@ -62,7 +62,6 @@ let _creditosEnServidor = {};
 // borra por no traerlas en un arreglo viejo).
 const _versionesSuperadas = new Map();
 const _idsRecibidosEnVivo = new Set();
-let _escuchaApartadosActiva = false;
 
 function _marcarVersionSuperada(id, texto) {
   if (!texto) return;
@@ -126,13 +125,49 @@ function _aplicarCreditosEnVivo(doc) {
   if (huboCambios) _avisarApartadosActualizados();
 }
 
-function escucharApartadosEnVivo() {
-  if (!dbFirestore || _escuchaApartadosActiva) return;
-  _escuchaApartadosActiva = true;
-  // Si la escucha falla (sin sesión, sin red) la página sigue como antes:
-  // con lo que cargó al abrir.
-  dbFirestore.collection(APARTADOS_COLECCION_FIRESTORE).onSnapshot(_aplicarVentanasEnVivo, () => {});
-  dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).onSnapshot(_aplicarCreditosEnVivo, () => {});
+// Revisión de cuota de Firestore: antes se leía la colección completa
+// con .get() y luego OTRA VEZ al abrir la escucha en vivo (Firestore
+// cobra las dos). Ahora la primera respuesta de la escucha en vivo es la
+// carga inicial, y las siguientes se aplican con _aplicar*EnVivo.
+function _primeraRespuestaEnVivo(ref, alCambiar) {
+  return new Promise((resolve, reject) => {
+    let primera = true;
+    ref.onSnapshot(snap => {
+      if (primera) { primera = false; resolve(snap); return; }
+      alCambiar(snap);
+    }, error => {
+      // Si la escucha falla (sin sesión, sin red) antes de responder, la
+      // carga falla igual que antes; si falla después, la página sigue
+      // con lo que ya tenía.
+      if (primera) { primera = false; reject(error); }
+    });
+  });
+}
+
+// La sesión de Firebase se resuelve de forma asíncrona (ver auth-guard.js):
+// en una pestaña nueva tarda un momento en quedar en sessionStorage.
+function _esperarSesionApartados() {
+  return new Promise(resolve => {
+    const inicio = Date.now();
+    (function revisar() {
+      const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+      if (sesion || Date.now() - inicio > 15000) return resolve(sesion);
+      setTimeout(revisar, 150);
+    })();
+  });
+}
+
+// Qué ventanas necesita esta página: una Emprendedora solo usa las suyas
+// (todo su portal filtra por su propio usuarioId), así que no lee las de
+// todas las demás. Líder sigue con todas por ahora (sus cálculos de
+// equipo, rango y comisiones usan las compras de su equipo), igual que
+// Staff/Encargado/Admin.
+async function _consultaVentanasDeEstaPagina() {
+  const coleccion = dbFirestore.collection(APARTADOS_COLECCION_FIRESTORE);
+  if (!/\/portal\/emprendedora\//.test(window.location.pathname)) return coleccion;
+  const sesion = await _esperarSesionApartados();
+  const personaId = sesion && sesion.tipo === 'persona' ? sesion.personaId : null;
+  return personaId ? coleccion.where('usuarioId', '==', personaId) : coleccion;
 }
 
 function _recordarVentanasEnServidor(ventanas) {
@@ -200,14 +235,14 @@ async function cargarApartadosRepo() {
       const metaSnap = await dbFirestore.collection(APARTADOS_META_COLECCION).doc(APARTADOS_META_DOC_ID).get();
 
       if (metaSnap.exists) {
-        const snapVentanas = await dbFirestore.collection(APARTADOS_COLECCION_FIRESTORE).get();
+        const [snapVentanas, docCreditos] = await Promise.all([
+          _primeraRespuestaEnVivo(await _consultaVentanasDeEstaPagina(), _aplicarVentanasEnVivo),
+          _primeraRespuestaEnVivo(dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID), _aplicarCreditosEnVivo)
+        ]);
         APARTADOS_CACHE = snapVentanas.docs.map(d => ({ ...d.data(), id: d.id }));
         _recordarVentanasEnServidor(APARTADOS_CACHE);
-
-        const docCreditos = await dbFirestore.collection(APARTADOS_META_COLECCION).doc(CREDITOS_META_DOC_ID).get();
         CREDITOS_CACHE = docCreditos.exists ? (docCreditos.data() || {}) : {};
         _creditosEnServidor = { ...CREDITOS_CACHE };
-        escucharApartadosEnVivo();
       } else {
         // Primera vez que este proyecto de Firestore ve Apartados: siembra
         // las compras de ejemplo + la prueba de $8,000 + el crédito demo,

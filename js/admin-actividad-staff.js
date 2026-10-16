@@ -906,7 +906,7 @@ function construirHTMLReporteSemanalAct(filas, semanaKey) {
 }
 
 // En vivo: lo que cambie BRILLO MW u otro dispositivo se pinta aquí sin
-// recargar la página. Ver escucharActividadesStaffEnVivo() en
+// recargar la página. Ver _asCargarEnVivo() en
 // actividades-staff-firestore-sync.js.
 window.addEventListener('mw:actividades-staff-actualizadas', () => {
   renderTablaActividadesAdmin();
