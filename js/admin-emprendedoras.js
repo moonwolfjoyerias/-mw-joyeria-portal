@@ -963,7 +963,9 @@ function renderSeccionComprasPersona(persona) {
 
   ventanas.forEach(v => {
     (v.apartados || []).forEach(pieza => {
-      if (pieza.estado === 'liquidada') compras.push({ ventana: v, pieza });
+      // compraLimpiada: Admin limpió el historial de compras de la persona
+      // (ver limpiarHistorialComprasPersona) — ya no es "compra".
+      if (pieza.estado === 'liquidada' && !pieza.compraLimpiada) compras.push({ ventana: v, pieza });
     });
   });
 
@@ -995,7 +997,57 @@ function renderSeccionComprasPersona(persona) {
         <small>${escapeHTMLPersonas([pieza.colorOro, pieza.variante].filter(Boolean).join(' · ') || 'Sin variante')} · Ventana ${escapeHTMLPersonas(ventana.id)} · ${formatearFechaPersonas(pieza.fechaSolicitud || ventana.fechaInicio)}</small>
       </div>
     `).join('')}
+    <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+      <button type="button" class="btn btn-danger" id="limpiarComprasPersonaBtn">Limpiar historial de compras</button>
+    </div>
   `;
+
+  document.getElementById('limpiarComprasPersonaBtn')?.addEventListener('click', () => {
+    abrirAutorizacionAdmin({
+      titulo: 'Limpiar historial de compras',
+      peligrosa: true,
+      mensaje: `Se quitarán las ${compras.length} compra${compras.length === 1 ? '' : 's'} de ${escapeHTMLPersonas(nombreCompletoPersona(persona))} ($${formatearDineroPersonas(totalAcumulado)} MXN). Dejarán de contar para su rango, comisiones, rifa y constancia. Sus apartados no se borran: siguen apareciendo en la pestaña Apartados.`,
+      onConfirmar: () => limpiarHistorialComprasPersona(persona)
+    });
+  });
+
+}
+
+// BUG/pedido: limpiar el historial de compras de una e/l (ej. compras de
+// prueba que ya están en Firebase). No borra las piezas ni las ventanas
+// (son el historial de Apartados y de pagos, y BRILLO también las lee):
+// las marca con compraLimpiada, y tanto esta sección como los cálculos de
+// compras (js/compras-modelo.js → fechaLiquidacionPieza) dejan de
+// tomarlas en cuenta.
+function limpiarHistorialComprasPersona(persona) {
+  const fecha = new Date().toISOString();
+  const por = (typeof ADMIN_IDENTIDAD !== 'undefined' && ADMIN_IDENTIDAD.usuarioNombre) || 'Admin';
+  let piezas = 0;
+  let total = 0;
+  const ventanas = obtenerVentanasApartado().map(v => {
+    if (v.usuarioId !== persona.id) return v;
+    let cambio = false;
+    const apartados = (v.apartados || []).map(pieza => {
+      if (pieza.estado !== 'liquidada' || pieza.compraLimpiada) return pieza;
+      cambio = true;
+      piezas += 1;
+      total += Number(pieza.total || 0);
+      return { ...pieza, compraLimpiada: { fecha, por } };
+    });
+    return cambio ? { ...v, apartados } : v;
+  });
+  if (!piezas) return;
+
+  guardarVentanasApartado(ventanas);
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({
+      modulo: 'personas',
+      accion: 'limpiar_historial_compras',
+      descripcion: `Limpió el historial de compras de ${nombreCompletoPersona(persona)}: ${piezas} compra${piezas === 1 ? '' : 's'} ($${formatearDineroPersonas(total)} MXN).`
+    });
+  }
+  mostrarToastPersonas(`Historial de compras de ${nombreCompletoPersona(persona)} limpiado.`);
+  renderSeccionComprasPersona(persona);
 
 }
 
