@@ -21,8 +21,10 @@
 // Fecha efectiva de una pieza liquidada = fecha del ÚLTIMO pago que la
 // saldó (por si hubo abonos, aunque hoy el apartado se liquida completo
 // de una sola vez).
+// Una pieza con compraLimpiada (Admin limpió el historial de compras de la
+// persona, ver admin-emprendedoras.js) ya no cuenta como compra.
 function fechaLiquidacionPieza(pieza) {
-  if (pieza.estado !== 'liquidada' || !pieza.pagos?.length) return null;
+  if (pieza.estado !== 'liquidada' || pieza.compraLimpiada || !pieza.pagos?.length) return null;
   return pieza.pagos[pieza.pagos.length - 1].fecha || null;
 }
 
