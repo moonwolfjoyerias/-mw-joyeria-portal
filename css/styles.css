@@ -5101,3 +5101,78 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 @media (max-width: 900px) {
   .nom-nav-principal, .nom-nav-datos { flex-direction: row; }
 }
+
+/* ---------- Admin → Compras (Aronium) y Mis compras ---------- */
+.aronium-form { max-width: 640px; }
+.aronium-resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 4px 0 6px;
+}
+.aronium-resumen > div {
+  background: var(--mw-surface-soft);
+  border: 1px solid var(--mw-border);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.aronium-resumen span { font-size: 0.72rem; color: var(--mw-text-muted); }
+.aronium-resumen strong { font-size: 1.05rem; color: var(--mw-heading-e); }
+.aronium-alerta { color: #b4532a !important; }
+.aronium-filtros { flex-wrap: wrap; margin: 12px 0 10px; }
+.aronium-tabla td { font-size: 0.78rem; }
+.aronium-tabla td:nth-child(n+3), .aronium-tabla th:nth-child(n+3) { text-align: right; white-space: nowrap; }
+.aronium-meta { font-size: 0.7rem; color: var(--mw-text-muted); margin-top: 3px; }
+.aronium-persona-input {
+  width: 100%;
+  min-width: 220px;
+  border: 1px solid var(--mw-border);
+  border-radius: 8px;
+  padding: 0.45em 0.6em;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--mw-text);
+  background: var(--surface);
+}
+.aronium-via-pendiente { color: #b4532a; font-weight: 600; }
+.aronium-via-manual, .aronium-via-numero, .aronium-via-codigo, .aronium-via-nombre { color: #1f7a34; }
+.aronium-acciones { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--mw-accent-text);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.btn.btn-sm { padding: 0.35em 0.8em; font-size: 0.75rem; }
+
+.compras-quincenas { display: flex; flex-direction: column; gap: 12px; }
+.compra-quincena {
+  background: var(--surface);
+  border: 1px solid var(--mw-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 1rem 1.2rem;
+}
+.compra-quincena-cabeza { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.compra-quincena-cabeza h3 { font-family: var(--font-heading); color: var(--mw-heading-e); font-size: 1rem; margin: 0; }
+.compra-quincena-monto { font-size: 1.15rem; font-weight: 700; color: var(--mw-accent-text); }
+.compra-quincena-desglose { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 0.8rem; color: var(--mw-text-muted); }
+.compra-quincena-desglose .no-cuenta { opacity: 0.75; }
+.compras-total-anio {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--mw-surface-soft); border: 1px solid var(--mw-border); border-radius: var(--radius);
+  padding: 0.9rem 1.2rem; margin-bottom: 14px;
+}
+.compras-total-anio strong { font-size: 1.25rem; color: var(--mw-heading-e); }
+@media (max-width: 640px) {
+  .aronium-acciones { flex-direction: column-reverse; }
+  .aronium-acciones .btn { width: 100%; }
+}
+.aronium-olvidar { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; font-family: var(--font-body); font-weight: 400; font-size: 0.8rem; text-align: left; color: var(--mw-text); }
+.aronium-olvidar input { margin-top: 3px; flex-shrink: 0; }

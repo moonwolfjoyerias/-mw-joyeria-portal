@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mis compras — Portal MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=44">
+  <link rel="stylesheet" href="../../css/styles.css?v=46">
   <link rel="icon" type="image/png" href="../../assets/images/favicon.png">
   <!-- Fase 2: SDK compat de Firebase — solo se activa si js/firebase-config.js tiene MODO_DEMO=false y credenciales reales; si no, no hace nada. -->
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
@@ -68,7 +68,7 @@
       <header class="portal-header">
         <div>
           <h1>Mis compras</h1>
-          <p class="portal-sub">El historial de tus compras liquidadas.</p>
+          <p class="portal-sub">Tus compras registradas en la tienda (Aronium), por quincena.</p>
         </div>
 
         <div class="portal-header-actions">
@@ -94,13 +94,7 @@
         </div>
       </header>
 
-      <div class="placeholder-en-construccion">
-        <div class="icon-circle-big">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14.7 6.3a4 4 0 00-5.66 5.66L4 17l3 3 5.04-5.04a4 4 0 005.66-5.66l-2.12 2.12-2.82-2.82 2.12-2.12z"/></svg>
-        </div>
-        <h2>Seguimos trabajando</h2>
-        <p>Esta sección todavía está en construcción — muy pronto vas a poder ver aquí el historial de tus compras.</p>
-      </div>
+      <div id="misComprasContenido"><p class="cfg-card-sub">Cargando tus compras…</p></div>
     </main>
   </div>
 
@@ -124,5 +118,9 @@
   <script src="../../js/portal-common.js?v=6"></script>
   <script src="../../js/notificaciones-firestore-sync.js?v=9"></script>
   <script src="../../js/notificaciones-modelo.js?v=10"></script>
+  <script src="../../js/dom-utils.js?v=6"></script>
+  <script src="../../js/aronium-xlsx.js?v=1"></script>
+  <script src="../../js/compras-aronium-firestore-sync.js?v=2"></script>
+  <script src="../../js/mis-compras.js?v=1"></script>
 </body>
 </html>

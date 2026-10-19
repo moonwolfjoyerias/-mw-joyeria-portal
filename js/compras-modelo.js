@@ -1,6 +1,8 @@
 // MW JOYERÍA — Motor de compras reales (Secciones 4, 7 y 8)
 //
-// Deriva "compra" de cada persona a partir de las piezas de apartado ya
+// Deriva "compra" de cada persona de las compras de Aronium por quincena
+// (fuente oficial, ver obtenerComprasLiquidadasPersonaSubPeriodo) y, en
+// las quincenas sin archivo de Aronium, de las piezas de apartado ya
 // LIQUIDADAS (pagadas) — una pieza apartada pero sin pagar todavía NO
 // cuenta para ningún cálculo (decisión de negocio confirmada: nadie
 // gana rango/comisión/constancia/rifa por algo que ni siquiera se pagó).
@@ -63,14 +65,27 @@ function _acumularComprasLiquidadasPersona(personaId, filtroFecha) {
   return { normal, souvenir, total: normal + souvenir };
 }
 
-// Compras liquidadas de UNA persona en UN mes calendario completo.
-function obtenerComprasLiquidadasPersonaMes(personaId, mesKey) {
-  return _acumularComprasLiquidadasPersona(personaId, fecha => mesKeyDeFecha(fecha) === mesKey);
+// ARONIUM = FUENTE OFICIAL (ver js/compras-aronium-firestore-sync.js):
+// en una quincena que ya tiene su archivo de Aronium, la compra de la
+// persona es lo que dice Aronium (Efectivo + Terminal + Transferencia) —
+// las piezas de apartado liquidadas en esa quincena ya vienen incluidas
+// ahí (se cobran en la caja), así que NO se suman aparte. En las
+// quincenas sin archivo se sigue usando lo de siempre: los apartados
+// liquidados. Aronium no distingue souvenir de compra normal: todo cuenta
+// como normal.
+function _montoAroniumQuincena(personaId, mesKey, subPeriodo) {
+  return typeof montoComprasAroniumQuincena === 'function' ? montoComprasAroniumQuincena(personaId, mesKey, subPeriodo) : null;
 }
 
-// Compras liquidadas de UNA persona en UN sub-periodo quincenal del Plan
-// MW (p1 = días 1–15, p2 = 16–fin de mes), dentro de un mes calendario.
+function _quincenaDeFecha(fecha) {
+  return { mesKey: mesKeyDeFecha(fecha), subPeriodo: diaDeFecha(fecha) <= 15 ? 'p1' : 'p2' };
+}
+
+// Compras de UNA persona en UN sub-periodo quincenal del Plan MW (p1 =
+// días 1–15, p2 = 16–fin de mes), dentro de un mes calendario.
 function obtenerComprasLiquidadasPersonaSubPeriodo(personaId, mesKey, subPeriodo) {
+  const aronium = _montoAroniumQuincena(personaId, mesKey, subPeriodo);
+  if (aronium !== null) return { normal: aronium, souvenir: 0, total: aronium, fuente: 'aronium' };
   return _acumularComprasLiquidadasPersona(personaId, fecha => {
     if (mesKeyDeFecha(fecha) !== mesKey) return false;
     const dia = diaDeFecha(fecha);
@@ -78,12 +93,34 @@ function obtenerComprasLiquidadasPersonaSubPeriodo(personaId, mesKey, subPeriodo
   });
 }
 
-// Compras liquidadas de UNA persona desde una fecha ISO hasta hoy —
-// ventana rodante en días (no mes calendario), a diferencia de las dos
-// funciones de arriba. Usada por js/alertas-inactividad-modelo.js para
-// la alerta de "N semanas sin compra mínima" hacia las líderes.
+// Compras de UNA persona en UN mes calendario completo (sus dos quincenas).
+function obtenerComprasLiquidadasPersonaMes(personaId, mesKey) {
+  const p1 = obtenerComprasLiquidadasPersonaSubPeriodo(personaId, mesKey, 'p1');
+  const p2 = obtenerComprasLiquidadasPersonaSubPeriodo(personaId, mesKey, 'p2');
+  return { normal: p1.normal + p2.normal, souvenir: p1.souvenir + p2.souvenir, total: p1.total + p2.total };
+}
+
+// Compras de UNA persona desde una fecha ISO hasta hoy — ventana rodante en
+// días (no mes calendario), a diferencia de las dos funciones de arriba.
+// Usada por js/alertas-inactividad-modelo.js para la alerta de "N semanas
+// sin compra mínima" hacia las líderes. Una quincena con archivo de Aronium
+// que termina en o después de la fecha cuenta completa (Aronium no trae
+// fechas por compra).
 function obtenerComprasLiquidadasPersonaDesde(personaId, fechaDesdeISO) {
-  return _acumularComprasLiquidadasPersona(personaId, fecha => fecha >= fechaDesdeISO);
+  const delApartado = _acumularComprasLiquidadasPersona(personaId, fecha => {
+    if (fecha < fechaDesdeISO) return false;
+    const { mesKey, subPeriodo } = _quincenaDeFecha(fecha);
+    return _montoAroniumQuincena(personaId, mesKey, subPeriodo) === null;
+  });
+  let aronium = 0;
+  const importadas = typeof quincenasAroniumImportadas === 'function' ? quincenasAroniumImportadas() : [];
+  importadas.forEach(clave => {
+    const [anio, mes, sub] = clave.split('-');
+    const mesKey = `${anio}-${mes}`;
+    const { hasta } = typeof rangoFechasQuincenaAronium === 'function' ? rangoFechasQuincenaAronium(mesKey, sub) : { hasta: '' };
+    if (hasta >= String(fechaDesdeISO).slice(0, 10)) aronium += _montoAroniumQuincena(personaId, mesKey, sub) || 0;
+  });
+  return { normal: delApartado.normal + aronium, souvenir: delApartado.souvenir, total: delApartado.total + aronium };
 }
 
 // Producción grupal de TODO el equipo (toda la descendencia, no solo
