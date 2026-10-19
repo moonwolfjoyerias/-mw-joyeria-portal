@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('aroniumArchivo')?.addEventListener('change', (e) => leerArchivoAronium(e.target.files?.[0]));
   renderHistorialAronium();
+  iniciarHistorialPersonaAronium();
 });
 
 function fmtMoneyAronium(n) {
@@ -404,4 +405,95 @@ function renderHistorialAronium() {
       }
     });
   }));
+}
+
+// ============================================================
+// HISTORIAL DE UNA PERSONA — ver y limpiar
+// ============================================================
+
+let personaHistorialAroniumId = null;
+
+function iniciarHistorialPersonaAronium() {
+  const input = document.getElementById('aroniumBuscarPersona');
+  const lista = document.getElementById('aroniumBuscarPersonaLista');
+  if (!input || !lista) return;
+  const personas = personasLigablesAronium().sort((a, b) => nombreCompletoPersona(a).localeCompare(nombreCompletoPersona(b), 'es'));
+  lista.innerHTML = personas.map(p => `<option value="${escapeAttribute(etiquetaPersonaAronium(p))}"></option>`).join('');
+  input.addEventListener('change', () => {
+    const persona = personas.find(p => etiquetaPersonaAronium(p) === input.value.trim());
+    const id = persona ? persona.id : null;
+    // Al salir del buscador (ej. clic en "Limpiar historial") el navegador
+    // vuelve a disparar "change": si la persona no cambió, no se vuelve a
+    // pintar — si no, el botón se reemplazaba y el clic se perdía.
+    if (id === personaHistorialAroniumId) return;
+    personaHistorialAroniumId = id;
+    renderHistorialPersonaAronium();
+  });
+}
+
+function renderHistorialPersonaAronium() {
+  const wrap = document.getElementById('aroniumHistorialPersona');
+  if (!wrap) return;
+  const persona = personaHistorialAroniumId ? obtenerPersonaPorId(personaHistorialAroniumId) : null;
+  if (!persona) { wrap.innerHTML = ''; return; }
+
+  const claves = quincenasAroniumImportadas().reverse()
+    .filter(clave => (COMPRAS_ARONIUM_QUINCENAS[clave]?.montos || {})[persona.id] !== undefined);
+  const total = claves.reduce((s, clave) => s + Number(COMPRAS_ARONIUM_QUINCENAS[clave].montos[persona.id] || 0), 0);
+  const ligas = [...(persona.aroniumClienteIds || []).map(id => `cliente ${id}`), ...(persona.codigosAronium || [])];
+
+  wrap.innerHTML = `
+    <p class="aronium-meta" style="margin:0 0 8px;">${ligas.length ? `Se liga en Aronium como: ${escapeHTML(ligas.join(' · '))}` : 'Todavía no está ligada a ningún cliente de Aronium.'}</p>
+    ${claves.length ? `
+      <div class="catalog-table-wrap">
+        <table class="catalog-table">
+          <thead><tr><th>Quincena</th><th style="text-align:right;">Cuenta como compra</th></tr></thead>
+          <tbody>
+            ${claves.map(clave => `<tr><td>${etiquetaQuincenaAronium(clave)}</td><td style="text-align:right;">${fmtMoneyAronium(COMPRAS_ARONIUM_QUINCENAS[clave].montos[persona.id])}</td></tr>`).join('')}
+            <tr><td><strong>Total</strong></td><td style="text-align:right;"><strong>${fmtMoneyAronium(total)}</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="aronium-acciones">
+        <button type="button" class="btn btn-danger" id="aroniumLimpiarPersonaBtn">Limpiar historial de compras</button>
+      </div>` : '<p class="cfg-card-sub" style="margin:0;">No tiene compras de Aronium registradas.</p>'}
+  `;
+  document.getElementById('aroniumLimpiarPersonaBtn')?.addEventListener('click', () => confirmarLimpiarHistorialPersonaAronium(persona, claves, total));
+}
+
+function confirmarLimpiarHistorialPersonaAronium(persona, claves, total) {
+  const nombre = nombreCompletoPersona(persona);
+  const tieneLiga = (persona.aroniumClienteIds || []).length || (persona.codigosAronium || []).length;
+  abrirAutorizacionAdmin({
+    titulo: 'Limpiar historial de compras',
+    peligrosa: true,
+    mensaje: `Se borrarán las compras de Aronium de <strong>${escapeHTML(nombre)}</strong> en ${claves.length} quincena${claves.length === 1 ? '' : 's'} (${fmtMoneyAronium(total)}). Dejarán de contar para su rango, comisiones, rifa y constancia, y ya no las verá en Mis compras. No se puede deshacer, salvo volviendo a subir esas quincenas.`
+      + (tieneLiga ? `<label class="aronium-olvidar"><input type="checkbox" id="aroniumOlvidarLiga"> También olvidar con qué cliente de Aronium se liga (si las compras eran de otra persona; la próxima vez habrá que ligarla a mano).</label>` : ''),
+    onConfirmar: () => limpiarHistorialPersonaAronium(persona, document.getElementById('aroniumOlvidarLiga')?.checked)
+  });
+}
+
+async function limpiarHistorialPersonaAronium(persona, olvidarLiga) {
+  const nombre = nombreCompletoPersona(persona);
+  try {
+    const claves = await limpiarHistorialComprasAroniumPersona(persona.id);
+    if (olvidarLiga) {
+      const personas = obtenerPersonas();
+      const p = personas.find(x => x.id === persona.id);
+      if (p) { p.aroniumClienteIds = []; p.codigosAronium = []; guardarPersonas(personas); }
+    }
+    if (typeof registrarAuditoriaAdmin === 'function') {
+      registrarAuditoriaAdmin({
+        modulo: 'compras',
+        accion: 'limpiar_historial_compras',
+        descripcion: `Limpió el historial de compras de Aronium de ${nombre} (${claves.length} quincena${claves.length === 1 ? '' : 's'}${claves.length ? ': ' + claves.map(etiquetaQuincenaAronium).join(', ') : ''})${olvidarLiga ? ' y olvidó su liga con Aronium' : ''}.`
+      });
+    }
+    mostrarToast(`Historial de compras de ${nombre} limpiado.`);
+  } catch (error) {
+    console.error('No se pudo limpiar el historial de compras:', error);
+    mostrarToast('No se pudo limpiar el historial. Inténtalo de nuevo.');
+  }
+  renderHistorialPersonaAronium();
+  renderHistorialAronium();
 }

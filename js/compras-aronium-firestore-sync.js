@@ -229,6 +229,55 @@ async function eliminarImportacionAronium(clave) {
   COMPRAS_ARONIUM_IMPORTADAS.delete(clave);
 }
 
+// Borra TODO el historial de compras de Aronium de UNA persona: su monto
+// en cada quincena (deja de contar para rango/comisiones/rifa/constancia)
+// y su desglose de Mis compras. Las quincenas en sí se conservan para las
+// demás. Regresa las quincenas de las que se quitó.
+// Resumen de la quincena (e/l ligadas y monto que cuenta) sin esta persona.
+function _resumenSinPersona(clave, personaId) {
+  const montos = { ...(COMPRAS_ARONIUM_QUINCENAS[clave]?.montos || {}) };
+  delete montos[personaId];
+  return {
+    ligados: Object.keys(montos).length,
+    totalCuentaLigado: Math.round(Object.values(montos).reduce((s, v) => s + Number(v || 0), 0) * 100) / 100
+  };
+}
+
+async function limpiarHistorialComprasAroniumPersona(personaId) {
+  personaId = String(personaId);
+  const claves = Object.keys(COMPRAS_ARONIUM_QUINCENAS)
+    .filter(clave => COMPRAS_ARONIUM_QUINCENAS[clave]?.montos && personaId in COMPRAS_ARONIUM_QUINCENAS[clave].montos);
+
+  if (!dbFirestore) {
+    const demo = _comprasAroniumDemo();
+    claves.forEach(clave => {
+      if (!demo.quincenas[clave]?.montos) return;
+      demo.quincenas[clave].resumen = { ...(demo.quincenas[clave].resumen || {}), ..._resumenSinPersona(clave, personaId) };
+      delete demo.quincenas[clave].montos[personaId];
+    });
+    delete demo.personas[personaId];
+    localStorage.setItem(COMPRAS_ARONIUM_STORAGE_KEY, JSON.stringify(demo));
+  } else {
+    const fv = firebase.firestore.FieldValue;
+    const lote = dbFirestore.batch();
+    claves.forEach(clave => {
+      lote.set(dbFirestore.collection(COMPRAS_ARONIUM_COLECCION).doc(clave), {
+        montos: { [personaId]: fv.delete() },
+        resumen: _resumenSinPersona(clave, personaId)
+      }, { merge: true });
+    });
+    lote.delete(dbFirestore.collection(COMPRAS_ARONIUM_PERSONA_COLECCION).doc(personaId));
+    await lote.commit();
+  }
+
+  claves.forEach(clave => {
+    const q = COMPRAS_ARONIUM_QUINCENAS[clave];
+    q.resumen = { ...(q.resumen || {}), ..._resumenSinPersona(clave, personaId) };
+    delete q.montos[personaId];
+  });
+  return claves;
+}
+
 // Recuerda (o deja de recordar) clientes de Aronium como "no es e/l".
 async function guardarIgnoradosAronium(agregar, quitar) {
   agregar = (agregar || []).map(String);

@@ -9,6 +9,7 @@ const MODULOS_ACTIVIDAD = {
   lista_deseos: 'Lista de deseos',
   personas: 'Personas',
   comisiones: 'Comisiones',
+  compras: 'Compras (Aronium)',
   solicitudes: 'Solicitudes',
   configuracion: 'Configuración'
 };
