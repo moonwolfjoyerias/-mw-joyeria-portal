@@ -487,6 +487,24 @@ service cloud.firestore {
     // Solo el personal interno (Staff, Encargado, Administrativo) las lee y
     // escribe. Las reglas finas de cada colección (quién cancela una venta,
     // qué registros no se pueden borrar) se agregan con cada módulo.
+    // Compras de Aronium (ver js/compras-aronium-firestore-sync.js). Solo
+    // Admin las carga. El monto por quincena lo leen las cuentas con sesión
+    // (las Líderes calculan rango/comisiones de su equipo con él — mismo
+    // criterio que ventanasApartado/personas); el desglose por forma de
+    // pago de cada persona, solo ella y el equipo interno.
+    match /comprasAronium/{id} {
+      allow read: if estaAutenticado();
+      allow write: if esAdmin();
+    }
+    match /comprasAroniumMeta/{id} {
+      allow read: if estaAutenticado();
+      allow write: if esAdmin();
+    }
+    match /comprasAroniumPersona/{id} {
+      allow read: if esInterno() || (estaAutenticado() && miPerfil().personaId == id);
+      allow write: if esAdmin();
+    }
+
     match /{coleccion}/{id} {
       allow read, write: if coleccion.matches('brillo[A-Z].*') && esInterno();
     }

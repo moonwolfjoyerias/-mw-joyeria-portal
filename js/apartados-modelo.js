@@ -797,4 +797,11 @@ function verificarApartadosPorVencerPendientes() {
 // archivo. Cada página que use datos de apartados debe esperar esto
 // una vez antes de su primer render — igual que ya hace
 // catalogoRepoListo para Catálogo.
-const apartadosRepoListo = cargarApartadosRepo();
+// Las páginas que calculan compras (rango, comisiones, rifa…) esperan
+// esta promesa antes de calcular — también espera a las compras de
+// Aronium cuando la página las carga (compras-aronium-firestore-sync.js),
+// para no calcular con los apartados una quincena que ya tiene archivo.
+const apartadosRepoListo = Promise.all([
+  cargarApartadosRepo(),
+  typeof comprasAroniumListo !== 'undefined' ? comprasAroniumListo : null
+]).then(([ventanas]) => ventanas);
