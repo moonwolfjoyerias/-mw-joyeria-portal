@@ -5176,3 +5176,230 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
 }
 .aronium-olvidar { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; font-family: var(--font-body); font-weight: 400; font-size: 0.8rem; text-align: left; color: var(--mw-text); }
 .aronium-olvidar input { margin-top: 3px; flex-shrink: 0; }
+
+/* =========================================================
+   MW JOYERÍA — AJUSTES PARA CELULAR (revisión móvil)
+   Va al final a propósito: sobreescribe reglas anteriores solo en
+   pantallas angostas; el escritorio se ve igual que antes.
+   ========================================================= */
+
+/* ---------- Formularios en cuadrícula ----------
+   Un elemento de grid no se encoge por debajo de su contenido: en
+   Compras (Aronium) el <select> de quincena y el campo de archivo
+   empujaban la tarjeta fuera de la pantalla en celular. */
+.cfg-form-grid > * { min-width: 0; }
+.cfg-form-grid input,
+.cfg-form-grid select,
+.cfg-form-grid textarea { max-width: 100%; min-width: 0; }
+
+@media (max-width: 720px) {
+  /* ---------- Barra superior del sitio público ----------
+     Fija arriba para tener el menú a mano en páginas largas
+     (el catálogo mide varias pantallas). */
+  .topbar { position: sticky; top: 0; z-index: 60; padding: 0.7rem 1rem; }
+  .topbar .logo img { height: 30px; }
+  /* El botón "Iniciar sesión" trae margin-left en línea (style="") */
+  .topbar nav a { margin-left: 0 !important; }
+  #publicNav.open {
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+    gap: 0.25rem;
+    padding: 0.4rem 0 0.6rem;
+  }
+  #publicNav.open a:not(.btn) {
+    display: block;
+    width: 100%;
+    padding: 0.55rem 0.2rem;
+    font-size: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  #publicNav.open a.btn { align-self: stretch; text-align: center; margin-top: 0.6rem; padding: 0.7em 1.1em !important; }
+
+  /* ---------- Pie de página ----------
+     Los enlaces del pie repiten el menú de arriba: se ocultan en
+     celular y el pie queda más compacto. */
+  .site-footer { padding: 2rem 1.25rem 0; }
+  .footer-grid { gap: 1.2rem; padding-bottom: 1.5rem; }
+  .footer-nav { display: none; }
+  .footer-logo img { height: 38px; }
+  .footer-social a { width: 40px; height: 40px; }
+
+  /* ---------- Barra lateral del portal ----------
+     Antes ocupaba ~145 px de franja morada casi vacía (logo con
+     margin-bottom de escritorio). Ahora es una barra delgada fija
+     arriba, y el menú abierto se desplaza por dentro si no cabe. */
+  .sidebar { position: sticky; top: 0; z-index: 60; padding: 0.6rem 1rem; }
+  .sidebar .brand-link { margin-bottom: 0; padding: 0; background: none; }
+  .sidebar .brand-link > span { line-height: 1.15; }
+  .sidebar .brand-link .logo-main { line-height: 1.15; }
+  .sidebar .brand-link img { height: 28px; }
+  .sidebar-toggle { top: 0.55rem; right: 1rem; }
+  .sidebar.sidebar-abierta nav {
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+    padding-bottom: 0.4rem;
+  }
+  .sidebar nav a { padding: 0.7em 0.8em; }
+  .main-content { padding: 1.25rem 1rem 2rem; }
+  .portal-header { margin-bottom: 1.2rem; }
+  .portal-header h1 { font-size: 1.6rem; }
+
+  /* ---------- Tablas del portal como tarjetas ----------
+     js/portal-common.js (initTablasMovil) agrega .tabla-tarjetas y el
+     data-label de cada celda. Cada fila se vuelve una tarjeta con
+     "Etiqueta  valor" por renglón: ya no hay columnas escondidas a la
+     derecha que obliguen a desplazarse de lado. */
+  .catalog-table-wrap:has(> table.tabla-tarjetas),
+  .table-wrap:has(> table.tabla-tarjetas) { overflow-x: visible; }
+  table.tabla-tarjetas,
+  table.tabla-tarjetas tbody { display: block; width: 100%; }
+  table.tabla-tarjetas thead { display: none; }
+  table.tabla-tarjetas tr {
+    display: block;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--mw-border);
+  }
+  table.tabla-tarjetas tbody tr:last-child { border-bottom: 0; }
+  table.tabla-tarjetas td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.6rem;
+    padding: 0.32rem 0;
+    border-bottom: 0;
+    text-align: right;
+    font-size: 0.82rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  table.tabla-tarjetas td::before {
+    content: attr(data-label);
+    flex: 0 0 36%;
+    margin-right: auto;
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--mw-text-muted);
+    padding-top: 0.12em;
+    overflow-wrap: normal;
+  }
+  table.tabla-tarjetas td[data-label=""]::before,
+  table.tabla-tarjetas td:empty { display: none; }
+  table.tabla-tarjetas td[data-label=""] { justify-content: flex-end; padding-top: 0.6rem; }
+  table.tabla-tarjetas td > * { min-width: 0; }
+  /* La primera celda (nombre, producto, evento…) es el título de la tarjeta. */
+  table.tabla-tarjetas td:first-child:not(.celda-completa) {
+    display: block;
+    text-align: left;
+    font-size: 0.9rem;
+    padding-bottom: 0.45rem;
+    margin-bottom: 0.2rem;
+    border-bottom: 1px dashed var(--mw-border);
+  }
+  table.tabla-tarjetas td:first-child:not(.celda-completa)::before { display: none; }
+  table.tabla-tarjetas td.celda-completa { display: block; text-align: left; padding: 0.2rem 0; }
+  table.tabla-tarjetas td.celda-completa::before { display: none; }
+  /* Última celda con botones (Acciones): sin etiqueta, a todo lo ancho
+     y con los botones en renglón en vez de apilados. */
+  table.tabla-tarjetas td:last-child:has(button, .btn) { padding-top: 0.6rem; }
+  table.tabla-tarjetas td:last-child:has(button, .btn)::before { display: none; }
+  table.tabla-tarjetas .catalog-actions { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; width: 100%; }
+  table.tabla-tarjetas .catalog-description { max-width: none; }
+  table.tabla-tarjetas .catalog-product-cell { min-width: 0; text-align: left; }
+  table.tabla-tarjetas .catalog-product-id { font-size: 0.75rem; }
+}
+
+/* ---------- Inicio (hero) ---------- */
+@media (max-width: 560px) {
+  .hero { padding: 1.8rem 1.25rem 2.2rem; gap: 2rem; }
+  .hero h1 { font-size: 2.6rem; margin-bottom: 1rem; }
+  .hero-subtitulo { font-size: 1.05rem; }
+  .hero .lede { font-size: 0.98rem; margin-bottom: 1.5rem; }
+  .hero-actions { flex-direction: column; margin-bottom: 2rem; }
+  .hero-actions .btn { width: 100%; text-align: center; }
+  /* 2×2 con el texto a un lado del ícono: antes, a 4 columnas, cada
+     etiqueta se partía en 3 renglones ("Calidad / que / perdura"). */
+  .trust-badges { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 0.8rem; }
+  .trust-badges .item { display: flex; align-items: center; gap: 0.55rem; text-align: left; }
+  .trust-badges svg { width: 26px; height: 26px; flex-shrink: 0; }
+  .trust-badges span { margin-top: 0; }
+}
+
+/* ---------- Espacios de foto sin foto real ----------
+   Mientras no se suba una foto desde Configuración → Fotografías del
+   sitio, esos espacios muestran solo el logo MW deslavado. En
+   escritorio acompañan al texto, pero en celular cada uno ocupaba una
+   pantalla entera de relleno (Colecciones, Nosotros). Ahí se ocultan;
+   en cuanto haya una foto real vuelven a aparecer solos. */
+@media (max-width: 860px) {
+  .page-hero-visual:not(:has(.foto-real)) { display: none; }
+  .photo-placeholder.foto-sitio-predeterminada { display: none; }
+  .page-hero { padding: 1.6rem 1.25rem 1.2rem; gap: 1.5rem; }
+}
+
+/* ---------- Colecciones ---------- */
+@media (max-width: 560px) {
+  .collection-block { padding: 1rem 1.25rem 2rem; }
+  .collection-header h2 { font-size: 1.3rem; }
+  .product-grid { gap: 0.8rem; }
+  /* Colecciones vacías ("Próximamente…"): en celular solo alargan la página. */
+  .collection-block:has(.product-grid > p.text-muted:only-child) { display: none; }
+}
+
+/* ---------- Catálogo con filtros (público, Emprendedora, Líder) ----------
+   js/filtros-movil.js vuelve el título "Filtros" un botón; aquí el
+   panel arranca cerrado en celular y las opciones van a 2 columnas. */
+@media (max-width: 900px) {
+  .filter-panel { padding: 0.85rem 1rem; }
+  .filter-panel-header { margin-bottom: 0; }
+  .filter-panel-header h3[role="button"] {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.3rem 0;
+    flex: 1;
+  }
+  .filter-panel-header h3[role="button"]::after {
+    content: '';
+    width: 0.45em;
+    height: 0.45em;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg) translateY(-2px);
+    transition: transform 0.15s ease;
+    margin-left: 0.2rem;
+  }
+  .filter-panel.filtros-abiertos .filter-panel-header h3[role="button"]::after { transform: rotate(-135deg) translateY(-2px); }
+  .filtros-activos:empty { display: none; }
+  .filtros-activos {
+    order: 2;
+    min-width: 1.4em;
+    height: 1.4em;
+    padding: 0 0.4em;
+    border-radius: 999px;
+    background: var(--mw-purple);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .filter-panel-header h3[role="button"]::after { order: 3; }
+  .filter-panel:not(.filtros-abiertos) .filter-group { display: none; }
+  .filter-panel.filtros-abiertos .filter-panel-header { margin-bottom: 0.9rem; }
+  .filter-group > div:has(> .filter-option) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 0.8rem;
+  }
+  .catalog-layout { gap: 1rem; }
+}
+@media (max-width: 560px) {
+  .catalog-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+  .catalog-product-card .cp-body { padding: 0.65rem 0.7rem 0.8rem; }
+  .catalog-product-card h4 { font-size: 0.82rem; }
+}
+

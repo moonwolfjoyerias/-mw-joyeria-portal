@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initEventsScroll();
   initResumenDatePill();
   initSidebarMovil();
+  initTablasMovil();
 });
 
 // ---------- UI-01 de la auditoría: menú lateral colapsable en móvil ----------
@@ -49,6 +50,72 @@ function initSidebarMovil() {
   // debe quedar "abierta" heredada en un ancho donde ya no aplica.
   window.addEventListener('resize', () => {
     if (window.innerWidth > 720) sidebar.classList.remove('sidebar-abierta');
+  });
+}
+
+// ---------- Tablas como tarjetas en celular ----------
+// En una pantalla angosta las tablas del portal (Catálogo con 11
+// columnas, Calendario, Solicitudes, Actividad staff…) obligaban a
+// desplazarse de lado y solo se veían las primeras 1-2 columnas. Aquí se
+// copia el encabezado de cada columna a data-label en cada celda, para
+// que css/styles.css (table.tabla-tarjetas) pinte cada fila como una
+// tarjeta "Etiqueta: valor" en celular; en escritorio se ve igual que
+// antes. Las tablas se repintan desde JS (filtros, Firestore en vivo),
+// por eso se vuelven a revisar cada vez que cambia el DOM (o cuando una
+// pestaña oculta se muestra). Solo se convierten las tablas que NO caben
+// a lo ancho (las que ya caben, como las de Comisiones, se quedan como
+// tabla); para excluir una a propósito, agrégale la clase "sin-tarjetas".
+const ANCHO_MAX_TABLAS_TARJETA = 720;
+
+function initTablasMovil() {
+  let pendiente = false;
+  const etiquetarTodas = () => {
+    pendiente = false;
+    if (window.innerWidth > ANCHO_MAX_TABLAS_TARJETA) return;
+    document.querySelectorAll('.main-content table:not(.sin-tarjetas):not(.tabla-tarjetas)').forEach(etiquetarTablaMovil);
+    document.querySelectorAll('.main-content table.tabla-tarjetas').forEach(etiquetarFilasTablaMovil);
+  };
+  const programar = () => {
+    if (pendiente) return;
+    pendiente = true;
+    requestAnimationFrame(etiquetarTodas);
+  };
+  etiquetarTodas();
+  new MutationObserver(programar).observe(document.body, {
+    childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'],
+  });
+  window.addEventListener('resize', programar);
+}
+
+function etiquetarTablaMovil(tabla) {
+  const contenedor = tabla.parentElement;
+  // Oculta (pestaña no activa) → ancho 0; se revisa otra vez cuando se muestre.
+  if (!contenedor || !tabla.offsetWidth) return;
+  // scrollWidth del contenedor: en tablas de ancho fijo (Apartados) la
+  // tabla mide lo mismo que su contenedor y lo que se sale son las celdas.
+  const anchoContenido = Math.max(tabla.offsetWidth, contenedor.scrollWidth);
+  if (anchoContenido <= contenedor.clientWidth + 2) return;
+  tabla.classList.add('tabla-tarjetas');
+  etiquetarFilasTablaMovil(tabla);
+}
+
+function etiquetarFilasTablaMovil(tabla) {
+  const encabezados = [...tabla.querySelectorAll('thead th')].map(th => th.textContent.trim());
+
+  tabla.querySelectorAll('tbody tr').forEach((tr) => {
+    const celdas = [...tr.children];
+    // Fila de agrupación o de "sin resultados" (una sola celda con colspan).
+    // (Se revisa antes de agregar la clase: classList.add dispara el
+    // MutationObserver aunque la clase ya exista → ciclo sin fin.)
+    if (celdas.length === 1) {
+      if (!celdas[0].classList.contains('celda-completa')) celdas[0].classList.add('celda-completa');
+      return;
+    }
+    let columna = 0;
+    celdas.forEach((td) => {
+      if (!td.hasAttribute('data-label')) td.setAttribute('data-label', encabezados[columna] || '');
+      columna += Number(td.getAttribute('colspan')) || 1;
+    });
   });
 }
 
