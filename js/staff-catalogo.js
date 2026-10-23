@@ -1051,7 +1051,8 @@ function obtenerDatosProducto(idEditando) {
     descuento,
     disponible: variantes.some(v => v.stock > 0),
     galeria: galeriaTemporal,
-    imagen: galeriaTemporal[0]?.src || ''
+    imagen: galeriaTemporal[0]?.src || '',
+    fotosEditadas: true // la galería viene de este formulario: se guarda en productosFotos (ver catalogo-firestore-sync.js)
 
   };
 
@@ -1485,7 +1486,8 @@ function ejecutarAccion(accion, empleado) {
 
     cerrarModal();
 
-    abrirModalProducto(producto);
+    // Las fotos ya no vienen con el catálogo: se descargan al editar.
+    prepararFotosProducto(producto).then(() => abrirModalProducto(producto), () => {});
 
     return;
 

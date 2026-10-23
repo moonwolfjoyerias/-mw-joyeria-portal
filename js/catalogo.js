@@ -276,7 +276,7 @@ function abrirModalDetalleProducto(productoId) {
     <button class="modal-close" data-close>&times;</button>
     <div class="detalle-producto-layout">
       <div class="detalle-producto-foto">
-        <img id="detalleProductoImg" src="${seleccionUnica ? fotoVarianteProducto(producto, seleccionUnica) : normalizarImagenProducto(producto)}" alt="${escapeAttribute(producto.nombre)}" class="${fotoGenerica ? 'foto-generica' : ''}">
+        <img id="detalleProductoImg" src="${seleccionUnica ? fotoVarianteProducto(producto, seleccionUnica) : normalizarImagenProducto(producto, true)}" alt="${escapeAttribute(producto.nombre)}" class="${fotoGenerica ? 'foto-generica' : ''}">
       </div>
       <div class="detalle-producto-info">
         <h3>${escapeHTMLCatalogoVariantes(producto.nombre)}</h3>
@@ -309,7 +309,7 @@ function abrirModalDetalleProducto(productoId) {
 
   select?.addEventListener('change', () => {
     const variante = buscarVariante(producto, select.value);
-    if (img) img.src = variante ? fotoVarianteProducto(producto, variante) : normalizarImagenProducto(producto);
+    if (img) img.src = variante ? fotoVarianteProducto(producto, variante) : normalizarImagenProducto(producto, true);
     if (apartarBtn) apartarBtn.disabled = !select.value;
   });
 
@@ -468,9 +468,9 @@ function mostrarPasoPedirDeposito() {
 // La tarjeta de producto nunca mostraba la foto real que sube Staff/
 // Admin — siempre el logo MW fijo. Mismo respaldo que ya usa
 // admin/encargado/staff-catalogo.js.
-function normalizarImagenProducto(producto) {
+function normalizarImagenProducto(producto, completa = false) {
 
-  const imagen = fotoPrincipalProducto(producto);
+  const imagen = fotoPrincipalProducto(producto, completa);
 
   if (!imagen) return '../../assets/images/isotipo-morado.png';
 

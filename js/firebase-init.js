@@ -32,7 +32,8 @@ let storageFirebase = null;
 if (typeof firebaseConfigListo === 'function' && firebaseConfigListo() && typeof firebase !== 'undefined') {
   firebase.initializeApp(FIREBASE_CONFIG);
   dbFirestore = firebase.firestore();
-  authFirebase = firebase.auth();
+  // Las páginas públicas no cargan el SDK de Auth (no hay inicio de sesión ahí).
+  authFirebase = typeof firebase.auth === 'function' ? firebase.auth() : null;
   try {
     // Storage es opcional: si el proyecto no lo tiene habilitado (requiere
     // plan Blaze), esto no debe tumbar Auth/Firestore en el resto del portal.
