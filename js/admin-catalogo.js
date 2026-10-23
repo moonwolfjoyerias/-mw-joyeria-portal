@@ -135,7 +135,11 @@ function renderCatalogo() {
   wirearZoomFotos(grid);
 
   grid.querySelectorAll('[data-editar]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalProducto(catalogoAdmin.find(p => p.id === btn.dataset.editar)));
+    btn.addEventListener('click', () => {
+      // Las fotos ya no vienen con el catálogo: se descargan al editar.
+      const producto = catalogoAdmin.find(p => p.id === btn.dataset.editar);
+      prepararFotosProducto(producto).then(() => abrirModalProducto(producto), () => {});
+    });
   });
 
   grid.querySelectorAll('[data-eliminar]').forEach(btn => {
@@ -614,7 +618,8 @@ function obtenerDatosProducto(idEditando) {
     variantes, precioEtiqueta, descuento,
     disponible: variantes.some(v => v.stock > 0),
     galeria: galeriaTemporalAdmin,
-    imagen: galeriaTemporalAdmin[0]?.src || ''
+    imagen: galeriaTemporalAdmin[0]?.src || '',
+    fotosEditadas: true // la galería viene de este formulario: se guarda en productosFotos (ver catalogo-firestore-sync.js)
   };
 
 }

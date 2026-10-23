@@ -72,9 +72,12 @@ function migrarProductoAVariantes(producto) {
     ? producto.colorOro
     : (variantesOriginales[0]?.colorOro || '');
 
-  const galeria = Array.isArray(producto.galeria)
-    ? producto.galeria
-    : (producto.imagen ? [{ id: 'foto-legado', src: producto.imagen }] : []);
+  // Sin fotos dentro del documento, usa la galería ya descargada de
+  // productosFotos (ver "FOTOS DE PRODUCTO" abajo), si la hay.
+  const embebidas = fotosEmbebidasProducto(producto);
+  const galeria = embebidas.length
+    ? embebidas
+    : (_galeriasProducto.get(String(producto.id)) || (Array.isArray(producto.galeria) ? producto.galeria : []));
 
   const variantes = variantesOriginales.map(v => ({
     ...v,
@@ -89,22 +92,218 @@ function etiquetaVariante(variante) {
   return [variante.color, variante.talla].filter(Boolean).join(' · ') || 'Única';
 }
 
-// Primera foto de la galería (ya migrada) del producto, o '' si no tiene ninguna.
-function fotoPrincipalProducto(producto) {
-  const p = migrarProductoAVariantes(producto);
-  return p.galeria[0]?.src || '';
+// ============================================================
+// FOTOS DE PRODUCTO — carga bajo demanda
+// ============================================================
+//
+// Cuota de Firestore (la página se quedaba en blanco con "Quota
+// exceeded"): las fotos iban dentro de cada documento de `productos`
+// (125–550 KB por producto), así que abrir un catálogo descargaba TODAS
+// las fotos de TODOS los productos. Ahora viven aparte (ver
+// js/catalogo-firestore-sync.js):
+//   productosFotos/{id}      → { galeria: [{id, src}] } (tamaño completo)
+//   productosMiniaturas/{id} → { src } (foto principal chica, ~20 KB)
+// y el producto solo guarda `fotosIds` (los ids de su galería; [] = sin
+// fotos).
+//
+// fotoPrincipalProducto()/fotoVarianteProducto() siguen siendo
+// síncronas para no tocar cada pantalla: si la foto todavía no se ha
+// descargado regresan una "foto pendiente" (un pixel transparente con el
+// id del producto después del #). Un observador de la página detecta
+// esas <img>, descarga la foto solo cuando la imagen se ve en pantalla y
+// la reemplaza. Las fotos que todavía vengan dentro del producto
+// (modo demo, productos aún sin optimizar, o guardados desde BRILLO) se
+// usan tal cual, sin descargar nada.
+
+const FOTOS_PRODUCTO_COLECCION = 'productosFotos';
+const MINIATURAS_PRODUCTO_COLECCION = 'productosMiniaturas';
+const FOTO_PENDIENTE_PREFIJO = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7#mwfoto=';
+
+const _galeriasProducto = new Map();   // id → galería completa tal como está en el servidor
+const _miniaturasProducto = new Map(); // id → src de la miniatura ('' = sin foto)
+const _descargasFotosProducto = new Map();
+
+// Raíz del sitio, resuelta desde la ubicación de este archivo (js/) —
+// así las rutas sirven igual en la raíz y en /portal/<rol>/.
+const _RAIZ_SITIO_FOTOS = (() => {
+  try { return new URL('../', document.currentScript.src).href; } catch (error) { return ''; }
+})();
+const _FOTO_GENERICA_PRODUCTO = _RAIZ_SITIO_FOTOS + 'assets/images/isotipo-morado.png';
+
+// Fotos que vienen dentro del propio documento del producto.
+function fotosEmbebidasProducto(producto) {
+  if (!producto) return [];
+  if (Array.isArray(producto.galeria) && producto.galeria.some(f => f && f.src)) return producto.galeria.filter(f => f && f.src);
+  if (producto.imagen) return [{ id: 'foto-legado', src: producto.imagen }];
+  return [];
+}
+
+function _hayFotosEnServidor() {
+  return typeof dbFirestore !== 'undefined' && !!dbFirestore;
+}
+
+function esFotoPendienteProducto(src) {
+  return typeof src === 'string' && src.startsWith(FOTO_PENDIENTE_PREFIJO);
+}
+
+function _fotoPendiente(productoId, fotoId, completa) {
+  return FOTO_PENDIENTE_PREFIJO + [productoId, fotoId || '', completa ? 'c' : ''].map(encodeURIComponent).join('|');
+}
+
+function _leerFotoPendiente(src) {
+  const [productoId, fotoId, completa] = src.slice(FOTO_PENDIENTE_PREFIJO.length).split('|').map(decodeURIComponent);
+  return { productoId, fotoId: fotoId || null, completa: completa === 'c' };
+}
+
+// Primera foto del producto, o '' si no tiene ninguna. Con completa =
+// false (lo normal en listas y tarjetas) basta la miniatura.
+function fotoPrincipalProducto(producto, completa = false) {
+  const embebidas = fotosEmbebidasProducto(producto);
+  if (embebidas.length) return embebidas[0].src;
+  if (!producto || producto.id === undefined || producto.id === null) return '';
+  if (Array.isArray(producto.fotosIds) && !producto.fotosIds.length) return '';
+  const id = String(producto.id);
+  if (_galeriasProducto.has(id)) return _galeriasProducto.get(id)[0]?.src || '';
+  if (!completa && _miniaturasProducto.has(id)) return _miniaturasProducto.get(id);
+  if (!_hayFotosEnServidor()) return '';
+  return _fotoPendiente(id, null, completa);
 }
 
 // Foto asignada a esta variante (por fotoId) si existe en la galería del
 // producto; si la variante no tiene foto propia, usa la foto principal.
+// Siempre en tamaño completo (la usa el detalle del producto).
 function fotoVarianteProducto(producto, variante) {
-  const p = migrarProductoAVariantes(producto);
-  if (variante && variante.fotoId) {
-    const foto = p.galeria.find(f => f.id === variante.fotoId);
-    if (foto) return foto.src;
-  }
-  return fotoPrincipalProducto(p);
+  const fotoId = variante && variante.fotoId;
+  if (!fotoId) return fotoPrincipalProducto(producto, true);
+  const embebidas = fotosEmbebidasProducto(producto);
+  const galeria = embebidas.length ? embebidas : (_galeriasProducto.get(String(producto.id)) || null);
+  if (galeria) return (galeria.find(f => f.id === fotoId) || galeria[0] || {}).src || '';
+  if (Array.isArray(producto.fotosIds) && !producto.fotosIds.length) return '';
+  if (!_hayFotosEnServidor()) return '';
+  return _fotoPendiente(String(producto.id), fotoId, true);
 }
+
+function _descargarUnaVez(clave, fn) {
+  if (!_descargasFotosProducto.has(clave)) {
+    _descargasFotosProducto.set(clave, fn().catch((error) => {
+      _descargasFotosProducto.delete(clave); // se puede reintentar después
+      throw error;
+    }));
+  }
+  return _descargasFotosProducto.get(clave);
+}
+
+// Galería completa de un producto (productosFotos/{id}).
+function cargarGaleriaProducto(productoId) {
+  const id = String(productoId);
+  if (_galeriasProducto.has(id)) return Promise.resolve(_galeriasProducto.get(id));
+  if (!_hayFotosEnServidor()) return Promise.resolve([]);
+  return _descargarUnaVez('g:' + id, async () => {
+    const doc = await dbFirestore.collection(FOTOS_PRODUCTO_COLECCION).doc(id).get();
+    const galeria = doc.exists && Array.isArray(doc.data().galeria) ? doc.data().galeria : [];
+    _galeriasProducto.set(id, galeria);
+    return galeria;
+  });
+}
+
+// Miniatura de la foto principal (productosMiniaturas/{id}); si no hay,
+// usa la galería completa.
+function cargarMiniaturaProducto(productoId) {
+  const id = String(productoId);
+  if (_galeriasProducto.has(id)) return Promise.resolve(_galeriasProducto.get(id)[0]?.src || '');
+  if (_miniaturasProducto.has(id)) return Promise.resolve(_miniaturasProducto.get(id));
+  if (!_hayFotosEnServidor()) return Promise.resolve('');
+  return _descargarUnaVez('m:' + id, async () => {
+    const doc = await dbFirestore.collection(MINIATURAS_PRODUCTO_COLECCION).doc(id).get();
+    const src = doc.exists && doc.data().src
+      ? doc.data().src
+      : ((await cargarGaleriaProducto(id))[0]?.src || '');
+    _miniaturasProducto.set(id, src);
+    return src;
+  });
+}
+
+// Deja la galería del producto lista en memoria — los formularios de
+// edición la esperan antes de abrirse (migrarProductoAVariantes la toma
+// de aquí si el producto no trae fotos dentro).
+async function prepararFotosProducto(producto) {
+  if (!producto || fotosEmbebidasProducto(producto).length) return;
+  if (Array.isArray(producto.fotosIds) && !producto.fotosIds.length) return;
+  try {
+    await cargarGaleriaProducto(producto.id);
+  } catch (error) {
+    if (typeof mostrarToast === 'function') mostrarToast('No se pudieron cargar las fotos de este producto. Revisa tu conexión.');
+    throw error;
+  }
+}
+
+// Convierte una "foto pendiente" en la foto real ('' si no tiene).
+// completa = true pide el tamaño completo aunque la pendiente fuera
+// de miniatura (para ampliar la foto).
+async function resolverFotoPendienteProducto(src, completa = false) {
+  if (!esFotoPendienteProducto(src)) return src;
+  const pendiente = _leerFotoPendiente(src);
+  const { productoId, fotoId } = pendiente;
+  if (!completa && !pendiente.completa && !fotoId) return cargarMiniaturaProducto(productoId);
+  const galeria = await cargarGaleriaProducto(productoId);
+  return ((fotoId && galeria.find(f => f.id === fotoId)) || galeria[0] || {}).src || '';
+}
+
+function _rutaFotoProductoParaImg(src) {
+  // Fotos de ejemplo antiguas guardan la ruta relativa a /portal/.
+  if (src && src.startsWith('../assets/')) return _RAIZ_SITIO_FOTOS + src.slice(3);
+  return src;
+}
+
+// Foto real lista para un <img> ('' si el producto no tiene foto).
+async function resolverFotoProductoParaImg(src, completa = false) {
+  const real = await resolverFotoPendienteProducto(src, completa);
+  return real && !/isotipo-morado\.png/.test(real) ? _rutaFotoProductoParaImg(real) : '';
+}
+
+async function _pintarFotoPendiente(img) {
+  const pendiente = img.getAttribute('src');
+  if (!esFotoPendienteProducto(pendiente) || img.dataset.fotoCargando === pendiente) return;
+  img.dataset.fotoCargando = pendiente;
+  let src = '';
+  try { src = await resolverFotoPendienteProducto(pendiente); } catch (error) { src = ''; }
+  delete img.dataset.fotoCargando;
+  if (img.getAttribute('src') !== pendiente) return; // la pantalla ya cambió esta imagen
+  const real = src && !/isotipo-morado\.png/.test(src);
+  img.src = real ? _rutaFotoProductoParaImg(src) : _FOTO_GENERICA_PRODUCTO;
+  img.classList.toggle('foto-generica', !real);
+  // Al ampliar se descarga la foto en tamaño completo (ver abrirImagenEnGrande).
+  if (img.hasAttribute('data-zoom') && !real) img.removeAttribute('data-zoom');
+}
+
+(function observarFotosPendientes() {
+  if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
+  const visibles = typeof IntersectionObserver !== 'undefined'
+    ? new IntersectionObserver((entradas) => {
+        entradas.forEach((e) => {
+          if (!e.isIntersecting) return;
+          visibles.unobserve(e.target);
+          _pintarFotoPendiente(e.target);
+        });
+      }, { rootMargin: '300px' })
+    : null;
+  const revisar = (img) => {
+    if (!esFotoPendienteProducto(img.getAttribute('src'))) return;
+    if (visibles) visibles.observe(img); else _pintarFotoPendiente(img);
+  };
+  const revisarNodo = (nodo) => {
+    if (nodo.nodeType !== 1) return;
+    if (nodo.tagName === 'IMG') revisar(nodo);
+    else nodo.querySelectorAll('img').forEach(revisar);
+  };
+  new MutationObserver((cambios) => {
+    cambios.forEach((c) => {
+      if (c.type === 'attributes') revisarNodo(c.target);
+      else c.addedNodes.forEach(revisarNodo);
+    });
+  }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+  document.addEventListener('DOMContentLoaded', () => revisarNodo(document.body));
+})();
 
 // fechaAlta (ISO) — cuándo se dio de alta el producto. La usa "Nuevas
 // piezas" del Inicio de Emprendedora/Líder (js/novedades-inicio.js) para
@@ -211,17 +410,27 @@ async function descontarStockVariante(productoId, varianteId) {
       return await dbFirestore.runTransaction(async tx => {
         const ref = dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE).doc(String(productoId));
         const doc = await tx.get(ref);
-        if (!doc.exists) return { ok: false, error: 'Ese producto ya no existe en el catálogo.' };
+        // El resumen del catálogo (catalogoResumen, ver
+        // catalogo-firestore-sync.js) se actualiza en la misma
+        // transacción — y también cuando no se pudo apartar, para que
+        // quien veía la pieza con existencia vieja (por ejemplo, vendida
+        // en BRILLO) ya la vea como es.
+        const reflejarEnResumen = (datosProducto) => {
+          if (typeof escribirProductoEnResumenDesdeTransaccion === 'function') escribirProductoEnResumenDesdeTransaccion(tx, productoId, datosProducto);
+        };
+        if (!doc.exists) { reflejarEnResumen(null); return { ok: false, error: 'Ese producto ya no existe en el catálogo.' }; }
         const datos = doc.data();
         const variantes = Array.isArray(datos.variantes) ? datos.variantes : [];
         const indice = variantes.findIndex(v => v.id === varianteId);
-        if (indice === -1) return { ok: false, error: 'Esa variante ya no existe en el catálogo.' };
+        if (indice === -1) { reflejarEnResumen(datos); return { ok: false, error: 'Esa variante ya no existe en el catálogo.' }; }
         const variante = variantes[indice];
         if (!variante.stock || variante.stock <= 0) {
+          reflejarEnResumen(datos);
           return { ok: false, error: `Ya no hay existencia de ${datos.nombre} (${etiquetaVariante(variante)}).` };
         }
         const variantesActualizadas = variantes.map((v, i) => i === indice ? { ...v, stock: v.stock - 1 } : v);
         tx.update(ref, { variantes: variantesActualizadas });
+        reflejarEnResumen({ ...datos, variantes: variantesActualizadas });
         actualizarVarianteEnCacheLocal(productoId, varianteId, variantesActualizadas.find(v => v.id === varianteId).stock);
         return { ok: true };
       });
@@ -263,6 +472,9 @@ async function restaurarStockVariante(productoId, varianteId) {
         if (indice === -1) return;
         const variantesActualizadas = variantes.map((v, i) => i === indice ? { ...v, stock: (v.stock || 0) + 1 } : v);
         tx.update(ref, { variantes: variantesActualizadas });
+        if (typeof escribirProductoEnResumenDesdeTransaccion === 'function') {
+          escribirProductoEnResumenDesdeTransaccion(tx, productoId, { ...datos, variantes: variantesActualizadas });
+        }
         actualizarVarianteEnCacheLocal(productoId, varianteId, variantesActualizadas.find(v => v.id === varianteId).stock);
       });
     } catch (error) {

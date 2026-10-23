@@ -108,6 +108,39 @@ service cloud.firestore {
       allow write: if esInterno();
     }
 
+    // productosFotos/{id} y productosMiniaturas/{id} — fotos de cada
+    // producto, fuera del documento del producto para que abrir el
+    // catálogo no descargue todas las fotos (ver "FOTOS DE PRODUCTO" en
+    // js/catalogo-variantes-modelo.js). Mismos permisos que productos.
+    match /productosFotos/{id} {
+      allow read: if true;
+      allow write: if esInterno();
+    }
+    match /productosMiniaturas/{id} {
+      allow read: if true;
+      allow write: if esInterno();
+    }
+
+    // catalogoResumen/{parte} — todos los productos (sin fotos) en pocos
+    // documentos, para abrir el catálogo con ~12 lecturas en vez de una
+    // por producto (ver "RESUMEN DEL CATÁLOGO" en
+    // js/catalogo-firestore-sync.js). Lectura pública, como productos.
+    // Staff/Encargado/Admin lo escriben completo. Al apartar o cancelar,
+    // cualquier cuenta autenticada actualiza en la misma transacción la
+    // existencia del producto — igual que en productos, SOLO el campo
+    // "variantes" de UN producto que ya esté en el resumen, el que nombra
+    // "ultimoCambio".
+    match /catalogoResumen/{parte} {
+      allow read: if true;
+      allow write: if esInterno();
+      allow update: if estaAutenticado()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['productos', 'ultimoCambio'])
+        && request.resource.data.ultimoCambio is string
+        && request.resource.data.ultimoCambio in resource.data.productos
+        && request.resource.data.productos.diff(resource.data.productos).affectedKeys().hasOnly([request.resource.data.ultimoCambio])
+        && request.resource.data.productos[request.resource.data.ultimoCambio].diff(resource.data.productos[request.resource.data.ultimoCambio]).affectedKeys().hasOnly(['variantes']);
+    }
+
     // ventanasApartado/{id} — Apartados. SEC-07 de la auditoría: antes
     // cualquier cuenta autenticada podía leer Y ESCRIBIR cualquier
     // ventana ajena — el comentario original decía que usuarioId no

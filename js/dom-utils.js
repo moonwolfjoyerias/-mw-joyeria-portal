@@ -41,6 +41,12 @@ function setText(id, valor) {
 // puede usarlo sin wiring adicional.
 function abrirImagenEnGrande(src, alt) {
   if (!src) return;
+  // Foto de producto que todavía no se descarga (ver "FOTOS DE PRODUCTO"
+  // en js/catalogo-variantes-modelo.js): se abre ya en tamaño completo.
+  if (typeof esFotoPendienteProducto === 'function' && esFotoPendienteProducto(src)) {
+    resolverFotoProductoParaImg(src, true).then((real) => { if (real) abrirImagenEnGrande(real, alt); }, () => {});
+    return;
+  }
   let overlay = document.getElementById('lightboxOverlay');
   if (!overlay) {
     overlay = document.createElement('div');

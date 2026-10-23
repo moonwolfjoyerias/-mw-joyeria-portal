@@ -5403,3 +5403,7 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   .catalog-product-card h4 { font-size: 0.82rem; }
 }
 
+/* Foto de producto que todavía se está descargando (ver "FOTOS DE
+   PRODUCTO" en js/catalogo-variantes-modelo.js): fondo suave en vez de
+   un hueco en blanco. */
+img[src*="#mwfoto="] { background: var(--mw-lilac-soft); }
