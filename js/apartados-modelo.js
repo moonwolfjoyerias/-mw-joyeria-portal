@@ -491,6 +491,21 @@ function liquidarPiezasSeleccionadas(ventana, piezaIds, { monto, metodo, referen
 
   const siguenActivas = piezasActivas.length - piezasElegidas.length;
 
+  // El aviso "ya pagué" de la Emprendedora/Líder (ver js/apartados.js)
+  // queda atendido por las piezas que se acaban de liquidar; si eligió
+  // otras que siguen activas, el aviso se queda solo con esas.
+  if (ventana.fechaDeclaracionPago) {
+    const pendientes = (Array.isArray(ventana.piezasDeclaradasPago) ? ventana.piezasDeclaradasPago : [])
+      .filter(id => !idsElegidos.has(id) && piezasActivas.some(p => p.id === id));
+    if (pendientes.length && siguenActivas > 0) {
+      ventana.piezasDeclaradasPago = pendientes;
+    } else {
+      delete ventana.fechaDeclaracionPago;
+      delete ventana.montoDeclaradoPago;
+      delete ventana.piezasDeclaradasPago;
+    }
+  }
+
   ventana.auditoria.push(registrarAuditoriaVentana(
     (siguenActivas > 0
       ? `${piezasElegidas.length} pieza${piezasElegidas.length === 1 ? '' : 's'} liquidada${piezasElegidas.length === 1 ? '' : 's'} del carrito (quedan ${siguenActivas} activa${siguenActivas === 1 ? '' : 's'})`

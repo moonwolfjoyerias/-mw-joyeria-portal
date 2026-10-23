@@ -430,7 +430,6 @@ function ejecutarConfirmarDeposito(ventanaId, datos) {
 function abrirModalLiquidar(v) {
 
   const piezasActivas = obtenerPiezasActivas(v);
-  const idsDeclarados = new Set(Array.isArray(v.piezasDeclaradasPago) ? v.piezasDeclaradasPago : []);
 
   const overlay = document.getElementById("modalOverlay");
   const box = document.getElementById("modalBox");
@@ -441,19 +440,9 @@ function abrirModalLiquidar(v) {
     <h3>Liquidar apartado</h3>
     <p class="modal-sub">${escapeHTML(v.usuarioNombre)} · ${piezasActivas.length} pieza${piezasActivas.length === 1 ? "" : "s"}</p>
 
-    ${v.fechaDeclaracionPago ? `<div class="modal-note">${escapeHTML(v.usuarioNombre)} avisó que ya pagó el ${formatearFechaHora(v.fechaDeclaracionPago)}${idsDeclarados.size && idsDeclarados.size < piezasActivas.length ? ` — solo ${idsDeclarados.size} de ${piezasActivas.length} piezas (ya marcadas abajo)` : ''} (informativo — confirma con la hora real del depósito recibido).</div>` : ""}
+    ${htmlEleccionPiezasLiquidar(v, piezasActivas)}
 
-    <label>Piezas a liquidar</label>
-    <div id="piezasLiquidarLista" class="piezas-liquidar-lista">
-      ${piezasActivas.map(p => `
-        <label class="pieza-liquidar-row">
-          <input type="checkbox" data-pieza-liquidar="${p.id}" ${idsDeclarados.size ? (idsDeclarados.has(p.id) ? "checked" : "") : "checked"}>
-          <span class="pieza-liquidar-info">${escapeHTML(p.producto)}${p.variante ? ` · ${escapeHTML(p.variante)}` : ""}</span>
-          <strong>$${p.saldo} MXN</strong>
-        </label>
-      `).join("")}
-    </div>
-
+    <div id="liquidarResto" style="display:none;">
     <div id="depositoLiquidarBox" style="display:none;margin-top:10px;">
       <div class="auth-warning">
         <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span>
@@ -483,6 +472,7 @@ function abrirModalLiquidar(v) {
       <input id="liquidarReferencia" type="text" placeholder="Obligatoria para transferencia">
     </div>
     <p class="modal-sub" id="liquidarSinPagoNota" style="display:none;">El depósito cubre el total — no se requiere pago adicional.</p>
+    </div>
 
     <div id="formError" class="auth-error" style="display:none;"></div>
 
@@ -515,9 +505,7 @@ function abrirModalLiquidar(v) {
     return { idsSeleccionados, cubreTodo, decision, montoEsperado };
   }
 
-  recalcularLiquidar();
-
-  box.querySelectorAll("[data-pieza-liquidar]").forEach(cb => cb.addEventListener("change", recalcularLiquidar));
+  wirearEleccionPiezasLiquidar(box, v, piezasActivas, recalcularLiquidar);
   box.querySelectorAll('input[name="decisionDepositoLiquidar"]').forEach(r => r.addEventListener("change", recalcularLiquidar));
 
   document.getElementById("continuarLiquidarBtn").addEventListener("click", () => {
@@ -527,9 +515,15 @@ function abrirModalLiquidar(v) {
     const referencia = document.getElementById("liquidarReferencia")?.value.trim() || null;
     const error = document.getElementById("formError");
 
+    if (!alcanceLiquidarElegido(box)) {
+      error.style.display = "block";
+      error.textContent = "Elige si está pagando todo el apartado o solo algunas piezas.";
+      return;
+    }
+
     if (!idsSeleccionados.length) {
       error.style.display = "block";
-      error.textContent = "Elige al menos una pieza para liquidar.";
+      error.textContent = "Marca las piezas que está pagando.";
       return;
     }
 

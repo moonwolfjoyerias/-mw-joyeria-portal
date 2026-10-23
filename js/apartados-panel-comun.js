@@ -573,6 +573,8 @@ function crearFilaDetalle(v) {
          <button type="button" class="action-btn danger-action bolsita-btn" data-ventana="${v.id}" data-quitar-pieza="${p.id}" title="Quitar esta pieza del apartado (por ejemplo, si ya no hay existencia)">× Quitar pieza</button>`
       : (p.enBolsita ? `<span class="status status-active">✓ Estuvo en bolsita</span>` : "");
 
+    const elegidaParaPagar = p.estado === "activa" && v.fechaDeclaracionPago && Array.isArray(v.piezasDeclaradasPago) && v.piezasDeclaradasPago.includes(p.id);
+
     return `
       <div class="piece-cell" style="margin-bottom:10px;align-items:flex-start;">
         <div class="piece-thumb"><img src="${foto}" alt="${escapeAttribute(p.producto)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;${generica ? 'opacity:.35;' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(p.producto)}"`}></div>
@@ -581,6 +583,7 @@ function crearFilaDetalle(v) {
           <small>${escapeHTML([p.colorOro, p.variante].filter(Boolean).join(" · "))} · $${Number(p.total).toLocaleString("es-MX")} MXN</small>
           <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
             <span class="status ${estadoPieza.clase}">${estadoPieza.texto}</span>
+            ${elegidaParaPagar ? `<span class="pieza-elegida-persona">Avisó que la pagó</span>` : ""}
             ${bolsita}
           </div>
           ${p.enBolsita ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">En bolsita desde ${formatearFechaHora(p.enBolsita.fecha)} · ${escapeHTML(p.enBolsita.usuario || "")}</small>` : ""}
@@ -643,7 +646,13 @@ function obtenerAccionesVentana(v) {
       // tener que abrir la fila — sigue abriendo el mismo modal de
       // Liquidar de siempre, exactamente la misma acción, solo cambia la
       // etiqueta como aviso visual.
-      const etiquetaLiquidar = v.fechaDeclaracionPago ? 'Ya pagó todo' : 'Liquidar apartado';
+      // Con el carrito, la persona puede haber avisado que pagó solo
+      // algunas piezas — la etiqueta dice cuántas.
+      const declaradas = v.fechaDeclaracionPago ? piezasDeclaradasActivas(v).length : 0;
+      const activas = obtenerPiezasActivas(v).length;
+      const etiquetaLiquidar = !v.fechaDeclaracionPago
+        ? 'Liquidar apartado'
+        : (declaradas && declaradas < activas ? `Ya pagó ${declaradas} de ${activas} piezas` : 'Ya pagó todo');
       html += `<button class="action-btn primary-action" data-liquidar-ventana="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> ${etiquetaLiquidar}</button>`;
       html += `<button class="action-btn danger-action" data-cancelar-ventana="${v.id}"><span>×</span> Cancelar apartado</button>`;
       // LOG-06 de la auditoría: antes el excedente del depósito (lo que
@@ -682,6 +691,112 @@ function obtenerAccionesVentana(v) {
 // activas o no — antes se preguntaba aquí, antes de saber qué se iba
 // a pagar, porque el apartado solo se podía liquidar completo.
 // ============================================================
+
+// ============================================================
+// LIQUIDAR: ¿PAGA TODO O SOLO ALGUNAS PIEZAS?
+// ============================================================
+//
+// Desde el carrito de "Mis apartados" (js/apartados.js) la
+// Emprendedora/Líder elige qué piezas paga y al avisar "Ya envié mi
+// comprobante" quedan en v.piezasDeclaradasPago. El modal de Liquidar
+// de Staff/Encargado/Admin (abrirModalLiquidar en cada
+// *-apartados.js) primero pregunta si está pagando todo el apartado o
+// solo algunas piezas, y muestra cuáles eligió ella.
+
+// Piezas todavía activas que la persona eligió al avisar que pagó.
+function piezasDeclaradasActivas(v) {
+  const ids = new Set(Array.isArray(v.piezasDeclaradasPago) ? v.piezasDeclaradasPago : []);
+  return obtenerPiezasActivas(v).filter(p => ids.has(p.id));
+}
+
+function _textoPiezaLiquidar(p) {
+  return escapeHTML(p.producto) + (p.variante ? ` · ${escapeHTML(p.variante)}` : "");
+}
+
+function htmlEleccionPiezasLiquidar(v, piezasActivas) {
+  const declaradas = v.fechaDeclaracionPago ? piezasDeclaradasActivas(v) : [];
+  const idsDeclarados = new Set(declaradas.map(p => p.id));
+  const primerNombre = escapeHTML(String(v.usuarioNombre || "").trim().split(" ")[0] || "la clienta");
+  const totalTodo = piezasActivas.reduce((suma, p) => suma + Number(p.saldo || 0), 0);
+  const unaPieza = piezasActivas.length < 2;
+
+  const eligioTodo = declaradas.length && declaradas.length === piezasActivas.length;
+  const avisoPersona = v.fechaDeclaracionPago ? `
+    <div class="liquidar-aviso-persona">
+      <strong>${escapeHTML(v.usuarioNombre)} avisó que ya pagó el ${formatearFechaHora(v.fechaDeclaracionPago)}</strong>
+      ${declaradas.length ? `
+        <span>Eligió pagar ${eligioTodo ? "todo su apartado" : `${declaradas.length} de ${piezasActivas.length} piezas`}:</span>
+        <ul>${declaradas.map(p => `<li>${_textoPiezaLiquidar(p)} — $${p.saldo} MXN</li>`).join("")}</ul>
+      ` : `<span>No indicó qué piezas.</span>`}
+      ${Number(v.montoDeclaradoPago) > 0 ? `<span>Dice haber transferido: <strong>$${v.montoDeclaradoPago} MXN</strong></span>` : ""}
+      <small>Informativo — confirma con el depósito que de verdad se recibió.</small>
+    </div>
+  ` : "";
+
+  const sugerida = declaradas.length ? (eligioTodo ? "todo" : "algunas") : "";
+
+  return `
+    ${avisoPersona}
+    <label>¿Qué está pagando?</label>
+    <div class="liquidar-opciones">
+      <label class="liquidar-opcion">
+        <input type="radio" name="alcanceLiquidar" value="todo" ${sugerida === "todo" ? "checked" : ""}>
+        <span><strong>Todo el apartado</strong><small>${piezasActivas.length} pieza${piezasActivas.length === 1 ? "" : "s"} · $${totalTodo} MXN</small></span>
+      </label>
+      <label class="liquidar-opcion${unaPieza ? " deshabilitada" : ""}">
+        <input type="radio" name="alcanceLiquidar" value="algunas" ${sugerida === "algunas" ? "checked" : ""} ${unaPieza ? "disabled" : ""}>
+        <span><strong>Solo algunas piezas</strong><small>${unaPieza ? "Solo tiene una pieza" : "Eliges cuáles abajo"}</small></span>
+      </label>
+    </div>
+
+    <div id="piezasLiquidarBloque" style="display:none;">
+      <label id="piezasLiquidarTitulo">Piezas a liquidar</label>
+      <div id="piezasLiquidarLista" class="piezas-liquidar-lista">
+        ${piezasActivas.map(p => `
+          <label class="pieza-liquidar-row">
+            <input type="checkbox" data-pieza-liquidar="${p.id}">
+            <span class="pieza-liquidar-info">${_textoPiezaLiquidar(p)}${idsDeclarados.has(p.id) ? `<span class="pieza-elegida-persona">La eligió ${primerNombre}</span>` : ""}</span>
+            <strong>$${p.saldo} MXN</strong>
+          </label>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+// Conecta la pregunta "¿Qué está pagando?" con la lista de piezas.
+// alCambiar = el recalcular del modal (monto, depósito, pago). El resto
+// del formulario (#liquidarResto) se muestra hasta que se elige una
+// opción.
+function wirearEleccionPiezasLiquidar(box, v, piezasActivas, alCambiar) {
+  const idsDeclarados = new Set(piezasDeclaradasActivas(v).map(p => p.id));
+  const casillas = Array.from(box.querySelectorAll("[data-pieza-liquidar]"));
+  const bloque = box.querySelector("#piezasLiquidarBloque");
+  const titulo = box.querySelector("#piezasLiquidarTitulo");
+  const resto = box.querySelector("#liquidarResto");
+
+  const aplicar = (marcarDeNuevo) => {
+    const alcance = alcanceLiquidarElegido(box);
+    if (bloque) bloque.style.display = alcance ? "" : "none";
+    if (resto) resto.style.display = alcance ? "" : "none";
+    casillas.forEach((cb) => {
+      const id = cb.getAttribute("data-pieza-liquidar");
+      if (alcance === "todo") cb.checked = true;
+      else if (alcance === "algunas" && marcarDeNuevo) cb.checked = idsDeclarados.size < piezasActivas.length && idsDeclarados.has(id);
+      cb.disabled = alcance === "todo";
+    });
+    if (titulo) titulo.textContent = alcance === "todo" ? "Piezas que se liquidan" : "Marca las piezas que está pagando";
+    alCambiar();
+  };
+
+  box.querySelectorAll('input[name="alcanceLiquidar"]').forEach(r => r.addEventListener("change", () => aplicar(true)));
+  casillas.forEach(cb => cb.addEventListener("change", alCambiar));
+  aplicar(true);
+}
+
+function alcanceLiquidarElegido(box) {
+  return box.querySelector('input[name="alcanceLiquidar"]:checked')?.value || "";
+}
 
 function iniciarLiquidacionVentana(ventanaId) {
 

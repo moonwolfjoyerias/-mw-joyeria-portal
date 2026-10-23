@@ -3375,6 +3375,79 @@ img.zoomable-photo { cursor: zoom-in; }
   flex-shrink: 0;
 }
 .pieza-liquidar-row .pieza-liquidar-info { flex: 1; min-width: 0; }
+.pieza-liquidar-row input[type="checkbox"]:disabled { opacity: 0.6; }
+
+/* Liquidar: primero "¿Qué está pagando?" (todo / solo algunas piezas) y
+   lo que eligió la Emprendedora/Líder al avisar que pagó — ver
+   htmlEleccionPiezasLiquidar en js/apartados-panel-comun.js. */
+.liquidar-aviso-persona {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--mw-accent-text-strong);
+  background: var(--mw-lilac-soft);
+  padding: 0.75em 0.9em;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+}
+.liquidar-aviso-persona ul { margin: 2px 0 2px 1.1em; padding: 0; }
+.liquidar-aviso-persona small { opacity: 0.8; }
+.liquidar-opciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 8px 0 14px;
+}
+.liquidar-opcion {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--mw-border-d);
+  border-radius: 10px;
+  background: var(--mw-surface-soft);
+  cursor: pointer;
+  font-weight: 400;
+  color: var(--mw-heading-d);
+}
+.liquidar-opcion:has(input:checked) { border-color: var(--mwv-8b55ad); box-shadow: 0 0 0 1px var(--mwv-8b55ad); }
+.liquidar-opcion.deshabilitada { opacity: 0.55; cursor: not-allowed; }
+.liquidar-opcion input { margin-top: 3px; accent-color: var(--mwv-8b55ad); }
+.liquidar-opcion span { display: flex; flex-direction: column; gap: 2px; }
+.liquidar-opcion small { color: var(--mw-text-muted, #766d83); font-size: 0.76rem; }
+.pieza-elegida-persona {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0.1em 0.6em;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--mw-gold-soft);
+  color: #8A6D14;
+  white-space: nowrap;
+}
+/* .modal-box label (display:block, fuente de títulos) es más específico
+   que las clases de arriba — aquí se recupera el acomodo en fila. */
+.modal-box .liquidar-opcion,
+.modal-box .pieza-liquidar-row {
+  display: flex;
+  font-family: inherit;
+  font-size: 0.85rem;
+  margin-bottom: 0;
+}
+#depositoLiquidarBox label { font-family: inherit; color: var(--mw-heading-d); }
+#depositoLiquidarBox input[type="radio"],
+.modal-box .liquidar-opcion input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+}
+:root[data-theme="dark"] .pieza-elegida-persona { color: #F0D58A; }
+@media (max-width: 560px) {
+  .liquidar-opciones { grid-template-columns: 1fr; }
+}
 .pieza-liquidar-row strong { flex-shrink: 0; color: var(--mw-accent-text); }
 
 .price-input {
