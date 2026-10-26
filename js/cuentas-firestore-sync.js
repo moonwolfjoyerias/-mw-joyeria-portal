@@ -52,6 +52,7 @@ function firestoreUserACuentaInterna(uid, datos) {
     correo: datos.correo || '',
     fotoUrl: datos.fotoUrl || '',
     empleadoNominaId: datos.empleadoNominaId || null,
+    sinNomina: datos.sinNomina === true, // ver revisarEmpleadosNominaContraCuentas en nomina-modelo.js
     fechaAlta: datos.fechaAlta || null,
     activa: datos.activa !== false,
     ...(datos.rol === 'encargado' ? { permisos: datos.permisos || permisosEncargadoPorDefecto() } : {})
@@ -59,7 +60,26 @@ function firestoreUserACuentaInterna(uid, datos) {
   };
 }
 
+// Solo Admin puede leer perfiles ajenos (users/{uid}, ver firestore.rules):
+// en las páginas de Staff/Encargado la consulta siempre la rechazaban las
+// reglas y salía el aviso "No se pudieron cargar las cuentas internas"
+// en cada página. Ahí ya no se pide — esas páginas sacan a las personas
+// de Nómina (ver "EMPLEADOS ↔ CUENTAS" en nomina-modelo.js).
+async function _sesionPuedeLeerCuentasInternas() {
+  if (typeof obtenerSesionActiva !== 'function') return true;
+  const inicio = Date.now();
+  while (!obtenerSesionActiva() && Date.now() - inicio < 15000) {
+    await new Promise(r => setTimeout(r, 150));
+  }
+  const sesion = obtenerSesionActiva();
+  return !sesion || sesion.rol === 'admin';
+}
+
 async function cargarCuentasInternasRepo() {
+  if (dbFirestore && !(await _sesionPuedeLeerCuentasInternas())) {
+    CUENTAS_INTERNAS_CACHE = [];
+    return CUENTAS_INTERNAS_CACHE;
+  }
   if (dbFirestore) {
     try {
       // BUG reportado tras lanzar a producción: al venir SIEMPRE de
@@ -125,6 +145,7 @@ async function sincronizarPerfilCuentaInterna(cuenta) {
     correo: cuenta.correo || '',
     fotoUrl: cuenta.fotoUrl || '',
     empleadoNominaId: cuenta.empleadoNominaId || null,
+    sinNomina: cuenta.sinNomina === true,
     activa: cuenta.activa !== false,
   };
   if (cuenta.rol === 'encargado') datos.permisos = cuenta.permisos || permisosEncargadoPorDefecto();

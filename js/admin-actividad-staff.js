@@ -31,6 +31,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof actividadesStaffRepoListo !== 'undefined') await actividadesStaffRepoListo;
   if (typeof nominaRepoListo !== 'undefined') await nominaRepoListo;
+  if (typeof cuentasInternasRepoListo !== 'undefined') await cuentasInternasRepoListo;
+
+  renderAvisoPersonasActividadStaff();
 
   const hoy = new Date();
   const input = document.getElementById('actSemanaInput');
@@ -43,6 +46,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   inicializarVistaTodasAct();
 
 });
+
+// Las personas de esta página salen de Nómina — si ahí todavía hay
+// personas de prueba o cuentas sin registro, se avisa con un enlace a
+// la revisión (ver renderAvisoCuentasNomina en admin-nomina.js).
+function renderAvisoPersonasActividadStaff() {
+  if (typeof revisarEmpleadosNominaContraCuentas !== 'function') return;
+  const { sinEmpleado, dePrueba } = revisarEmpleadosNominaContraCuentas();
+  if (!sinEmpleado.length && !dePrueba.length) return;
+  const sub = document.querySelector('.portal-sub');
+  if (!sub) return;
+  const aviso = document.createElement('div');
+  aviso.className = 'cfg-recuperar-banner';
+  aviso.innerHTML = `
+    <div>
+      <strong>La lista de personas todavía no coincide con las cuentas dadas de alta.</strong>
+      <span>Las personas de esta página salen de Nómina; ahí puedes revisarlas y quitar las de prueba.</span>
+    </div>
+    <div class="cfg-recuperar-acciones"><a class="btn btn-primary" href="admin-nomina.html">Ir a Nómina</a></div>
+  `;
+  sub.insertAdjacentElement('afterend', aviso);
+}
 
 // ============================================================
 // NAVEGACIÓN ENTRE VISTAS

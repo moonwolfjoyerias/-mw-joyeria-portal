@@ -102,8 +102,10 @@ function abrirReciboNomina(empleado) {
 
   if (!overlay || !box) return;
 
+  // Por el enlace cuenta ↔ empleado (ver "EMPLEADOS ↔ CUENTAS" en
+  // nomina-modelo.js); por nombre solo si la cuenta aún no se enlaza.
   const empleadoNominaReal = typeof obtenerEmpleadosNomina === 'function'
-    ? obtenerEmpleadosNomina().find(e => e.nombre === empleado.nombre)
+    ? (empleadoNominaDeCuenta(empleado) || obtenerEmpleadosNomina().find(e => e.nombre === empleado.nombre))
     : null;
 
   if (!empleadoNominaReal) {

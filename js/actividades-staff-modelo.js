@@ -244,18 +244,15 @@ function empleadosStaffActivosActividad() {
     .filter(e => e.cargo === 'staff' && e.estado === 'activo');
 }
 
-// Vincula una cuenta interna (login) con su registro de Nómina — usa
-// empleadoNominaId cuando existe (cuentas creadas desde Configuración
-// ya lo traen) y si no, cae a hacer match por nombre (mismas 9
-// personas de ejemplo en ambos registros, ver nota en nomina-modelo.js).
+// Vincula una cuenta interna (login) con su registro de Nómina — por
+// el enlace cuenta ↔ empleado (cuenta.empleadoNominaId o
+// empleado.cuentaInternaId, ver "EMPLEADOS ↔ CUENTAS" en
+// nomina-modelo.js) y, si la cuenta todavía no se enlaza, por nombre.
 function empleadoNominaDeCuentaActividadStaff(cuenta) {
   if (!cuenta) return null;
   const empleados = typeof obtenerEmpleadosNominaBasico === 'function' ? obtenerEmpleadosNominaBasico() : [];
-  if (cuenta.empleadoNominaId) {
-    const directo = empleados.find(e => e.id === cuenta.empleadoNominaId);
-    if (directo) return directo;
-  }
-  return empleados.find(e => e.nombre === cuenta.nombre) || null;
+  return (typeof empleadoNominaDeCuenta === 'function' ? empleadoNominaDeCuenta(cuenta, empleados) : null)
+    || empleados.find(e => e.nombre === cuenta.nombre) || null;
 }
 
 // ============================================================

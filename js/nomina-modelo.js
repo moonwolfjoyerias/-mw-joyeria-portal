@@ -61,22 +61,27 @@ const NOMINA_HISTORIAL_ESTADOS_KEY = 'mw-nomina-historial-estados-v1';
 // EMPLEADOS DE NÓMINA
 // ============================================================
 
-// Mismas 9 personas que ya existen como cuentas internas (Staff01-07,
-// Valentina Cruz, Claudia) — ver nota de arquitectura arriba. Los
-// salarios son valores de ejemplo razonables (no existía ningún dato
-// salarial real en el sistema antes de esta página).
+// Antes aquí se sembraban 9 personas de prueba (Ana López, Mariana
+// Torres, … Claudia) que nunca fueron empleados reales. Igual que con
+// las cuentas de ejemplo (SEC-03, ver construirCuentasInternasEjemplo),
+// un proyecto nuevo arranca sin empleados: el registro de Nómina sale de
+// las cuentas que Admin da de alta (ver "EMPLEADOS ↔ CUENTAS" abajo).
 function construirEmpleadosNominaEjemplo() {
-  return [
-    { id: 'emp-staff01', numeroEmpleado: 'EMP001', nombre: 'Ana López', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff02', numeroEmpleado: 'EMP002', nombre: 'Mariana Torres', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff03', numeroEmpleado: 'EMP003', nombre: 'Carlos Reyes', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff04', numeroEmpleado: 'EMP004', nombre: 'Fernanda Ibarra', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff05', numeroEmpleado: 'EMP005', nombre: 'Jorge Salinas', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff06', numeroEmpleado: 'EMP006', nombre: 'Paulina Gómez', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-staff07', numeroEmpleado: 'EMP007', nombre: 'Luis Medina', cargo: 'staff', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 1800, pagoHoraExtra: 100, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-encargado01', numeroEmpleado: 'EMP008', nombre: 'Valentina Cruz', cargo: 'encargado', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 2600, pagoHoraExtra: 140, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' },
-    { id: 'emp-admin01', numeroEmpleado: 'EMP009', nombre: 'Claudia', cargo: 'admin', fechaInicio: '2023-01-01', fechaBaja: null, salarioBase: 3200, pagoHoraExtra: 170, diasPorSemana: 6, horasPorDia: 8, desfaseInicioEstado: null, estado: 'activo', fotoUrl: '', metodoPago: 'Efectivo' }
-  ];
+  return [];
+}
+
+// Las personas de prueba que ya quedaron sembradas en proyectos
+// existentes (id → nombre original), para poder reconocerlas y
+// quitarlas. Si alguien ya renombró una para usarla con una persona
+// real, deja de contar como de prueba.
+const EMPLEADOS_NOMINA_DE_PRUEBA = {
+  'emp-staff01': 'Ana López', 'emp-staff02': 'Mariana Torres', 'emp-staff03': 'Carlos Reyes',
+  'emp-staff04': 'Fernanda Ibarra', 'emp-staff05': 'Jorge Salinas', 'emp-staff06': 'Paulina Gómez',
+  'emp-staff07': 'Luis Medina', 'emp-encargado01': 'Valentina Cruz', 'emp-admin01': 'Claudia'
+};
+
+function esEmpleadoNominaDePrueba(empleado) {
+  return !!empleado && EMPLEADOS_NOMINA_DE_PRUEBA[empleado.id] === empleado.nombre;
 }
 
 // ============================================================
@@ -272,7 +277,8 @@ function obtenerEmpleadoNominaPorId(id) {
 function obtenerEmpleadosNominaBasico() {
   return obtenerEmpleadosNomina().map(e => ({
     id: e.id, numeroEmpleado: e.numeroEmpleado, nombre: e.nombre,
-    cargo: e.cargo, estado: e.estado, fotoUrl: e.fotoUrl
+    cargo: e.cargo, estado: e.estado, fotoUrl: e.fotoUrl,
+    cuentaInternaId: e.cuentaInternaId || null
   }));
 }
 
@@ -1220,6 +1226,141 @@ function rechazarSolicitudNomina(id, { motivo, usuarioAdminId, usuarioAdminNombr
 
   return { ok: true, solicitud };
 
+}
+
+// ============================================================
+// EMPLEADOS ↔ CUENTAS INTERNAS
+// ============================================================
+//
+// Cada persona con cuenta interna (Configuración → Usuarios y permisos,
+// o un alta aprobada en Nómina → Solicitudes) debe tener su registro de
+// Nómina — de ahí sale también la lista de personas de Actividades del
+// Staff y la identificación "¿Quién eres?" de Staff. Se enlazan en los
+// dos sentidos: cuenta.empleadoNominaId y empleado.cuentaInternaId.
+//
+// Solo Admin puede leer las cuentas (users/{uid}, ver firestore.rules),
+// así que la revisión vive en Admin → Nómina, y nada se aplica sin que
+// Admin lo confirme: por ejemplo, la cuenta general compartida de Staff
+// no es una persona y no debe tener nómina.
+
+function _normalizarNombreNomina(texto) {
+  return String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function empleadoNominaDeCuenta(cuenta, empleados = obtenerEmpleadosNomina()) {
+  if (!cuenta) return null;
+  return (cuenta.empleadoNominaId && empleados.find(e => e.id === cuenta.empleadoNominaId))
+    || empleados.find(e => e.cuentaInternaId && e.cuentaInternaId === cuenta.id)
+    || null;
+}
+
+// { sinEmpleado: [{ cuenta, coincide }], dePrueba: [empleado] }
+// - sinEmpleado: cuentas activas sin registro de Nómina; `coincide` es
+//   un empleado ya existente, sin cuenta, con exactamente el mismo
+//   nombre (se enlaza en vez de crear otro).
+// - dePrueba: personas de prueba que no están enlazadas a ninguna cuenta.
+function revisarEmpleadosNominaContraCuentas() {
+  const cuentas = (typeof obtenerCuentasInternas === 'function' ? obtenerCuentasInternas() : [])
+    .filter(c => c.activa !== false && CARGOS_NOMINA[c.rol] && !c.sinNomina);
+  const empleados = obtenerEmpleadosNomina();
+  const enlazados = new Set();
+  const sinCuenta = [];
+  cuentas.forEach((cuenta) => {
+    const empleado = empleadoNominaDeCuenta(cuenta, empleados);
+    if (empleado) enlazados.add(empleado.id);
+    else sinCuenta.push(cuenta);
+  });
+  const sinEmpleado = sinCuenta.map((cuenta) => {
+    const coincide = empleados.find(e => !enlazados.has(e.id) && !e.cuentaInternaId
+      && _normalizarNombreNomina(e.nombre) === _normalizarNombreNomina(cuenta.nombre)) || null;
+    if (coincide) enlazados.add(coincide.id);
+    return { cuenta, coincide };
+  });
+  const dePrueba = empleados.filter(e => esEmpleadoNominaDePrueba(e) && !enlazados.has(e.id));
+  return { sinEmpleado, dePrueba };
+}
+
+function siguienteNumeroEmpleadoNomina(empleados = obtenerEmpleadosNomina()) {
+  const maximo = empleados.reduce((max, e) => {
+    const m = /^EMP(\d+)$/i.exec(String(e.numeroEmpleado || ''));
+    return m ? Math.max(max, Number(m[1])) : max;
+  }, 0);
+  return 'EMP' + String(maximo + 1).padStart(3, '0');
+}
+
+// agregar: [{ cuentaId, salarioBase, fechaInicio }] — crea el empleado
+// (o enlaza el que ya coincide por nombre). sinNominaIds: cuentas que no
+// son una persona con sueldo (p. ej. la cuenta general compartida de
+// Staff) — se marcan para no volver a sugerirlas. quitarIds: personas de
+// prueba a borrar, junto con sus semanas e historial de prueba.
+async function aplicarRevisionEmpleadosNomina({ agregar = [], sinNominaIds = [], quitarIds = [] }) {
+  const revision = revisarEmpleadosNominaContraCuentas();
+  const quitar = new Set(quitarIds.filter(id => revision.dePrueba.some(e => e.id === id)));
+  let empleados = obtenerEmpleadosNomina().filter(e => !quitar.has(e.id));
+  const cuentasEnlazadas = [];
+  const creados = [];
+
+  agregar.forEach(({ cuentaId, salarioBase, fechaInicio }, i) => {
+    const pendiente = revision.sinEmpleado.find(r => r.cuenta.id === cuentaId);
+    if (!pendiente) return;
+    let empleado = pendiente.coincide && empleados.find(e => e.id === pendiente.coincide.id);
+    if (empleado) {
+      empleado.cuentaInternaId = pendiente.cuenta.id;
+    } else {
+      empleado = {
+        id: `emp-${Date.now()}-${i}`,
+        numeroEmpleado: siguienteNumeroEmpleadoNomina(empleados),
+        nombre: pendiente.cuenta.nombre,
+        cargo: pendiente.cuenta.rol,
+        fechaInicio: fechaInicio || String(pendiente.cuenta.fechaAlta || new Date().toISOString()).slice(0, 10),
+        fechaBaja: null,
+        salarioBase: Math.max(0, Number(salarioBase) || 0),
+        diasPorSemana: 6,
+        horasPorDia: 8,
+        desfaseInicioEstado: null,
+        estado: 'activo',
+        fotoUrl: '',
+        metodoPago: 'Efectivo',
+        cuentaInternaId: pendiente.cuenta.id
+      };
+      empleado.pagoHoraExtra = calcularTarifaHoraExtraEmpleado(empleado);
+      empleados = [...empleados, empleado];
+      creados.push(empleado);
+    }
+    cuentasEnlazadas.push({ cuenta: pendiente.cuenta, empleadoId: empleado.id });
+  });
+
+  guardarEmpleadosNomina(empleados);
+
+  if (quitar.size) {
+    const periodos = obtenerPeriodosNomina();
+    const periodosSinPrueba = {};
+    Object.keys(periodos).forEach((clave) => { if (!quitar.has(periodos[clave].empleadoId)) periodosSinPrueba[clave] = periodos[clave]; });
+    guardarPeriodosNomina(periodosSinPrueba);
+    if (typeof guardarNominaHistorialAjustesRepo === 'function') guardarNominaHistorialAjustesRepo(NOMINA_HISTORIAL_AJUSTES_CACHE.filter(r => !quitar.has(r.empleadoId)));
+    if (typeof guardarNominaHistorialEstadosRepo === 'function') guardarNominaHistorialEstadosRepo(NOMINA_HISTORIAL_ESTADOS_CACHE.filter(r => !quitar.has(r.empleadoId)));
+  }
+
+  // El otro lado del enlace: la cuenta apunta a su empleado (o queda
+  // marcada como cuenta sin nómina).
+  const cambiosCuentas = [
+    ...cuentasEnlazadas.map(({ cuenta, empleadoId }) => ({ id: cuenta.id, cambio: { empleadoNominaId: empleadoId } })),
+    ...sinNominaIds.map(id => ({ id, cambio: { sinNomina: true } }))
+  ];
+  if (cambiosCuentas.length && typeof guardarCuentasInternas === 'function') {
+    const cuentas = obtenerCuentasInternas();
+    for (const { id, cambio } of cambiosCuentas) {
+      const enCache = cuentas.find(c => c.id === id);
+      if (!enCache) continue;
+      Object.assign(enCache, cambio);
+      if (typeof sincronizarPerfilCuentaInterna === 'function') {
+        try { await sincronizarPerfilCuentaInterna(enCache); } catch (error) { /* el enlace por empleado.cuentaInternaId ya basta */ }
+      }
+    }
+    guardarCuentasInternas(cuentas);
+  }
+
+  return { ok: true, creados: creados.length, enlazados: cuentasEnlazadas.length - creados.length, sinNomina: sinNominaIds.length, quitados: quitar.size };
 }
 
 // Arranca la carga de nomina-firestore-sync.js — tiene que ser AQUÍ (no
