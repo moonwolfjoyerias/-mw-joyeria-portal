@@ -13,6 +13,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderResumenListaDeseos();
 });
 
+// En vivo: si Staff/Encargado/Admin cambia la fecha de vencimiento (o
+// cualquier otra cosa del apartado) mientras esta página está abierta,
+// "Próximos vencimientos" y las piezas apartadas se actualizan sin
+// recargar — mismo aviso que usa "Mis apartados" (js/apartados.js).
+window.addEventListener('mw:apartados-actualizados', () => renderResumenApartados());
+
 function renderResumenApartados() {
   const statPiezas = document.getElementById('statPiezasApartadas');
   const statVencimiento = document.getElementById('statProximoVencimiento');

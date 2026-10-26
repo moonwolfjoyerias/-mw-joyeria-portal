@@ -992,6 +992,8 @@ function obtenerDatosProducto(idEditando) {
 
     mostrarToast(`El código "${codigo}" ya lo tiene "${productoMismoCodigo.nombre}". Usa un código distinto.`);
 
+    document.getElementById('productoCodigo')?.focus();
+
     return null;
 
   }

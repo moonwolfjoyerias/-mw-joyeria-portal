@@ -1563,6 +1563,10 @@ function cerrarModalPersonas() {
 }
 
 function mostrarToastPersonas(mensaje) {
+  // El aviso general (portal-common.js) sí tiene estilo en esta página y
+  // queda por encima de los modales; '.mw-toast' solo tenía estilo en
+  // Apartados, así que aquí salía como texto suelto al final de la página.
+  if (typeof mostrarToast === 'function') { mostrarToast(mensaje); return; }
   let toast = document.getElementById('mwToast');
   if (!toast) {
     toast = document.createElement('div');
