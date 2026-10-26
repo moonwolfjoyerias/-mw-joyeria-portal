@@ -597,7 +597,11 @@ function obtenerDatosProducto(idEditando) {
   if (!descripcion) { mostrarToast('Agrega una descripción.'); return null; }
   if (!codigo) { mostrarToast('Escribe el código del producto.'); return null; }
   const productoMismoCodigo = productoConCodigo(catalogoEncargado, codigo, idEditando);
-  if (productoMismoCodigo) { mostrarToast(`El código "${codigo}" ya lo tiene "${productoMismoCodigo.nombre}". Usa un código distinto.`); return null; }
+  if (productoMismoCodigo) {
+    mostrarToast(`El código "${codigo}" ya lo tiene "${productoMismoCodigo.nombre}". Usa un código distinto.`);
+    document.getElementById('productoCodigo')?.focus();
+    return null;
+  }
   if (!variantesTemporalEncargado.length || variantesTemporalEncargado.some(v => Number.isNaN(Number(v.stock)) || Number(v.stock) < 0)) {
     mostrarToast('La existencia de alguna variante no es válida.');
     return null;

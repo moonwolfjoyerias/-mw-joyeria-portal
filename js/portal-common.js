@@ -453,5 +453,8 @@ function mostrarToast(mensaje) {
   toast.textContent = mensaje;
   toast.classList.add('show');
   clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => toast.classList.remove('show'), 3000);
+  // Los mensajes largos (errores con explicación) se quedan más tiempo
+  // para alcanzar a leerlos: 3 s mínimo, hasta 8 s.
+  const duracion = Math.min(8000, Math.max(3000, String(mensaje || '').length * 60));
+  toast._timer = setTimeout(() => toast.classList.remove('show'), duracion);
 }

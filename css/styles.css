@@ -1639,7 +1639,12 @@ img.zoomable-photo { cursor: zoom-in; }
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease, transform 0.25s ease;
-  z-index: 60;
+  /* Por encima de cualquier modal (.modal-overlay 50, .catalog-modal-overlay
+     80, lightbox 200): antes quedaba DETRÁS del modal de Catálogo y avisos
+     como "ese código ya lo tiene otro producto" no se veían. */
+  z-index: 300;
+  max-width: calc(100vw - 32px);
+  text-align: center;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
