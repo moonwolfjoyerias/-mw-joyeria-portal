@@ -181,6 +181,10 @@ function agregarEventosComunesFilas() {
     btn.addEventListener("click", () => confirmarBolsitaPieza(btn.dataset.ventana, btn.dataset.bolsitaPieza));
   });
 
+  document.querySelectorAll("[data-cambiar-vencimiento]").forEach(btn => {
+    btn.addEventListener("click", () => abrirModalCambiarVencimiento(btn.dataset.cambiarVencimiento));
+  });
+
   document.querySelectorAll("[data-sacar-bolsita]").forEach(btn => {
     btn.addEventListener("click", () => confirmarSacarDeBolsita(btn.dataset.ventana, btn.dataset.sacarBolsita));
   });
@@ -372,6 +376,115 @@ function confirmarBolsitaPieza(ventanaId, piezaId) {
       textoBoton: "Sí, ya está guardada",
       onConfirmar: (empleado) => alternarBolsitaPieza(ventanaId, piezaId, empleado)
     });
+
+}
+
+// ============================================================
+// CAMBIAR FECHA DE VENCIMIENTO — plazo normal, plazo foránea o fecha
+// personalizada (ver cambiarVencimientoVentana en apartados-modelo.js).
+// Encargado/Admin confirman con el botón del modal; Staff además se
+// identifica con usuario/contraseña (pedirConfirmacionPanelRol).
+// ============================================================
+
+function abrirModalCambiarVencimiento(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v || v.estado !== "activa") return;
+
+  const formato = (iso) => iso ? new Date(iso).toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "sin fecha";
+  const opcion = (modo) => {
+    const regla = obtenerReglaCategoria(modo);
+    return `
+      <label class="liquidar-opcion">
+        <input type="radio" name="modoVencimiento" value="${modo}" ${v.categoria === modo ? "checked" : ""}>
+        <span><strong>Plazo ${regla.etiqueta.toLowerCase()} (${regla.dias} días)</strong><small>Vence el ${formato(calcularNuevoVencimientoVentana(v, modo))}</small></span>
+      </label>`;
+  };
+  const hoy = new Date();
+  const hoyISO = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+
+  const overlay = document.getElementById("modalOverlay");
+  const box = document.getElementById("modalBox");
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModal()">×</button>
+    <h3>Cambiar fecha de vencimiento</h3>
+    <p class="modal-sub">${escapeHTML(v.usuarioNombre)} · hoy vence el ${formato(v.fechaVencimiento)}${v.fechaInicio ? ` · depósito confirmado el ${formato(v.fechaInicio)}` : ""}</p>
+
+    <label>Nueva fecha</label>
+    <div class="vencimiento-opciones">
+      ${opcion("normal")}
+      ${opcion("foranea")}
+      <label class="liquidar-opcion">
+        <input type="radio" name="modoVencimiento" value="personalizada">
+        <span><strong>Fecha personalizada</strong><small>Vence al final del día que elijas</small></span>
+      </label>
+    </div>
+    <input type="date" id="vencimientoPersonalizado" min="${hoyISO}" style="display:none;margin-top:8px;">
+
+    <div class="modal-note" id="vencimientoNota" style="margin-top:12px;">Elegir plazo normal o foránea también cambia la categoría del apartado. Los días se cuentan desde que se confirmó el depósito.</div>
+    <div id="vencimientoError" class="auth-error" style="display:none;"></div>
+
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" type="button" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1;" type="button" id="guardarVencimientoBtn">Guardar</button>
+    </div>
+  `;
+
+  overlay.classList.add("open");
+
+  const fechaInput = document.getElementById("vencimientoPersonalizado");
+  box.querySelectorAll('input[name="modoVencimiento"]').forEach(r => r.addEventListener("change", () => {
+    fechaInput.style.display = r.value === "personalizada" && r.checked ? "" : "none";
+    if (r.value === "personalizada" && r.checked) fechaInput.focus();
+  }));
+
+  document.getElementById("guardarVencimientoBtn").addEventListener("click", () => {
+    const modo = box.querySelector('input[name="modoVencimiento"]:checked')?.value;
+    const fechaISO = fechaInput.value;
+    const error = document.getElementById("vencimientoError");
+    const mostrarError = (texto) => { error.style.display = "block"; error.textContent = texto; };
+
+    if (!modo) return mostrarError("Elige el plazo o una fecha personalizada.");
+    const nueva = calcularNuevoVencimientoVentana(v, modo, fechaISO);
+    if (!nueva) return mostrarError("Elige la fecha personalizada.");
+    if (new Date(nueva).getTime() <= Date.now()) return mostrarError("Esa fecha ya pasó. Elige una de hoy en adelante, o usa una fecha personalizada.");
+
+    pedirConfirmacionPanelRol({
+      ventanaId,
+      titulo: "Cambiar fecha de vencimiento",
+      mensaje: `El apartado de ${escapeHTML(v.usuarioNombre)} vencerá el ${formato(nueva)}.`,
+      textoBoton: "Cambiar fecha",
+      sinConfirmacion: true, // Encargado/Admin ya confirmaron en este modal; Staff igual se identifica
+      onConfirmar: (empleado) => ejecutarCambioVencimiento(ventanaId, { modo, fechaISO }, empleado)
+    });
+  });
+
+}
+
+function ejecutarCambioVencimiento(ventanaId, datos, empleado) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  const resultado = cambiarVencimientoVentana(v, datos, empleado);
+  if (!resultado.ok) { mostrarToast(resultado.error); return; }
+
+  const fechaTexto = new Date(resultado.nueva).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
+  if (typeof agregarNotificacion === "function") {
+    agregarNotificacion({
+      texto: `La fecha de vencimiento de tu apartado cambió: ahora vence el ${fechaTexto}.`,
+      link: "apartados",
+      paraId: v.usuarioId,
+      rolDestino: "emprendedora_lider"
+    });
+  }
+  registrarActividadApartadosRol({ accion: "cambiar_vencimiento", descripcion: `Cambió la fecha de vencimiento del apartado de ${v.usuarioNombre} al ${fechaTexto} (${resultado.motivo})` }, empleado);
+
+  guardarVentanas();
+  cerrarModal();
+  renderTabla();
+  mostrarToast(`Fecha de vencimiento cambiada por ${empleado.nombre}.`);
 
 }
 
@@ -592,7 +705,11 @@ function crearFilaVentana(v) {
         ${vencidaAviso ? `<small style="display:block;margin-top:4px;color:#bd4c4c;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Vencida — pendiente de gestionar</small>` : ""}
       </td>
 
-      <td>${obtenerTextoVencimiento(v)}</td>
+      <td>
+        ${obtenerTextoVencimiento(v)}
+        ${v.vencimientoAjustado ? `<small style="display:block;margin-top:3px;color:var(--mwv-766d83);">${v.vencimientoAjustado.modo === "personalizada" ? "Fecha personalizada" : `Plazo ${obtenerReglaCategoria(v.vencimientoAjustado.modo).etiqueta.toLowerCase()}`} · ${escapeHTML(v.vencimientoAjustado.usuario || "")}</small>` : ""}
+        ${v.estado === "activa" ? `<button type="button" class="action-btn detail-action cambiar-vencimiento-btn" data-cambiar-vencimiento="${v.id}">Cambiar fecha</button>` : ""}
+      </td>
 
       <td>
         <div class="actions-stack">

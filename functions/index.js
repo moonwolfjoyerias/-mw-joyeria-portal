@@ -1,4 +1,12 @@
-// MW JOYERÍA — Correo de las notificaciones personales de Emprendedora/Líder
+// MW JOYERÍA — Funciones de servidor
+//
+// 1. correoNotificacionEmprendedoraLider — correo de las notificaciones
+//    personales de Emprendedora/Líder (abajo).
+// 2. cambiarPasswordCuenta — Admin cambia la contraseña real de una
+//    cuenta (al final del archivo).
+//
+// ---------------------------------------------------------------------
+// 1. Correo de las notificaciones personales de Emprendedora/Líder
 //
 // Pedido: "vincular las notificaciones con el correo". Acordado con el
 // equipo:
@@ -15,10 +23,12 @@
 // functions/README.md para activarlo.
 
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 
 initializeApp();
 const db = getFirestore();
@@ -140,3 +150,51 @@ exports.correoNotificacionEmprendedoraLider = onDocumentCreated(
     await registro.update({ estado: 'enviado' });
   }
 );
+
+// ---------------------------------------------------------------------
+// 2. Cambiar la contraseña de una cuenta desde Administración
+// ---------------------------------------------------------------------
+//
+// El navegador no puede cambiar la contraseña de OTRA cuenta de Firebase
+// Auth (solo la propia); antes había que correr a mano
+// scripts/resetear-password.js con la llave de servicio. Ahora
+// Configuración → Usuarios y permisos → "Restablecer contraseña" llama a
+// esta función (ver cambiarPasswordFirebaseComoAdmin en
+// js/auth-service.js).
+//
+// Solo la usa una cuenta de Administración activa (se revisa su perfil
+// en users/{uid}, no lo que diga el navegador), y solo sobre cuentas del
+// portal (las que tienen perfil en users/{uid}).
+//
+// Región fija us-central1: a diferencia del correo, no depende de dónde
+// esté Firestore, y así el portal siempre sabe a qué dirección llamar.
+exports.cambiarPasswordCuenta = onCall({ region: 'us-central1' }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Inicia sesión de nuevo.');
+
+  const quien = await db.collection('users').doc(request.auth.uid).get();
+  const perfil = quien.exists ? quien.data() : null;
+  if (!perfil || perfil.rol !== 'admin' || perfil.activa === false) {
+    throw new HttpsError('permission-denied', 'Solo Administración puede cambiar contraseñas.');
+  }
+
+  const uid = String((request.data && request.data.uid) || '');
+  const password = String((request.data && request.data.password) || '');
+  if (!uid) throw new HttpsError('invalid-argument', 'Falta la cuenta.');
+  if (password.length < 6) throw new HttpsError('invalid-argument', 'La contraseña debe tener al menos 6 caracteres.');
+
+  const destino = await db.collection('users').doc(uid).get();
+  if (!destino.exists) throw new HttpsError('not-found', 'Esa cuenta no existe en el portal.');
+
+  try {
+    await getAuth().updateUser(uid, { password });
+  } catch (error) {
+    if (error && error.code === 'auth/user-not-found') throw new HttpsError('not-found', 'Esa cuenta ya no tiene acceso en Firebase.');
+    if (error && error.code === 'auth/invalid-password') throw new HttpsError('invalid-argument', 'La contraseña debe tener al menos 6 caracteres.');
+    logger.error('No se pudo cambiar la contraseña', { uid, error: error && error.message });
+    throw new HttpsError('internal', 'No se pudo cambiar la contraseña. Inténtalo de nuevo.');
+  }
+
+  const datos = destino.data();
+  logger.info('Contraseña cambiada por Administración', { uid, usuario: datos.usuario || '', por: perfil.usuario || request.auth.uid });
+  return { ok: true };
+});

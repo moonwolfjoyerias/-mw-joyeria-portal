@@ -429,6 +429,56 @@ function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, emplea
 
 }
 
+// Staff/Encargado/Admin cambian a mano la fecha de vencimiento de una
+// ventana activa (Apartados → "Cambiar fecha"):
+// - modo 'normal' / 'foranea': la ventana se toma como de esa categoría
+//   y vence a los días de esa categoría contados desde que se confirmó
+//   el depósito (fechaInicio), igual que al confirmarlo.
+// - modo 'personalizada': vence al final del día elegido (fechaISO,
+//   'AAAA-MM-DD').
+// Si la nueva fecha queda más adelante, los avisos de "vence en 1 día /
+// 2 horas" se vuelven a mandar cuando toque.
+function calcularNuevoVencimientoVentana(ventana, modo, fechaISO) {
+  if (modo === 'personalizada') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fechaISO || ''))) return null;
+    const [a, m, d] = fechaISO.split('-').map(Number);
+    return new Date(a, m - 1, d, 23, 59, 0, 0).toISOString();
+  }
+  const regla = CATEGORIAS_APARTADO[modo];
+  if (!regla || !regla.dias) return null;
+  const inicio = ventana.fechaInicio ? new Date(ventana.fechaInicio) : new Date();
+  return new Date(inicio.getTime() + regla.dias * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function cambiarVencimientoVentana(ventana, { modo, fechaISO }, empleado) {
+
+  if (!ventana || ventana.estado !== 'activa') return { ok: false, error: 'Solo se puede cambiar la fecha de un apartado activo.' };
+  const nueva = calcularNuevoVencimientoVentana(ventana, modo, fechaISO);
+  if (!nueva) return { ok: false, error: modo === 'personalizada' ? 'Elige una fecha.' : 'Ese plazo no es válido.' };
+  if (modo === 'personalizada' && new Date(nueva).getTime() <= Date.now()) {
+    return { ok: false, error: 'La fecha personalizada tiene que ser de hoy en adelante.' };
+  }
+
+  const anterior = ventana.fechaVencimiento;
+  const categoriaAnterior = ventana.categoria;
+  ventana.fechaVencimiento = nueva;
+  if (modo === 'normal' || modo === 'foranea') ventana.categoria = modo;
+  ventana.vencimientoAjustado = { modo, fecha: new Date().toISOString(), usuario: empleado.nombre };
+  if (!anterior || new Date(nueva) > new Date(anterior)) {
+    delete ventana.avisoVencimiento1DiaEnviado;
+    delete ventana.avisoVencimiento2HorasEnviado;
+  }
+
+  const formato = (iso) => iso ? new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : 'sin fecha';
+  const motivo = modo === 'personalizada'
+    ? 'fecha personalizada'
+    : `plazo ${CATEGORIAS_APARTADO[modo].etiqueta.toLowerCase()} (${CATEGORIAS_APARTADO[modo].dias} días)${categoriaAnterior !== modo ? ` — ahora es ${CATEGORIAS_APARTADO[modo].etiqueta}` : ''}`;
+  ventana.auditoria.push(registrarAuditoriaVentana(`Fecha de vencimiento cambiada del ${formato(anterior)} al ${formato(nueva)} (${motivo})`, empleado));
+
+  return { ok: true, anterior, nueva, motivo };
+
+}
+
 // Descuenta la existencia real de la variante seleccionada (Sección 4.3
 // — cantidad por combinación color+talla) antes de crear la pieza. Si ya
 // no hay existencia (otra persona se adelantó, o el catálogo cambió
