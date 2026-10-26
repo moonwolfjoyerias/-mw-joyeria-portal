@@ -432,3 +432,12 @@ function abrirModalEvento(id) {
   document.getElementById('confirmarAsistenciaBtn')?.addEventListener('click', () => confirmarAsistenciaEvento(ev.id));
   overlay.classList.add('open');
 }
+
+// En vivo: si Staff agrega o cambia un evento (en la página o en BRILLO
+// MW), el calendario se actualiza solo, sin recargar.
+window.addEventListener('mw:eventos-actualizados', () => {
+  if (typeof cargarEventosCompartidos === 'function') EVENTOS_ACTUALES = cargarEventosCompartidos();
+  renderCalendario();
+  renderProximosEventos();
+  renderInvitacionesComunidad();
+});

@@ -809,3 +809,11 @@ function formatearFechaHoraLarga(fechaISO) {
 
 }
 
+
+// En vivo: lo que cambie BRILLO MW u otro dispositivo (eventos nuevos,
+// editados o eliminados) se pinta aquí sin recargar la página.
+// Ver escucharEventosEnVivo() en eventos-firestore-sync.js.
+window.addEventListener('mw:eventos-actualizados', () => {
+  eventosCalendario = cargarEventosCompartidos();
+  renderTablaCalendario();
+});

@@ -26,6 +26,92 @@ const EVENTOS_STORAGE_KEY = 'mw-eventos-v1';
 
 let EVENTOS_CACHE = [];
 
+// Opción A + en vivo (convivencia con BRILLO MW, que también maneja el
+// calendario en esta misma colección). Igual que
+// lista-deseos-firestore-sync.js:
+// - Se recuerda cómo estaba cada evento en el servidor y al guardar se
+//   envía SOLO lo que cambió aquí; solo se borra lo que esta página
+//   conocía y quitó, nunca un evento que no conoce.
+// - onSnapshot aplica lo que cambie BRILLO u otro dispositivo sobre el
+//   mismo arreglo en memoria y avisa a la pantalla
+//   ('mw:eventos-actualizados') para que se vuelva a pintar sola.
+// - Una copia atrasada de un evento no se vuelve a enviar, y lo que llegó
+//   en vivo no se borra por no venir en un arreglo viejo.
+const _evEnServidor = new Map();
+const _evVersionesSuperadas = new Map();
+const _evRecibidosEnVivo = new Set();
+let _evEnServidorCargado = false;
+let _escuchaEventosActiva = false;
+
+function _evRecordarServidor(eventos) {
+  _evEnServidor.clear();
+  eventos.forEach(ev => _evEnServidor.set(String(ev.id), textoEstableFirestore(ev)));
+  _evEnServidorCargado = true;
+}
+
+function _evSuperar(id, texto) {
+  if (!texto) return;
+  if (!_evVersionesSuperadas.has(id)) _evVersionesSuperadas.set(id, new Set());
+  _evVersionesSuperadas.get(id).add(texto);
+}
+
+function _evAplicarEnVivo(snap) {
+  let huboCambios = false;
+  snap.docChanges().forEach(cambio => {
+    const id = String(cambio.doc.id);
+    const antes = _evEnServidor.get(id);
+    const i = EVENTOS_CACHE.findIndex(ev => String(ev.id) === id);
+    const local = i >= 0 ? EVENTOS_CACHE[i] : null;
+    const cambioPendiente = local && textoEstableFirestore(local) !== antes;
+    if (cambio.type === 'removed') {
+      if (antes === undefined) return;
+      _evSuperar(id, antes);
+      _evEnServidor.delete(id);
+      if (local && !cambioPendiente) { EVENTOS_CACHE.splice(i, 1); huboCambios = true; }
+      return;
+    }
+    const ev = { ...cambio.doc.data(), id: cambio.doc.id };
+    const texto = textoEstableFirestore(ev);
+    if (texto === antes) return;
+    if (antes === undefined && !local) _evRecibidosEnVivo.add(id);
+    _evSuperar(id, antes);
+    _evEnServidor.set(id, texto);
+    if (cambioPendiente) return;
+    if (local) EVENTOS_CACHE[i] = ev; else EVENTOS_CACHE.unshift(ev);
+    huboCambios = true;
+  });
+  if (!huboCambios) return;
+  try { localStorage.setItem(EVENTOS_STORAGE_KEY, JSON.stringify(EVENTOS_CACHE)); } catch (error) { /* noop */ }
+  window.dispatchEvent(new CustomEvent('mw:eventos-actualizados'));
+}
+
+function escucharEventosEnVivo() {
+  if (!dbFirestore || _escuchaEventosActiva) return;
+  _escuchaEventosActiva = true;
+  // Si la escucha falla (sin sesión, sin red) la página sigue como antes:
+  // con lo que cargó.
+  dbFirestore.collection(EVENTOS_COLECCION_FIRESTORE).onSnapshot(_evAplicarEnVivo, () => {});
+}
+
+// Un arreglo armado antes de un cambio en vivo: sus copias atrasadas se
+// cambian por la versión actual y lo que llegó en vivo y no trae se
+// conserva, para que la pantalla no muestre datos viejos.
+function _evConservarRecibidos(eventos) {
+  if (eventos === EVENTOS_CACHE) return eventos;
+  const actuales = new Map(EVENTOS_CACHE.map(ev => [String(ev.id), ev]));
+  eventos.forEach((ev, i) => {
+    const id = String(ev.id);
+    if (_evVersionesSuperadas.has(id) && _evVersionesSuperadas.get(id).has(textoEstableFirestore(ev)) && actuales.has(id)) eventos[i] = actuales.get(id);
+  });
+  if (_evRecibidosEnVivo.size) {
+    const ids = new Set(eventos.map(ev => String(ev.id)));
+    EVENTOS_CACHE.forEach(ev => {
+      if (_evRecibidosEnVivo.has(String(ev.id)) && !ids.has(String(ev.id))) eventos.push(ev);
+    });
+  }
+  return eventos;
+}
+
 function eventosSemillaLocal() {
   return (typeof EVENTOS_EJEMPLO !== 'undefined' ? EVENTOS_EJEMPLO : []).map(ev => ({ ...ev }));
 }
@@ -46,6 +132,8 @@ async function cargarEventosRepo() {
       const snap = await dbFirestore.collection(EVENTOS_COLECCION_FIRESTORE).get();
       if (!snap.empty) {
         EVENTOS_CACHE = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        _evRecordarServidor(EVENTOS_CACHE);
+        escucharEventosEnVivo();
       } else {
         // Colección vacía: puede ser la primera vez que este proyecto
         // recibe el calendario, O alguien borró todos los eventos a
@@ -54,6 +142,8 @@ async function cargarEventosRepo() {
         const meta = await dbFirestore.collection(EVENTOS_META_COLECCION).doc(EVENTOS_META_DOC_ID).get();
         if (meta.exists) {
           EVENTOS_CACHE = [];
+          _evRecordarServidor(EVENTOS_CACHE);
+          escucharEventosEnVivo();
         } else {
           EVENTOS_CACHE = eventosSemillaLocal();
           await guardarEventosRepo(EVENTOS_CACHE);
@@ -83,6 +173,7 @@ async function cargarEventosRepo() {
 let _colaGuardadoEventos = Promise.resolve();
 
 async function guardarEventosRepo(eventos) {
+  eventos = _evConservarRecibidos(eventos);
   EVENTOS_CACHE = eventos;
   try { localStorage.setItem(EVENTOS_STORAGE_KEY, JSON.stringify(eventos)); } catch (error) { /* noop */ }
 
@@ -95,18 +186,37 @@ async function guardarEventosRepo(eventos) {
 
 async function sincronizarEventosConFirestore(eventos) {
   const coleccion = dbFirestore.collection(EVENTOS_COLECCION_FIRESTORE);
-  const snap = await coleccion.get();
-  const idsNuevos = new Set(eventos.map(ev => String(ev.id)));
+  // Opción A: solo lo que cambió aquí; solo se borra lo que esta página
+  // conocía y quitó (nunca un evento creado en BRILLO u otro dispositivo).
   const batch = dbFirestore.batch();
-  snap.docs.forEach(doc => {
-    if (!idsNuevos.has(doc.id)) batch.delete(doc.ref);
-  });
+  const escritos = new Map();
   eventos.forEach(ev => {
-    batch.set(coleccion.doc(String(ev.id)), ev);
+    const id = String(ev.id);
+    const texto = textoEstableFirestore(ev);
+    if (_evEnServidor.get(id) === texto) return;
+    if (_evVersionesSuperadas.has(id) && _evVersionesSuperadas.get(id).has(texto)) return;
+    batch.set(coleccion.doc(id), ev);
+    escritos.set(id, texto);
   });
-  batch.set(dbFirestore.collection(EVENTOS_META_COLECCION).doc(EVENTOS_META_DOC_ID), { inicializado: true }, { merge: true });
+  const idsNuevos = new Set(eventos.map(ev => String(ev.id)));
+  const borrados = [];
+  _evEnServidor.forEach((texto, id) => {
+    if (!idsNuevos.has(id) && !_evRecibidosEnVivo.has(id)) {
+      batch.delete(coleccion.doc(id));
+      borrados.push(id);
+    }
+  });
+  // El marcador "ya se sembró" solo hace falta la primera vez.
+  const primeraVez = !_evEnServidorCargado;
+  if (primeraVez) {
+    batch.set(dbFirestore.collection(EVENTOS_META_COLECCION).doc(EVENTOS_META_DOC_ID), { inicializado: true }, { merge: true });
+  }
+  if (!escritos.size && !borrados.length && !primeraVez) return;
   try {
     await batch.commit();
+    escritos.forEach((texto, id) => _evEnServidor.set(id, texto));
+    borrados.forEach(id => _evEnServidor.delete(id));
+    _evEnServidorCargado = true;
   } catch (error) {
     if (typeof mostrarToast === 'function') {
       mostrarToast('No se pudo guardar el calendario: ' + (error && error.message ? error.message : 'error desconocido') + '. Ningún cambio de este guardado se aplicó.');
