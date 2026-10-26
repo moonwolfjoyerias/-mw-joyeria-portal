@@ -106,9 +106,14 @@ function obtenerVentanasFiltradas() {
     // "Quitar de la vista" solo oculta la fila — la ventana, su historial
     // y su crédito siguen intactos, y se pueden ver con el filtro
     // "Quitadas de la vista".
+    // Una pieza cancelada que sigue en su bolsita física es algo
+    // pendiente: esa ventana se muestra aunque esté cerrada o quitada
+    // de la vista, hasta que alguien confirme que ya se sacó.
+    const pendienteBolsita = v.apartados.some(piezaPendienteDeSacarDeBolsita);
+
     if (filtroEstado === "ocultas") {
       if (!v.ocultaEnPanel) return false;
-    } else {
+    } else if (!pendienteBolsita) {
       if (v.ocultaEnPanel) return false;
 
       // Una ventana cerrada sin depósito que conservar ya no tiene nada
@@ -174,6 +179,10 @@ function agregarEventosComunesFilas() {
 
   document.querySelectorAll("[data-bolsita-pieza]").forEach(btn => {
     btn.addEventListener("click", () => confirmarBolsitaPieza(btn.dataset.ventana, btn.dataset.bolsitaPieza));
+  });
+
+  document.querySelectorAll("[data-sacar-bolsita]").forEach(btn => {
+    btn.addEventListener("click", () => confirmarSacarDeBolsita(btn.dataset.ventana, btn.dataset.sacarBolsita));
   });
 
   document.querySelectorAll("[data-ocultar-ventana]").forEach(btn => {
@@ -366,6 +375,45 @@ function confirmarBolsitaPieza(ventanaId, piezaId) {
 
 }
 
+// Pieza cancelada (o quitada del apartado) que estaba guardada en su
+// bolsita física: alguien tiene que sacarla y regresarla — queda
+// pendiente hasta que se confirma.
+function piezaPendienteDeSacarDeBolsita(pieza) {
+  return pieza.estado === "cancelada" && !!pieza.enBolsita && !pieza.sacadaDeBolsita;
+}
+
+function confirmarSacarDeBolsita(ventanaId, piezaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  const pieza = v?.apartados.find(p => p.id === piezaId);
+  if (!pieza || !piezaPendienteDeSacarDeBolsita(pieza)) return;
+
+  pedirConfirmacionPanelRol({
+    ventanaId,
+    titulo: "Sacar de la bolsita",
+    mensaje: `¿Confirmas que "${escapeHTML(pieza.producto)}" de ${escapeHTML(v.usuarioNombre)} ya se sacó de su bolsita física?`,
+    textoBoton: "Sí, ya se sacó",
+    onConfirmar: (empleado) => marcarSacadaDeBolsita(ventanaId, piezaId, empleado)
+  });
+
+}
+
+function marcarSacadaDeBolsita(ventanaId, piezaId, empleado) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  const pieza = v?.apartados.find(p => p.id === piezaId);
+  if (!pieza || !piezaPendienteDeSacarDeBolsita(pieza)) return;
+
+  pieza.sacadaDeBolsita = { fecha: new Date().toISOString(), usuario: empleado.nombre };
+  v.auditoria.push(registrarAuditoriaVentana(`${pieza.producto}: se sacó de la bolsita física (pieza cancelada)`, empleado));
+  registrarActividadApartadosRol({ accion: "sacar_de_bolsita", descripcion: `Sacó ${pieza.producto} de la bolsita física (pieza cancelada del apartado de ${v.usuarioNombre})` }, empleado);
+
+  guardarVentanas();
+  renderTabla();
+  mostrarToast(`Sacada de la bolsita por ${empleado.nombre}.`);
+
+}
+
 function confirmarOcultarVentana(ventanaId, ocultar) {
 
   const v = ventanas.find(x => x.id === ventanaId);
@@ -507,6 +555,7 @@ function crearFilaVentana(v) {
   const vencidaAviso = v.estado === "activa" && ventanaEstaVencida(v);
   const piezasActivas = obtenerPiezasActivas(v);
   const sinBolsita = piezasActivas.filter(p => !p.enBolsita).length;
+  const porSacarDeBolsita = v.apartados.filter(piezaPendienteDeSacarDeBolsita).length;
 
   return `
     <tr class="ventana-row">
@@ -519,6 +568,7 @@ function crearFilaVentana(v) {
             ${piezasActivas.length ? (sinBolsita
               ? `<small style="display:block;margin-top:3px;color:#9a6a00;font-weight:600;">${sinBolsita} de ${piezasActivas.length} sin guardar en bolsita</small>`
               : `<small style="display:block;margin-top:3px;color:#3f7a2a;font-weight:600;">✓ Todas en bolsita</small>`) : ""}
+            ${porSacarDeBolsita ? `<small style="display:block;margin-top:3px;color:#b94d4d;background:#fdecec;border-radius:6px;padding:2px 6px;font-weight:600;">⚠ ${porSacarDeBolsita} pieza${porSacarDeBolsita === 1 ? "" : "s"} cancelada${porSacarDeBolsita === 1 ? "" : "s"} sigue${porSacarDeBolsita === 1 ? "" : "n"} en bolsita</small>` : ""}
             ${v.cambioClienteSinRevisar ? `<small style="display:block;margin-top:3px;color:#9a6a00;background:#fff4da;border-radius:6px;padding:2px 6px;font-weight:600;">⚠ ${escapeHTML(v.cambioClienteSinRevisar.texto)} — sin revisar</small>` : ""}
           </div>
         </button>
@@ -571,7 +621,11 @@ function crearFilaDetalle(v) {
     const bolsita = p.estado === "activa"
       ? `<button type="button" class="action-btn ${p.enBolsita ? "primary-action" : "detail-action"} bolsita-btn" data-ventana="${v.id}" data-bolsita-pieza="${p.id}" title="${p.enBolsita ? "Clic para quitar la marca" : "Marcar cuando la pieza ya esté guardada en su bolsita en el local"}">${p.enBolsita ? "✓ En bolsita" : "Guardar en bolsita"}</button>
          <button type="button" class="action-btn danger-action bolsita-btn" data-ventana="${v.id}" data-quitar-pieza="${p.id}" title="Quitar esta pieza del apartado (por ejemplo, si ya no hay existencia)">× Quitar pieza</button>`
-      : (p.enBolsita ? `<span class="status status-active">✓ Estuvo en bolsita</span>` : "");
+      : piezaPendienteDeSacarDeBolsita(p)
+        ? `<button type="button" class="action-btn primary-action bolsita-btn" data-ventana="${v.id}" data-sacar-bolsita="${p.id}" title="Clic cuando la pieza ya se haya sacado de su bolsita física">Confirmar que se sacó de la bolsita</button>`
+        : p.sacadaDeBolsita
+          ? `<span class="status status-active">✓ Sacada de la bolsita</span>`
+          : (p.enBolsita ? `<span class="status status-active">✓ Estuvo en bolsita</span>` : "");
 
     const elegidaParaPagar = p.estado === "activa" && v.fechaDeclaracionPago && Array.isArray(v.piezasDeclaradasPago) && v.piezasDeclaradasPago.includes(p.id);
 
@@ -587,6 +641,8 @@ function crearFilaDetalle(v) {
             ${bolsita}
           </div>
           ${p.enBolsita ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">En bolsita desde ${formatearFechaHora(p.enBolsita.fecha)} · ${escapeHTML(p.enBolsita.usuario || "")}</small>` : ""}
+          ${piezaPendienteDeSacarDeBolsita(p) ? `<small style="display:block;margin-top:4px;color:#b94d4d;font-weight:600;">Se canceló y sigue en su bolsita: sácala y confirma aquí.</small>` : ""}
+          ${p.sacadaDeBolsita ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">Sacada de la bolsita ${formatearFechaHora(p.sacadaDeBolsita.fecha)} · ${escapeHTML(p.sacadaDeBolsita.usuario || "")}</small>` : ""}
           ${p.retiro ? `<small style="display:block;margin-top:4px;color:#b94d4d;">Quitada del apartado: ${escapeHTML(p.retiro.motivo)} · ${escapeHTML(p.retiro.usuario || "")} · ${formatearFechaHora(p.retiro.fecha)}</small>` : ""}
         </div>
       </div>
