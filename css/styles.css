@@ -5480,3 +5480,25 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
    PRODUCTO" en js/catalogo-variantes-modelo.js): fondo suave en vez de
    un hueco en blanco. */
 img[src*="#mwfoto="] { background: var(--mw-lilac-soft); }
+
+/* Admin → Nómina: revisar personas contra las cuentas dadas de alta
+   (ver abrirModalRevisarCuentasNomina en js/admin-nomina.js). */
+.nom-revision-titulo { font-weight: 600; color: var(--mw-heading-d); margin: 14px 0 4px; font-size: 0.9rem; }
+.nom-revision-lista { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.nom-revision-fila {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--mw-border-d);
+  border-radius: 8px;
+  background: var(--mw-surface-soft);
+}
+.modal-box .nom-revision-check { display: flex; flex-direction: row; align-items: flex-start; gap: 10px; font-family: inherit; color: var(--mw-heading-d); margin: 0; cursor: pointer; }
+.nom-revision-check input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; accent-color: var(--mwv-8b55ad); }
+.nom-revision-check span { display: flex; flex-direction: column; gap: 2px; }
+.nom-revision-check small, .nom-revision-nota { color: var(--mw-text-muted); font-size: 0.76rem; }
+.nom-revision-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-left: 28px; }
+.modal-box .nom-revision-campos label { font-family: inherit; font-size: 0.76rem; margin: 0; }
+.nom-revision-campos input { width: 100%; height: 36px; border: 1px solid var(--mw-border-d); border-radius: 7px; padding: 0 10px; margin-top: 3px; background: var(--mw-surface, #fff); color: var(--mw-heading-d); }
+@media (max-width: 560px) { .nom-revision-campos { grid-template-columns: 1fr; padding-left: 0; } }

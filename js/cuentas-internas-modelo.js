@@ -292,7 +292,8 @@ async function activarCuentaInterna(id) {
 }
 
 function obtenerCuentaInternaPorEmpleadoNomina(empleadoNominaId) {
-  return obtenerCuentasInternas().find(c => c.empleadoNominaId === empleadoNominaId) || null;
+  const empleado = typeof obtenerEmpleadoNominaPorId === 'function' ? obtenerEmpleadoNominaPorId(empleadoNominaId) : null;
+  return obtenerCuentasInternas().find(c => c.empleadoNominaId === empleadoNominaId || (empleado && empleado.cuentaInternaId === c.id)) || null;
 }
 
 // El acceso real en Firebase Auth (el registro en sí) no se puede

@@ -21,7 +21,9 @@ let nomFiltroCargo = 'todos';
 document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof nominaRepoListo !== 'undefined') await nominaRepoListo;
+  if (typeof cuentasInternasRepoListo !== 'undefined') await cuentasInternasRepoListo;
 
+  renderAvisoCuentasNomina();
   revisarBorradorNominaAlCargar();
   renderSelectorPeriodoNomina();
   renderVistaActualNomina();
@@ -1413,6 +1415,135 @@ function renderDatosEmpleados() {
     renderDatosEmpleados();
   }));
 
+}
+
+// ============================================================
+// EMPLEADOS ↔ CUENTAS DADAS DE ALTA — ver revisarEmpleadosNominaContraCuentas
+// en nomina-modelo.js. Aviso arriba de la página + revisión que Admin
+// confirma (nada se agrega ni se quita solo).
+// ============================================================
+
+function renderAvisoCuentasNomina() {
+  let aviso = document.getElementById('nomAvisoCuentas');
+  if (!aviso) {
+    const ancla = document.getElementById('nomRecuperarBanner');
+    if (!ancla) return;
+    aviso = document.createElement('div');
+    aviso.id = 'nomAvisoCuentas';
+    aviso.className = 'cfg-recuperar-banner';
+    ancla.parentNode.insertBefore(aviso, ancla);
+  }
+  const { sinEmpleado, dePrueba } = revisarEmpleadosNominaContraCuentas();
+  if (!sinEmpleado.length && !dePrueba.length) { aviso.hidden = true; return; }
+  const partes = [];
+  if (sinEmpleado.length) partes.push(`${sinEmpleado.length} cuenta${sinEmpleado.length === 1 ? '' : 's'} dada${sinEmpleado.length === 1 ? '' : 's'} de alta sin registro de nómina`);
+  if (dePrueba.length) partes.push(`${dePrueba.length} persona${dePrueba.length === 1 ? '' : 's'} de prueba`);
+  aviso.hidden = false;
+  aviso.innerHTML = `
+    <div>
+      <strong>Nómina no coincide con las cuentas dadas de alta.</strong>
+      <span>Hay ${partes.join(' y ')}. Actividades del Staff usa esta misma lista de personas.</span>
+    </div>
+    <div class="cfg-recuperar-acciones">
+      <button class="btn btn-primary" id="nomRevisarCuentasBtn" type="button">Revisar</button>
+    </div>
+  `;
+  document.getElementById('nomRevisarCuentasBtn').addEventListener('click', abrirModalRevisarCuentasNomina);
+}
+
+function abrirModalRevisarCuentasNomina() {
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const { sinEmpleado, dePrueba } = revisarEmpleadosNominaContraCuentas();
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  box.style.maxWidth = '620px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Personas de Nómina</h3>
+    <p class="modal-sub">Nómina y Actividades del Staff deben tener a las personas con cuenta dada de alta.</p>
+
+    ${sinEmpleado.length ? `
+      <div class="nom-revision-titulo">Cuentas sin registro de nómina</div>
+      <p class="cfg-card-sub" style="margin:0 0 8px;">Desmarca las que no son una persona con sueldo (por ejemplo, la cuenta general compartida de Staff): ya no se volverán a sugerir. El sueldo se puede capturar después en Datos → Empleados.</p>
+      <div class="nom-revision-lista">
+        ${sinEmpleado.map(({ cuenta, coincide }) => `
+          <div class="nom-revision-fila">
+            <label class="nom-revision-check">
+              <input type="checkbox" data-nom-agregar-cuenta="${escapeHTMLNomina(cuenta.id)}" checked>
+              <span><strong>${escapeHTMLNomina(cuenta.nombre)}</strong><small>${escapeHTMLNomina(cuenta.usuario)} · ${escapeHTMLNomina(CARGOS_NOMINA[cuenta.rol] || cuenta.rol)}</small></span>
+            </label>
+            ${coincide
+              ? `<small class="nom-revision-nota">Ya está en Nómina como «${escapeHTMLNomina(coincide.nombre)}» (${escapeHTMLNomina(coincide.numeroEmpleado)}): solo se enlaza.</small>`
+              : `<div class="nom-revision-campos">
+                  <label>Sueldo semanal<input type="number" min="0" step="1" placeholder="0" data-nom-sueldo="${escapeHTMLNomina(cuenta.id)}"></label>
+                  <label>Fecha de inicio<input type="date" value="${escapeHTMLNomina(String(cuenta.fechaAlta || hoy).slice(0, 10))}" data-nom-inicio="${escapeHTMLNomina(cuenta.id)}"></label>
+                </div>`}
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+
+    ${dePrueba.length ? `
+      <div class="nom-revision-titulo">Personas de prueba</div>
+      <p class="cfg-card-sub" style="margin:0 0 8px;">Se sembraron al crear el sistema y no son empleados reales. Se quitan junto con sus semanas de nómina de prueba.</p>
+      <div class="nom-revision-lista">
+        ${dePrueba.map(e => `
+          <label class="nom-revision-fila nom-revision-check">
+            <input type="checkbox" data-nom-quitar-empleado="${escapeHTMLNomina(e.id)}" checked>
+            <span><strong>Quitar a ${escapeHTMLNomina(e.nombre)}</strong><small>${escapeHTMLNomina(e.numeroEmpleado)} · ${escapeHTMLNomina(CARGOS_NOMINA[e.cargo] || e.cargo)}</small></span>
+          </label>
+        `).join('')}
+      </div>
+    ` : ''}
+
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="btn btn-outline" style="flex:1;" id="nomRevisionCancelarBtn" type="button">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1;" id="nomRevisionAplicarBtn" type="button">Aplicar</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+  document.getElementById('nomRevisionCancelarBtn')?.addEventListener('click', cerrar);
+
+  document.getElementById('nomRevisionAplicarBtn')?.addEventListener('click', () => {
+    const agregar = Array.from(box.querySelectorAll('[data-nom-agregar-cuenta]:checked')).map((cb) => {
+      const cuentaId = cb.getAttribute('data-nom-agregar-cuenta');
+      return {
+        cuentaId,
+        salarioBase: box.querySelector(`[data-nom-sueldo="${CSS.escape(cuentaId)}"]`)?.value || 0,
+        fechaInicio: box.querySelector(`[data-nom-inicio="${CSS.escape(cuentaId)}"]`)?.value || null
+      };
+    });
+    const sinNominaIds = Array.from(box.querySelectorAll('[data-nom-agregar-cuenta]:not(:checked)')).map(cb => cb.getAttribute('data-nom-agregar-cuenta'));
+    const quitarIds = Array.from(box.querySelectorAll('[data-nom-quitar-empleado]:checked')).map(cb => cb.getAttribute('data-nom-quitar-empleado'));
+    if (!agregar.length && !sinNominaIds.length && !quitarIds.length) { cerrar(); return; }
+
+    const nombresQuitar = dePrueba.filter(e => quitarIds.includes(e.id)).map(e => escapeHTMLNomina(e.nombre));
+    const mensaje = [
+      agregar.length ? `Se agregan o enlazan <strong>${agregar.length}</strong> persona${agregar.length === 1 ? '' : 's'} con cuenta.` : '',
+      sinNominaIds.length ? `${sinNominaIds.length} cuenta${sinNominaIds.length === 1 ? ' queda' : 's quedan'} sin nómina.` : '',
+      nombresQuitar.length ? `Se quitan las personas de prueba: ${nombresQuitar.join(', ')}.` : ''
+    ].filter(Boolean).join(' ');
+
+    abrirAutorizacionAdmin({
+      titulo: 'Actualizar personas de Nómina',
+      mensaje,
+      onConfirmar: async () => {
+        const resultado = await aplicarRevisionEmpleadosNomina({ agregar, sinNominaIds, quitarIds });
+        if (typeof registrarAuditoriaAdmin === 'function') {
+          registrarAuditoriaAdmin({ modulo: 'nomina', accion: 'revisar_empleados_cuentas', descripcion: `Nómina actualizada con las cuentas dadas de alta: ${resultado.creados} agregada(s), ${resultado.enlazados} enlazada(s), ${resultado.sinNomina} sin nómina, ${resultado.quitados} persona(s) de prueba quitada(s)` });
+        }
+        mostrarToast(resultado.creados ? 'Listo. Captura el sueldo de las personas nuevas en Datos → Empleados.' : 'Listo, Nómina actualizada.');
+        renderAvisoCuentasNomina();
+        renderVistaActualNomina();
+      }
+    });
+  });
 }
 
 function confirmarBajaEmpleadoNomina(id) {
