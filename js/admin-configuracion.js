@@ -1865,7 +1865,7 @@ function abrirModalResetPassword(tipo, id) {
 
   const sugerida = tipo === 'persona'
     ? `${usuario}${generarIniciales(nombre)}`
-    : String(Math.floor(1000 + Math.random() * 9000));
+    : String(Math.floor(100000 + Math.random() * 900000)); // Firebase pide al menos 6 caracteres
 
   box.style.maxWidth = '400px';
   box.innerHTML = `
@@ -1888,13 +1888,20 @@ function abrirModalResetPassword(tipo, id) {
   box.querySelector('[data-close]')?.addEventListener('click', cerrar);
   document.getElementById('cfgCancelarResetBtn')?.addEventListener('click', cerrar);
 
-  document.getElementById('cfgConfirmarResetBtn')?.addEventListener('click', () => {
+  document.getElementById('cfgConfirmarResetBtn')?.addEventListener('click', async () => {
 
     const nueva = document.getElementById('cfgNuevaPasswordInput').value.trim();
     const errorEl = document.getElementById('cfgResetPasswordError');
-    if (!nueva) return;
+    const boton = document.getElementById('cfgConfirmarResetBtn');
+    if (!nueva || boton.disabled) return;
 
-    const resultado = tipo === 'persona' ? restablecerPasswordPersona(id, nueva) : restablecerPasswordCuentaInterna(id, nueva);
+    // La contraseña real se cambia en el servidor (puede tardar unos segundos).
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+    if (errorEl) errorEl.style.display = 'none';
+    const resultado = tipo === 'persona' ? await restablecerPasswordPersona(id, nueva) : await restablecerPasswordCuentaInterna(id, nueva);
+    boton.disabled = false;
+    boton.textContent = 'Guardar';
     // BUG reportado tras lanzar a producción: cuando esto fallaba (ej.
     // una cuenta con acceso real en Firebase, ver ambas funciones de
     // restablecerPassword*), el clic simplemente no hacía nada — ningún

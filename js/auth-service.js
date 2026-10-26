@@ -208,6 +208,30 @@ async function iniciarSesionAnonimaSiFalta() {
   await authFirebase.signInAnonymously();
 }
 
+// Cambia la contraseña REAL (Firebase Auth) de otra cuenta. Solo
+// Administración: lo valida la función de servidor cambiarPasswordCuenta
+// (functions/index.js) con el perfil de quien la llama. Se llama con el
+// protocolo de "callable" de Firebase directo con fetch, sin cargar otro
+// SDK en la página.
+async function cambiarPasswordFirebaseComoAdmin(uid, password) {
+  const usuario = authFirebase && authFirebase.currentUser;
+  if (!usuario) throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
+  const token = await usuario.getIdToken();
+  let respuesta;
+  try {
+    respuesta = await fetch(`https://us-central1-${FIREBASE_CONFIG.projectId}.cloudfunctions.net/cambiarPasswordCuenta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ data: { uid, password } })
+    });
+  } catch (error) {
+    throw new Error('No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.');
+  }
+  const cuerpo = await respuesta.json().catch(() => ({}));
+  if (respuesta.status === 404) throw new Error('La función para cambiar contraseñas todavía no está publicada (ver functions/README.md).');
+  if (!respuesta.ok || cuerpo.error) throw new Error((cuerpo.error && cuerpo.error.message) || 'No se pudo cambiar la contraseña.');
+}
+
 async function cerrarSesionFirebase() {
   try {
     await authFirebase.signOut();

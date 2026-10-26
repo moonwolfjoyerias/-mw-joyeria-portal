@@ -1,4 +1,11 @@
-# Correo de las notificaciones de Emprendedoras/Líderes
+# Funciones de servidor de MW Joyería
+
+Aquí viven dos funciones que corren en el servidor de Firebase (requieren el plan Blaze). Se publican juntas con los pasos de abajo:
+
+1. **Correo de las notificaciones** de Emprendedoras/Líderes (`correoNotificacionEmprendedoraLider`).
+2. **Cambiar contraseñas desde Administración** (`cambiarPasswordCuenta`): Configuración → Usuarios y permisos → "Restablecer contraseña" cambia la contraseña real de cualquier cuenta del portal (Staff, Encargado, Admin, Emprendedoras y Líderes). Solo la puede usar una cuenta de Administración activa; el servidor lo revisa en `users/{uid}`. Antes había que correr a mano `scripts/resetear-password.js`.
+
+## Correo de las notificaciones de Emprendedoras/Líderes
 
 `index.js` manda por correo cada notificación **personal** de una e/l (apartados por vencer o cancelados, piezas quitadas, pagos, comisiones, solicitudes aprobadas, etc.) en cuanto se crea. Staff, Encargado y Admin siguen solo con la campana. No se manda correo por las piezas nuevas del catálogo.
 
@@ -27,7 +34,9 @@ En Firebase Console → **Firestore Database**, revisa la ubicación de la base 
 | `eur3` | `europe-west1` |
 | Una región sola (ej. `us-east1`) | Esa misma |
 
-### 3. Publicar la función desde Google Cloud Shell (no hay que instalar nada)
+### 3. Publicar las funciones desde Google Cloud Shell (no hay que instalar nada)
+
+Antes, asegúrate de que los cambios ya estén en `main` (Cloud Shell descarga el código de ahí).
 
 1. Abre https://shell.cloud.google.com/?project=moonwolf-portal con la cuenta de Google dueña del proyecto.
 2. Pega estos comandos, uno por uno:
@@ -49,6 +58,10 @@ npx firebase-tools deploy --only functions
 
 ### 4. Probar
 
+**Contraseñas:** como Admin, en Configuración → Usuarios y permisos, usa "Restablecer contraseña" con una cuenta de prueba y entra con la nueva contraseña. Si aparece "La función para cambiar contraseñas todavía no está publicada", falta el paso 3.
+
+**Correo:**
+
 1. Ponle tu propio correo a una e/l de prueba.
 2. Genera un aviso para ella. Por ejemplo, en Apartados quítale una pieza o marca "No depositó".
 3. Revisa la bandeja de entrada y también la de spam.
@@ -66,4 +79,4 @@ git pull && npx firebase-tools deploy --only functions
 
 ## Costo
 
-Con el volumen del portal queda dentro de lo gratuito: Cloud Functions incluye 2 millones de ejecuciones al mes, Brevo da 300 correos al día y la clave en Secret Manager cuesta centavos de dólar al mes. Si un día se pasan de 300 correos diarios, Brevo deja de enviar hasta el día siguiente (queda `error` en `correosNotificaciones`) o se puede contratar su plan de pago.
+Con el volumen del portal queda dentro de lo gratuito: Cloud Functions incluye 2 millones de ejecuciones al mes (cambiar una contraseña es una ejecución), Brevo da 300 correos al día y la clave en Secret Manager cuesta centavos de dólar al mes. Si un día se pasan de 300 correos diarios, Brevo deja de enviar hasta el día siguiente (queda `error` en `correosNotificaciones`) o se puede contratar su plan de pago.

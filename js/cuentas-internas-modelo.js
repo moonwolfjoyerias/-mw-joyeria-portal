@@ -34,12 +34,10 @@
 // enlaza ambos lados. Si no hay Firebase configurado, todo sigue
 // funcionando 100% en localStorage como hasta ahora.
 //
-// ⚠️ LÍMITE CONOCIDO: restablecerPasswordCuentaInterna NO puede
-// cambiar la contraseña real de una cuenta ya creada en Firebase Auth
-// — eso requiere el SDK de administración (server-side), que este
-// portal no tiene sin pagar Cloud Functions. Para esas cuentas, la
-// función devuelve un error explicando que hay que pedirlo aparte
-// (por ahora, un script que corre quien tenga la llave de servicio).
+// restablecerPasswordCuentaInterna cambia la contraseña real de una
+// cuenta ya creada en Firebase Auth con la función de servidor
+// cambiarPasswordCuenta (functions/index.js, plan Blaze) — el
+// navegador por sí solo no puede cambiar la contraseña de otra cuenta.
 
 const CUENTAS_INTERNAS_STORAGE_KEY = 'mw-cuentas-internas-v1';
 
@@ -363,14 +361,21 @@ async function editarCuentaInterna(id, { telefono, correo, fotoUrl } = {}) {
 
 }
 
-function restablecerPasswordCuentaInterna(id, nuevoPassword) {
+// Con acceso real en Firebase (firebaseUid), la contraseña se cambia en
+// el servidor (cambiarPasswordFirebaseComoAdmin, js/auth-service.js).
+async function restablecerPasswordCuentaInterna(id, nuevoPassword) {
 
   const cuentas = obtenerCuentasInternas();
   const cuenta = cuentas.find(c => c.id === id);
   if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
   if (!nuevoPassword) return { ok: false, error: 'La nueva contraseña no puede estar vacía.' };
   if (cuenta.firebaseUid) {
-    return { ok: false, error: `Esta cuenta ya tiene acceso real — su contraseña no se puede cambiar desde aquí. Pide a quien tenga la clave de servicio de Firebase que corra: node scripts/resetear-password.js <service-account.json> ${cuenta.usuario} <nueva-contraseña>` };
+    if (nuevoPassword.length < 6) return { ok: false, error: 'La contraseña debe tener al menos 6 caracteres.' };
+    try {
+      await cambiarPasswordFirebaseComoAdmin(cuenta.firebaseUid, nuevoPassword);
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
   }
 
   cuenta.password = nuevoPassword;

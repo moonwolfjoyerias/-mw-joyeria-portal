@@ -177,9 +177,7 @@ async function abrirDetalleSolicitudAdmin(id) {
           <p class="bp-sub" id="inePreviewReversoCargando" style="margin:0;">Cargando identificación…</p>
         </div>` : ''}
       </div>
-    ` : `
-      <p class="bp-sub">Esta solicitud se registró sin identificación oficial (INE) — es opcional.</p>
-    `}
+    ` : ''}
 
     ${!esPendiente ? construirResolucionHTML(solicitud) : ''}
 

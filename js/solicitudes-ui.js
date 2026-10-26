@@ -12,8 +12,6 @@
 // Guarda los ARCHIVOS reales (no su contenido en base64) — se suben a
 // IndexedDB vía js/documentos-modelo.js recién al enviar la solicitud,
 // nunca se guarda su contenido dentro del registro de la solicitud.
-// Solo se pide el frente de la INE, y es opcional.
-let ineFrenteArchivoTemporal = null;
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -96,8 +94,6 @@ function abrirModalNuevaSolicitud() {
   const box = document.getElementById('modalBox');
   if (!overlay || !box) return;
 
-  ineFrenteArchivoTemporal = null;
-
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     <h3>Nueva solicitud de inscripción</h3>
@@ -118,9 +114,6 @@ function abrirModalNuevaSolicitud() {
       <label class="opcion-si-no"><input type="radio" name="solViveEnSLP" value="no"> No</label>
     </div>
 
-    <label for="solIneFrente">Foto de identificación oficial (INE) — frente (opcional)</label>
-    <input id="solIneFrente" type="file" accept="image/*">
-
     <small class="field-help">Información confidencial: solo el personal Administrativo autorizado podrá verla.</small>
 
     <div id="solError" class="auth-error" style="display:none;"></div>
@@ -129,19 +122,6 @@ function abrirModalNuevaSolicitud() {
   `;
 
   overlay.classList.add('open');
-
-  document.getElementById('solIneFrente')?.addEventListener('change', (e) => {
-    const archivo = e.target.files?.[0];
-    if (!archivo) { ineFrenteArchivoTemporal = null; return; }
-    const validacion = validarArchivoDocumento(archivo);
-    if (!validacion.ok) {
-      mostrarErrorSolicitud(validacion.error);
-      e.target.value = '';
-      ineFrenteArchivoTemporal = null;
-      return;
-    }
-    ineFrenteArchivoTemporal = archivo;
-  });
 
   document.getElementById('enviarSolicitudBtn')?.addEventListener('click', () => enviarNuevaSolicitud(identidad));
 
@@ -156,8 +136,7 @@ function abrirModalNuevaSolicitud() {
 async function enviarNuevaSolicitud(identidad) {
 
   // Evita crear dos solicitudes si se hace doble clic mientras
-  // guardarBlobDocumento()/crearSolicitudInscripcion() (ambas async)
-  // todavía están en curso.
+  // crearSolicitudInscripcion() (async) todavía está en curso.
   const boton = document.getElementById('enviarSolicitudBtn');
   if (boton?.disabled) return;
   if (boton) { boton.disabled = true; boton.textContent = 'Enviando...'; }
@@ -173,25 +152,8 @@ async function enviarNuevaSolicitud(identidad) {
     return;
   }
 
-  // La INE es opcional: solo se guarda si la adjuntaron.
-  // Si la foto no se puede subir (ej. Firebase Storage todavía no está
-  // activado — ver guardarBlobDocumento), la solicitud se envía igual,
-  // sin la foto, y se avisa; antes el botón se quedaba en "Enviando…".
-  let ineFrenteStoragePath = null;
-  let ineNoSubida = false;
-  if (ineFrenteArchivoTemporal) {
-    const sufijo = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-    ineFrenteStoragePath = `solicitudes-ine/${sufijo}-frente`;
-    if (boton) boton.textContent = 'Subiendo foto...';
-    try {
-      await guardarBlobDocumento(ineFrenteStoragePath, ineFrenteArchivoTemporal);
-    } catch (error) {
-      console.error('No se pudo subir la foto de la INE:', error);
-      ineFrenteStoragePath = null;
-      ineNoSubida = true;
-    }
-    if (boton) boton.textContent = 'Enviando...';
-  }
+  // Ya no se pide foto de la INE (decisión del equipo) — la
+  // identificación se revisa por fuera del portal si hace falta.
 
   let resultado;
   try {
@@ -202,7 +164,6 @@ async function enviarNuevaSolicitud(identidad) {
       nombreCompleto,
       telefono,
       correo,
-      ineFrenteUrl: ineFrenteStoragePath,
       viveEnSLP: respuestaSLP === 'si'
     });
   } catch (error) {
@@ -212,7 +173,6 @@ async function enviarNuevaSolicitud(identidad) {
   }
 
   if (!resultado.ok) {
-    if (ineFrenteStoragePath) await eliminarBlobDocumento(ineFrenteStoragePath).catch(() => {});
     mostrarErrorSolicitud(resultado.error);
     if (boton) { boton.disabled = false; boton.textContent = 'Enviar solicitud'; }
     return;
@@ -226,9 +186,7 @@ async function enviarNuevaSolicitud(identidad) {
   // La solicitud YA quedó creada arriba — el toast de confirmación nunca
   // debe depender de que esta lista cargue bien (ver nota de BUG en
   // obtenerSolicitudesDe, solicitudes-modelo.js).
-  mostrarToast(ineNoSubida
-    ? 'Solicitud enviada, pero sin la foto de la INE: por ahora no se pudo subir el archivo. Te avisaremos cuando sea revisada.'
-    : 'Solicitud enviada. Te avisaremos cuando sea revisada.');
+  mostrarToast('Solicitud enviada. Te avisaremos cuando sea revisada.');
   try {
     await renderMisSolicitudes(identidad);
   } catch (error) {

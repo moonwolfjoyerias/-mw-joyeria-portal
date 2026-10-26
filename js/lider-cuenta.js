@@ -120,7 +120,16 @@ function renderPerfilLider() {
 }
 
 // ---------- Datos bancarios (para el pago de comisiones) ----------
-let caratulaClabeArchivoTemporal = null;
+// La carátula de la CLABE ya no se sube a la página (decisión del
+// equipo): se manda por WhatsApp al mismo número de los comprobantes.
+const WHATSAPP_CARATULA_CLABE = '524448100805';
+
+function enlaceWhatsappCaratulaClabe(persona) {
+  const nombre = persona ? [persona.nombre, persona.apellidos].filter(Boolean).join(' ') : '';
+  const usuario = persona?.usuario ? ` (usuario ${persona.usuario})` : '';
+  const mensaje = `Hola, soy ${nombre || 'líder MW'}${usuario}. Les envío la carátula de mi CLABE para el pago de mis comisiones.`;
+  return `https://wa.me/${WHATSAPP_CARATULA_CLABE}?text=${encodeURIComponent(mensaje)}`;
+}
 
 async function abrirModalDatosBancarios() {
   const overlay = document.getElementById('modalOverlay');
@@ -130,8 +139,6 @@ async function abrirModalDatosBancarios() {
   const idActual = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
   const persona = idActual && typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(idActual) : null;
   const actuales = persona?.datosBancarios || {};
-  caratulaClabeArchivoTemporal = null;
-
   box.style.maxWidth = '420px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
@@ -143,27 +150,13 @@ async function abrirModalDatosBancarios() {
     <input type="text" id="inputBancoNombre" value="${(actuales.banco || '').replace(/"/g, '&quot;')}">
     <label for="inputBancoClabe" style="margin-top:10px;">CLABE interbancaria</label>
     <input type="text" id="inputBancoClabe" inputmode="numeric" maxlength="18" value="${(actuales.clabe || '').replace(/"/g, '&quot;')}">
-    <label for="inputCaratulaClabe" style="margin-top:10px;">Carátula de la CLABE (foto o PDF)</label>
-    <input type="file" id="inputCaratulaClabe" accept="image/*,application/pdf">
-    <small class="field-help" id="caratulaClabeActual">${actuales.caratulaClabeUrl ? 'Ya tienes una carátula guardada — sube otra solo si quieres reemplazarla.' : 'Todavía no subes tu carátula.'}</small>
+    <label style="margin-top:10px;">Carátula de la CLABE</label>
+    <a class="btn btn-outline" style="width:100%;" href="${enlaceWhatsappCaratulaClabe(persona)}" target="_blank" rel="noopener">Enviar carátula por WhatsApp</a>
+    <small class="field-help">Mándala en foto o PDF al 444 810 0805.</small>
     <div id="datosBancariosError" class="auth-error" style="display:none;"></div>
     <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="guardarDatosBancariosBtn">Guardar</button>
   `;
   overlay.classList.add('open');
-
-  document.getElementById('inputCaratulaClabe')?.addEventListener('change', (e) => {
-    const archivo = e.target.files?.[0];
-    if (!archivo) { caratulaClabeArchivoTemporal = null; return; }
-    const validacion = validarArchivoDocumento(archivo, { permitirPdf: true });
-    if (!validacion.ok) {
-      const error = document.getElementById('datosBancariosError');
-      if (error) { error.textContent = validacion.error; error.style.display = 'block'; }
-      e.target.value = '';
-      caratulaClabeArchivoTemporal = null;
-      return;
-    }
-    caratulaClabeArchivoTemporal = archivo;
-  });
 
   document.getElementById('guardarDatosBancariosBtn')?.addEventListener('click', async () => {
     if (!idActual) { mostrarToast('No se pudo identificar tu cuenta — vuelve a iniciar sesión.'); return; }
@@ -172,30 +165,7 @@ async function abrirModalDatosBancarios() {
     const clabe = document.getElementById('inputBancoClabe').value.trim();
     if (clabe && !/^\d{18}$/.test(clabe)) { mostrarToast('La CLABE interbancaria debe tener 18 dígitos.'); return; }
 
-    let caratulaClabeUrl;
-    if (caratulaClabeArchivoTemporal) {
-      const boton = document.getElementById('guardarDatosBancariosBtn');
-      if (boton?.disabled) return;
-      if (boton) { boton.disabled = true; boton.textContent = 'Subiendo carátula...'; }
-      caratulaClabeUrl = `datos-bancarios/${idActual}-caratula-${Date.now()}`;
-      try {
-        await guardarBlobDocumento(caratulaClabeUrl, caratulaClabeArchivoTemporal);
-      } catch (error) {
-        // Ver guardarBlobDocumento: sin Firebase Storage activado la subida
-        // falla. Se avisa en vez de dejar el botón colgado; los demás
-        // datos no se guardan para que no se pierda la carátula sin aviso.
-        console.error('No se pudo subir la carátula de la CLABE:', error);
-        const errorEl = document.getElementById('datosBancariosError');
-        if (errorEl) { errorEl.textContent = 'No se pudo subir la carátula, así que se quitó. Da clic en Guardar otra vez para guardar tus datos sin ella, o inténtalo más tarde.'; errorEl.style.display = 'block'; }
-        const inputCaratula = document.getElementById('inputCaratulaClabe');
-        if (inputCaratula) inputCaratula.value = '';
-        caratulaClabeArchivoTemporal = null;
-        if (boton) { boton.disabled = false; boton.textContent = 'Guardar'; }
-        return;
-      }
-    }
-
-    actualizarDatosBancariosPersona(idActual, { titular, banco, clabe, caratulaClabeUrl });
+    actualizarDatosBancariosPersona(idActual, { titular, banco, clabe });
     overlay.classList.remove('open');
     mostrarToast('Datos bancarios actualizados.');
     renderPerfilLider();
