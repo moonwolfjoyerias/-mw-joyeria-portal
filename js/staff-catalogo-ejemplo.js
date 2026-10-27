@@ -45,7 +45,7 @@ const CATALOGO_EJEMPLO = [
     descripcion: 'Cadena fina de 45 cm, ideal para combinar con dijes.',
     material: 'oro-laminado',
     categoria: 'Cadenas',
-    calidad: 'estandar',
+    calidad: 'premium',
     precioEtiqueta: 650,
     descuento: 60,
     disponible: true,
@@ -94,7 +94,7 @@ const CATALOGO_EJEMPLO = [
     descripcion: 'Aretes con diseño floral elegante.',
     material: 'acero-inoxidable',
     categoria: 'Aretes',
-    calidad: 'estandar',
+    calidad: 'premium',
     precioEtiqueta: 320,
     descuento: 40,
     disponible: true,
@@ -126,7 +126,7 @@ const CATALOGO_EJEMPLO = [
     descripcion: 'Exhibidor individual para presentación de joyería.',
     material: 'exhibidores',
     categoria: 'Exhibidores',
-    calidad: 'estandar',
+    calidad: 'premium',
     precioEtiqueta: 149,
     descuento: 30,
     disponible: true,
@@ -142,7 +142,7 @@ const CATALOGO_EJEMPLO = [
     descripcion: 'Souvenir de MW Joyería para obsequio.',
     material: 'souvenirs',
     categoria: 'Souvenirs',
-    calidad: 'estandar',
+    calidad: 'premium',
     precioEtiqueta: 120,
     descuento: 0,
     disponible: true,
@@ -168,15 +168,12 @@ const CATEGORIAS_STAFF = [
   'Relicarios', 'Rosarios', 'Simuladores', 'Semanarios', 'Tobilleras', 'Tiaras'
 ];
 
-const CALIDADES_STAFF = [
-  { key: 'estandar', label: 'Estándar' },
-  { key: 'premium', label: 'Premium' }
-];
 
 const COLORES_ORO_STAFF = [
   'Amarillo',
   'Blanco',
   'Dorado',
+  'Florentino',
   'Negro',
   'Rosa'
 ];

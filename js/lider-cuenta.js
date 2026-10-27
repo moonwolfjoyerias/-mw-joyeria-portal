@@ -109,7 +109,9 @@ function renderPerfilLider() {
   }
 
   setText('perfilNombre', nombre);
-  setText('perfilLider', `Líder ${RANGOS_MW[idxRango(persona?.rangoActualKey || 'sin_rango')].label}`);
+  // Sin rango todavía: solo "Líder" (no "Líder Sin Rango").
+  const rangoPerfil = RANGOS_MW[idxRango(persona?.rangoActualKey || 'sin_rango')];
+  setText('perfilLider', rangoPerfil.key === 'sin_rango' ? 'Líder' : `Líder ${rangoPerfil.label}`);
   setText('perfilTelefono', persona?.telefono || (!persona && demo ? PERFIL_LIDER_EJEMPLO.telefono : '—'));
   setText('perfilCorreo', persona?.correo || (!persona && demo ? PERFIL_LIDER_EJEMPLO.correo : '—'));
 

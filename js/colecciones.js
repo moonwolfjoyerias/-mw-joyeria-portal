@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof catalogoRepoListo !== 'undefined') await catalogoRepoListo;
 
   const categorias = ['oro-laminado', 'acero-inoxidable', 'exhibidores', 'souvenirs', 'fantasia', 'otros'];
-  const catalogo = typeof obtenerCatalogoStaffStorage === 'function' ? obtenerCatalogoStaffStorage() : [];
+  const catalogo = typeof obtenerCatalogoStaffStorage === 'function' ? ordenarProductosMasRecientes(obtenerCatalogoStaffStorage()) : [];
 
   categorias.forEach((material) => {
     const grid = document.querySelector(`.product-grid[data-categoria="${material}"]`);

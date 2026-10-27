@@ -429,6 +429,68 @@ function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, emplea
 
 }
 
+// Cuando Admin cambia la etiqueta de una persona (Normal / Foránea /
+// VIP, en Emprendedoras/Líderes), sus apartados abiertos toman esa
+// categoría con sus reglas:
+// - Activo → Normal/Foránea: vence a los días de la categoría contados
+//   desde el depósito (si alguien puso una fecha personalizada a mano,
+//   esa se respeta). Si venía de VIP sin depósito, pasa a pendiente de
+//   depósito (el plazo corre al confirmarlo, como en cualquier
+//   apartado nuevo).
+// - Activo → VIP: ya no vence.
+// - Pendiente de depósito → VIP: pendiente de aprobación VIP (no
+//   deposita, pero Staff la aprueba).
+// - Pendiente de aprobación VIP → Normal/Foránea: pendiente de depósito.
+// Regresa las ventanas que cambiaron.
+function sincronizarCategoriaVentanasPersona(personaId, categoriaNueva, empleado) {
+
+  const reglaNueva = CATEGORIAS_APARTADO[categoriaNueva];
+  if (!reglaNueva) return [];
+  const cambiadas = [];
+
+  obtenerVentanasApartado().forEach((ventana) => {
+    if (ventana.usuarioId !== personaId || ventana.categoria === categoriaNueva) return;
+    if (!['activa', 'pendiente_deposito', 'pendiente_aprobacion'].includes(ventana.estado)) return;
+
+    const categoriaAnterior = ventana.categoria || 'normal';
+    const estadoAnterior = ventana.estado;
+    const vencimientoAnterior = ventana.fechaVencimiento;
+    ventana.categoria = categoriaNueva;
+
+    const tieneDeposito = Number(ventana.depositoApartadoDisponible) > 0 || Number(ventana.depositoPiso) > 0;
+    if (reglaNueva.requiereAprobacion) {
+      if (ventana.estado === 'pendiente_deposito') ventana.estado = 'pendiente_aprobacion';
+      ventana.fechaVencimiento = null;
+    } else if (ventana.estado === 'pendiente_aprobacion') {
+      ventana.estado = 'pendiente_deposito';
+      ventana.fechaVencimiento = null;
+    } else if (ventana.estado === 'activa') {
+      if (reglaNueva.requiereDeposito && !tieneDeposito) {
+        ventana.estado = 'pendiente_deposito';
+        ventana.fechaVencimiento = null;
+      } else if (!(ventana.vencimientoAjustado && ventana.vencimientoAjustado.modo === 'personalizada')) {
+        ventana.fechaVencimiento = calcularNuevoVencimientoVentana(ventana, categoriaNueva);
+      }
+    }
+    if (ventana.fechaVencimiento && (!vencimientoAnterior || new Date(ventana.fechaVencimiento) > new Date(vencimientoAnterior))) {
+      delete ventana.avisoVencimiento1DiaEnviado;
+      delete ventana.avisoVencimiento2HorasEnviado;
+    }
+
+    const etiqueta = (c) => (CATEGORIAS_APARTADO[c] || CATEGORIAS_APARTADO.normal).etiqueta;
+    const detalle = ventana.estado !== estadoAnterior
+      ? ` — ahora ${ESTADOS_VENTANA_MODELO[ventana.estado].toLowerCase()}`
+      : (ventana.fechaVencimiento !== vencimientoAnterior
+        ? (ventana.fechaVencimiento ? ` — ahora vence el ${new Date(ventana.fechaVencimiento).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}` : ' — ya no vence')
+        : '');
+    ventana.auditoria.push(registrarAuditoriaVentana(`Categoría cambiada de ${etiqueta(categoriaAnterior)} a ${etiqueta(categoriaNueva)} (cambio en la cuenta de la persona)${detalle}`, empleado));
+    cambiadas.push(ventana);
+  });
+
+  return cambiadas;
+
+}
+
 // Staff/Encargado/Admin cambian a mano la fecha de vencimiento de una
 // ventana activa (Apartados → "Cambiar fecha"):
 // - modo 'normal' / 'foranea': la ventana se toma como de esa categoría

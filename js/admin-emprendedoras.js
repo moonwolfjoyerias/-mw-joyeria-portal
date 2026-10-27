@@ -656,6 +656,7 @@ function guardarInformacionPersona(persona) {
       const actual = personas.find(p => p.id === persona.id);
       if (!actual) return;
 
+      const categoriaAnterior = actual.categoria || 'normal';
       Object.assign(actual, cambios);
       guardarPersonas(personas);
 
@@ -664,6 +665,29 @@ function guardarInformacionPersona(persona) {
         accion: 'editar_informacion',
         descripcion: `Información actualizada: ${nombreCompletoPersona(actual)}`
       });
+
+      // Sus apartados abiertos toman la nueva etiqueta con sus reglas
+      // (ver sincronizarCategoriaVentanasPersona en apartados-modelo.js).
+      if ((cambios.categoria || 'normal') !== categoriaAnterior && typeof sincronizarCategoriaVentanasPersona === 'function') {
+        const cambiadas = sincronizarCategoriaVentanasPersona(actual.id, cambios.categoria, { nombre: ADMIN_IDENTIDAD.usuarioNombre });
+        if (cambiadas.length) {
+          guardarVentanasApartado(obtenerVentanasApartado());
+          const etiqueta = (CATEGORIAS_PERSONA[cambios.categoria] || cambios.categoria);
+          if (typeof agregarNotificacion === 'function') {
+            agregarNotificacion({
+              texto: `Tu cuenta ahora es ${etiqueta}: ${cambiadas.length === 1 ? 'tu apartado se actualizó' : `tus ${cambiadas.length} apartados se actualizaron`} con las condiciones de ${etiqueta}.`,
+              link: 'apartados',
+              paraId: actual.id,
+              rolDestino: 'emprendedora_lider'
+            });
+          }
+          registrarAuditoriaAdmin({
+            modulo: 'apartados',
+            accion: 'categoria_apartados_persona',
+            descripcion: `${cambiadas.length} apartado(s) de ${nombreCompletoPersona(actual)} pasaron a ${etiqueta}`
+          });
+        }
+      }
 
       modoEdicionPersona = false;
       liderSeleccionadoEdicion = null;

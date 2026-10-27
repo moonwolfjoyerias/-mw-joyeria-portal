@@ -28,12 +28,12 @@ const CATEGORIAS_ORO = [
   'Relicarios', 'Rosarios', 'Simuladores', 'Semanarios', 'Tobilleras', 'Tiaras',
 ];
 const CATEGORIAS_ACERO = ['Aretes', 'Pulseras', 'Cadenas', 'Anillos', 'Collares'];
-const COLORES_ORO = ['Blanco', 'Amarillo', 'Dorado', 'Rosa', 'Negro'];
+// Misma lista que el formulario de producto (js/staff-catalogo-ejemplo.js).
+const COLORES_ORO = COLORES_ORO_STAFF;
 
 const filtro = {
   materiales: new Set(),
   categorias: new Set(),
-  calidades: new Set(),
   coloresOro: new Set(),
   talla: '',
 };
@@ -50,7 +50,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderFiltroMateriales();
   renderFiltroCategorias();
-  renderFiltroCalidad();
   renderFiltroColorOro();
   renderFiltroTalla();
   aplicarFiltros();
@@ -117,21 +116,6 @@ function renderFiltroCategorias() {
   }));
 }
 
-function renderFiltroCalidad() {
-  const wrap = document.getElementById('filterCalidad');
-  if (!wrap) return;
-  wrap.innerHTML = ['estandar', 'premium'].map(q => `
-    <label class="filter-option">
-      <input type="checkbox" value="${q}" data-filter="calidad">
-      ${q === 'estandar' ? 'Estándar' : 'Premium'}
-    </label>
-  `).join('');
-  wrap.querySelectorAll('input').forEach(cb => cb.addEventListener('change', (e) => {
-    if (e.target.checked) filtro.calidades.add(e.target.value); else filtro.calidades.delete(e.target.value);
-    aplicarFiltros();
-  }));
-}
-
 function renderFiltroColorOro() {
   const wrap = document.getElementById('filterColorOro');
   if (!wrap) return;
@@ -168,7 +152,6 @@ function toggleOroGroups() {
 function limpiarFiltros() {
   filtro.materiales.clear();
   filtro.categorias.clear();
-  filtro.calidades.clear();
   filtro.coloresOro.clear();
   filtro.talla = '';
   document.querySelectorAll('.filter-panel input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -183,13 +166,12 @@ function aplicarFiltros() {
   const resultado = obtenerCatalogoReal().filter((p) => {
     if (filtro.materiales.size > 0 && !filtro.materiales.has(p.material)) return false;
     if (filtro.categorias.size > 0 && !filtro.categorias.has(p.categoria)) return false;
-    if (filtro.calidades.size > 0 && !filtro.calidades.has(p.calidad)) return false;
     if (filtro.coloresOro.size > 0 && !filtro.coloresOro.has(p.colorOro)) return false;
     const variantes = p.variantes || [];
     if (filtro.talla && !variantes.some(v => v.talla === filtro.talla)) return false;
     return true;
   });
-  renderProductos(resultado);
+  renderProductos(ordenarProductosMasRecientes(resultado));
 }
 
 function renderProductos(productos) {
@@ -284,7 +266,6 @@ function abrirModalDetalleProducto(productoId) {
           <div class="full" style="grid-column:1/-1;"><span>Descripción</span><strong>${escapeHTMLCatalogoVariantes(producto.descripcion || 'Sin descripción')}</strong></div>
           <div><span>Categoría</span><strong>${escapeHTMLCatalogoVariantes(producto.categoria || 'Sin categoría')}</strong></div>
           <div><span>Material</span><strong>${escapeHTMLCatalogoVariantes(material)}</strong></div>
-          <div><span>Calidad</span><strong>${producto.calidad === 'premium' ? 'Premium' : 'Estándar'}</strong></div>
           ${producto.colorOro ? `<div><span>Color de oro</span><strong>${escapeHTMLCatalogoVariantes(producto.colorOro)}</strong></div>` : ''}
           <div><span>Precio etiqueta</span><strong>$${producto.precioEtiqueta} MXN</strong></div>
           <div><span>Descuento</span><strong>${producto.descuento || 0}% ($${precioConDescuento(producto)} MXN)</strong></div>
@@ -353,7 +334,9 @@ async function mostrarPasoConfirmarApartar(producto, variante) {
 
   const persona = typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(usuarioIdActual) : null;
   const nuevaVentana = abrirVentanaApartado({
-    usuarioId: usuarioIdActual, usuarioNombre: usuarioNombreActual, telefono: persona?.telefono || '', categoria: 'normal'
+    // La etiqueta de su cuenta (Normal/Foránea/VIP): antes siempre se
+    // abría como Normal sin importar la cuenta.
+    usuarioId: usuarioIdActual, usuarioNombre: usuarioNombreActual, telefono: persona?.telefono || '', categoria: persona?.categoria || 'normal'
   }, null);
   const resultado = await agregarPiezaAVentana(nuevaVentana, datosPieza, null);
   if (!resultado.ok) { mostrarToast(resultado.error); return; }

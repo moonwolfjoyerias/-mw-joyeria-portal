@@ -324,6 +324,21 @@ function completarFechaAltaCatalogo(catalogo) {
   return cambio;
 }
 
+// Orden del catálogo (decisión del equipo): lo más nuevo hasta arriba.
+// La fecha de alta es fechaAlta; los productos que no la tienen la
+// sacan de su id ('prod-' + la hora en que se crearon, igual en BRILLO).
+// Los que no tienen ninguna de las dos (semilla de ejemplo) van al final.
+function marcaAltaProducto(producto) {
+  const fecha = Date.parse((producto && producto.fechaAlta) || '');
+  if (!Number.isNaN(fecha)) return fecha;
+  const marca = /^prod-(\d{12,14})/.exec(String((producto && producto.id) || ''));
+  return marca ? Number(marca[1]) : 0;
+}
+
+function ordenarProductosMasRecientes(productos) {
+  return [...productos].sort((a, b) => marcaAltaProducto(b) - marcaAltaProducto(a));
+}
+
 function stockTotalProducto(producto) {
   const p = migrarProductoAVariantes(producto);
   return p.variantes.reduce((suma, v) => suma + (Number(v.stock) || 0), 0);
