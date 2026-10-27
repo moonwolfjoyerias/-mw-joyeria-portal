@@ -5311,7 +5311,15 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   .sidebar .brand-link > span { line-height: 1.15; }
   .sidebar .brand-link .logo-main { line-height: 1.15; }
   .sidebar .brand-link img { height: 28px; }
-  .sidebar-toggle { top: 0.55rem; right: 1rem; }
+  /* Fijo a la pantalla (no a la barra): antes, si algo de la página era
+     más ancho que el celular y se deslizaba de lado, la barra se movía
+     con la página y el botón del menú quedaba fuera de la pantalla. */
+  .sidebar-toggle { position: fixed; top: 0.55rem; right: 1rem; z-index: 61; }
+  /* El portal ya no se desliza de lado en celular: el texto largo se
+     parte y lo que es ancho (tablas) se desplaza dentro de su recuadro.
+     clip (no hidden) para no romper la barra fija de arriba. */
+  .layout-portal { overflow-x: clip; }
+  .main-content { overflow-wrap: anywhere; }
   .sidebar.sidebar-abierta nav {
     max-height: calc(100vh - 60px);
     overflow-y: auto;

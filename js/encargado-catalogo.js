@@ -96,7 +96,8 @@ function renderCatalogo() {
   const categoria = document.getElementById('filterCategoria')?.value || '';
   const estado = document.getElementById('filterEstado')?.value || '';
 
-  const productos = catalogoEncargado.filter(p => {
+  // Lo más nuevo hasta arriba (ver ordenarProductosMasRecientes).
+  const productos = ordenarProductosMasRecientes(catalogoEncargado).filter(p => {
 
     if (
       search &&
@@ -121,7 +122,7 @@ function renderCatalogo() {
   if (!productos.length) {
     grid.innerHTML = `
       <tr>
-        <td colspan="11" class="catalog-empty-cell">
+        <td colspan="10" class="catalog-empty-cell">
           <strong>No encontramos productos</strong>
           <span>Prueba con otros filtros o agrega un nuevo artículo.</span>
         </td>
@@ -211,7 +212,6 @@ function renderProducto(p) {
       <td><span class="catalog-description">${escapeHTML(p.descripcion || 'Sin descripción')}</span></td>
       <td>${escapeHTML(p.categoria || 'Sin categoría')}</td>
       <td>${escapeHTML(material)}</td>
-      <td>${p.calidad === 'premium' ? 'Premium' : 'Estándar'}</td>
       <td>${escapeHTML(colorTalla)}</td>
       <td><strong>$${formatearPrecio(p.precioEtiqueta)} MXN</strong></td>
       <td>
@@ -322,13 +322,6 @@ function abrirModalProducto(producto = null) {
         <label>Código del producto *</label>
         <input id="productoCodigo" type="text" placeholder="Ej. AN-045" value="${escapeAttribute(producto?.codigo || '')}">
         <small class="field-help">Solo lo ven Staff, Encargado y Admin (columna "ID del producto") — nunca Emprendedora/Líder.</small>
-      </div>
-
-      <div class="form-field">
-        <label>Calidad</label>
-        <select id="productoCalidad">
-          ${CALIDADES_STAFF.map(c => `<option value="${c.key}" ${producto?.calidad === c.key ? 'selected' : ''}>${c.label}</option>`).join('')}
-        </select>
       </div>
 
       <div class="form-field full">
@@ -586,7 +579,10 @@ function obtenerDatosProducto(idEditando) {
   const categoria = document.getElementById('productoCategoria')?.value;
   const colorOro = document.getElementById('productoColorOro')?.value || '';
   const codigo = document.getElementById('productoCodigo')?.value.trim();
-  const calidad = document.getElementById('productoCalidad')?.value;
+  // Ya no hay calidad estándar (decisión del equipo): todo es Premium.
+  // Se sigue guardando el campo para que BRILLO y los productos viejos
+  // lo encuentren igual.
+  const calidad = 'premium';
   const precioEtiqueta = Number(document.getElementById('productoPrecioEtiqueta')?.value);
   const descuentoSelect = document.getElementById('productoDescuentoSelect')?.value;
   const descuento = descuentoSelect === 'otro'
