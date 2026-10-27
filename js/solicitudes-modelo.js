@@ -121,6 +121,24 @@ async function obtenerSolicitudesDe(solicitanteId) {
     .sort((a, b) => b.fechaSolicitud.localeCompare(a.fechaSolicitud));
 }
 
+// En vivo (convivencia con BRILLO MW, que también aprueba y rechaza
+// solicitudes): avisa cada vez que cambia algo en solicitudes de
+// inscripción o de evento, para que la lista se vuelva a pintar sola.
+// Si la escucha falla, la pantalla sigue como antes.
+function escucharSolicitudesEnVivo(alCambiar) {
+  if (!dbFirestore) return;
+  const primera = { inscripcion: true, evento: true };
+  const avisar = clave => () => {
+    // La primera respuesta de cada escucha es lo que ya se pintó al cargar.
+    if (primera[clave]) { primera[clave] = false; return; }
+    alCambiar();
+  };
+  dbFirestore.collection(SOLICITUDES_COLECCION_FIRESTORE).onSnapshot(avisar('inscripcion'), () => {});
+  if (typeof SOLICITUDES_EVENTOS_COLECCION_FIRESTORE !== 'undefined') {
+    dbFirestore.collection(SOLICITUDES_EVENTOS_COLECCION_FIRESTORE).onSnapshot(avisar('evento'), () => {});
+  }
+}
+
 // ============================================================
 // VALIDACIÓN Y CREACIÓN
 // ============================================================

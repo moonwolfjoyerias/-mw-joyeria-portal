@@ -19,6 +19,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('solicitudFilterEstado')?.addEventListener('change', renderListaSolicitudesAdmin);
   document.getElementById('solicitudOrden')?.addEventListener('change', renderListaSolicitudesAdmin);
 
+  // Lo que se apruebe o rechace desde BRILLO MW u otro dispositivo, y las
+  // solicitudes nuevas, aparecen solas en la lista.
+  if (typeof escucharSolicitudesEnVivo === 'function') {
+    let pendiente = null;
+    escucharSolicitudesEnVivo(() => {
+      clearTimeout(pendiente);
+      pendiente = setTimeout(renderListaSolicitudesAdmin, 300);
+    });
+  }
+
   // Enlace directo desde una notificación (?solicitud=ID[&tipo=evento])
   // — abre de una vez el detalle de esa solicitud.
   const params = new URLSearchParams(window.location.search);

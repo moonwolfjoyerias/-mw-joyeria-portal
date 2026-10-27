@@ -75,6 +75,94 @@ function _recordarPersonasEnServidor(personas) {
   });
 }
 
+// En vivo (convivencia con BRILLO MW, que también maneja Emprendedoras/
+// Líderes y aprueba Solicitudes en esta misma colección). Igual que
+// eventos-firestore-sync.js:
+// - onSnapshot aplica lo que cambie BRILLO u otro dispositivo sobre el
+//   mismo arreglo en memoria y avisa a la pantalla
+//   ('mw:personas-actualizadas') para que se vuelva a pintar sola. Solo en
+//   los portales de Staff/Encargado/Admin (una Emprendedora solo lee su
+//   propio registro y el de su líder).
+// - Una copia atrasada de una persona no se vuelve a enviar, y lo que
+//   llegó en vivo no se borra por no venir en un arreglo viejo.
+const _personasVersionesSuperadas = new Map();
+const _personasRecibidasEnVivo = new Set();
+let _escuchaPersonasActiva = false;
+
+function _textoPublicoPersona(persona) {
+  return textoEstableFirestore(separarCamposFinancieroPersona(persona).publico);
+}
+
+function _superarPersona(id, texto) {
+  if (!texto) return;
+  if (!_personasVersionesSuperadas.has(id)) _personasVersionesSuperadas.set(id, new Set());
+  _personasVersionesSuperadas.get(id).add(texto);
+}
+
+function _aplicarPersonasEnVivo(snap) {
+  let huboCambios = false;
+  snap.docChanges().forEach(cambio => {
+    const id = String(cambio.doc.id);
+    const antes = _personasEnServidor.get(id);
+    const i = PERSONAS_CACHE.findIndex(p => String(p.id) === id);
+    const local = i >= 0 ? PERSONAS_CACHE[i] : null;
+    const cambioPendiente = local && _textoPublicoPersona(local) !== antes;
+    if (cambio.type === 'removed') {
+      if (antes === undefined) return;
+      _superarPersona(id, antes);
+      _personasEnServidor.delete(id);
+      if (local && !cambioPendiente) { PERSONAS_CACHE.splice(i, 1); huboCambios = true; }
+      return;
+    }
+    // Los datos financieros viven aparte (personasFinanciero) y no llegan
+    // aquí: se conservan los que ya tenía esta página.
+    const financiero = local ? separarCamposFinancieroPersona(local).financiero : {};
+    const persona = { ...cambio.doc.data(), id: cambio.doc.id, ...financiero };
+    const texto = _textoPublicoPersona(persona);
+    if (texto === antes) return;
+    if (antes === undefined && !local) _personasRecibidasEnVivo.add(id);
+    _superarPersona(id, antes);
+    _personasEnServidor.set(id, texto);
+    if (cambioPendiente) return;
+    // Quien cambia una persona con acceso real también deja al día su
+    // users/{uid} en el mismo guardado (la página y BRILLO).
+    if (persona.firebaseUid) _usuariosEnServidor.set(persona.firebaseUid, textoEstableFirestore(perfilUsuarioPersona(persona)));
+    if (local) PERSONAS_CACHE[i] = persona; else PERSONAS_CACHE.push(persona);
+    huboCambios = true;
+  });
+  if (!huboCambios) return;
+  try { localStorage.setItem(PERSONAS_STORAGE_KEY, JSON.stringify(PERSONAS_CACHE)); } catch (error) { /* noop */ }
+  window.dispatchEvent(new CustomEvent('mw:personas-actualizadas'));
+}
+
+function escucharPersonasEnVivo() {
+  if (!dbFirestore || _escuchaPersonasActiva) return;
+  if (!/\/portal\/(admin|encargado|staff)\//.test(window.location.pathname)) return;
+  _escuchaPersonasActiva = true;
+  // Si la escucha falla (sin sesión, sin red) la página sigue como antes:
+  // con lo que cargó.
+  dbFirestore.collection(PERSONAS_COLECCION_FIRESTORE).onSnapshot(_aplicarPersonasEnVivo, () => {});
+}
+
+// Un arreglo armado antes de un cambio en vivo: sus copias atrasadas se
+// cambian por la versión actual y lo que llegó en vivo y no trae se
+// conserva, para que la pantalla no muestre datos viejos.
+function _conservarPersonasRecibidas(personas) {
+  if (personas === PERSONAS_CACHE) return personas;
+  const actuales = new Map(PERSONAS_CACHE.map(p => [String(p.id), p]));
+  personas.forEach((p, i) => {
+    const id = String(p.id);
+    if (_personasVersionesSuperadas.has(id) && _personasVersionesSuperadas.get(id).has(_textoPublicoPersona(p)) && actuales.has(id)) personas[i] = actuales.get(id);
+  });
+  if (_personasRecibidasEnVivo.size) {
+    const ids = new Set(personas.map(p => String(p.id)));
+    PERSONAS_CACHE.forEach(p => {
+      if (_personasRecibidasEnVivo.has(String(p.id)) && !ids.has(String(p.id))) personas.push(p);
+    });
+  }
+  return personas;
+}
+
 function personasSemillaLocal() {
   return typeof construirPersonasEjemplo === 'function' ? construirPersonasEjemplo() : [];
 }
@@ -140,6 +228,7 @@ async function cargarPersonasRepo() {
         PERSONAS_CACHE = await _leerPersonasDeEstaPagina();
         await fusionarPersonasFinanciero(PERSONAS_CACHE);
         _recordarPersonasEnServidor(PERSONAS_CACHE);
+        escucharPersonasEnVivo();
       } else {
         // Primera vez que este proyecto de Firestore ve Personas: siembra
         // el ejemplo completo de una vez (misma semilla que ya existía).
@@ -223,6 +312,7 @@ function avisarErrorGuardadoPersonas(error, detalle) {
 }
 
 function guardarPersonasRepo(personas) {
+  personas = _conservarPersonasRecibidas(personas);
   PERSONAS_CACHE = personas;
   try { localStorage.setItem(PERSONAS_STORAGE_KEY, JSON.stringify(personas)); } catch (error) { /* noop */ }
 
@@ -258,7 +348,9 @@ async function sincronizarPersonasConFirestore(personas) {
     const { publico, financiero } = separarCamposFinancieroPersona(persona);
 
     const textoPublico = textoEstableFirestore(publico);
-    if (_personasEnServidor.get(id) !== textoPublico) {
+    // Una copia atrasada (ya superada por un cambio en vivo) no se reenvía.
+    const atrasada = _personasVersionesSuperadas.has(id) && _personasVersionesSuperadas.get(id).has(textoPublico);
+    if (_personasEnServidor.get(id) !== textoPublico && !atrasada) {
       batch.set(coleccion.doc(id), publico);
       alConfirmar.push(() => _personasEnServidor.set(id, textoPublico));
     }
@@ -276,7 +368,7 @@ async function sincronizarPersonasConFirestore(personas) {
     // acceso users/{uid} de quien YA tiene cuenta real se mantiene al día
     // desde este único punto. Nunca toca password ni crea accesos nuevos
     // (eso es crearAccesoFirebaseParaPersona).
-    if (!esPersona && persona.firebaseUid) {
+    if (!esPersona && persona.firebaseUid && !atrasada) {
       const uid = persona.firebaseUid;
       const perfil = perfilUsuarioPersona(persona);
       const textoPerfil = textoEstableFirestore(perfil);
@@ -292,7 +384,7 @@ async function sincronizarPersonasConFirestore(personas) {
   if (!esPersona) {
     const idsNuevos = new Set(personas.map(p => String(p.id)));
     _personasEnServidor.forEach((texto, id) => {
-      if (idsNuevos.has(id)) return;
+      if (idsNuevos.has(id) || _personasRecibidasEnVivo.has(id)) return;
       batch.delete(coleccion.doc(id));
       alConfirmar.push(() => _personasEnServidor.delete(id));
     });
