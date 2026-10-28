@@ -1861,3 +1861,17 @@ function abrirModalRangoManual(liderId) {
     renderComisiones();
   });
 }
+
+// Lo que cambie BRILLO MW u otro dispositivo (pagos, bonos, ajustes,
+// rangos manuales y las personas) llega solo — ver
+// comisiones-firestore-sync.js y personas-firestore-sync.js. Se vuelve a
+// pintar solo si no hay ajustes a medio guardar, ni una celda en edición,
+// ni una ventana abierta, para no perder lo que se está capturando.
+function repintarComisionesEnVivo() {
+  const ventanaAbierta = document.getElementById('modalOverlay')?.classList.contains('open');
+  const editando = document.querySelector('.comm-celda-editable input');
+  if (Object.keys(pendienteBorrador).length || ventanaAbierta || editando) return;
+  renderComisiones();
+}
+window.addEventListener('mw:comisiones-actualizadas', repintarComisionesEnVivo);
+window.addEventListener('mw:personas-actualizadas', repintarComisionesEnVivo);

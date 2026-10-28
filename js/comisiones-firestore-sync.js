@@ -119,11 +119,16 @@ async function cargarComisionesRepo() {
         snapBonos.docs.forEach(d => { COMISIONES_BONOS_CACHE[d.id] = d.data(); });
         COMISIONES_RANGO_MANUAL_CACHE = {};
         snapRango.docs.forEach(d => { COMISIONES_RANGO_MANUAL_CACHE[d.id] = d.data().rangoKey; });
+        Object.values(_COMISIONES_PIEZAS).forEach(_comisionesRecordarServidor);
+        _comisionesEnServidorCargado = true;
+        escucharComisionesEnVivo();
       } else {
         // Primera vez que este proyecto de Firestore ve Comisiones — no
         // hay semilla de ejemplo (a diferencia de Catálogo/Personas):
         // arranca vacío, igual que ya arrancaba vacío en localStorage.
         await dbFirestore.collection(COMISIONES_META_COLECCION).doc(COMISIONES_META_DOC_ID).set({ inicializado: true });
+        _comisionesEnServidorCargado = true;
+        escucharComisionesEnVivo();
       }
     } catch (error) {
       // La consulta falló (reglas, red) — NO se rellena con lo que haya
@@ -167,40 +172,192 @@ function avisarErrorGuardadoComisiones(error, detalle) {
   }
 }
 
-async function sincronizarMapaComisiones(nombreColeccion, mapa, transformarValor) {
-  const coleccion = dbFirestore.collection(nombreColeccion);
-  const snap = await coleccion.get();
-  const clavesNuevas = new Set(Object.keys(mapa));
-  const batch = dbFirestore.batch();
-  snap.docs.forEach(doc => {
-    if (!clavesNuevas.has(doc.id)) batch.delete(doc.ref);
-  });
-  Object.keys(mapa).forEach(clave => {
-    const valor = transformarValor ? transformarValor(mapa[clave]) : mapa[clave];
-    batch.set(coleccion.doc(clave), valor);
-  });
-  batch.set(dbFirestore.collection(COMISIONES_META_COLECCION).doc(COMISIONES_META_DOC_ID), { inicializado: true }, { merge: true });
-  await batch.commit();
+// Opción A + en vivo (convivencia con BRILLO MW, que también registra
+// pagos, bonos, ajustes y rangos manuales en estas mismas colecciones).
+// Igual que nomina-firestore-sync.js:
+// - Se recuerda cómo estaba cada documento en el servidor y al guardar
+//   se envía SOLO lo que cambió aquí; solo se borra lo que esta página
+//   conocía y quitó, nunca un documento que no conoce. Antes cada
+//   guardado leía la colección completa y la reescribía.
+// - onSnapshot (solo Admin) aplica lo que cambie BRILLO u otro
+//   dispositivo sobre la misma caché y avisa a la pantalla
+//   ('mw:comisiones-actualizadas').
+// - Una copia atrasada no se vuelve a enviar, y lo que llegó en vivo no
+//   se borra por no venir en un mapa viejo.
+// - comisionesMeta/estado solo se escribe la primera vez.
+let _comisionesEnServidorCargado = false;
+
+// valor (como lo guarda la caché) ↔ documento (como vive en Firestore).
+function _comisionesCrearPieza(coleccion, detalle, obtener, asignar, aDoc, deDoc) {
+  return {
+    coleccion, detalle, obtener, asignar,
+    aDoc: aDoc || (v => v),
+    deDoc: deDoc || (d => d),
+    enServidor: new Map(),
+    superadas: new Map(),
+    recibidosEnVivo: new Set(),
+    escuchando: false
+  };
 }
 
-function guardarAjustesRepo(ajustes) {
-  COMISIONES_AJUSTES_CACHE = ajustes;
+const _COMISIONES_PIEZAS = {
+  ajustes: _comisionesCrearPieza(COMISIONES_AJUSTES_COLECCION, 'el ajuste de comisión',
+    () => COMISIONES_AJUSTES_CACHE, v => { COMISIONES_AJUSTES_CACHE = v; }),
+  pagos: _comisionesCrearPieza(COMISIONES_PAGOS_COLECCION, 'el pago de comisión',
+    () => COMISIONES_PAGOS_CACHE, v => { COMISIONES_PAGOS_CACHE = v; }),
+  bonos: _comisionesCrearPieza(COMISIONES_BONOS_COLECCION, 'el bono de rango',
+    () => COMISIONES_BONOS_CACHE, v => { COMISIONES_BONOS_CACHE = v; }),
+  rangoManual: _comisionesCrearPieza(COMISIONES_RANGO_MANUAL_COLECCION, 'el rango manual',
+    () => COMISIONES_RANGO_MANUAL_CACHE, v => { COMISIONES_RANGO_MANUAL_CACHE = v; },
+    rangoKey => ({ rangoKey }), d => d.rangoKey)
+};
+
+function _comisionesTexto(pieza, valor) {
+  return textoEstableFirestore(pieza.aDoc(valor));
+}
+
+function _comisionesRecordarServidor(pieza) {
+  pieza.enServidor.clear();
+  const mapa = pieza.obtener();
+  Object.keys(mapa).forEach(clave => pieza.enServidor.set(clave, _comisionesTexto(pieza, mapa[clave])));
+}
+
+function _comisionesSuperar(pieza, clave, texto) {
+  if (!texto) return;
+  if (!pieza.superadas.has(clave)) pieza.superadas.set(clave, new Set());
+  pieza.superadas.get(clave).add(texto);
+}
+
+function _comisionesAplicarEnVivo(pieza, snap) {
+  let huboCambios = false;
+  const mapa = pieza.obtener();
+  snap.docChanges().forEach(cambio => {
+    const clave = String(cambio.doc.id);
+    const antes = pieza.enServidor.get(clave);
+    const local = clave in mapa ? _comisionesTexto(pieza, mapa[clave]) : undefined;
+    const cambioPendiente = local !== undefined && local !== antes;
+    if (cambio.type === 'removed') {
+      if (antes === undefined) return;
+      _comisionesSuperar(pieza, clave, antes);
+      pieza.enServidor.delete(clave);
+      if (local !== undefined && !cambioPendiente) { delete mapa[clave]; huboCambios = true; }
+      return;
+    }
+    const valor = pieza.deDoc(cambio.doc.data());
+    const texto = _comisionesTexto(pieza, valor);
+    if (texto === antes) return;
+    if (antes === undefined && local === undefined) pieza.recibidosEnVivo.add(clave);
+    _comisionesSuperar(pieza, clave, antes);
+    pieza.enServidor.set(clave, texto);
+    if (cambioPendiente) return;
+    mapa[clave] = valor;
+    huboCambios = true;
+  });
+  if (!huboCambios) return;
+  persistirCachesComisionesLocal();
+  window.dispatchEvent(new CustomEvent('mw:comisiones-actualizadas', { detail: { coleccion: pieza.coleccion } }));
+}
+
+// El historial de ajustes solo se agrega (un documento por registro): en
+// vivo solo se suman los registros nuevos que lleguen.
+const _comisionesHistorialIds = new Set();
+function _comisionesHistorialEnVivo(snap) {
+  let huboCambios = false;
+  snap.docChanges().forEach(cambio => {
+    if (cambio.type !== 'added' || _comisionesHistorialIds.has(cambio.doc.id)) return;
+    _comisionesHistorialIds.add(cambio.doc.id);
+    COMISIONES_HISTORIAL_CACHE.push({ ...cambio.doc.data(), id: cambio.doc.id });
+    huboCambios = true;
+  });
+  if (!huboCambios) return;
+  persistirCachesComisionesLocal();
+  window.dispatchEvent(new CustomEvent('mw:comisiones-actualizadas', { detail: { coleccion: COMISIONES_HISTORIAL_COLECCION } }));
+}
+
+let _escuchaHistorialComisiones = false;
+function escucharComisionesEnVivo() {
+  if (!dbFirestore) return;
+  Object.values(_COMISIONES_PIEZAS).forEach(pieza => {
+    if (pieza.escuchando) return;
+    pieza.escuchando = true;
+    // Si la escucha falla (sin sesión, sin red) la página sigue como
+    // antes: con lo que cargó.
+    dbFirestore.collection(pieza.coleccion).onSnapshot(snap => _comisionesAplicarEnVivo(pieza, snap), () => {});
+  });
+  if (!_escuchaHistorialComisiones) {
+    _escuchaHistorialComisiones = true;
+    COMISIONES_HISTORIAL_CACHE.forEach(r => _comisionesHistorialIds.add(String(r.id)));
+    dbFirestore.collection(COMISIONES_HISTORIAL_COLECCION).onSnapshot(_comisionesHistorialEnVivo, () => {});
+  }
+}
+
+// Un mapa armado antes de un cambio en vivo: sus copias atrasadas se
+// cambian por la versión actual y lo que llegó en vivo y no trae se
+// conserva, para que la pantalla no muestre datos viejos.
+function _comisionesConservarRecibidos(pieza, mapa) {
+  const actual = pieza.obtener();
+  if (mapa === actual) return mapa;
+  Object.keys(mapa).forEach(clave => {
+    if (pieza.superadas.has(clave) && pieza.superadas.get(clave).has(_comisionesTexto(pieza, mapa[clave])) && clave in actual) mapa[clave] = actual[clave];
+  });
+  pieza.recibidosEnVivo.forEach(clave => {
+    if (!(clave in mapa) && clave in actual) mapa[clave] = actual[clave];
+  });
+  return mapa;
+}
+
+async function sincronizarMapaComisiones(pieza, mapa) {
+  const coleccion = dbFirestore.collection(pieza.coleccion);
+  const batch = dbFirestore.batch();
+  const escritos = new Map();
+  Object.keys(mapa).forEach(clave => {
+    const texto = _comisionesTexto(pieza, mapa[clave]);
+    if (pieza.enServidor.get(clave) === texto) return;
+    if (pieza.superadas.has(clave) && pieza.superadas.get(clave).has(texto)) return;
+    batch.set(coleccion.doc(clave), pieza.aDoc(mapa[clave]));
+    escritos.set(clave, texto);
+  });
+  const borrados = [];
+  pieza.enServidor.forEach((texto, clave) => {
+    if (!(clave in mapa) && !pieza.recibidosEnVivo.has(clave)) {
+      batch.delete(coleccion.doc(clave));
+      borrados.push(clave);
+    }
+  });
+  const primeraVez = !_comisionesEnServidorCargado;
+  if (primeraVez) {
+    batch.set(dbFirestore.collection(COMISIONES_META_COLECCION).doc(COMISIONES_META_DOC_ID), { inicializado: true }, { merge: true });
+  }
+  if (!escritos.size && !borrados.length && !primeraVez) return;
+  await batch.commit();
+  escritos.forEach((texto, clave) => pieza.enServidor.set(clave, texto));
+  borrados.forEach(clave => pieza.enServidor.delete(clave));
+  _comisionesEnServidorCargado = true;
+}
+
+function _guardarPiezaComisiones(pieza, mapa) {
+  mapa = _comisionesConservarRecibidos(pieza, mapa);
+  pieza.asignar(mapa);
   persistirCachesComisionesLocal();
   if (!dbFirestore) return Promise.resolve();
   const tarea = _colaGuardadoComisiones.then(() =>
-    sincronizarMapaComisiones(COMISIONES_AJUSTES_COLECCION, ajustes).catch(error => avisarErrorGuardadoComisiones(error, 'el ajuste de comisión'))
+    sincronizarMapaComisiones(pieza, mapa).catch(error => avisarErrorGuardadoComisiones(error, pieza.detalle))
   );
   _colaGuardadoComisiones = tarea;
   return tarea;
 }
 
+function guardarAjustesRepo(ajustes) {
+  return _guardarPiezaComisiones(_COMISIONES_PIEZAS.ajustes, ajustes);
+}
+
 function registrarHistorialAjusteRepo(registro) {
   COMISIONES_HISTORIAL_CACHE.push(registro);
+  _comisionesHistorialIds.add(String(registro.id));
   persistirCachesComisionesLocal();
   if (!dbFirestore) return Promise.resolve();
   const tarea = _colaGuardadoComisiones.then(() =>
     dbFirestore.collection(COMISIONES_HISTORIAL_COLECCION).doc(registro.id).set(registro)
-      .then(() => dbFirestore.collection(COMISIONES_META_COLECCION).doc(COMISIONES_META_DOC_ID).set({ inicializado: true }, { merge: true }))
       .catch(error => avisarErrorGuardadoComisiones(error, 'el historial de ajustes'))
   );
   _colaGuardadoComisiones = tarea;
@@ -208,34 +365,13 @@ function registrarHistorialAjusteRepo(registro) {
 }
 
 function guardarPagosRepo(pagos) {
-  COMISIONES_PAGOS_CACHE = pagos;
-  persistirCachesComisionesLocal();
-  if (!dbFirestore) return Promise.resolve();
-  const tarea = _colaGuardadoComisiones.then(() =>
-    sincronizarMapaComisiones(COMISIONES_PAGOS_COLECCION, pagos).catch(error => avisarErrorGuardadoComisiones(error, 'el pago de comisión'))
-  );
-  _colaGuardadoComisiones = tarea;
-  return tarea;
+  return _guardarPiezaComisiones(_COMISIONES_PIEZAS.pagos, pagos);
 }
 
 function guardarBonosRepo(bonos) {
-  COMISIONES_BONOS_CACHE = bonos;
-  persistirCachesComisionesLocal();
-  if (!dbFirestore) return Promise.resolve();
-  const tarea = _colaGuardadoComisiones.then(() =>
-    sincronizarMapaComisiones(COMISIONES_BONOS_COLECCION, bonos).catch(error => avisarErrorGuardadoComisiones(error, 'el bono de rango'))
-  );
-  _colaGuardadoComisiones = tarea;
-  return tarea;
+  return _guardarPiezaComisiones(_COMISIONES_PIEZAS.bonos, bonos);
 }
 
 function guardarRangoManualRepo(mapa) {
-  COMISIONES_RANGO_MANUAL_CACHE = mapa;
-  persistirCachesComisionesLocal();
-  if (!dbFirestore) return Promise.resolve();
-  const tarea = _colaGuardadoComisiones.then(() =>
-    sincronizarMapaComisiones(COMISIONES_RANGO_MANUAL_COLECCION, mapa, (rangoKey) => ({ rangoKey })).catch(error => avisarErrorGuardadoComisiones(error, 'el rango manual'))
-  );
-  _colaGuardadoComisiones = tarea;
-  return tarea;
+  return _guardarPiezaComisiones(_COMISIONES_PIEZAS.rangoManual, mapa);
 }
