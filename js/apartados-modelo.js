@@ -39,6 +39,9 @@
 //   las piezas activas restantes y pierde el depósito por completo.
 
 let DEPOSITO_BASE = 50;
+// Las foráneas depositan más para empezar a apartar (su ventana dura
+// más días). Admin → Configuración también es dueña de este valor.
+let DEPOSITO_FORANEA = 200;
 
 const CATEGORIAS_APARTADO = {
   normal: { etiqueta: 'Normal', dias: 3, requiereDeposito: true },
@@ -55,11 +58,25 @@ if (typeof obtenerValorVigente === 'function') {
   const depositoConfigurado = obtenerValorVigente('apartado', 'deposito_base');
   if (typeof depositoConfigurado === 'number') DEPOSITO_BASE = depositoConfigurado;
 
+  const depositoForaneaConfigurado = obtenerValorVigente('apartado', 'deposito_foranea');
+  if (typeof depositoForaneaConfigurado === 'number') DEPOSITO_FORANEA = depositoForaneaConfigurado;
+
   const diasNormalConfigurado = obtenerValorVigente('apartado', 'ventana_normal_dias');
   if (typeof diasNormalConfigurado === 'number') CATEGORIAS_APARTADO.normal.dias = diasNormalConfigurado;
 
   const diasForaneaConfigurado = obtenerValorVigente('apartado', 'ventana_foranea_dias');
   if (typeof diasForaneaConfigurado === 'number') CATEGORIAS_APARTADO.foranea.dias = diasForaneaConfigurado;
+}
+
+// Depósito mínimo para empezar a apartar según la etiqueta de la
+// cuenta (Normal/Foránea). VIP no deposita, pero si llegara a dejar
+// algo se trata como el de una Normal.
+function depositoMinimoCategoria(categoria) {
+  return categoria === 'foranea' ? DEPOSITO_FORANEA : DEPOSITO_BASE;
+}
+
+function depositoMinimoVentana(ventana) {
+  return depositoMinimoCategoria(ventana && ventana.categoria);
 }
 
 // Estados de la VENTANA (no de cada pieza).
@@ -166,9 +183,10 @@ function crearApartadoPieza(datos = {}) {
   };
 }
 
-// LOG-06 de la auditoría: separa el depósito en dos partes — el PISO de
-// $50 (congelado, solo se resuelve al cerrar la ventana por completo,
-// igual que siempre) y el EXCEDENTE sobre $50 (utilizable en cualquier
+// LOG-06 de la auditoría: separa el depósito en dos partes — el PISO
+// ($50, o $200 si es foránea — ver depositoMinimoVentana; congelado,
+// solo se resuelve al cerrar la ventana por completo, igual que
+// siempre) y el EXCEDENTE sobre el piso (utilizable en cualquier
 // pago mientras la ventana sigue activa — ver aplicarExcedenteDeposito).
 // depositoApartadoDisponible se conserva como el TOTAL (piso+excedente)
 // — varias pantallas ya lo muestran o comparan contra 0 — pero ya nunca
@@ -176,8 +194,9 @@ function crearApartadoPieza(datos = {}) {
 // para que ambos números nunca queden desincronizados del total.
 function fijarDepositoVentana(ventana, montoTotal) {
   const total = Number(montoTotal) || 0;
-  ventana.depositoPiso = Math.min(total, DEPOSITO_BASE);
-  ventana.depositoExcedente = Math.max(0, total - DEPOSITO_BASE);
+  const minimo = depositoMinimoVentana(ventana);
+  ventana.depositoPiso = Math.min(total, minimo);
+  ventana.depositoExcedente = Math.max(0, total - minimo);
   ventana.depositoApartadoDisponible = ventana.depositoPiso + ventana.depositoExcedente;
 }
 
@@ -351,18 +370,22 @@ function ventanaEstaVencida(ventana, ahora = Date.now()) {
 
 // Abre una ventana nueva para una persona. Si ya tiene crédito
 // guardado de una ventana anterior, lo reutiliza automáticamente y la
-// ventana queda activa de inmediato (sin pedir depósito físico).
+// ventana queda activa de inmediato (sin pedir depósito físico) —
+// siempre que alcance el depósito mínimo de su etiqueta. Si no alcanza
+// (ej. $50 de crédito y ahora es foránea, que pide $200), el crédito
+// se aplica igual y la ventana espera solo la diferencia.
 function abrirVentanaApartado(datosPersona, empleado) {
 
   const regla = obtenerReglaCategoria(datosPersona.categoria);
   const creditoPrevio = obtenerCreditoDisponible(datosPersona.usuarioId);
+  const creditoAlcanza = creditoPrevio >= depositoMinimoCategoria(datosPersona.categoria || 'normal');
 
   // VIP no pide depósito, pero sí exige que Staff/Administrativo
   // confirme/apruebe manualmente cada apartado (Sección 5.5) — nace
   // pendiente de esa aprobación en vez de activa de inmediato.
   const estadoInicial = regla.requiereAprobacion
     ? 'pendiente_aprobacion'
-    : ((!regla.requiereDeposito || creditoPrevio > 0) ? 'activa' : 'pendiente_deposito');
+    : ((!regla.requiereDeposito || creditoAlcanza) ? 'activa' : 'pendiente_deposito');
 
   const ventana = crearVentanaApartado({
     ...datosPersona,
@@ -373,7 +396,12 @@ function abrirVentanaApartado(datosPersona, empleado) {
 
   if (creditoPrevio > 0) {
     establecerCredito(datosPersona.usuarioId, 0);
-    ventana.auditoria.push(registrarAuditoriaVentana('Ventana abierta con crédito previo reutilizado', empleado));
+    ventana.auditoria.push(registrarAuditoriaVentana(
+      ventana.estado === 'pendiente_deposito'
+        ? `Ventana abierta con crédito previo de $${creditoPrevio} — faltan $${depositoMinimoVentana(ventana) - creditoPrevio} para completar el depósito mínimo`
+        : 'Ventana abierta con crédito previo reutilizado',
+      empleado
+    ));
   } else {
     ventana.auditoria.push(registrarAuditoriaVentana('Ventana creada', empleado));
   }
@@ -405,17 +433,27 @@ function existeReferenciaDuplicada(referencia) {
   );
 }
 
-// El monto mínimo son $50, pero algunas personas transfieren más — el
-// monto completo recibido queda como depósito disponible de la ventana.
-// El plazo de vencimiento se cuenta a partir de este momento (no desde
-// que se solicitó la pieza).
+// Lo que falta depositar para que una ventana pendiente se active: el
+// mínimo de su etiqueta ($50 normal, $200 foránea) menos el crédito
+// previo que ya trae aplicado (ver abrirVentanaApartado).
+function depositoFaltanteVentana(ventana) {
+  const yaAplicado = ventana.estado === 'pendiente_deposito' ? Number(ventana.depositoApartadoDisponible || 0) : 0;
+  return Math.max(0, depositoMinimoVentana(ventana) - yaAplicado);
+}
+
+// El monto mínimo es el de su etiqueta ($50, o $200 si es foránea),
+// pero algunas personas transfieren más — el monto completo recibido
+// queda como depósito disponible de la ventana (sumado al crédito
+// previo que ya tuviera aplicado). El plazo de vencimiento se cuenta a
+// partir de este momento (no desde que se solicitó la pieza).
 function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, empleado) {
 
-  const montoFinal = Number(monto) || DEPOSITO_BASE;
+  const montoFinal = Number(monto) || depositoFaltanteVentana(ventana);
   const regla = obtenerReglaCategoria(ventana.categoria);
   const ahora = new Date();
+  const creditoAplicado = ventana.estado === 'pendiente_deposito' ? Number(ventana.depositoApartadoDisponible || 0) : 0;
 
-  fijarDepositoVentana(ventana, montoFinal);
+  fijarDepositoVentana(ventana, creditoAplicado + montoFinal);
   ventana.metodoDeposito = metodo || null;
   ventana.referenciaDeposito = referencia || null;
   ventana.estado = 'activa';
@@ -441,6 +479,10 @@ function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, emplea
 // - Pendiente de depósito → VIP: pendiente de aprobación VIP (no
 //   deposita, pero Staff la aprueba).
 // - Pendiente de aprobación VIP → Normal/Foránea: pendiente de depósito.
+// - Pendiente de depósito con crédito previo que ya alcanza el mínimo
+//   de la etiqueta nueva (ej. $50 al pasar de Foránea a Normal): activa.
+// - Un apartado activo que pasa a Foránea NO pide completar los $200:
+//   su depósito ya se confirmó con la regla de antes.
 // Regresa las ventanas que cambiaron.
 function sincronizarCategoriaVentanasPersona(personaId, categoriaNueva, empleado) {
 
@@ -464,6 +506,15 @@ function sincronizarCategoriaVentanasPersona(personaId, categoriaNueva, empleado
     } else if (ventana.estado === 'pendiente_aprobacion') {
       ventana.estado = 'pendiente_deposito';
       ventana.fechaVencimiento = null;
+    } else if (ventana.estado === 'pendiente_deposito') {
+      // Crédito previo que no alcanzaba para foránea ($200) pero sí
+      // alcanza el mínimo de la etiqueta nueva: se activa ya.
+      if (Number(ventana.depositoApartadoDisponible || 0) >= depositoMinimoCategoria(categoriaNueva)) {
+        fijarDepositoVentana(ventana, ventana.depositoApartadoDisponible);
+        ventana.estado = 'activa';
+        ventana.fechaInicio = new Date().toISOString();
+        ventana.fechaVencimiento = calcularNuevoVencimientoVentana(ventana, categoriaNueva);
+      }
     } else if (ventana.estado === 'activa') {
       if (reglaNueva.requiereDeposito && !tieneDeposito) {
         ventana.estado = 'pendiente_deposito';
@@ -758,6 +809,17 @@ function cancelarVentanaSinDeposito(ventana, empleado) {
     `Apartado cancelado: no se recibió el depósito (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'} regresaron al inventario)`,
     empleado
   ));
+
+  // Crédito previo que no alcanzó el mínimo (ver abrirVentanaApartado):
+  // era suyo de antes, así que vuelve a quedar como crédito.
+  const creditoAplicado = Number(ventana.depositoApartadoDisponible || 0);
+  if (creditoAplicado > 0) {
+    establecerCredito(ventana.usuarioId, obtenerCreditoDisponible(ventana.usuarioId) + creditoAplicado);
+    ventana.depositoPiso = 0;
+    ventana.depositoExcedente = 0;
+    ventana.depositoApartadoDisponible = 0;
+    ventana.auditoria.push(registrarAuditoriaVentana(`Crédito previo de $${creditoAplicado} devuelto como crédito`, empleado));
+  }
 
   return piezasActivas;
 

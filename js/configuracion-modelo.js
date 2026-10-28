@@ -200,6 +200,7 @@ function _asegurarSemillaPeriodos() {
 
 function _asegurarSemillaApartados() {
   _sembrarValor('apartado', 'deposito_base', 50, 'Apartados', 'Depósito base');
+  _sembrarValor('apartado', 'deposito_foranea', 200, 'Apartados', 'Depósito foránea');
   _sembrarValor('apartado', 'ventana_normal_dias', 3, 'Apartados', 'Ventana nacional (días)');
   _sembrarValor('apartado', 'ventana_foranea_dias', 15, 'Apartados', 'Ventana foránea (días)');
 }

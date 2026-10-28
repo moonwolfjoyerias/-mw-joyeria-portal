@@ -221,7 +221,7 @@ function numeroWhatsapp(telefono) {
 
 function mensajeComprobanteDeposito(v) {
   const nombre = String(v.usuarioNombre || "").trim().split(/\s+/)[0];
-  return `¡Hola${nombre ? `, ${nombre}` : ""}! Vimos que apartaste piezas en la página, pero todavía no recibimos tu comprobante de depósito. Te recordamos que, para asegurar tus piezas, es necesario un depósito mínimo de $${DEPOSITO_BASE}. Cuando lo tengas, envíanos tu comprobante por aquí. ¡Quedamos al pendiente!`;
+  return `¡Hola${nombre ? `, ${nombre}` : ""}! Vimos que apartaste piezas en la página, pero todavía no recibimos tu comprobante de depósito. Te recordamos que, para asegurar tus piezas, es necesario un depósito mínimo de $${depositoFaltanteVentana(v)}. Cuando lo tengas, envíanos tu comprobante por aquí. ¡Quedamos al pendiente!`;
 }
 
 // Staff se identifica primero (cuenta compartida); Encargado/Admin pasan
@@ -309,7 +309,7 @@ function ejecutarNoDeposito(ventanaId, empleado) {
 
   if (typeof agregarNotificacion === "function") {
     agregarNotificacion({
-      texto: `Cancelamos tu apartado porque no recibimos tu depósito mínimo de $${DEPOSITO_BASE}. Tus piezas quedaron liberadas; si todavía las quieres, puedes volver a apartarlas desde el catálogo.`,
+      texto: `Cancelamos tu apartado porque no recibimos tu depósito mínimo de $${depositoMinimoVentana(v)}. Tus piezas quedaron liberadas; si todavía las quieres, puedes volver a apartarlas desde el catálogo.`,
       link: "apartados",
       paraId: v.usuarioId,
       rolDestino: "emprendedora_lider"
@@ -1048,7 +1048,7 @@ function obtenerDescripcionDeposito(v) {
   const conReferencia = (texto) => v.referenciaDeposito ? `${texto} · Ref: ${escapeHTML(v.referenciaDeposito)}` : texto;
 
   if (!regla.requiereDeposito) return v.estado === "pendiente_aprobacion" ? "Esperando aprobación VIP" : "Categoría VIP";
-  if (v.estado === "pendiente_deposito") return "Esperando depósito";
+  if (v.estado === "pendiente_deposito") return `Esperando depósito de $${depositoFaltanteVentana(v)}`;
   if (v.estado === "vencida" || v.estado === "cerrada") return conReferencia("Ventana finalizada");
 
   // LOG-06: el piso de $50 (congelado hasta el cierre) y el excedente

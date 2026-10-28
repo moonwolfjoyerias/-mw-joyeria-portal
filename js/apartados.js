@@ -115,7 +115,9 @@ function actualizarReloj() {
       const label = box.querySelector('.countdown-label');
       const nota = box.querySelector('.countdown-note');
       if (label) label.textContent = 'Confirmando tu depósito';
-      if (nota) nota.textContent = 'Tu apartado ya se registró. En cuanto confirmemos tu depósito tus piezas quedarán aseguradas y empezará a correr el tiempo.';
+      if (nota) nota.textContent = pendiente.estado === 'pendiente_deposito'
+        ? `Tu apartado ya se registró. Tu depósito mínimo es de $${depositoFaltanteVentana(pendiente)}; en cuanto lo confirmemos tus piezas quedarán aseguradas y empezará a correr el tiempo.`
+        : 'Tu apartado ya se registró. En cuanto confirmemos tu depósito tus piezas quedarán aseguradas y empezará a correr el tiempo.';
     } else {
       box.style.display = 'none';
     }

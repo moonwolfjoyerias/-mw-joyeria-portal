@@ -350,7 +350,7 @@ async function mostrarPasoConfirmarApartar(producto, variante) {
     mostrarPasoExito('Ya tenías depósito guardado de una ventana anterior — esta pieza quedó apartada de una vez, sin volver a depositar.');
   } else {
     notificarDisponibilidadCondicionadaADeposito(nuevaVentana);
-    mostrarPasoPedirDeposito();
+    mostrarPasoPedirDeposito(nuevaVentana);
   }
 }
 
@@ -360,7 +360,7 @@ async function mostrarPasoConfirmarApartar(producto, variante) {
 function notificarDisponibilidadCondicionadaADeposito(ventana) {
   if (typeof agregarNotificacion !== 'function' || !usuarioIdActual) return;
   agregarNotificacion({
-    texto: 'Tu pieza quedó registrada, pero su disponibilidad depende de tu depósito — mientras no se confirme, no está garantizada y podría dejar de estar disponible. Deposita pronto para asegurarla.',
+    texto: `Tu pieza quedó registrada, pero su disponibilidad depende de tu depósito de $${depositoFaltanteVentana(ventana)} — mientras no se confirme, no está garantizada y podría dejar de estar disponible. Deposita pronto para asegurarla.`,
     link: 'apartados',
     paraId: usuarioIdActual,
     rolDestino: 'emprendedora_lider',
@@ -386,16 +386,20 @@ function mostrarPasoExito(mensaje) {
   overlay.classList.add('open');
 }
 
-function mostrarPasoPedirDeposito() {
+function mostrarPasoPedirDeposito(ventana) {
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
   box.classList.remove('modal-box-xwide'); // por si venía del modal enriquecido de detalle (ver abrirModalDetalleProducto)
   const mensajeWa = encodeURIComponent('¡Hola! Te envío mi comprobante de pago');
+  // $50 normal, $200 foránea (ver depositoMinimoCategoria), menos el
+  // crédito anterior que ya se le haya aplicado.
+  const monto = depositoFaltanteVentana(ventana);
+  const creditoPrevio = Number(ventana.depositoApartadoDisponible || 0);
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <h3>Necesitas depositar $50</h3>
-    <p class="modal-sub">Tu pieza ya quedó registrada. Para que tu ventana se active, confirma tu depósito de $50 — esto abre tu ventana para apartar piezas sin pagar de nuevo.</p>
+    <h3>Necesitas depositar $${monto}</h3>
+    <p class="modal-sub">Tu pieza ya quedó registrada. Para que tu ventana se active, confirma tu depósito de $${monto}${creditoPrevio > 0 ? ` (ya se aplicaron $${creditoPrevio} de tu crédito anterior)` : ''} — esto abre tu ventana para apartar piezas sin pagar de nuevo.</p>
 
     <div class="bank-details-box">
       <div class="copy-field">

@@ -269,14 +269,18 @@ function abrirModalConfirmarDeposito(ventanaId) {
   const overlay = document.getElementById("modalOverlay");
   const box = document.getElementById("modalBox");
 
+  // $50 normal, $200 foránea, menos el crédito previo ya aplicado.
+  const depositoMinimo = depositoFaltanteVentana(v);
+  const creditoPrevio = Number(v.depositoApartadoDisponible || 0);
+
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
     <h3>Confirmar depósito</h3>
-    <p class="modal-sub">Registra el depósito de ${escapeHTML(v.usuarioNombre)}. Algunas personas transfieren más de $50 — anota el monto exacto recibido. Este depósito respalda toda la ventana, no una sola pieza. El plazo de vencimiento empieza a contar a partir de ahora.</p>
+    <p class="modal-sub">Registra el depósito de ${escapeHTML(v.usuarioNombre)}. ${v.categoria === "foranea" ? "Es foránea: su depósito mínimo es de $" + depositoMinimoVentana(v) + ". " : ""}${creditoPrevio > 0 ? "Ya tiene $" + creditoPrevio + " de crédito previo aplicado, así que solo faltan $" + depositoMinimo + ". " : ""}Algunas personas transfieren más del mínimo — anota el monto exacto recibido. Este depósito respalda toda la ventana, no una sola pieza. El plazo de vencimiento empieza a contar a partir de ahora.</p>
 
     <label for="depositoMonto">Monto recibido</label>
-    <input id="depositoMonto" type="number" min="${DEPOSITO_BASE}" step="0.01" value="${DEPOSITO_BASE}" placeholder="Mínimo $${DEPOSITO_BASE}">
+    <input id="depositoMonto" type="number" min="${depositoMinimo}" step="0.01" value="${depositoMinimo}" placeholder="Mínimo $${depositoMinimo}">
 
     <label for="depositoMetodo">Método de pago</label>
     <select id="depositoMetodo" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
@@ -302,9 +306,9 @@ function abrirModalConfirmarDeposito(ventanaId) {
     const referencia = document.getElementById("depositoReferencia").value.trim();
     const error = document.getElementById("formError");
 
-    if (!Number.isFinite(monto) || monto < DEPOSITO_BASE) {
+    if (!Number.isFinite(monto) || monto <= 0 || monto < depositoMinimo) {
       error.style.display = "block";
-      error.textContent = `El monto mínimo del depósito es $${DEPOSITO_BASE} MXN.`;
+      error.textContent = `El monto mínimo del depósito es $${depositoMinimo} MXN.`;
       return;
     }
 
