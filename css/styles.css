@@ -5521,3 +5521,22 @@ img[src*="#mwfoto="] { background: var(--mw-lilac-soft); }
 .cambiar-vencimiento-btn { display: block; margin-top: 6px; padding: 4px 10px; font-size: 0.72rem; }
 .vencimiento-opciones { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
 #vencimientoPersonalizado { width: 100%; height: 42px; border: 1px solid var(--mw-border-d); border-radius: 7px; padding: 0 12px; color: var(--mw-heading-d); background: var(--mw-surface, #fff); }
+
+/* Link de catálogo para clientas — botones en el Catálogo de e/l (ver
+   js/catalogo.js) y la página catalogo-vivo.html (js/catalogo-vivo.js). */
+.catalogo-link-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.catalogo-link-acciones .btn-whatsapp svg { width: 15px; height: 15px; }
+.catalogo-vivo-card { cursor: pointer; }
+.catalogo-vivo-card:focus-visible { outline: 2px solid var(--mw-purple); outline-offset: 2px; }
+.catalogo-vivo-toolbar { gap: 12px; flex-wrap: wrap; }
+.catalogo-vivo-hero .btn-whatsapp { margin-top: 0.6rem; }
+.detalle-miniaturas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.detalle-miniaturas button {
+  width: 58px; height: 58px; padding: 0; border-radius: 8px; overflow: hidden; cursor: pointer;
+  border: 2px solid var(--mw-border); background: var(--mw-surface-soft);
+}
+.detalle-miniaturas button.activa { border-color: var(--mw-purple); }
+.detalle-miniaturas img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (max-width: 720px) {
+  .catalogo-vivo-toolbar .catalog-search { width: 100%; }
+}

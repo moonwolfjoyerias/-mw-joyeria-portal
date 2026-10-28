@@ -141,6 +141,23 @@ service cloud.firestore {
         && request.resource.data.productos[request.resource.data.ultimoCambio].diff(resource.data.productos[request.resource.data.ultimoCambio]).affectedKeys().hasOnly(['variantes']);
     }
 
+    // catalogoTarjetas/{personaId} — lo único que muestra el link de
+    // catálogo que cada Emprendedora/Líder comparte con sus clientas
+    // (catalogo-vivo.html?e=...): su nombre y su WhatsApp. Lectura
+    // pública (las clientas no inician sesión); solo la propia persona
+    // o el equipo interno la escriben, y solo con esos campos. Se
+    // borra al dar de baja/inactivar la cuenta (el link deja de
+    // funcionar).
+    match /catalogoTarjetas/{id} {
+      allow read: if true;
+      allow create, update: if estaAutenticado() && (esInterno() || miPerfil().personaId == id)
+        && request.resource.data.keys().hasOnly(['nombre', 'telefono', 'actualizado'])
+        && request.resource.data.nombre is string && request.resource.data.nombre.size() <= 120
+        && request.resource.data.telefono is string && request.resource.data.telefono.size() <= 20
+        && request.resource.data.actualizado is string && request.resource.data.actualizado.size() <= 40;
+      allow delete: if estaAutenticado() && (esInterno() || miPerfil().personaId == id);
+    }
+
     // ventanasApartado/{id} — Apartados. SEC-07 de la auditoría: antes
     // cualquier cuenta autenticada podía leer Y ESCRIBIR cualquier
     // ventana ajena — el comentario original decía que usuarioId no

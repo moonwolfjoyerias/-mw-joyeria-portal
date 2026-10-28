@@ -252,6 +252,7 @@ async function sincronizarPersonasConFirestore(personas) {
 
   const batch = dbFirestore.batch();
   const alConfirmar = [];
+  const tarjetasCatalogoABorrar = [];
 
   candidatas.forEach(persona => {
     const id = String(persona.id);
@@ -261,6 +262,7 @@ async function sincronizarPersonasConFirestore(personas) {
     if (_personasEnServidor.get(id) !== textoPublico) {
       batch.set(coleccion.doc(id), publico);
       alConfirmar.push(() => _personasEnServidor.set(id, textoPublico));
+      if (!esPersona && persona.estado && persona.estado !== 'activa') tarjetasCatalogoABorrar.push(id);
     }
 
     if (Object.keys(financiero).length) {
@@ -295,6 +297,7 @@ async function sincronizarPersonasConFirestore(personas) {
       if (idsNuevos.has(id)) return;
       batch.delete(coleccion.doc(id));
       alConfirmar.push(() => _personasEnServidor.delete(id));
+      tarjetasCatalogoABorrar.push(id);
     });
   }
 
@@ -306,6 +309,14 @@ async function sincronizarPersonasConFirestore(personas) {
 
   await batch.commit();
   alConfirmar.forEach(aplicar => aplicar());
+
+  // Cuenta dada de baja, inactiva o eliminada: su link de catálogo para
+  // clientas (catalogo-vivo.html, ver js/catalogo.js) deja de funcionar.
+  // Aparte del batch a propósito: si esto falla, no debe tumbar el
+  // guardado de personas.
+  tarjetasCatalogoABorrar.forEach((id) => {
+    dbFirestore.collection('catalogoTarjetas').doc(id).delete().catch(() => { /* noop */ });
+  });
 }
 
 // Crea la cuenta REAL de Firebase Auth de una persona nueva + su perfil
