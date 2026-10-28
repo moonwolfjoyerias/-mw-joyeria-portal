@@ -11,13 +11,13 @@
 <body>
 
   <header class="topbar">
-    <span class="logo">
+    <a class="logo" href="index.html">
       <img src="assets/images/isotipo-blanco.png" alt="MOONWOLF Joyería">
       <span class="logo-text">
         <span class="logo-main">MOONWOLF</span>
         <span class="logo-sub">JOYERÍA</span>
       </span>
-    </span>
+    </a>
 
     <button class="nav-toggle" id="navToggle" aria-label="Abrir menú">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -294,10 +294,14 @@
       grid.innerHTML = productos.map((p) => {
         const variantes = variantesDisponibles(p);
         const meta = [p.colorOro, p.categoria, ...variantes.map(etiquetaVariante)].filter(Boolean).join(' · ');
+        const foto = normalizarImagenPublico(p);
+        // Tocar la foto la abre en grande (ver abrirImagenEnGrande en
+        // js/dom-utils.js), ya en tamaño completo.
+        const zoom = esFotoGenericaPublico(p) ? '' : `data-zoom="${escapeHTMLPublico(foto)}"`;
         return `
         <article class="catalog-product-card">
           <div class="cp-photo">
-            <img src="${normalizarImagenPublico(p)}" alt="${escapeHTMLPublico(p.nombre)}" class="${esFotoGenericaPublico(p) ? 'foto-generica' : ''}">
+            <img src="${foto}" alt="${escapeHTMLPublico(p.nombre)}" class="${esFotoGenericaPublico(p) ? 'foto-generica' : ''}" ${zoom}>
           </div>
           <div class="cp-body">
             <h4>${escapeHTMLPublico(p.nombre)}</h4>
@@ -309,6 +313,7 @@
         </article>
       `;
       }).join('');
+      wirearZoomFotos(grid);
     }
 
     document.addEventListener('DOMContentLoaded', async () => {

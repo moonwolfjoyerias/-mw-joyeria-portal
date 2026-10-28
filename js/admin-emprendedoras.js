@@ -1606,3 +1606,14 @@ function mostrarToastPersonas(mensaje) {
 // formatearDineroPersonas / formatearFechaPersonas / escapeHTMLPersonas /
 // escapeAttributePersonas ahora viven en js/personas-ejemplo.js, para
 // que admin-plan-mw.js pueda reutilizarlas sin duplicarlas.
+
+// Lo que cambie BRILLO MW u otro dispositivo llega solo (ver
+// personas-firestore-sync.js). El perfil abierto solo se vuelve a pintar
+// si no se está editando ni hay una ventana abierta, para no perder lo
+// que se está escribiendo.
+window.addEventListener('mw:personas-actualizadas', () => {
+  renderFiltroLideres();
+  aplicarBusquedaPersonas();
+  const ventanaAbierta = document.getElementById('modalOverlay')?.classList.contains('open');
+  if (!modoEdicionPersona && !ventanaAbierta) renderDetallePersona();
+});

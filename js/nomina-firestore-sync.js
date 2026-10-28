@@ -58,6 +58,146 @@ let NOMINA_HISTORIAL_AJUSTES_CACHE = [];
 let NOMINA_HISTORIAL_ESTADOS_CACHE = [];
 let NOMINA_SOLICITUDES_CACHE = [];
 
+// Opción A + en vivo (convivencia con BRILLO MW, que también maneja la
+// nómina en estas mismas colecciones). Igual que
+// eventos-firestore-sync.js, pero para las seis piezas a la vez:
+// - Se recuerda cómo estaba cada documento en el servidor y al guardar
+//   se envía SOLO lo que cambió aquí; solo se borra lo que esta página
+//   conocía y quitó, nunca un documento que no conoce. Así la firma de
+//   un recibo desde Staff es un solo documento con un solo campo
+//   distinto (lo único que las reglas le permiten a Staff), y un
+//   historial largo ya no se reescribe completo en cada guardado.
+// - onSnapshot aplica lo que cambie BRILLO u otro dispositivo sobre la
+//   misma caché en memoria y avisa a la pantalla
+//   ('mw:nomina-actualizada') para que se vuelva a pintar sola.
+// - Una copia atrasada no se vuelve a enviar, y lo que llegó en vivo no
+//   se borra por no venir en un arreglo viejo.
+// - nominaMeta/estado ("ya se sembró") solo se escribe la primera vez.
+let _nominaEnServidorCargado = false;
+
+// localKey es una función: las llaves NOMINA_*_KEY viven en
+// nomina-modelo.js, que se carga después de este archivo.
+function _nominaCrearPieza(coleccion, localKey, detalle, esMapa, obtener, asignar) {
+  return {
+    coleccion, localKey, detalle, esMapa, obtener, asignar,
+    enServidor: new Map(),
+    superadas: new Map(),
+    recibidosEnVivo: new Set(),
+    escuchando: false
+  };
+}
+
+const _NOMINA_PIEZAS = {
+  empleados: _nominaCrearPieza(NOMINA_EMPLEADOS_COLECCION, () => NOMINA_EMPLEADOS_KEY, 'el empleado', false,
+    () => NOMINA_EMPLEADOS_CACHE, v => { NOMINA_EMPLEADOS_CACHE = v; }),
+  conceptos: _nominaCrearPieza(NOMINA_CONCEPTOS_COLECCION, () => NOMINA_CONCEPTOS_KEY, 'el concepto de nómina', false,
+    () => NOMINA_CONCEPTOS_CACHE, v => { NOMINA_CONCEPTOS_CACHE = v; }),
+  periodos: _nominaCrearPieza(NOMINA_PERIODOS_COLECCION, () => NOMINA_PERIODOS_KEY, 'la nómina de la semana', true,
+    () => NOMINA_PERIODOS_CACHE, v => { NOMINA_PERIODOS_CACHE = v; }),
+  historialAjustes: _nominaCrearPieza(NOMINA_HISTORIAL_AJUSTES_COLECCION, () => NOMINA_HISTORIAL_KEY, 'el historial de ajustes', false,
+    () => NOMINA_HISTORIAL_AJUSTES_CACHE, v => { NOMINA_HISTORIAL_AJUSTES_CACHE = v; }),
+  historialEstados: _nominaCrearPieza(NOMINA_HISTORIAL_ESTADOS_COLECCION, () => NOMINA_HISTORIAL_ESTADOS_KEY, 'el historial de estados', false,
+    () => NOMINA_HISTORIAL_ESTADOS_CACHE, v => { NOMINA_HISTORIAL_ESTADOS_CACHE = v; }),
+  solicitudes: _nominaCrearPieza(NOMINA_SOLICITUDES_COLECCION, () => NOMINA_SOLICITUDES_KEY, 'la solicitud', false,
+    () => NOMINA_SOLICITUDES_CACHE, v => { NOMINA_SOLICITUDES_CACHE = v; })
+};
+
+// Periodos es un mapa clave → periodo (la clave es el id del documento);
+// el resto son arreglos con id. Estas cuatro funciones esconden esa
+// diferencia para que el resto del archivo trate todo como una lista.
+function _nominaALista(pieza, valor) {
+  if (!pieza.esMapa) return valor;
+  return Object.keys(valor).map(clave => ({ ...valor[clave], id: clave }));
+}
+function _nominaLeerItem(pieza, valor, id) {
+  if (pieza.esMapa) return valor[id] ? { ...valor[id], id } : null;
+  return valor.find(item => String(item.id) === id) || null;
+}
+function _nominaPonerItem(pieza, valor, id, item) {
+  if (pieza.esMapa) { valor[id] = item; return; }
+  const i = valor.findIndex(x => String(x.id) === id);
+  if (i >= 0) valor[i] = item; else valor.push(item);
+}
+function _nominaQuitarItem(pieza, valor, id) {
+  if (pieza.esMapa) { delete valor[id]; return; }
+  const i = valor.findIndex(x => String(x.id) === id);
+  if (i >= 0) valor.splice(i, 1);
+}
+
+function _nominaRecordarServidor(pieza) {
+  pieza.enServidor.clear();
+  _nominaALista(pieza, pieza.obtener()).forEach(item => pieza.enServidor.set(String(item.id), textoEstableFirestore(item)));
+}
+
+function _nominaSuperar(pieza, id, texto) {
+  if (!texto) return;
+  if (!pieza.superadas.has(id)) pieza.superadas.set(id, new Set());
+  pieza.superadas.get(id).add(texto);
+}
+
+function _nominaAplicarEnVivo(pieza, snap) {
+  let huboCambios = false;
+  const cache = pieza.obtener();
+  snap.docChanges().forEach(cambio => {
+    const id = String(cambio.doc.id);
+    const antes = pieza.enServidor.get(id);
+    const local = _nominaLeerItem(pieza, cache, id);
+    const cambioPendiente = local && textoEstableFirestore(local) !== antes;
+    if (cambio.type === 'removed') {
+      if (antes === undefined) return;
+      _nominaSuperar(pieza, id, antes);
+      pieza.enServidor.delete(id);
+      if (local && !cambioPendiente) { _nominaQuitarItem(pieza, cache, id); huboCambios = true; }
+      return;
+    }
+    const item = { ...cambio.doc.data(), id: cambio.doc.id };
+    const texto = textoEstableFirestore(item);
+    if (texto === antes) return;
+    if (antes === undefined && !local) pieza.recibidosEnVivo.add(id);
+    _nominaSuperar(pieza, id, antes);
+    pieza.enServidor.set(id, texto);
+    if (cambioPendiente) return;
+    _nominaPonerItem(pieza, cache, id, item);
+    huboCambios = true;
+  });
+  if (!huboCambios) return;
+  try { localStorage.setItem(pieza.localKey(), JSON.stringify(cache)); } catch (error) { /* noop */ }
+  window.dispatchEvent(new CustomEvent('mw:nomina-actualizada', { detail: { coleccion: pieza.coleccion } }));
+}
+
+function escucharNominaEnVivo() {
+  if (!dbFirestore) return;
+  Object.values(_NOMINA_PIEZAS).forEach(pieza => {
+    if (pieza.escuchando) return;
+    pieza.escuchando = true;
+    // Si la escucha falla (sin sesión, sin red) la página sigue como
+    // antes: con lo que cargó.
+    dbFirestore.collection(pieza.coleccion).onSnapshot(snap => _nominaAplicarEnVivo(pieza, snap), () => {});
+  });
+}
+
+// Un valor armado antes de un cambio en vivo: sus copias atrasadas se
+// cambian por la versión actual y lo que llegó en vivo y no trae se
+// conserva, para que la pantalla no muestre datos viejos.
+function _nominaConservarRecibidos(pieza, valor) {
+  const cache = pieza.obtener();
+  if (valor === cache) return valor;
+  _nominaALista(pieza, valor).forEach(item => {
+    const id = String(item.id);
+    const actual = _nominaLeerItem(pieza, cache, id);
+    if (actual && pieza.superadas.has(id) && pieza.superadas.get(id).has(textoEstableFirestore(item))) {
+      _nominaPonerItem(pieza, valor, id, pieza.esMapa ? cache[id] : actual);
+    }
+  });
+  pieza.recibidosEnVivo.forEach(id => {
+    if (_nominaLeerItem(pieza, valor, id)) return;
+    const actual = _nominaLeerItem(pieza, cache, id);
+    if (actual) _nominaPonerItem(pieza, valor, id, pieza.esMapa ? cache[id] : actual);
+  });
+  return valor;
+}
+
+
 function nominaEmpleadosSemillaLocal() {
   return typeof construirEmpleadosNominaEjemplo === 'function' ? construirEmpleadosNominaEjemplo() : [];
 }
@@ -124,6 +264,9 @@ async function cargarNominaRepo() {
         NOMINA_SOLICITUDES_CACHE = snapSolicitudes.docs.map(d => ({ ...d.data(), id: d.id }));
         NOMINA_PERIODOS_CACHE = {};
         snapPeriodos.docs.forEach(d => { NOMINA_PERIODOS_CACHE[d.id] = d.data(); });
+        Object.values(_NOMINA_PIEZAS).forEach(_nominaRecordarServidor);
+        _nominaEnServidorCargado = true;
+        escucharNominaEnVivo();
       } else {
         // Primera vez que este proyecto de Firestore ve Nómina: solo
         // empleados y conceptos tienen semilla — periodos/historiales/
@@ -132,6 +275,7 @@ async function cargarNominaRepo() {
           guardarNominaEmpleadosRepo(nominaEmpleadosSemillaLocal()),
           guardarNominaConceptosRepo(nominaConceptosSemillaLocal())
         ]);
+        escucharNominaEnVivo();
       }
     } catch (error) {
       // La consulta falló (reglas, red) — NO se rellena con lo que haya
@@ -181,88 +325,77 @@ function avisarErrorGuardadoNomina(error, detalle) {
   }
 }
 
-function guardarNominaEmpleadosRepo(lista) {
-  NOMINA_EMPLEADOS_CACHE = lista;
-  try { localStorage.setItem(NOMINA_EMPLEADOS_KEY, JSON.stringify(lista)); } catch (error) { /* noop */ }
+// Las seis funciones de siempre (las llama nomina-modelo.js) — ahora
+// todas pasan por el mismo guardado de "solo lo que cambió".
+function _guardarPiezaNomina(pieza, valor) {
+  valor = _nominaConservarRecibidos(pieza, valor);
+  pieza.asignar(valor);
+  try { localStorage.setItem(pieza.localKey(), JSON.stringify(valor)); } catch (error) { /* noop */ }
   if (!dbFirestore) return Promise.resolve();
   const tarea = _colaGuardadoNomina.then(() =>
-    sincronizarColeccionNomina(NOMINA_EMPLEADOS_COLECCION, lista).catch(error => avisarErrorGuardadoNomina(error, 'el empleado'))
+    sincronizarColeccionNomina(pieza, valor).catch(error => avisarErrorGuardadoNomina(error, pieza.detalle))
   );
   _colaGuardadoNomina = tarea;
   return tarea;
 }
 
+function guardarNominaEmpleadosRepo(lista) {
+  return _guardarPiezaNomina(_NOMINA_PIEZAS.empleados, lista);
+}
+
 function guardarNominaConceptosRepo(lista) {
-  NOMINA_CONCEPTOS_CACHE = lista;
-  try { localStorage.setItem(NOMINA_CONCEPTOS_KEY, JSON.stringify(lista)); } catch (error) { /* noop */ }
-  if (!dbFirestore) return Promise.resolve();
-  const tarea = _colaGuardadoNomina.then(() =>
-    sincronizarColeccionNomina(NOMINA_CONCEPTOS_COLECCION, lista).catch(error => avisarErrorGuardadoNomina(error, 'el concepto de nómina'))
-  );
-  _colaGuardadoNomina = tarea;
-  return tarea;
+  return _guardarPiezaNomina(_NOMINA_PIEZAS.conceptos, lista);
 }
 
 // SEC-02: periodos ya no se guarda como un solo documento con el mapa
 // completo (nominaMeta/periodos) — cada semana vive en su propio
-// documento de nominaPeriodos/{clave}, mismo patrón diff-y-resync que
-// el resto de las colecciones de este archivo (ver sincronizarColeccionNomina).
+// documento de nominaPeriodos/{clave}.
 function guardarNominaPeriodosRepo(periodos) {
-  NOMINA_PERIODOS_CACHE = periodos;
-  try { localStorage.setItem(NOMINA_PERIODOS_KEY, JSON.stringify(periodos)); } catch (error) { /* noop */ }
-  if (!dbFirestore) return Promise.resolve();
-  const lista = Object.keys(periodos).map(clave => ({ ...periodos[clave], id: clave }));
-  const tarea = _colaGuardadoNomina.then(() =>
-    sincronizarColeccionNomina(NOMINA_PERIODOS_COLECCION, lista).catch(error => avisarErrorGuardadoNomina(error, 'la nómina de la semana'))
-  );
-  _colaGuardadoNomina = tarea;
-  return tarea;
+  return _guardarPiezaNomina(_NOMINA_PIEZAS.periodos, periodos);
 }
 
 function guardarNominaHistorialAjustesRepo(lista) {
-  NOMINA_HISTORIAL_AJUSTES_CACHE = lista;
-  try { localStorage.setItem(NOMINA_HISTORIAL_KEY, JSON.stringify(lista)); } catch (error) { /* noop */ }
-  if (!dbFirestore) return Promise.resolve();
-  const tarea = _colaGuardadoNomina.then(() =>
-    sincronizarColeccionNomina(NOMINA_HISTORIAL_AJUSTES_COLECCION, lista).catch(error => avisarErrorGuardadoNomina(error, 'el historial de ajustes'))
-  );
-  _colaGuardadoNomina = tarea;
-  return tarea;
+  return _guardarPiezaNomina(_NOMINA_PIEZAS.historialAjustes, lista);
 }
 
 function guardarNominaHistorialEstadosRepo(lista) {
-  NOMINA_HISTORIAL_ESTADOS_CACHE = lista;
-  try { localStorage.setItem(NOMINA_HISTORIAL_ESTADOS_KEY, JSON.stringify(lista)); } catch (error) { /* noop */ }
-  if (!dbFirestore) return Promise.resolve();
-  const tarea = _colaGuardadoNomina.then(() =>
-    sincronizarColeccionNomina(NOMINA_HISTORIAL_ESTADOS_COLECCION, lista).catch(error => avisarErrorGuardadoNomina(error, 'el historial de estados'))
-  );
-  _colaGuardadoNomina = tarea;
-  return tarea;
+  return _guardarPiezaNomina(_NOMINA_PIEZAS.historialEstados, lista);
 }
 
 function guardarNominaSolicitudesRepo(lista) {
-  NOMINA_SOLICITUDES_CACHE = lista;
-  try { localStorage.setItem(NOMINA_SOLICITUDES_KEY, JSON.stringify(lista)); } catch (error) { /* noop */ }
-  if (!dbFirestore) return Promise.resolve();
-  const tarea = _colaGuardadoNomina.then(() =>
-    sincronizarColeccionNomina(NOMINA_SOLICITUDES_COLECCION, lista).catch(error => avisarErrorGuardadoNomina(error, 'la solicitud'))
-  );
-  _colaGuardadoNomina = tarea;
-  return tarea;
+  return _guardarPiezaNomina(_NOMINA_PIEZAS.solicitudes, lista);
 }
 
-async function sincronizarColeccionNomina(nombreColeccion, lista) {
-  const coleccion = dbFirestore.collection(nombreColeccion);
-  const snap = await coleccion.get();
-  const idsNuevos = new Set(lista.map(item => String(item.id)));
+async function sincronizarColeccionNomina(pieza, valor) {
+  const coleccion = dbFirestore.collection(pieza.coleccion);
+  const lista = _nominaALista(pieza, valor);
+  // Opción A: solo lo que cambió aquí; solo se borra lo que esta página
+  // conocía y quitó (nunca algo creado en BRILLO u otro dispositivo).
   const batch = dbFirestore.batch();
-  snap.docs.forEach(doc => {
-    if (!idsNuevos.has(doc.id)) batch.delete(doc.ref);
-  });
+  const escritos = new Map();
   lista.forEach(item => {
-    batch.set(coleccion.doc(String(item.id)), item);
+    const id = String(item.id);
+    const texto = textoEstableFirestore(item);
+    if (pieza.enServidor.get(id) === texto) return;
+    if (pieza.superadas.has(id) && pieza.superadas.get(id).has(texto)) return;
+    batch.set(coleccion.doc(id), item);
+    escritos.set(id, texto);
   });
-  batch.set(dbFirestore.collection(NOMINA_META_COLECCION).doc(NOMINA_META_DOC_ID), { inicializado: true }, { merge: true });
+  const idsNuevos = new Set(lista.map(item => String(item.id)));
+  const borrados = [];
+  pieza.enServidor.forEach((texto, id) => {
+    if (!idsNuevos.has(id) && !pieza.recibidosEnVivo.has(id)) {
+      batch.delete(coleccion.doc(id));
+      borrados.push(id);
+    }
+  });
+  const primeraVez = !_nominaEnServidorCargado;
+  if (primeraVez) {
+    batch.set(dbFirestore.collection(NOMINA_META_COLECCION).doc(NOMINA_META_DOC_ID), { inicializado: true }, { merge: true });
+  }
+  if (!escritos.size && !borrados.length && !primeraVez) return;
   await batch.commit();
+  escritos.forEach((texto, id) => pieza.enServidor.set(id, texto));
+  borrados.forEach(id => pieza.enServidor.delete(id));
+  _nominaEnServidorCargado = true;
 }
