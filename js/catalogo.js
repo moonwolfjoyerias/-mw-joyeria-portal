@@ -57,12 +57,92 @@ document.addEventListener('DOMContentLoaded', async () => {
   const clearBtn = document.getElementById('clearFiltersBtn');
   if (clearBtn) clearBtn.addEventListener('click', limpiarFiltros);
 
+  iniciarLinkCatalogoClientas();
+
   // FEAT-03 pedida tras lanzar a producción: enlace directo desde la
   // notificación de "ya está disponible lo que pediste" (lista de
   // deseos) — abre de una vez el modal de Apartar para ese producto.
   const productoIdDesdeUrl = new URLSearchParams(window.location.search).get('apartar');
   if (productoIdDesdeUrl) abrirModalApartar(productoIdDesdeUrl);
 });
+
+// ---------- Link de catálogo para sus clientas ----------
+// Cada e/l comparte catalogo-vivo.html?e={personaId}: solo el catálogo
+// con precio etiqueta, su nombre y su WhatsApp — sin menú ni nada más
+// del sitio. Esa página es pública (las clientas no inician sesión), así
+// que no puede leer personas/; lo que muestra sale de
+// catalogoTarjetas/{personaId}, que se escribe aquí (ver
+// firestore.rules). Se escribe al copiar/compartir el link y, si ya lo
+// había compartido desde este dispositivo, al abrir el catálogo cuando
+// cambió su nombre o teléfono.
+const TARJETA_CATALOGO_STORAGE_PREFIJO = 'mw_tarjetaCatalogo_';
+
+function urlCatalogoClientas() {
+  return new URL(`../../catalogo-vivo.html?e=${encodeURIComponent(usuarioIdActual)}`, window.location.href).href;
+}
+
+function datosTarjetaCatalogo() {
+  const persona = typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(usuarioIdActual) : null;
+  const nombre = (persona ? [persona.nombre, persona.apellidos].filter(Boolean).join(' ') : '') || usuarioNombreActual || '';
+  return { nombre: nombre.trim().slice(0, 120), telefono: String(persona?.telefono || '').replace(/\D/g, '').slice(0, 20) };
+}
+
+async function guardarTarjetaCatalogo(soloSiCambio) {
+  if (typeof dbFirestore === 'undefined' || !dbFirestore || !usuarioIdActual) return false;
+  const clave = TARJETA_CATALOGO_STORAGE_PREFIJO + usuarioIdActual;
+  const datos = datosTarjetaCatalogo();
+  const texto = JSON.stringify(datos);
+  let anterior = null;
+  try { anterior = localStorage.getItem(clave); } catch (error) { /* noop */ }
+  if (soloSiCambio && (anterior === null || anterior === texto)) return true;
+  await dbFirestore.collection('catalogoTarjetas').doc(String(usuarioIdActual)).set({ ...datos, actualizado: new Date().toISOString() });
+  try { localStorage.setItem(clave, texto); } catch (error) { /* noop */ }
+  return true;
+}
+
+async function prepararLinkCatalogo() {
+  try {
+    await guardarTarjetaCatalogo(false);
+  } catch (error) {
+    mostrarToast('No se pudo preparar tu link. Revisa tu conexión e inténtalo de nuevo.');
+    return null;
+  }
+  if (!datosTarjetaCatalogo().telefono) {
+    mostrarToast('Tu link no tendrá botón de WhatsApp porque no tienes teléfono registrado — agrégalo en "Cambiar teléfono".');
+  }
+  return urlCatalogoClientas();
+}
+
+async function iniciarLinkCatalogoClientas() {
+  const copiarBtn = document.getElementById('copiarLinkCatalogoBtn');
+  const compartirBtn = document.getElementById('compartirLinkCatalogoBtn');
+  if (!copiarBtn && !compartirBtn) return;
+
+  copiarBtn?.addEventListener('click', async () => {
+    const url = await prepararLinkCatalogo();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      mostrarToast('Link copiado. Pégalo donde quieras compartirlo con tus clientas.');
+    } catch (error) {
+      window.prompt('Copia tu link:', url);
+    }
+  });
+
+  compartirBtn?.addEventListener('click', async () => {
+    // La ventana se abre antes de esperar a Firestore: si se abre
+    // después, el navegador del celular la bloquea como emergente.
+    const ventana = window.open('', '_blank');
+    const url = await prepararLinkCatalogo();
+    if (!url) { ventana?.close(); return; }
+    const mensaje = `¡Hola! Te comparto mi catálogo de MW Joyería, con todas las piezas disponibles y sus precios: ${url}`;
+    const wa = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+    if (ventana) ventana.location.href = wa; else window.location.href = wa;
+  });
+
+  if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
+  guardarTarjetaCatalogo(true).catch(() => { /* se reintenta al copiar el link */ });
+}
 
 // ---------- Catálogo real (mismo que Staff/Encargado/Admin) ----------
 function obtenerCatalogoReal() {
@@ -350,7 +430,7 @@ async function mostrarPasoConfirmarApartar(producto, variante) {
     mostrarPasoExito('Ya tenías depósito guardado de una ventana anterior — esta pieza quedó apartada de una vez, sin volver a depositar.');
   } else {
     notificarDisponibilidadCondicionadaADeposito(nuevaVentana);
-    mostrarPasoPedirDeposito();
+    mostrarPasoPedirDeposito(nuevaVentana);
   }
 }
 
@@ -360,7 +440,7 @@ async function mostrarPasoConfirmarApartar(producto, variante) {
 function notificarDisponibilidadCondicionadaADeposito(ventana) {
   if (typeof agregarNotificacion !== 'function' || !usuarioIdActual) return;
   agregarNotificacion({
-    texto: 'Tu pieza quedó registrada, pero su disponibilidad depende de tu depósito — mientras no se confirme, no está garantizada y podría dejar de estar disponible. Deposita pronto para asegurarla.',
+    texto: `Tu pieza quedó registrada, pero su disponibilidad depende de tu depósito de $${depositoFaltanteVentana(ventana)} — mientras no se confirme, no está garantizada y podría dejar de estar disponible. Deposita pronto para asegurarla.`,
     link: 'apartados',
     paraId: usuarioIdActual,
     rolDestino: 'emprendedora_lider',
@@ -386,16 +466,20 @@ function mostrarPasoExito(mensaje) {
   overlay.classList.add('open');
 }
 
-function mostrarPasoPedirDeposito() {
+function mostrarPasoPedirDeposito(ventana) {
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
   box.classList.remove('modal-box-xwide'); // por si venía del modal enriquecido de detalle (ver abrirModalDetalleProducto)
   const mensajeWa = encodeURIComponent('¡Hola! Te envío mi comprobante de pago');
+  // $50 normal, $200 foránea (ver depositoMinimoCategoria), menos el
+  // crédito anterior que ya se le haya aplicado.
+  const monto = depositoFaltanteVentana(ventana);
+  const creditoPrevio = Number(ventana.depositoApartadoDisponible || 0);
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <h3>Necesitas depositar $50</h3>
-    <p class="modal-sub">Tu pieza ya quedó registrada. Para que tu ventana se active, confirma tu depósito de $50 — esto abre tu ventana para apartar piezas sin pagar de nuevo.</p>
+    <h3>Necesitas depositar $${monto}</h3>
+    <p class="modal-sub">Tu pieza ya quedó registrada. Para que tu ventana se active, confirma tu depósito de $${monto}${creditoPrevio > 0 ? ` (ya se aplicaron $${creditoPrevio} de tu crédito anterior)` : ''} — esto abre tu ventana para apartar piezas sin pagar de nuevo.</p>
 
     <div class="bank-details-box">
       <div class="copy-field">
