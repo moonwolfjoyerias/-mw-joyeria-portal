@@ -1795,3 +1795,18 @@ function abrirModalSolicitudBajaEncargado(empleadosActivos) {
   });
 
 }
+
+// Lo que cambie BRILLO MW u otro dispositivo llega solo (ver
+// nomina-firestore-sync.js). El detalle de un empleado solo se vuelve a
+// pintar si no hay cambios a medio capturar ni una ventana abierta, para
+// no borrar lo que se está escribiendo.
+window.addEventListener('mw:nomina-actualizada', () => {
+  if (nomVista === 'detalle') {
+    const ventanaAbierta = document.getElementById('modalOverlay')?.classList.contains('open');
+    const escribiendo = document.activeElement && document.getElementById('nomVistaDetalle')?.contains(document.activeElement)
+      && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName);
+    if (!nomPendienteCambios.length && !ventanaAbierta && !escribiendo) renderVistaDetalleNomina();
+    return;
+  }
+  renderVistaActualNomina();
+});
