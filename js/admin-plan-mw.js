@@ -861,8 +861,9 @@ function renderHistorialRangos() {
 // Lo que cambie BRILLO MW u otro dispositivo (ascensos, recompensas)
 // llega solo — ver personas-firestore-sync.js. No se repinta con una
 // ventana abierta.
-window.addEventListener('mw:personas-actualizadas', () => {
+// También cuando BRILLO confirma o cobra una compra (cambian rango, constancia…).
+['mw:personas-actualizadas', 'mw:compras-brillo-actualizadas'].forEach(evento => window.addEventListener(evento, () => {
   if (document.getElementById('modalOverlay')?.classList.contains('open')) return;
   renderPlanMW();
   if (planmwVista === 'rangos') renderHistorialRangos();
-});
+}));

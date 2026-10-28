@@ -994,6 +994,13 @@ function renderSeccionComprasPersona(persona) {
   });
 
   const totalAcumulado = compras.reduce((suma, c) => suma + Number(c.pieza.total || 0), 0);
+  // Una compra de la página cuenta hasta que BRILLO la confirma (ver
+  // js/compras-brillo-firestore-sync.js).
+  const estadoBrillo = ({ ventana, pieza }) => typeof confirmacionCompraPiezaBrillo === 'function'
+    ? confirmacionCompraPiezaBrillo(ventana.id, pieza, null)
+    : { cuenta: true };
+  const porConfirmar = compras.filter(c => !estadoBrillo(c).cuenta);
+  const totalQueCuenta = totalAcumulado - porConfirmar.reduce((suma, c) => suma + Number(c.pieza.total || 0), 0);
 
   if (!compras.length) {
     sec.innerHTML = `
@@ -1008,14 +1015,21 @@ function renderSeccionComprasPersona(persona) {
 
   sec.innerHTML = `
     <h4 class="profile-section-title">Compras</h4>
-    <div class="detail-grid" style="grid-template-columns:1fr 1fr;margin-bottom:16px;">
+    <div class="detail-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:16px;">
       <div><span>Compras liquidadas</span><strong>${compras.length}</strong></div>
-      <div><span>Total acumulado</span><strong>$${formatearDineroPersonas(totalAcumulado)} MXN</strong></div>
+      <div><span>Confirmadas en BRILLO (cuentan)</span><strong>$${formatearDineroPersonas(totalQueCuenta)} MXN</strong></div>
+      <div><span>Por confirmar en BRILLO</span><strong>${porConfirmar.length}</strong></div>
     </div>
     ${compras.map(({ ventana, pieza }) => `
       <div class="compra-item">
         <div class="compra-item-head">
-          <strong>${escapeHTMLPersonas(pieza.producto)}</strong>
+          <strong>${escapeHTMLPersonas(pieza.producto)}${(() => {
+            const e = estadoBrillo({ ventana, pieza });
+            if (e.cuenta) return '';
+            return e.estado === 'rechazada'
+              ? ' <span class="badge badge-correccion">No confirmada en BRILLO</span>'
+              : ' <span class="badge badge-pendiente">Por confirmar en BRILLO</span>';
+          })()}</strong>
           <strong>$${formatearDineroPersonas(pieza.total)} MXN</strong>
         </div>
         <small>${escapeHTMLPersonas([pieza.colorOro, pieza.variante].filter(Boolean).join(' · ') || 'Sin variante')} · Ventana ${escapeHTMLPersonas(ventana.id)} · ${formatearFechaPersonas(pieza.fechaSolicitud || ventana.fechaInicio)}</small>
@@ -1611,9 +1625,10 @@ function mostrarToastPersonas(mensaje) {
 // personas-firestore-sync.js). El perfil abierto solo se vuelve a pintar
 // si no se está editando ni hay una ventana abierta, para no perder lo
 // que se está escribiendo.
-window.addEventListener('mw:personas-actualizadas', () => {
+// También cuando BRILLO confirma o cobra una compra (cambian rango, constancia…).
+['mw:personas-actualizadas', 'mw:compras-brillo-actualizadas'].forEach(evento => window.addEventListener(evento, () => {
   renderFiltroLideres();
   aplicarBusquedaPersonas();
   const ventanaAbierta = document.getElementById('modalOverlay')?.classList.contains('open');
   if (!modoEdicionPersona && !ventanaAbierta) renderDetallePersona();
-});
+}));

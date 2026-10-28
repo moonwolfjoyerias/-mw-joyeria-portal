@@ -992,5 +992,7 @@ function verificarApartadosPorVencerPendientes() {
 // para no calcular con los apartados una quincena que ya tiene archivo.
 const apartadosRepoListo = Promise.all([
   cargarApartadosRepo(),
-  typeof comprasAroniumListo !== 'undefined' ? comprasAroniumListo : null
+  typeof comprasAroniumListo !== 'undefined' ? comprasAroniumListo : null,
+  // Y a las compras confirmadas por BRILLO (compras-brillo-firestore-sync.js).
+  typeof comprasBrilloListo !== 'undefined' ? comprasBrilloListo : null
 ]).then(([ventanas]) => ventanas);

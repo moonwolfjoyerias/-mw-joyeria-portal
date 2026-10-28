@@ -555,6 +555,20 @@ service cloud.firestore {
       allow write: if esAdmin();
     }
 
+    // Compras confirmadas por BRILLO MW (ver js/compras-brillo-firestore-sync.js).
+    // Una compra hecha por la página cuenta hasta que Encargado o
+    // Administración la confirma en BRILLO. Staff solo puede crear las que
+    // se cobran en BRILLO mismo (al liquidar un apartado ahí: origen
+    // 'brillo'), nunca confirmar las de la página ni cambiar las existentes.
+    // La leen las cuentas con sesión (Líderes calculan su equipo), igual que
+    // comprasAronium.
+    match /comprasBrillo/{id} {
+      allow read: if estaAutenticado();
+      allow create: if miRol() in ['encargado', 'admin']
+        || (miRol() == 'staff' && request.resource.data.origen == 'brillo');
+      allow update, delete: if miRol() in ['encargado', 'admin'];
+    }
+
     match /{coleccion}/{id} {
       allow read, write: if coleccion.matches('brillo[A-Z].*') && esInterno();
     }

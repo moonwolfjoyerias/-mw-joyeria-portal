@@ -6,6 +6,9 @@
 // LIQUIDADAS (pagadas) — una pieza apartada pero sin pagar todavía NO
 // cuenta para ningún cálculo (decisión de negocio confirmada: nadie
 // gana rango/comisión/constancia/rifa por algo que ni siquiera se pagó).
+// Además, una pieza liquidada en la página cuenta hasta que BRILLO MW la
+// confirma (ver fechaCompraPieza); las compras en la caja de BRILLO cuentan
+// solas (js/compras-brillo-firestore-sync.js).
 //
 // Separa Souvenir de compra normal usando pieza.material (grabado al
 // momento de apartar en apartados-modelo.js, tomado del catálogo real):
@@ -26,6 +29,18 @@
 function fechaLiquidacionPieza(pieza) {
   if (pieza.estado !== 'liquidada' || pieza.compraLimpiada || !pieza.pagos?.length) return null;
   return pieza.pagos[pieza.pagos.length - 1].fecha || null;
+}
+
+// Fecha en que la pieza CUENTA como compra, o null si no cuenta: además de
+// estar liquidada, BRILLO MW la tiene que haber confirmado (ver
+// js/compras-brillo-firestore-sync.js); cuenta en la fecha que BRILLO
+// decidió al confirmarla.
+function fechaCompraPieza(ventana, pieza) {
+  const liquidada = fechaLiquidacionPieza(pieza);
+  if (!liquidada) return null;
+  if (typeof confirmacionCompraPiezaBrillo !== 'function') return liquidada;
+  const c = confirmacionCompraPiezaBrillo(ventana.id, pieza, liquidada);
+  return c.cuenta ? c.fecha : null;
 }
 
 function mesKeyDeFecha(iso) {
@@ -49,20 +64,27 @@ function diaDeFecha(iso) {
   return iso ? Number(iso.slice(8, 10)) : null;
 }
 
-// Recorre TODAS las piezas liquidadas de una persona y aplica un
-// filtro de fecha (recibe el ISO de liquidación) — evita repetir el
-// mismo doble-forEach en cada función pública de este archivo.
+// Recorre TODAS las compras que cuentan de una persona (piezas liquidadas y
+// confirmadas por BRILLO, más sus compras en la caja de BRILLO) y aplica un
+// filtro de fecha (recibe el ISO en que cuenta) — evita repetir el mismo
+// doble-forEach en cada función pública de este archivo.
 function _acumularComprasLiquidadasPersona(personaId, filtroFecha) {
   const ventanas = obtenerVentanasApartado().filter(v => v.usuarioId === personaId);
   let normal = 0;
   let souvenir = 0;
   ventanas.forEach(v => {
     (v.apartados || []).forEach(pieza => {
-      const fecha = fechaLiquidacionPieza(pieza);
+      const fecha = fechaCompraPieza(v, pieza);
       if (!fecha || !filtroFecha(fecha)) return;
       const monto = Number(pieza.total || 0);
       if (pieza.material === 'souvenirs') souvenir += monto; else normal += monto;
     });
+  });
+  const caja = typeof comprasCajaBrilloPersona === 'function' ? comprasCajaBrilloPersona(personaId) : [];
+  caja.forEach(c => {
+    if (!filtroFecha(c.fechaCuenta)) return;
+    normal += c.normal;
+    souvenir += c.souvenir;
   });
   return { normal, souvenir, total: normal + souvenir };
 }
