@@ -1875,3 +1875,4 @@ function repintarComisionesEnVivo() {
 }
 window.addEventListener('mw:comisiones-actualizadas', repintarComisionesEnVivo);
 window.addEventListener('mw:personas-actualizadas', repintarComisionesEnVivo);
+window.addEventListener('mw:compras-brillo-actualizadas', repintarComisionesEnVivo);
