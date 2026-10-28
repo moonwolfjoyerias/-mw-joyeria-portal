@@ -857,3 +857,12 @@ function renderHistorialRangos() {
   `;
 
 }
+
+// Lo que cambie BRILLO MW u otro dispositivo (ascensos, recompensas)
+// llega solo — ver personas-firestore-sync.js. No se repinta con una
+// ventana abierta.
+window.addEventListener('mw:personas-actualizadas', () => {
+  if (document.getElementById('modalOverlay')?.classList.contains('open')) return;
+  renderPlanMW();
+  if (planmwVista === 'rangos') renderHistorialRangos();
+});
