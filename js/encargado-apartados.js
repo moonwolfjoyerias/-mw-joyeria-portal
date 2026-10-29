@@ -210,7 +210,7 @@ async function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, var
   // Si la persona ya tiene una ventana activa, la pieza se suma ahí en
   // vez de abrir una segunda ventana con su propio vencimiento aparte
   // (Sección 5.1: "apartar VARIAS piezas sin volver a pagar").
-  const ventanaExistente = ventanas.find(v => v.usuarioId === usuarioId && v.estado !== "vencida" && v.estado !== "cerrada");
+  const ventanaExistente = buscarVentanaParaApartar(ventanas, usuarioId);
 
   if (ventanaExistente) {
 
@@ -238,6 +238,7 @@ async function ejecutarNuevaVentana({ nombre, telefono, categoria, producto, var
 
   }
 
+  cerrarVentanasVencidasSinPiezas(ventanas, usuarioId, ENCARGADO_EMPLEADO);
   const nuevaVentana = abrirVentanaApartado({ usuarioId, usuarioNombre: nombre, telefono, categoria }, ENCARGADO_EMPLEADO);
   const resultadoPieza = await agregarPiezaAVentana(nuevaVentana, { producto, variante, colorOro, total, productoId, varianteId }, ENCARGADO_EMPLEADO);
 

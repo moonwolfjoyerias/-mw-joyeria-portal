@@ -363,6 +363,47 @@ function ventanaEstaVencida(ventana, ahora = Date.now()) {
   return !!ventana.fechaVencimiento && ahora >= new Date(ventana.fechaVencimiento).getTime();
 }
 
+// Ventana de esta persona a la que se le pueden sumar piezas nuevas:
+// una que espera su depósito o la aprobación VIP, o una activa que
+// TODAVÍA NO VENCE. Una ventana vencida sigue en estado 'activa' hasta
+// que Staff la desaparta (vencer es solo un aviso), así que antes las
+// piezas nuevas caían en esa ventana vencida en vez de abrir una nueva.
+function buscarVentanaParaApartar(ventanas, usuarioId) {
+  return ventanas.find(v => v.usuarioId === usuarioId && (
+    v.estado === 'pendiente_deposito' ||
+    v.estado === 'pendiente_aprobacion' ||
+    (v.estado === 'activa' && !ventanaEstaVencida(v))
+  ));
+}
+
+// Antes de abrir una ventana nueva: las ventanas vencidas de esta
+// persona que ya no tienen piezas activas (todo se pagó o se quitó) se
+// cierran, y su depósito pasa a crédito — así la ventana nueva lo
+// reutiliza en vez de pedir otro depósito (ver abrirVentanaApartado).
+// Las vencidas que todavía tienen piezas sin pagar se quedan como están
+// para que Staff contacte o desaparte; la ventana nueva va aparte.
+function cerrarVentanasVencidasSinPiezas(ventanas, usuarioId, empleado) {
+  const cerradas = [];
+  ventanas.forEach((ventana) => {
+    if (ventana.usuarioId !== usuarioId || ventana.estado !== 'activa' || !ventanaEstaVencida(ventana)) return;
+    if (obtenerPiezasActivas(ventana).length) return;
+    const monto = Number(ventana.depositoApartadoDisponible || 0);
+    if (monto > 0) {
+      establecerCredito(usuarioId, obtenerCreditoDisponible(usuarioId) + monto);
+      cerrarVentana(ventana, 'credito');
+      ventana.depositoPiso = 0;
+      ventana.depositoExcedente = 0;
+      ventana.depositoApartadoDisponible = 0;
+      ventana.auditoria.push(registrarAuditoriaVentana(`Ventana vencida sin piezas pendientes — depósito de $${monto} guardado como crédito para su nuevo apartado`, empleado));
+    } else {
+      cerrarVentana(ventana, 'no_aplica');
+      ventana.auditoria.push(registrarAuditoriaVentana('Ventana vencida sin piezas pendientes — cerrada al abrir un apartado nuevo', empleado));
+    }
+    cerradas.push(ventana);
+  });
+  return cerradas;
+}
+
 
 // ============================================================
 // CICLO DE VIDA
