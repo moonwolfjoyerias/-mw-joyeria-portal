@@ -11,8 +11,36 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (typeof comprasAroniumListo !== 'undefined') await comprasAroniumListo;
+  if (typeof comprasBrilloListo !== 'undefined') await comprasBrilloListo;
   renderMisCompras();
+  window.addEventListener('mw:compras-brillo-actualizadas', renderMisCompras);
 });
+
+// Compras confirmadas o cobradas en la tienda con BRILLO MW (revisión de
+// oct-2026): apartados liquidados ya confirmados y compras en caja. Las
+// quincenas con archivo de Aronium se toman de Aronium (arriba).
+function htmlComprasBrilloMisCompras() {
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  const personaId = sesion && sesion.personaId;
+  if (!personaId || typeof registrosComprasBrilloPersona !== 'function') return '';
+  const registros = registrosComprasBrilloPersona(personaId);
+  const filas = registros.map(r => {
+    const fecha = r.fechaCuenta || r.en;
+    const fechaTexto = fecha ? new Date(fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    if (r.tipo === 'venta') {
+      const monto = Number(r.normal || 0) + Number(r.souvenir || 0);
+      return `<div class="compra-quincena-desglose"><span>${fechaTexto} · Compra en tienda (ticket ${escapeHTML(String(r.folio || ''))})</span><strong>${fmtMoneyMisCompras(monto)}</strong></div>`;
+    }
+    const estado = r.estado === 'confirmada' ? '' : ' <span class="no-cuenta">(no se confirmó, no cuenta)</span>';
+    return `<div class="compra-quincena-desglose"><span>${fechaTexto} · Apartado: ${escapeHTML(String(r.producto || 'Pieza'))}${estado}</span><strong>${fmtMoneyMisCompras(r.monto)}</strong></div>`;
+  });
+  return `
+    <div class="compra-quincena" style="margin-top:14px;">
+      <div class="compra-quincena-cabeza"><h3>Confirmadas en la tienda</h3></div>
+      ${filas.join('') || '<div class="compra-quincena-desglose"><span>Todavía no hay compras confirmadas en la tienda.</span></div>'}
+      <div class="compra-quincena-desglose"><span>Tus apartados liquidados aparecen aquí cuando la tienda los confirma; desde ese momento cuentan para tu rango, comisiones, rifa y constancia.</span></div>
+    </div>`;
+}
 
 function fmtMoneyMisCompras(n) {
   return '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -45,7 +73,7 @@ function renderMisCompras() {
       <div class="cfg-card">
         <h3 class="cfg-card-title">Todavía no hay compras registradas</h3>
         <p class="cfg-card-sub" style="margin:0;">La tienda carga tus compras cada quincena. En cuanto se carguen, aparecerán aquí.</p>
-      </div>`;
+      </div>${htmlComprasBrilloMisCompras()}`;
     return;
   }
 
@@ -85,6 +113,7 @@ function renderMisCompras() {
           </div>`;
       }).join('')}
     </div>
-    <p class="cfg-card-sub" style="margin-top:14px;">Cuenta como compra lo que pagaste en efectivo, con terminal o por transferencia; es lo que se toma en cuenta para tu rango, comisiones, rifa y constancia. Pronto podrás ver aquí pieza por pieza.</p>
+    ${htmlComprasBrilloMisCompras()}
+    <p class="cfg-card-sub" style="margin-top:14px;">Cuenta como compra lo que pagaste en efectivo, con terminal o por transferencia; es lo que se toma en cuenta para tu rango, comisiones, rifa y constancia.</p>
   `;
 }

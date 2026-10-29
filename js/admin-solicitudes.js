@@ -54,7 +54,13 @@ async function renderListaSolicitudesAdmin() {
   const estadoFiltro = document.getElementById('solicitudFilterEstado')?.value || '';
   const orden = document.getElementById('solicitudOrden')?.value || 'reciente';
 
-  const solicitudesInscripcion = (await obtenerSolicitudes()).map(s => ({ ...s, _tipo: 'inscripcion', _titulo: s.nombreCompleto }));
+  const crudas = await obtenerSolicitudes();
+  // Duplicados y riesgo de equipo inflado se revisan aquí: quien envía la
+  // solicitud ya no puede leer las de otras personas.
+  const solicitudesInscripcion = crudas.map(s => {
+    const r = revisarSolicitudPublica(s, crudas);
+    return { ...s, riesgoEquipoInflado: r.riesgo, riesgoEquipoInfladoConteo: r.conteo, _duplicada: r.duplicada, _tipo: 'inscripcion', _titulo: s.nombreCompleto };
+  });
   const solicitudesEvento = (typeof obtenerSolicitudesEventos === 'function' ? await obtenerSolicitudesEventos() : []).map(s => ({ ...s, _tipo: 'evento', _titulo: s.titulo }));
 
   const todasLasSolicitudes = [...solicitudesInscripcion, ...solicitudesEvento];
@@ -98,7 +104,7 @@ async function renderListaSolicitudesAdmin() {
       <td>${s.origen === 'publico'
         ? `<span class="badge">Se registró ella misma</span> <small class="bp-sub">${s.liderIndicado ? `líder: ${escapeHTMLSolAdmin(s.liderIndicado)}` : 'sin líder'}</small>${s.riesgoEquipoInflado ? ` <span class="badge badge-riesgo" title="Ya hay ${s.riesgoEquipoInfladoConteo} solicitudes recientes indicando a esta misma líder">⚠ Riesgo</span>` : ''}`
         : `${escapeHTMLSolAdmin(s.solicitanteNombre)}${s.solicitanteRol ? ` <span class="badge">${s.solicitanteRol === 'lider' ? 'Líder' : 'Emprendedora'}</span>` : ''}`}</td>
-      <td><span class="badge estado-badge ${s.estado}">${ESTADOS_SOLICITUD[s.estado] || s.estado}</span></td>
+      <td><span class="badge estado-badge ${s.estado}">${ESTADOS_SOLICITUD[s.estado] || s.estado}</span>${s._duplicada ? ` <span class="badge badge-riesgo" title="${escapeHTMLSolAdmin(s._duplicada)}">⚠ Duplicada</span>` : ''}</td>
       <td>${formatearFechaSolAdmin(s.fechaSolicitud)}</td>
       <td><button class="action-btn detail-action" data-ver="${s.id}" data-tipo="${s._tipo}">Ver detalle</button></td>
     </tr>
@@ -119,8 +125,10 @@ async function renderListaSolicitudesAdmin() {
 
 async function abrirDetalleSolicitudAdmin(id) {
 
-  const solicitud = await obtenerSolicitudPorId(id);
-  if (!solicitud) return;
+  const cruda = await obtenerSolicitudPorId(id);
+  if (!cruda) return;
+  const revision = revisarSolicitudPublica(cruda, await obtenerSolicitudes());
+  const solicitud = { ...cruda, riesgoEquipoInflado: revision.riesgo, riesgoEquipoInfladoConteo: revision.conteo };
 
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
@@ -134,6 +142,12 @@ async function abrirDetalleSolicitudAdmin(id) {
     <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
     <h3>Solicitud de inscripción</h3>
     <p class="modal-sub">Revisada como parte del proceso de alta de nuevas Emprendedoras.</p>
+    ${revision.duplicada ? `
+      <div class="risk-warning-banner">
+        <span class="icon-inline">⚠️</span>
+        <div><strong>Posible duplicada</strong><small>${escapeHTMLSolAdmin(revision.duplicada)} Revísalo antes de aprobar.</small></div>
+      </div>
+    ` : ''}
 
     ${solicitud.origen === 'publico' ? `
       <h4 class="profile-section-title">Cómo llegó</h4>

@@ -22,8 +22,19 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Revisión de oct-2026: una sesión ANÓNIMA (la que abre el botón
+    // "Inscribirse" de login.html para quien todavía no tiene cuenta) ya no
+    // cuenta como "autenticada". Cualquier visitante puede abrir una sesión
+    // anónima con la llave pública de la página, así que antes podía leer
+    // apartados, perfiles, avisos y solicitudes (con contraseñas temporales)
+    // de todas las personas. Lo único que puede hacer ahora una sesión
+    // anónima es CREAR su propia solicitud de inscripción (ver abajo).
+    function esAnonimo() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
     function estaAutenticado() {
-      return request.auth != null;
+      return request.auth != null && !esAnonimo();
     }
 
     // Perfil de quien inició sesión — solo existe si Admin (o el script
@@ -43,6 +54,16 @@ service cloud.firestore {
 
     function esAdmin() {
       return miRol() == 'admin';
+    }
+
+    // Permisos por módulo de cada Encargado (Configuración → Usuarios y
+    // permisos; ver permisosEncargadoPorDefecto en
+    // js/cuentas-internas-modelo.js). Si Admin le quitó el módulo, la
+    // pantalla ya no aparece, y con esto tampoco puede escribir en él
+    // por fuera. Sin el campo cuenta como permitido (el default).
+    function puedeModuloInterno(modulo) {
+      return esInterno()
+        && !(miRol() == 'encargado' && miPerfil().get('permisos', {}).get(modulo, true) == false);
     }
 
     // users/{uid} — cada quien lee su propio perfil (lo necesita al
@@ -93,8 +114,8 @@ service cloud.firestore {
     // función real.
     match /productos/{id} {
       allow read: if true;
-      allow create, delete: if esInterno();
-      allow update: if esInterno()
+      allow create, delete: if puedeModuloInterno('catalogo');
+      allow update: if puedeModuloInterno('catalogo')
         || (estaAutenticado() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['variantes']));
     }
 
@@ -114,11 +135,11 @@ service cloud.firestore {
     // js/catalogo-variantes-modelo.js). Mismos permisos que productos.
     match /productosFotos/{id} {
       allow read: if true;
-      allow write: if esInterno();
+      allow write: if puedeModuloInterno('catalogo');
     }
     match /productosMiniaturas/{id} {
       allow read: if true;
-      allow write: if esInterno();
+      allow write: if puedeModuloInterno('catalogo');
     }
 
     // catalogoResumen/{parte} — todos los productos (sin fotos) en pocos
@@ -182,8 +203,18 @@ service cloud.firestore {
     // "estado") y guarda el objeto completo de créditos por depósitos
     // anteriores (documento "creditos"). Mismos permisos que
     // ventanasApartado.
+    // Revisión de oct-2026: antes cualquier cuenta podía escribir el mapa
+    // de créditos completo (darse crédito a sí misma o quitárselo a otra).
+    // Ahora una Emprendedora/Líder solo puede GASTAR su propio crédito
+    // (bajarlo o quitarlo al abrir una ventana — abrirVentanaApartado);
+    // subirlo o tocar el de otra persona es del equipo interno.
     match /apartadosMeta/{id} {
-      allow read, write: if estaAutenticado();
+      allow read: if estaAutenticado();
+      allow create, delete: if esInterno();
+      allow update: if esInterno()
+        || (estaAutenticado() && id == 'creditos'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([miPerfil().personaId])
+            && request.resource.data.get(miPerfil().personaId, 0) <= resource.data.get(miPerfil().personaId, 0));
     }
 
     // solicitudesInscripcion/{id} — migrado en una fase anterior (ver
@@ -201,8 +232,22 @@ service cloud.firestore {
     // estaAutenticado() es indistinguible de cualquier otra sesión —
     // nunca hizo falta tocar esta regla. Requiere activar el proveedor
     // "Anonymous" en Firebase Console → Authentication → Sign-in method.
+    //
+    // Revisión de oct-2026: cada solicitud guarda datos personales y, ya
+    // aprobada, el usuario y la contraseña temporal. Ahora solo la lee el
+    // equipo interno o quien la envió; la sesión anónima de "Inscribirse"
+    // solo puede CREAR una solicitud pública nueva y pendiente (sin
+    // credenciales ni revisión), nunca leer las demás. La revisión de
+    // duplicados y de "riesgo de equipo inflado" la hace Admin al verla.
     match /solicitudesInscripcion/{id} {
-      allow read, write: if estaAutenticado();
+      allow read: if esInterno() || (estaAutenticado() && resource.data.solicitanteId == miPerfil().personaId);
+      allow create: if esInterno()
+        || (estaAutenticado() && request.resource.data.solicitanteId == miPerfil().personaId
+            && request.resource.data.estado == 'pendiente' && request.resource.data.get('credenciales', null) == null)
+        || (esAnonimo() && request.resource.data.origen == 'publico' && request.resource.data.solicitanteId == null
+            && request.resource.data.estado == 'pendiente' && request.resource.data.get('credenciales', null) == null
+            && request.resource.data.get('revisadoPor', null) == null && request.resource.data.get('emprendedoraCreadaId', null) == null);
+      allow update, delete: if esInterno();
     }
 
     // solicitudesEventos/{id} — FB-04 de la auditoría (ver
@@ -232,9 +277,17 @@ service cloud.firestore {
     // persona no pueda editarse su propio rango/stats/comisiones) queda
     // pendiente, igual que ya se documentó arriba para ventanasApartado
     // y solicitudesInscripcion.
+    //
+    // Revisión de oct-2026: la propia persona ya no puede cambiarse lo que
+    // decide Administración (tipo, líder, rango, categoría, estado, usuario,
+    // cuenta, ascensos/recompensas pendientes). Desde su Mi cuenta solo
+    // cambia su foto; lo demás de su documento sigue igual.
     match /personas/{id} {
       allow read: if estaAutenticado();
-      allow write: if estaAutenticado() && (esInterno() || miPerfil().personaId == id);
+      allow create, delete: if esInterno();
+      allow update: if esInterno()
+        || (estaAutenticado() && miPerfil().personaId == id
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['tipo', 'liderId', 'rangoActualKey', 'categoria', 'estado', 'usuario', 'firebaseUid', 'ascensoPendiente', 'recompensaPendiente']));
     }
 
     // personasFinanciero/{id} — SEC-01 de la auditoría: datos bancarios
@@ -280,10 +333,16 @@ service cloud.firestore {
     // que ese único rechazo podía tumbar todo el lote de esa sesión.
     // Se permite también cuando paraId es null/no existe, igual que ya
     // acepta el propio cliente.
+    // Revisión de oct-2026: antes cualquier cuenta leía los avisos de todas
+    // (con nombres y montos de comisiones). Una Emprendedora/Líder lee solo
+    // los suyos (su portal ya los pide con where paraId == su id).
     match /notificaciones/{id} {
-      allow read: if estaAutenticado();
-      allow create: if estaAutenticado();
-      allow update, delete: if estaAutenticado() && (esInterno() || resource.data.paraId == null || resource.data.paraId == miPerfil().personaId);
+      allow read: if esInterno() || (estaAutenticado() && resource.data.paraId == miPerfil().personaId);
+      // La sesión anónima de "Inscribirse" solo avisa a Administración de su solicitud.
+      allow create: if estaAutenticado() || (esAnonimo() && request.resource.data.rolDestino == 'admin');
+      // Una Emprendedora/Líder solo marca o borra los suyos (antes también
+      // podía borrar los de Administración, que van sin paraId).
+      allow update, delete: if estaAutenticado() && (esInterno() || resource.data.paraId == miPerfil().personaId);
     }
 
     match /notificacionesMeta/{id} {
@@ -494,11 +553,11 @@ service cloud.firestore {
     // Lista de deseos/Actividades del Staff.
     match /eventos/{id} {
       allow read: if estaAutenticado();
-      allow write: if esInterno();
+      allow write: if puedeModuloInterno('calendario');
     }
     match /eventosMeta/{id} {
       allow read: if estaAutenticado();
-      allow write: if esInterno();
+      allow write: if puedeModuloInterno('calendario');
     }
 
     // auditoria/{id} — Bitácora de actividad ("Actividad"): quién hizo
@@ -522,10 +581,13 @@ service cloud.firestore {
     // el rol real de la persona) — exigir que coincida con miRol() cierra
     // el caso de forjar una entrada atribuida a un rol que no es el
     // propio, sin romper ningún registro legítimo de hoy.
+    // Revisión de oct-2026: Actividad es el registro de quién hizo qué; ya
+    // no se puede editar ni borrar desde Staff o Encargado (antes sí), solo
+    // Administración.
     match /auditoria/{id} {
       allow read: if esInterno();
       allow create: if estaAutenticado() && request.resource.data.rol == miRol();
-      allow update, delete: if esInterno();
+      allow update, delete: if esAdmin();
     }
 
     // BRILLO MW — sistema de caja e inventario (repositorio brillomw).
@@ -552,6 +614,27 @@ service cloud.firestore {
     }
     match /comprasAroniumPersona/{id} {
       allow read: if esInterno() || (estaAutenticado() && miPerfil().personaId == id);
+      allow write: if esAdmin();
+    }
+
+    // Configuración de Administración (ver js/configuracion-modelo.js): un
+    // documento por versión de cada parámetro (comisiones, metas, apartados…)
+    // y configuracion/simple (datos de MW, sistema, avisos). La leen todas
+    // las cuentas con sesión (Líderes calculan con estos valores); solo
+    // Administración escribe. Las versiones no se borran (historial).
+    match /configuracionVersiones/{id} {
+      allow read: if estaAutenticado();
+      allow create, update: if esAdmin();
+    }
+    match /configuracion/{id} {
+      allow read: if estaAutenticado();
+      allow write: if esAdmin();
+    }
+
+    // Folios de los boletos de la rifa por mes (ver js/rifa-boletos-modelo.js):
+    // solo Administración los asigna e imprime.
+    match /rifaBoletos/{id} {
+      allow read: if esInterno();
       allow write: if esAdmin();
     }
 

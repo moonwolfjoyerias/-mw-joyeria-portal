@@ -450,9 +450,9 @@ function mostrarModalPagoConMonto(ventana, piezas, totalFinal, notaExtra, decisi
     <h3>${pagaTodo
       ? `Pagar tu apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'})`
       : `Pagar ${piezas.length} de ${totalActivas} piezas de tu apartado`}</h3>
-    <p class="modal-sub">Total a pagar: <strong style="color:var(--mw-purple)">$${totalFinal} MXN</strong></p>
+    <p class="modal-sub">Total a pagar: <strong style="color:var(--mw-accent-text)">$${totalFinal} MXN</strong></p>
     ${!pagaTodo ? `<p class="modal-sub" style="margin-top:-.35rem;">Las piezas que no elegiste se quedan apartadas con normalidad, con el mismo plazo de siempre.</p>` : ''}
-    ${notaExtra ? `<p class="modal-sub" style="margin-top:-.35rem; color:var(--mw-purple); font-weight:600;">${notaExtra}</p>` : ''}
+    ${notaExtra ? `<p class="modal-sub" style="margin-top:-.35rem; color:var(--mw-accent-text); font-weight:600;">${notaExtra}</p>` : ''}
 
     <div class="bank-details-box">
       <div class="copy-field">

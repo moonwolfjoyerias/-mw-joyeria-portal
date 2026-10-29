@@ -77,7 +77,7 @@ function obtenerSolicitudListaDeseosPorId(id) {
 // destinatario: 'emprendedora' | 'publico'. Si es 'emprendedora',
 // personaId es obligatorio y queda vinculada — si es 'publico', nunca
 // se pide ni se guarda una cuenta (sección 1 del encargo).
-function crearSolicitudListaDeseos({ destinatario, personaId, piezas, creadoPorId, creadoPorNombre, creadoPorRol }) {
+function crearSolicitudListaDeseos({ destinatario, personaId, piezas, creadoPorId, creadoPorNombre, creadoPorRol, fotoReferencia }) {
 
   if (destinatario !== 'emprendedora' && destinatario !== 'publico') {
     return { ok: false, error: 'Indica si la solicitud es para una Emprendedora o para público en general.' };
@@ -118,6 +118,12 @@ function crearSolicitudListaDeseos({ destinatario, personaId, piezas, creadoPorI
     fechaCreacion: new Date().toISOString(),
     comentarioEstado: null
   };
+  // Foto de referencia (Mi lista de deseos): ya llega reducida (ver
+  // reducirFotoReferenciaDeseo en js/deseos.js); si aun así pesa demasiado
+  // para un documento de Firestore, no se guarda.
+  if (typeof fotoReferencia === 'string' && fotoReferencia.startsWith('data:image/') && fotoReferencia.length <= 450000) {
+    nueva.fotoReferencia = fotoReferencia;
+  }
 
   lista.unshift(nueva);
   guardarListaDeseos(lista);

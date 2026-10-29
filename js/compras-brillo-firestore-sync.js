@@ -111,4 +111,12 @@ function comprasCajaBrilloPersona(personaId) {
   return COMPRAS_BRILLO_VENTAS.get(personaId) || [];
 }
 
+// Todo lo que BRILLO tiene de una persona (Mis compras): piezas
+// confirmadas o no confirmadas y ventas de caja, la más reciente primero.
+function registrosComprasBrilloPersona(personaId) {
+  return [...COMPRAS_BRILLO_DOCS.values()]
+    .filter(d => d.personaId === personaId)
+    .sort((a, b) => String(b.fechaCuenta || b.en || '').localeCompare(String(a.fechaCuenta || a.en || '')));
+}
+
 const comprasBrilloListo = cargarComprasBrilloRepo();

@@ -125,14 +125,16 @@ function guardarNotificacionesCompartidas(lista) {
 // del catálogo para que el panel de notificaciones (portal-common.js)
 // arme el link directo a apartarlo (?apartar=), no solo un aviso
 // genérico que la obliga a buscarlo ella misma.
-function construirNotificacion({ texto, link, paraId, rolDestino, tipo, origen, productoId }) {
+// idFijo: para avisos que pueden salir de la página y de BRILLO a la vez
+// (vencimientos de apartados) — con el mismo id, en Firestore queda uno.
+function construirNotificacion({ texto, link, paraId, rolDestino, tipo, origen, productoId, idFijo }) {
   return normalizarNotificacion({
     // BUG (revisión de cuota de Firestore): solo con Date.now(), varios
     // avisos creados en el mismo milisegundo (ej. alertas de inactividad
     // a toda la cadena de líderes, en un ciclo) salían con el MISMO id —
     // en Firestore se pisaban (sobrevivía solo el último) y cada guardado
     // los reescribía todos otra vez. El sufijo aleatorio los separa.
-    id: `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: idFijo || `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     texto,
     link: link || '',
     leida: false,

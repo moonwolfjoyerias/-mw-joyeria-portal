@@ -453,7 +453,10 @@ function asegurarAsignacionesBaseSemana(semanaKey) {
 
   faltantes.forEach(catalogoEntry => {
     const nueva = {
-      id: `act-staff-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      // Id fijo por semana y actividad: si dos personas abren la página a
+      // la vez al empezar la semana, ambas escriben el MISMO documento en
+      // vez de sembrar cada actividad dos veces.
+      id: `act-staff-${semanaKey}-${catalogoEntry.id}`,
       actividadCatalogoId: catalogoEntry.id,
       nombre: catalogoEntry.nombre,
       zona: catalogoEntry.zona,

@@ -677,9 +677,9 @@ function crearFilaVentana(v) {
           <div>
             <strong>${escapeHTML(v.usuarioNombre)}</strong>
             <small>${escapeHTML(v.telefono || "")}</small>
-            <small style="color:#5b1689;font-weight:600;">${expandida ? "▾" : "▸"} Ver piezas (${v.apartados.length})</small>
+            <small style="color:var(--mw-accent-text);font-weight:600;">${expandida ? "▾" : "▸"} Ver piezas (${v.apartados.length})</small>
             ${piezasActivas.length ? (sinBolsita
-              ? `<small style="display:block;margin-top:3px;color:#9a6a00;font-weight:600;">${sinBolsita} de ${piezasActivas.length} sin guardar en bolsita</small>`
+              ? `<small style="display:block;margin-top:3px;color:var(--mw-aviso-texto);font-weight:600;">${sinBolsita} de ${piezasActivas.length} sin guardar en bolsita</small>`
               : `<small style="display:block;margin-top:3px;color:#3f7a2a;font-weight:600;">✓ Todas en bolsita</small>`) : ""}
             ${porSacarDeBolsita ? `<small style="display:block;margin-top:3px;color:#b94d4d;background:#fdecec;border-radius:6px;padding:2px 6px;font-weight:600;">⚠ ${porSacarDeBolsita} pieza${porSacarDeBolsita === 1 ? "" : "s"} cancelada${porSacarDeBolsita === 1 ? "" : "s"} sigue${porSacarDeBolsita === 1 ? "" : "n"} en bolsita</small>` : ""}
             ${v.cambioClienteSinRevisar ? `<small style="display:block;margin-top:3px;color:#9a6a00;background:#fff4da;border-radius:6px;padding:2px 6px;font-weight:600;">⚠ ${escapeHTML(v.cambioClienteSinRevisar.texto)} — sin revisar</small>` : ""}
@@ -702,7 +702,7 @@ function crearFilaVentana(v) {
       <td>
         <span class="status ${estado.clase}">${estado.texto}</span>
         ${v.resolucionDeposito ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">${obtenerTextoResolucion(v.resolucionDeposito)}</small>` : ""}
-        ${vencidaAviso ? `<small style="display:block;margin-top:4px;color:#bd4c4c;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Vencida — pendiente de gestionar</small>` : ""}
+        ${vencidaAviso ? `<small style="display:block;margin-top:4px;color:var(--mw-error-texto);"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Vencida — pendiente de gestionar</small>` : ""}
       </td>
 
       <td>

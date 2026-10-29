@@ -241,7 +241,7 @@ function construirTarjetaProximo(item) {
     sub = `${tipoCuenta} · Reto de Constancia`;
     textoFalta = listo
       ? `Ya cumplió ${item.siguienteHito.meses} compras. Premio: <strong>${escapeHTMLPersonas(item.siguienteHito.premio)}</strong>.`
-      : `${item.mesesCumplidos} compras acumuladas. Le${item.mesesFaltantes === 1 ? ' falta' : 'n faltan'} ${item.mesesFaltantes} compra${item.mesesFaltantes === 1 ? '' : 's'} para obtener: <strong>${escapeHTMLPersonas(item.siguienteHito.premio)}</strong>.`;
+      : `${item.mesesCumplidos} compras acumuladas. Le ${item.mesesFaltantes === 1 ? 'falta' : 'faltan'} ${item.mesesFaltantes} compra${item.mesesFaltantes === 1 ? '' : 's'} para obtener: <strong>${escapeHTMLPersonas(item.siguienteHito.premio)}</strong>.`;
   }
 
   return `
