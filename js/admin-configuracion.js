@@ -1349,6 +1349,7 @@ async function renderSeccionUsuarios() {
                   <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
                 </td>
                 <td style="white-space:nowrap;">
+                  <button type="button" class="cfg-icon-btn" data-cfg-renombrar-interna="${c.id}" title="Corregir nombre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></button>
                   <button type="button" class="cfg-icon-btn" data-cfg-reset-interna="${c.id}" ${c.id === ADMIN_IDENTIDAD.usuarioId ? 'disabled' : ''} title="${c.id === ADMIN_IDENTIDAD.usuarioId ? 'No puedes restablecer tu propia contraseña' : 'Restablecer contraseña'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7.5" cy="15.5" r="3.5"/><path d="M10 13L19 4"/><path d="M15 8l2 2"/></svg></button>
                   <button type="button" class="cfg-icon-btn" data-cfg-eliminar-interna="${c.id}" title="Eliminar cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
                 </td>
@@ -1730,6 +1731,69 @@ function wireCuentasInternas(cont) {
   cont.querySelectorAll('[data-cfg-editar-permisos]').forEach(btn => {
     btn.addEventListener('click', () => abrirModalPermisosEncargado(btn.getAttribute('data-cfg-editar-permisos')));
   });
+
+  cont.querySelectorAll('[data-cfg-renombrar-interna]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalRenombrarCuentaInterna(btn.getAttribute('data-cfg-renombrar-interna')));
+  });
+
+}
+
+// ============================================================
+// CORREGIR NOMBRE — cuentas internas
+// ============================================================
+// Cambia el nombre en la cuenta, en su registro de Nómina y en todo lo
+// que ya quedó guardado con el nombre anterior (ver
+// js/renombrar-personal.js).
+function abrirModalRenombrarCuentaInterna(id) {
+
+  const cuenta = obtenerCuentasInternas().find(c => c.id === id);
+  if (!cuenta) return;
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  box.style.maxWidth = '440px';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Corregir nombre</h3>
+    <p class="modal-sub">El nombre nuevo se aplica en todo el portal: su cuenta, Nómina, Actividades del Staff, Actividad, historial de Apartados, Lista de deseos, Calendario y Catálogo — también en lo que ya está registrado con el nombre anterior.</p>
+    <label for="cfgRenombrarInput">Nombre</label>
+    <input id="cfgRenombrarInput" type="text" maxlength="80" value="${escapeAttributePersonas(cuenta.nombre)}">
+    <div id="cfgRenombrarError" class="auth-error" style="display:none;"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="cfgRenombrarGuardarBtn" type="button">Guardar</button>
+  `;
+  overlay.classList.add('open');
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]')?.addEventListener('click', cerrar);
+
+  const input = document.getElementById('cfgRenombrarInput');
+  const error = document.getElementById('cfgRenombrarError');
+  const guardarBtn = document.getElementById('cfgRenombrarGuardarBtn');
+  input.focus();
+  input.select();
+
+  guardarBtn.addEventListener('click', async () => {
+    const nuevo = input.value.trim().replace(/\s+/g, ' ');
+    if (!nuevo) { error.textContent = 'Escribe el nombre.'; error.style.display = 'block'; return; }
+    if (nuevo === cuenta.nombre) { cerrar(); return; }
+    const repetido = obtenerCuentasInternas().some(c => c.id !== cuenta.id && String(c.nombre).trim().toLowerCase() === nuevo.toLowerCase());
+    if (repetido) { error.textContent = 'Ya hay otra cuenta con ese nombre.'; error.style.display = 'block'; return; }
+
+    guardarBtn.disabled = true;
+    guardarBtn.textContent = 'Actualizando en todo el portal…';
+    const resultado = await renombrarCuentaInterna(id, nuevo);
+    guardarBtn.disabled = false;
+    guardarBtn.textContent = 'Guardar';
+    if (!resultado.ok) { error.textContent = resultado.error; error.style.display = 'block'; return; }
+
+    cerrar();
+    renderSeccionUsuarios();
+    mostrarToast(resultado.errores.length
+      ? `Nombre actualizado, pero no se pudo revisar: ${resultado.errores.join(', ')}. Vuelve a intentarlo más tarde.`
+      : `Nombre actualizado en todo el portal (${resultado.registros} registro${resultado.registros === 1 ? '' : 's'}).`);
+  });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') guardarBtn.click(); });
 
 }
 

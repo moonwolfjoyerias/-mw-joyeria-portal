@@ -361,6 +361,40 @@ async function editarCuentaInterna(id, { telefono, correo, fotoUrl } = {}) {
 
 }
 
+// Corregir el nombre (Configuración → Usuarios y permisos): en la
+// cuenta y en todo lo ya registrado con el nombre anterior (ver
+// js/renombrar-personal.js). Solo Admin.
+async function renombrarCuentaInterna(id, nombreNuevo) {
+
+  const cuentas = obtenerCuentasInternas();
+  const cuenta = cuentas.find(c => c.id === id);
+  if (!cuenta) return { ok: false, error: 'La cuenta no existe.' };
+  const anterior = cuenta.nombre;
+
+  const resultado = await renombrarPersonalInterno({ cuenta, nombreAnterior: anterior, nombreNuevo });
+  if (!resultado.ok) return resultado;
+
+  cuenta.nombre = String(nombreNuevo).trim();
+  guardarCuentasInternas(cuentas);
+  // Si se corrigió su propio nombre, sus siguientes acciones ya quedan
+  // con el nombre nuevo (ver aplicarNombreSesionPropia en auth-guard.js).
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  if (sesion && (sesion.cuentaId === cuenta.id || (cuenta.firebaseUid && sesion.uid === cuenta.firebaseUid)) && typeof aplicarNombreSesionPropia === 'function') {
+    aplicarNombreSesionPropia(cuenta.nombre);
+  }
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({
+      modulo: 'cuentas',
+      accion: 'renombrar_cuenta_interna',
+      descripcion: `Nombre corregido: "${anterior}" → "${cuenta.nombre}" (${cuenta.usuario}). Se actualizó en ${resultado.registros} registro(s).`
+    });
+  }
+
+  return { ...resultado, cuenta };
+
+}
+
 // Con acceso real en Firebase (firebaseUid), la contraseña se cambia en
 // el servidor (cambiarPasswordFirebaseComoAdmin, js/auth-service.js).
 async function restablecerPasswordCuentaInterna(id, nuevoPassword) {
