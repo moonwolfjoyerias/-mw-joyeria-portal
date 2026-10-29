@@ -100,6 +100,40 @@ function ligarClientesAronium(clientes) {
 // LEER ARCHIVO → VISTA PREVIA
 // ============================================================
 
+// El reporte de Aronium no trae fechas, pero el archivo suele llamarse
+// con ellas: "16-30-09" (del 16 al 30 de septiembre), "1-15-10",
+// "16-31-08-2026"… Si el nombre trae una quincena válida, se elige sola
+// (Mes + Quincena) y se avisa, para no guardarla por error en otra.
+// Sin año en el nombre, se toma la más reciente que ya empezó.
+function detectarQuincenaArchivoAronium(nombreArchivo, hoy = new Date()) {
+  const numeros = String(nombreArchivo || '').replace(/\.xlsx$/i, '').match(/\d+/g) || [];
+  for (let i = 0; i + 2 < numeros.length; i++) {
+    const [desde, hasta, mes] = numeros.slice(i, i + 3).map(Number);
+    if (mes < 1 || mes > 12) continue;
+    const subPeriodo = desde === 1 && hasta === 15 ? 'p1'
+      : (desde === 16 && hasta >= 28 && hasta <= 31 ? 'p2' : null);
+    if (!subPeriodo) continue;
+    const anioEnNombre = /^\d{4}$/.test(numeros[i + 3] || '') ? Number(numeros[i + 3]) : null;
+    let anio = anioEnNombre || hoy.getFullYear();
+    if (!anioEnNombre && new Date(anio, mes - 1, desde) > hoy) anio -= 1;
+    return { mesKey: `${anio}-${String(mes).padStart(2, '0')}`, subPeriodo };
+  }
+  return null;
+}
+
+function aplicarQuincenaDetectadaAronium(nombreArchivo) {
+  const aviso = document.getElementById('aroniumQuincenaDetectada');
+  const detectada = detectarQuincenaArchivoAronium(nombreArchivo);
+  if (!detectada) { if (aviso) aviso.hidden = true; return; }
+  document.getElementById('aroniumMes').value = detectada.mesKey;
+  document.getElementById('aroniumQuincena').value = detectada.subPeriodo;
+  if (aviso) {
+    const { desde, hasta } = rangoFechasQuincenaAronium(detectada.mesKey, detectada.subPeriodo);
+    aviso.textContent = `Quincena tomada del nombre del archivo: ${etiquetaQuincenaAronium(claveQuincenaAronium(detectada.mesKey, detectada.subPeriodo))} (${desde} al ${hasta}). Si no es la correcta, cámbiala arriba antes de guardar.`;
+    aviso.hidden = false;
+  }
+}
+
 async function leerArchivoAronium(archivo) {
   mostrarErrorAronium('');
   const vista = document.getElementById('aroniumVistaPrevia');
@@ -108,6 +142,7 @@ async function leerArchivoAronium(archivo) {
     mostrarErrorAronium('El archivo debe ser el Excel (.xlsx) que exporta Aronium.');
     return;
   }
+  aplicarQuincenaDetectadaAronium(archivo.name);
   try {
     reporteAroniumActual = await leerReporteAronium(archivo);
     reporteAroniumActual.archivo = archivo.name;
