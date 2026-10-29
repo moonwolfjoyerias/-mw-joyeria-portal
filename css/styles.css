@@ -5622,3 +5622,10 @@ img[src*="#mwfoto="] { background: var(--mw-lilac-soft); }
 :root[data-theme="dark"] .calendar-day.is-today .day-num { color: #2a1f05; }
 /* Plan MW usa el menú de Configuración como pestañas: en fila, no en columna. */
 #planmwNavPrincipal { flex-direction: row; flex-wrap: wrap; margin-bottom: 1rem; }
+
+/* Admin → Compras (Aronium): aviso de la quincena tomada del nombre del
+   archivo (ver detectarQuincenaArchivoAronium en js/admin-compras.js). */
+.aronium-quincena-detectada {
+  margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;
+  background: var(--mw-lilac-soft); color: var(--mw-heading-d);
+}
