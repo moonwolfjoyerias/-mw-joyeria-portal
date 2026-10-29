@@ -47,6 +47,13 @@ let PERSONAS_CACHE = [];
 // límite diario de lecturas/escrituras.
 let _personasEnServidor = new Map();   // id → personas/{id}
 let _financieroEnServidor = new Map(); // id → personasFinanciero/{id}
+// Ids cuyo personasFinanciero ESTA página sí leyó (o confirmó que no existe).
+// Revisión de oct-2026: si la sesión todavía no estaba lista al cargar, no
+// se leía nada, los cierres del Plan MW partían de cero y al guardar se
+// pisaban con ceros el Reto de Constancia y los boletos de la rifa de todas.
+// Ahora solo se escribe lo financiero de quien sí se leyó (o es nueva).
+let _financieroLeido = new Set();
+let _personasCargadasDelServidor = false;
 let _usuariosEnServidor = new Map();   // firebaseUid → users/{uid}
 
 function perfilUsuarioPersona(persona) {
@@ -225,9 +232,14 @@ async function cargarPersonasRepo() {
     try {
       const metaSnap = await dbFirestore.collection(PERSONAS_META_COLECCION).doc(PERSONAS_META_DOC_ID).get();
       if (metaSnap.exists) {
-        PERSONAS_CACHE = await _leerPersonasDeEstaPagina();
-        await fusionarPersonasFinanciero(PERSONAS_CACHE);
+        // Las personas se publican (PERSONAS_CACHE) hasta tener también sus
+        // datos financieros: si otra parte de la página calculaba y guardaba
+        // antes, los cierres del Plan MW partían de cero y se guardaban ceros.
+        const leidas = await _leerPersonasDeEstaPagina();
+        await fusionarPersonasFinanciero(leidas);
+        PERSONAS_CACHE = leidas;
         _recordarPersonasEnServidor(PERSONAS_CACHE);
+        _personasCargadasDelServidor = true;
         escucharPersonasEnVivo();
       } else {
         // Primera vez que este proyecto de Firestore ve Personas: siembra
@@ -260,8 +272,21 @@ async function cargarPersonasRepo() {
 // Staff/Encargado nunca llaman esto con éxito (ni lo necesitan: ningún
 // controlador de Staff/Encargado lee estos tres campos) — se detectan
 // por sesión para no intentar una lectura que las reglas van a negar.
+function _esperarSesionPersonas() {
+  return new Promise(resolve => {
+    const inicio = Date.now();
+    (function revisar() {
+      const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+      if (sesion || Date.now() - inicio > 15000) return resolve(sesion);
+      setTimeout(revisar, 150);
+    })();
+  });
+}
+
 async function fusionarPersonasFinanciero(personas) {
-  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  // La sesión de Firebase llega un momento después de cargar la página:
+  // se espera, para no quedarse sin los datos financieros (ver _financieroLeido).
+  const sesion = await _esperarSesionPersonas();
   if (!sesion) return;
   try {
     if (sesion.tipo === 'interna' && sesion.rol === 'admin') {
@@ -270,13 +295,17 @@ async function fusionarPersonasFinanciero(personas) {
       personas.forEach(persona => {
         const datos = porId.get(String(persona.id));
         if (datos) Object.assign(persona, datos);
+        _financieroLeido.add(String(persona.id));
       });
+      // Las que no tenían documento también cuentan como leídas (ya se sabe que no hay nada).
+      porId.forEach((_, id) => _financieroLeido.add(id));
     } else if (sesion.tipo === 'persona' && sesion.personaId) {
       const doc = await dbFirestore.collection(PERSONAS_FINANCIERO_COLECCION).doc(String(sesion.personaId)).get();
       if (doc.exists) {
         const persona = personas.find(p => String(p.id) === String(sesion.personaId));
         if (persona) Object.assign(persona, doc.data());
       }
+      _financieroLeido.add(String(sesion.personaId));
     }
     // Staff/Encargado: ni lo intentan — no tienen permiso ni lo necesitan.
   } catch (error) {
@@ -357,7 +386,10 @@ async function sincronizarPersonasConFirestore(personas) {
       if (!esPersona && persona.estado && persona.estado !== 'activa') tarjetasCatalogoABorrar.push(id);
     }
 
-    if (Object.keys(financiero).length) {
+    // Nunca se escribe lo financiero de alguien cuyo documento no se leyó
+    // (se pisaría con ceros); sí el de una persona recién creada aquí.
+    const financieroConocido = _financieroLeido.has(id) || (_personasCargadasDelServidor && !_personasEnServidor.has(id));
+    if (Object.keys(financiero).length && financieroConocido) {
       const textoFinanciero = textoEstableFirestore(financiero);
       if (_financieroEnServidor.get(id) !== textoFinanciero) {
         batch.set(financieroColeccion.doc(id), financiero, { merge: true });

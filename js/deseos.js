@@ -10,9 +10,9 @@
 // pantalla de Lista de deseos de Staff/Encargado/Admin, en cualquier
 // dispositivo.
 //
-// La foto de referencia sigue siendo solo informativa en este
-// formulario (el modelo real de Lista de deseos no tiene un campo de
-// imagen por pieza) — no se guarda, igual que antes.
+// La foto de referencia se guarda reducida (máx. 800 px, JPEG) en la
+// solicitud, para que Staff/Encargado/Admin y BRILLO la vean (revisión de
+// oct-2026: antes se pedía pero se descartaba).
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (typeof listaDeseosRepoListo !== 'undefined') await listaDeseosRepoListo;
@@ -70,7 +70,7 @@ function initFormulario() {
   }
 
   if (form) {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const desc = textarea.value.trim();
       if (!desc) {
@@ -81,8 +81,15 @@ function initFormulario() {
       textarea.style.borderColor = '';
 
       const { id, nombre, rol } = miIdentidadDeseos();
+      const archivo = fileInput && fileInput.files && fileInput.files[0];
+      let fotoReferencia = null;
+      if (archivo) {
+        fotoReferencia = await reducirFotoReferenciaDeseo(archivo);
+        if (!fotoReferencia) mostrarToast('No se pudo leer la foto; la solicitud se envía sin foto.');
+      }
       const resultado = typeof crearSolicitudListaDeseos === 'function'
         ? crearSolicitudListaDeseos({
+          fotoReferencia,
           destinatario: 'emprendedora',
           personaId: id,
           piezas: [{ producto: desc, cantidad: 1 }],
@@ -190,3 +197,36 @@ function escapeHTMLDeseos(texto) {
 window.addEventListener('mw:lista-deseos-actualizada', () => {
   if (typeof renderSolicitudes === 'function') renderSolicitudes();
 });
+
+// Reduce la foto a máx. 800 px y JPEG para que quepa en la solicitud
+// (un documento de Firestore admite hasta 1 MB). null si no se pudo.
+function reducirFotoReferenciaDeseo(archivo) {
+  return new Promise(resolve => {
+    if (!archivo || !/^image\//.test(archivo.type)) return resolve(null);
+    const lector = new FileReader();
+    lector.onerror = () => resolve(null);
+    lector.onload = () => {
+      const img = new Image();
+      img.onerror = () => resolve(null);
+      img.onload = () => {
+        const escala = Math.min(1, 800 / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * escala);
+        canvas.height = Math.round(img.height * escala);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        let calidad = 0.75;
+        let datos = canvas.toDataURL('image/jpeg', calidad);
+        while (datos.length > 400000 && calidad > 0.35) {
+          calidad -= 0.1;
+          datos = canvas.toDataURL('image/jpeg', calidad);
+        }
+        resolve(datos.length <= 450000 ? datos : null);
+      };
+      img.src = lector.result;
+    };
+    lector.readAsDataURL(archivo);
+  });
+}

@@ -462,6 +462,14 @@ function renderArbolVisual() {
   const wrap = document.getElementById('equipoTreeViewport');
   if (wrap) {
     requestAnimationFrame(() => {
+      // Revisión de oct-2026: en celular, la primera vez el árbol se ajusta
+      // al ancho de la pantalla (antes se veía una sola persona y había que
+      // adivinar hacia dónde desplazarse). Los botones − / + siguen igual.
+      if (!equipoZoomAjustadoInicial && window.innerWidth < 700 && wrap.scrollWidth > wrap.clientWidth) {
+        equipoZoomAjustadoInicial = true;
+        equipoZoomActual = Math.max(0.6, Math.floor((wrap.clientWidth / wrap.scrollWidth) * equipoZoomActual * 20) / 20);
+        aplicarZoomEquipo();
+      }
       wrap.scrollLeft = (wrap.scrollWidth - wrap.clientWidth) / 2;
     });
   }
@@ -469,9 +477,13 @@ function renderArbolVisual() {
   buscarEnArbolEquipo(document.getElementById('equipoBuscarInput')?.value || '');
 }
 
+let equipoZoomAjustadoInicial = false;
+
 function aplicarZoomEquipo() {
   const contenedor = document.getElementById('orgTreeContainer');
-  if (contenedor) contenedor.style.cssText = `transform:scale(${equipoZoomActual});transform-origin:top center;transition:transform .15s ease;`;
+  // zoom (no transform) para que el área con desplazamiento siga al tamaño
+  // real del árbol: con transform quedaban huecos o partes sin alcanzar.
+  if (contenedor) contenedor.style.cssText = `zoom:${equipoZoomActual};`;
   const label = document.getElementById('equipoZoomLabel');
   if (label) label.textContent = `${Math.round(equipoZoomActual * 100)}%`;
 }

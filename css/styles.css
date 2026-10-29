@@ -1647,6 +1647,14 @@ img.zoomable-photo { cursor: zoom-in; }
   text-align: center;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* Revisión de oct-2026: en celular el aviso (toast) se apretaba en una
+   burbuja angosta encima del formulario; ahora ocupa el ancho de la
+   pantalla con margen y el texto respira. */
+@media (max-width: 600px) {
+  .toast { left: 16px; right: 16px; bottom: 16px; transform: translateY(20px); border-radius: 14px; text-align: center; max-width: none; }
+  .toast.show { transform: translateY(0); }
+}
+.ld-foto-referencia { display: block; max-width: 100%; max-height: 320px; margin-top: 6px; border-radius: 10px; border: 1px solid var(--border, #e7e1ee); object-fit: contain; background: #fff; }
 
 @media (max-width: 900px) {
   .apartado-row { flex-wrap: wrap; }
@@ -2016,8 +2024,8 @@ img.zoomable-photo { cursor: zoom-in; }
 .org-tree-card-header h3 { font-size: 1.15rem; margin: 0; }
 
 .org-tree-wrap { overflow-x: auto; padding: 1rem 0; }
-.org-tree { display: flex; justify-content: center; min-width: min-content; padding: 10px 20px 0; }
-.org-tree ul { padding-top: 38px; position: relative; display: flex; justify-content: center; margin: 0; }
+.org-tree { display: flex; justify-content: center; justify-content: safe center; min-width: min-content; padding: 10px 20px 0; }
+.org-tree ul { padding-top: 38px; position: relative; display: flex; justify-content: center; justify-content: safe center; margin: 0; }
 .org-tree li { display: flex; flex-direction: column; align-items: center; list-style: none; position: relative; padding: 38px 20px 0 20px; }
 .org-tree li::before, .org-tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid var(--mw-lilac); width: 50%; height: 30px; }
 .org-tree li::after { right: auto; left: 50%; border-left: 2px solid var(--mw-lilac); }
@@ -5540,3 +5548,77 @@ img[src*="#mwfoto="] { background: var(--mw-lilac-soft); }
 @media (max-width: 720px) {
   .catalogo-vivo-toolbar .catalog-search { width: 100%; }
 }
+
+/* ===================================================
+   Revisión de modo oscuro (oct 2026): insignias, avisos y botones con
+   colores claros fijos que quedaban ilegibles o como manchas blancas en
+   oscuro. Se midió el contraste de cada texto en las 47 pantallas.
+   =================================================== */
+/* Eventos "en línea" (solicitudes de evento): antes no tenían estilo y
+   salían como botón gris, también en modo claro. Mismo color que virtual. */
+.upcoming-card.en_linea { background: var(--mw-lilac-soft); }
+.event-chip.en_linea { background: var(--mw-purple); }
+.calendar-type-badge.en_linea { background: #eef2ff; color: #4f659f; }
+/* Texto blanco sobre dorado no se lee (2.4:1): texto oscuro. */
+.event-chip.presencial { color: #2a1f05; }
+
+:root[data-theme="dark"] .catalog-stock { color: #8fd18a; }
+:root[data-theme="dark"] .catalog-stock.stock-low { color: #f0c860; }
+:root[data-theme="dark"] .catalog-stock.stock-empty { color: #ff8f85; }
+:root[data-theme="dark"] .action-btn.danger-action { background: #3d1f1e; border-color: #6e302b; color: #ff8f85; }
+:root[data-theme="dark"] .action-btn.danger-action:hover { background: #4a2422; }
+
+/* Verde = bien / pagado / disponible */
+:root[data-theme="dark"] .estado-badge.activa,
+:root[data-theme="dark"] .estado-badge.aprobada,
+:root[data-theme="dark"] .badge-pagada,
+:root[data-theme="dark"] .comm-sync-pill,
+:root[data-theme="dark"] .cfg-sync-pill,
+:root[data-theme="dark"] .calendar-type-badge.presencial,
+:root[data-theme="dark"] .wishlist-status.disponible { background: #173327; color: #7fd39a; border-color: #24513c; }
+/* Dorado = pendiente / atención */
+:root[data-theme="dark"] .estado-badge.inactiva,
+:root[data-theme="dark"] .estado-badge.pendiente,
+:root[data-theme="dark"] .badge-ascenso,
+:root[data-theme="dark"] .wishlist-status.pendiente,
+:root[data-theme="dark"] .wishlist-status.bingo,
+:root[data-theme="dark"] .rank-hero-text .rh-tag,
+:root[data-theme="dark"] .comm-sync-pill.guardando,
+:root[data-theme="dark"] .cfg-sync-pill.guardando { background: #3a2f18; color: #f0c860; border-color: #5a4a22; }
+:root[data-theme="dark"] .cfg-recuperar-banner strong,
+:root[data-theme="dark"] .cfg-recuperar-banner span { color: #f0c860; }
+/* Naranja = ajustes / sin conexión */
+:root[data-theme="dark"] .comm-sync-pill.ajustes,
+:root[data-theme="dark"] .cfg-sync-pill.offline { background: #3d2a17; color: #f5b57a; border-color: #5e3f20; }
+/* Rojo = baja / rechazo / error */
+:root[data-theme="dark"] .estado-badge.baja,
+:root[data-theme="dark"] .estado-badge.rechazada,
+:root[data-theme="dark"] .badge-correccion,
+:root[data-theme="dark"] .team-alert-badge,
+:root[data-theme="dark"] .comm-sync-pill.offline,
+:root[data-theme="dark"] .cfg-sync-pill.error { background: #3d1f1e; color: #ff8f85; border-color: #6e302b; }
+/* Azul = en revisión / virtual */
+:root[data-theme="dark"] .calendar-type-badge.virtual,
+:root[data-theme="dark"] .calendar-type-badge.en_linea,
+:root[data-theme="dark"] .wishlist-status.en_revision { background: #262c4a; color: #b4c2f5; }
+
+:root[data-theme="dark"] .calendar-day .day-num,
+:root[data-theme="dark"] .calendar-day.other-month .day-num { color: #8d80a0; }
+:root[data-theme="dark"] .zoom-controls button { color: var(--mw-text); }
+/* Botones sin clase (p. ej. "Mostrar" contraseña) quedaban gris claro. */
+:root[data-theme="dark"] button:not([class]) { background: var(--mw-surface-soft); color: var(--mw-text); border: 1px solid var(--mw-border); border-radius: 6px; }
+:root[data-theme="dark"] .proximo-card.listo { background: linear-gradient(180deg, #3a2f18 0%, var(--surface) 70%); }
+:root[data-theme="dark"] .proximo-card.listo .proximo-tipo { color: #f0c860; }
+:root[data-theme="dark"] .proximo-card.listo .proximo-nombre,
+:root[data-theme="dark"] .proximo-card.listo .proximo-falta { color: var(--mw-text); }
+:root[data-theme="dark"] .proximo-card.listo .proximo-falta strong { color: var(--mw-lilac); }
+:root[data-theme="dark"] .proximo-card.listo .proximo-sub { color: var(--mw-text-muted); }
+:root { --mw-aviso-texto: #9a6a00; }
+:root[data-theme="dark"] { --mw-aviso-texto: #f0c860; }
+:root[data-theme="dark"] .calendar-day .day-num,
+:root[data-theme="dark"] .calendar-day.other-month .day-num { color: #a497b8; }
+:root { --mw-error-texto: #b03a3a; }
+:root[data-theme="dark"] { --mw-error-texto: #ff8f85; }
+:root[data-theme="dark"] .calendar-day.is-today .day-num { color: #2a1f05; }
+/* Plan MW usa el menú de Configuración como pestañas: en fila, no en columna. */
+#planmwNavPrincipal { flex-direction: row; flex-wrap: wrap; margin-bottom: 1rem; }

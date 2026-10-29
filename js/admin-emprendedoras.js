@@ -379,8 +379,18 @@ function renderAccionesPerfil(persona) {
   if (!wrap) return;
 
   if (!modoEdicionPersona) {
-    wrap.innerHTML = `<button class="btn btn-outline" id="editarPerfilBtn" type="button">Editar</button>`;
+    // Si una líder deja de estar activa (o se da de baja), todo su
+    // equipo pasa a su líder superior: este botón lo hace sin tener que
+    // cambiar su estado (p. ej. una líder que ya estaba inactiva).
+    const equipo = persona.tipo === 'lider'
+      ? obtenerPersonas().filter(p => p.liderId === persona.id && p.estado !== 'baja')
+      : [];
+    wrap.innerHTML = `
+      <button class="btn btn-outline" id="editarPerfilBtn" type="button">Editar</button>
+      ${equipo.length ? `<button class="btn btn-outline" id="reasignarEquipoBtn" type="button" style="margin-left:auto;">Reasignar su equipo (${equipo.length})</button>` : ''}
+    `;
     document.getElementById('editarPerfilBtn')?.addEventListener('click', () => entrarModoEdicionPersona(persona));
+    document.getElementById('reasignarEquipoBtn')?.addEventListener('click', () => abrirCompresionEquipoBaja(persona, null, equipo, 'solo'));
     return;
   }
 
@@ -639,10 +649,14 @@ function guardarInformacionPersona(persona) {
   // automática, siempre con Admin confirmando (o cambiando) el destino
   // sugerido. Antes esto no existía: el equipo se quedaba apuntando
   // indefinidamente a una líder ya dada de baja.
-  if (persona.tipo === 'lider' && persona.estado !== 'baja' && cambios.estado === 'baja') {
+  // Lo mismo si pasa de activa a inactiva (ahí Admin puede decidir que
+  // su equipo se quede con ella).
+  const pasaABaja = persona.estado !== 'baja' && cambios.estado === 'baja';
+  const pasaAInactiva = persona.estado === 'activa' && cambios.estado === 'inactiva';
+  if (persona.tipo === 'lider' && (pasaABaja || pasaAInactiva)) {
     const equipo = obtenerPersonas().filter(p => p.liderId === persona.id && p.estado !== 'baja');
     if (equipo.length) {
-      abrirCompresionEquipoBaja(persona, cambios, equipo);
+      abrirCompresionEquipoBaja(persona, cambios, equipo, pasaABaja ? 'baja' : 'inactiva');
       return;
     }
   }
@@ -709,7 +723,11 @@ function guardarInformacionPersona(persona) {
 // sin asignar si Admin decide resolverlo después. Nunca toca comisiones,
 // constancia ni rifa ya calculadas de ningún periodo anterior — solo
 // cambia liderId hacia adelante.
-function abrirCompresionEquipoBaja(persona, cambios, equipo) {
+//
+// modo: 'baja' (se da de baja), 'inactiva' (pasa a inactiva; puede
+// quedarse con su equipo) o 'solo' (solo se reasigna, sin tocar su
+// estado; cambios = null).
+function abrirCompresionEquipoBaja(persona, cambios, equipo, modo = 'baja') {
 
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
@@ -719,16 +737,24 @@ function abrirCompresionEquipoBaja(persona, cambios, equipo) {
   const superiorValida = !!(superior && superior.tipo === 'lider' && superior.estado !== 'baja');
   const opcionesDestino = obtenerPersonas().filter(p => p.tipo === 'lider' && p.id !== persona.id && p.estado !== 'baja');
 
+  const nombre = escapeHTMLPersonas(nombreCompletoPersona(persona));
+  const titulo = modo === 'baja' ? `Dar de baja a ${nombre} — reasignar su equipo`
+    : modo === 'inactiva' ? `${nombre} pasa a inactiva — ¿reasignar su equipo?`
+    : `Reasignar el equipo de ${nombre}`;
+  const motivo = modo === 'baja' ? 'al darla de baja' : modo === 'inactiva' ? 'si ya no está activa' : 'cuando ya no está activa';
+  const textoBoton = modo === 'baja' ? 'Dar de baja y reasignar' : modo === 'inactiva' ? 'Guardar cambios' : 'Reasignar equipo';
+
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <h3>Dar de baja a ${escapeHTMLPersonas(nombreCompletoPersona(persona))} — reasignar su equipo</h3>
-    <p class="modal-sub">${equipo.length} persona${equipo.length === 1 ? '' : 's'} depende${equipo.length === 1 ? '' : 'n'} directamente de ella. Según el documento de requisitos, su equipo se comprime hacia el líder inmediato superior al darla de baja — confirma o cambia el destino antes de continuar.</p>
+    <h3>${titulo}</h3>
+    <p class="modal-sub">${equipo.length} persona${equipo.length === 1 ? '' : 's'} depende${equipo.length === 1 ? '' : 'n'} directamente de ella. Su equipo pasa al líder inmediato superior ${motivo} — confirma o cambia el destino antes de continuar.</p>
     <ul style="max-height:160px;overflow-y:auto;margin:10px 0;padding-left:18px;">
       ${equipo.map(p => `<li>${escapeHTMLPersonas(nombreCompletoPersona(p))}</li>`).join('')}
     </ul>
     <div class="form-field">
       <label>Nuevo líder para este equipo</label>
       <select id="destinoCompresionSelect">
+        ${modo === 'inactiva' ? '<option value="__mantener">— Mantener su equipo con ella —</option>' : ''}
         <option value="">— Dejar sin líder por ahora (decidir después) —</option>
         ${opcionesDestino.map(p => `
           <option value="${p.id}" ${superiorValida && p.id === superior.id ? 'selected' : ''}>${escapeHTMLPersonas(nombreCompletoPersona(p))}${superiorValida && p.id === superior.id ? ' (líder superior — sugerida)' : ''}</option>
@@ -739,7 +765,7 @@ function abrirCompresionEquipoBaja(persona, cambios, equipo) {
     <div class="modal-note"><strong>Administración.</strong> Esta acción quedará registrada a tu nombre.</div>
     <div style="display:flex;gap:10px;margin-top:14px;">
       <button class="btn btn-outline" style="flex:1;" id="compresionCancelarBtn" type="button">Cancelar</button>
-      <button class="btn btn-danger" style="flex:1;" id="compresionConfirmarBtn" type="button">Dar de baja y reasignar</button>
+      <button class="btn ${modo === 'baja' ? 'btn-danger' : 'btn-primary'}" style="flex:1;" id="compresionConfirmarBtn" type="button">${textoBoton}</button>
     </div>
   `;
 
@@ -750,29 +776,52 @@ function abrirCompresionEquipoBaja(persona, cambios, equipo) {
 
   document.getElementById('compresionConfirmarBtn').addEventListener('click', () => {
 
-    const destinoId = document.getElementById('destinoCompresionSelect').value || null;
+    const valor = document.getElementById('destinoCompresionSelect').value;
+    const mantener = valor === '__mantener';
+    const destinoId = mantener ? null : (valor || null);
 
     const personas = obtenerPersonas();
     const actual = personas.find(p => p.id === persona.id);
     if (!actual) { cerrar(); return; }
 
-    Object.assign(actual, cambios);
+    if (cambios) Object.assign(actual, cambios);
 
     let movidos = 0;
-    personas.forEach(p => {
-      if (p.liderId === persona.id && p.estado !== 'baja') {
-        p.liderId = destinoId;
-        movidos++;
-      }
-    });
+    if (!mantener) {
+      personas.forEach(p => {
+        if (p.liderId === persona.id && p.estado !== 'baja') {
+          p.liderId = destinoId;
+          movidos++;
+        }
+      });
+    }
 
     guardarPersonas(personas);
 
     const nombreDestino = destinoId ? nombreCompletoPersona(obtenerPersonaPorId(destinoId) || {}) : null;
+    const resultadoEquipo = mantener ? 'su equipo se queda con ella'
+      : `equipo de ${movidos} persona${movidos === 1 ? '' : 's'} ${nombreDestino ? `reasignado a ${nombreDestino}` : 'dejado sin líder asignada (pendiente de decidir)'}`;
+    const queLePaso = modo === 'baja' ? 'dada de baja' : modo === 'inactiva' ? 'pasó a inactiva' : 'reasignación de equipo';
+    // Cada integrante sabe a qué rama pasó, y la líder que la recibe, a quién recibe.
+    if (destinoId && movidos && typeof agregarNotificacion === 'function') {
+      const movidas = personas.filter(p => p.liderId === destinoId && equipo.some(m => m.id === p.id));
+      movidas.forEach(m => agregarNotificacion({
+        texto: `Administración cambió tu equipo — ahora perteneces a la rama de ${nombreDestino}.`,
+        link: 'cuenta',
+        paraId: m.id,
+        rolDestino: 'emprendedora_lider'
+      }));
+      agregarNotificacion({
+        texto: `Se sumaron a tu equipo: ${movidas.map(m => nombreCompletoPersona(m)).join(', ')}.`,
+        link: 'equipo',
+        paraId: destinoId,
+        rolDestino: 'emprendedora_lider'
+      });
+    }
     registrarAuditoriaAdmin({
       modulo: 'personas',
-      accion: 'baja_lider_comprimir_equipo',
-      descripcion: `${nombreCompletoPersona(actual)} dada de baja — equipo de ${movidos} persona${movidos === 1 ? '' : 's'} ${nombreDestino ? `reasignado a ${nombreDestino}` : 'dejado sin líder asignada (pendiente de decidir)'}`
+      accion: modo === 'baja' ? 'baja_lider_comprimir_equipo' : 'reasignar_equipo_lider',
+      descripcion: `${nombreCompletoPersona(actual)} ${queLePaso} — ${resultadoEquipo}`
     });
 
     cerrar();
@@ -783,7 +832,8 @@ function abrirCompresionEquipoBaja(persona, cambios, equipo) {
     aplicarBusquedaPersonas();
     renderDetallePersona();
 
-    mostrarToastPersonas(`Baja aplicada. Equipo ${nombreDestino ? `reasignado a ${nombreDestino}` : 'sin líder por ahora'}.`);
+    const textoEquipo = mantener ? 'Su equipo se queda con ella' : `Equipo ${nombreDestino ? `reasignado a ${nombreDestino}` : 'sin líder por ahora'}`;
+    mostrarToastPersonas(modo === 'baja' ? `Baja aplicada. ${textoEquipo}.` : modo === 'inactiva' ? `Cambios guardados. ${textoEquipo}.` : `${textoEquipo}.`);
 
   });
 

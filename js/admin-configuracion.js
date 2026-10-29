@@ -17,7 +17,14 @@ let seccionActual = 'datosMW';
 let pendientesVersionados = {}; // clave `${tipo}__${parametro}` -> {tipo,parametro,seccion,etiqueta,tipoValor,valorAnterior,valorNuevo}
 let timerAutoguardadoConfig = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  // La configuración vive en Firestore: se espera a que llegue antes de pintar.
+  if (typeof configuracionListo !== 'undefined') await configuracionListo;
+  // Si otra Administración cambia algo, se repinta (salvo que haya cambios sin guardar aquí).
+  window.addEventListener('mw:configuracion-actualizada', () => {
+    if (!Object.keys(pendientesVersionados).length) renderSeccionActual();
+  });
 
   revisarBorradorConfigAlCargar();
   renderSeccionActual();

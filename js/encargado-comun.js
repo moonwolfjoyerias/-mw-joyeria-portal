@@ -125,15 +125,33 @@ function obtenerCuentaEncargadoActual() {
     : null;
 }
 
+// La lista de cuentas internas solo la lee Admin (reglas de users/), así
+// que para la Encargado viene vacía: antes, sin encontrar su cuenta, no se
+// aplicaba ningún permiso y veía y abría todos los módulos. Su propio
+// perfil (users/{uid}) sí lo puede leer; si ni eso se puede, se usan los
+// permisos por defecto (Nómina cerrada) en vez de dejar todo abierto.
+async function obtenerCuentaEncargadoParaPermisos() {
+  const enCache = obtenerCuentaEncargadoActual();
+  if (enCache) return enCache;
+  if (typeof dbFirestore !== 'undefined' && dbFirestore && typeof firestoreUserACuentaInterna === 'function') {
+    try {
+      const snap = await dbFirestore.collection('users').doc(ENCARGADO_IDENTIDAD.usuarioId).get();
+      if (snap.exists) return firestoreUserACuentaInterna(snap.id, snap.data());
+    } catch (error) { /* se usan los permisos por defecto */ }
+  }
+  return { id: ENCARGADO_IDENTIDAD.usuarioId, rol: 'encargado', permisos: permisosEncargadoPorDefecto() };
+}
+
 async function aplicarPermisosEncargadoEnPagina() {
 
   if (typeof cuentasInternasRepoListo !== 'undefined') await cuentasInternasRepoListo;
+  if (typeof tienePermisoEncargado !== 'function') return;
 
-  const cuenta = obtenerCuentaEncargadoActual();
-  if (!cuenta || typeof tienePermisoEncargado !== 'function') return;
+  const cuenta = await obtenerCuentaEncargadoParaPermisos();
 
-  document.querySelectorAll('.sidebar nav a[href]').forEach(link => {
-    const archivo = link.getAttribute('href').split('/').pop();
+  // Menú, barra inferior y accesos de Inicio ("Ir a Nómina →", etc.).
+  document.querySelectorAll('a[href]').forEach(link => {
+    const archivo = link.getAttribute('href').split(/[?#]/)[0].split('/').pop();
     const modulo = ENCARGADO_MODULO_POR_PAGINA[archivo];
     if (modulo && !tienePermisoEncargado(cuenta, modulo)) link.remove();
   });

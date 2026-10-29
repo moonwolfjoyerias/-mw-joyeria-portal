@@ -358,6 +358,8 @@ function abrirDetalleSolicitudDeseosAdmin(id) {
       </div>
     `).join('')}
 
+    ${s.fotoReferencia && /^data:image\//.test(s.fotoReferencia) ? `<div class="eyebrow" style="margin-top:14px;">Foto de referencia</div><img src="${s.fotoReferencia}" alt="Foto de referencia" class="ld-foto-referencia">` : ''}
+
     ${s.comentarioEstado ? `<div class="modal-note"><strong>Comentario:</strong> ${escapeHTML(s.comentarioEstado)}</div>` : ''}
 
     <div class="eyebrow" style="margin-top:14px;">Actualizar estado</div>

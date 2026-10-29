@@ -335,8 +335,17 @@ function marcaAltaProducto(producto) {
   return marca ? Number(marca[1]) : 0;
 }
 
+// Revisión de oct-2026: en TODOS los catálogos (público, e/l, Staff,
+// Encargado, Admin) las piezas agotadas o marcadas como no disponibles van
+// al final; dentro de cada grupo, las más recientes primero.
+function productoSePuedeVender(producto) {
+  return producto.disponible !== false && stockTotalProducto(producto) > 0;
+}
+
 function ordenarProductosMasRecientes(productos) {
-  return [...productos].sort((a, b) => marcaAltaProducto(b) - marcaAltaProducto(a));
+  return [...productos].sort((a, b) =>
+    (productoSePuedeVender(b) - productoSePuedeVender(a)) || (marcaAltaProducto(b) - marcaAltaProducto(a))
+  );
 }
 
 function stockTotalProducto(producto) {

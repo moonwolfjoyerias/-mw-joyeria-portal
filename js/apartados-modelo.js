@@ -424,13 +424,43 @@ function aprobarVentanaVip(ventana, empleado) {
 // otra persona. Revisa TODA la tienda: el depósito de cada ventana
 // (referenciaDeposito) y cada pago de liquidación de cada pieza de
 // cada ventana (pagos[].referencia) — nunca solo la ventana actual.
+// Revisión de oct-2026: se compara sin espacios ni mayúsculas/minúsculas
+// ("ab 12" = "AB12"), igual que BRILLO MW.
+function normalizarReferenciaPago(referencia) {
+  return String(referencia || '').trim().toUpperCase().replace(/\s+/g, '');
+}
+
 function existeReferenciaDuplicada(referencia) {
-  referencia = String(referencia || '').trim();
-  if (!referencia) return false;
+  const buscada = normalizarReferenciaPago(referencia);
+  if (!buscada) return false;
   return obtenerVentanasApartado().some(v =>
-    v.referenciaDeposito === referencia ||
-    (v.apartados || []).some(pieza => (pieza.pagos || []).some(pago => pago.referencia === referencia))
+    normalizarReferenciaPago(v.referenciaDeposito) === buscada ||
+    (v.apartados || []).some(pieza => (pieza.pagos || []).some(pago => normalizarReferenciaPago(pago.referencia) === buscada))
   );
+}
+
+// Registro compartido con BRILLO MW (brilloReferenciasPago/<metodo>_<REF>):
+// ahí quedan las transferencias cobradas en la caja y en los apartados de
+// BRILLO. Una referencia usada en un lado ya no se acepta en el otro.
+const REFERENCIAS_PAGO_COLECCION = 'brilloReferenciasPago';
+
+async function referenciaYaUsada(referencia, metodo = 'transferencia') {
+  if (existeReferenciaDuplicada(referencia)) return true;
+  if (typeof dbFirestore === 'undefined' || !dbFirestore) return false;
+  try {
+    const doc = await dbFirestore.collection(REFERENCIAS_PAGO_COLECCION).doc(`${metodo}_${normalizarReferenciaPago(referencia)}`).get();
+    return doc.exists;
+  } catch (error) {
+    return false; // sin permiso o sin red: se queda la revisión local
+  }
+}
+
+function registrarReferenciaPago(referencia, metodo, ventana) {
+  const ref = normalizarReferenciaPago(referencia);
+  if (!ref || metodo !== 'transferencia' || typeof dbFirestore === 'undefined' || !dbFirestore) return;
+  dbFirestore.collection(REFERENCIAS_PAGO_COLECCION).doc(`${metodo}_${ref}`).set({
+    metodo, referencia: ref, documento: `ventanasApartado/${ventana.id}`, folio: ventana.id, origen: 'pagina', fecha: new Date().toISOString()
+  }).catch(() => { /* la ventana ya guarda la referencia; esto es el respaldo compartido */ });
 }
 
 // Lo que falta depositar para que una ventana pendiente se active: el
@@ -456,12 +486,24 @@ function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, emplea
   fijarDepositoVentana(ventana, creditoAplicado + montoFinal);
   ventana.metodoDeposito = metodo || null;
   ventana.referenciaDeposito = referencia || null;
+  registrarReferenciaPago(referencia, metodo, ventana);
   ventana.estado = 'activa';
   ventana.fechaInicio = ahora.toISOString();
   ventana.fechaVencimiento = regla.dias
     ? new Date(ahora.getTime() + regla.dias * 24 * 60 * 60 * 1000).toISOString()
     : null;
   ventana.auditoria.push(registrarAuditoriaVentana(`Depósito de $${montoFinal} confirmado${referencia ? ` — referencia ${referencia}` : ''}`, empleado));
+
+  // Antes solo el apartado VIP avisaba; con depósito, ella no sabía
+  // cuándo quedaban apartadas sus piezas hasta volver a entrar.
+  if (typeof agregarNotificacion === 'function') {
+    agregarNotificacion({
+      texto: `Confirmamos tu depósito de $${montoFinal}: tus piezas ya quedaron apartadas.`,
+      link: 'apartados',
+      paraId: ventana.usuarioId,
+      rolDestino: 'emprendedora_lider'
+    });
+  }
 
   return ventana;
 
@@ -648,6 +690,7 @@ function liquidarPiezasSeleccionadas(ventana, piezaIds, { monto, metodo, referen
 
   piezasElegidas.forEach(pieza => {
     pieza.pagos.push({ monto: pieza.saldo, tipo: 'liquidacion', metodo: metodo || null, referencia: referencia || null, fecha });
+    if (referencia) registrarReferenciaPago(referencia, metodo, ventana);
     pieza.saldo = 0;
     pieza.estado = 'liquidada';
   });
@@ -894,6 +937,11 @@ function registrarAuditoriaVentana(texto, empleado) {
 // vez que se revisa) — ver js/admin-apartados.js. Vencer no cancela
 // nada por sí solo (ver nota arriba de ESTADOS_VENTANA_MODELO); esto
 // solo es el aviso para que Administración decida contactar o desapartar.
+// Mismo id que pone BRILLO (avisosDeVencimiento en src/apartados/modelo.ts).
+function idAvisoVencimiento(tipo, ventana) {
+  return `NOTIF-${tipo}-${ventana.id}-${ventana.fechaVencimiento ? new Date(ventana.fechaVencimiento).getTime() : 0}`;
+}
+
 function verificarApartadosVencidosPendientes() {
 
   const ventanas = obtenerVentanasApartado();
@@ -912,7 +960,8 @@ function verificarApartadosVencidosPendientes() {
           texto: `El apartado de ${piezas} pieza${piezas === 1 ? '' : 's'} de ${ventana.usuarioNombre} ya venció.`,
           link: `admin-apartados.html?buscar=${encodeURIComponent(ventana.usuarioNombre)}`,
           rolDestino: 'admin',
-          origen: 'emprendedora_lider'
+          origen: 'emprendedora_lider',
+          idFijo: idAvisoVencimiento('vencido', ventana)
         });
       }
 
@@ -955,7 +1004,8 @@ function verificarApartadosPorVencerPendientes() {
           texto: `Tu apartado de ${piezas} pieza${piezas === 1 ? '' : 's'} vence en menos de 1 día — si no se liquida o renueva, se pierde.`,
           link: 'apartados',
           paraId: ventana.usuarioId,
-          rolDestino: 'emprendedora_lider'
+          rolDestino: 'emprendedora_lider',
+          idFijo: idAvisoVencimiento('vence1d', ventana)
         });
       }
     }
@@ -968,7 +1018,8 @@ function verificarApartadosPorVencerPendientes() {
           texto: `Tu apartado de ${piezas} pieza${piezas === 1 ? '' : 's'} vence en menos de 2 horas.`,
           link: 'apartados',
           paraId: ventana.usuarioId,
-          rolDestino: 'emprendedora_lider'
+          rolDestino: 'emprendedora_lider',
+          idFijo: idAvisoVencimiento('vence2h', ventana)
         });
       }
     }
@@ -994,5 +1045,12 @@ const apartadosRepoListo = Promise.all([
   cargarApartadosRepo(),
   typeof comprasAroniumListo !== 'undefined' ? comprasAroniumListo : null,
   // Y a las compras confirmadas por BRILLO (compras-brillo-firestore-sync.js).
-  typeof comprasBrilloListo !== 'undefined' ? comprasBrilloListo : null
+  typeof comprasBrilloListo !== 'undefined' ? comprasBrilloListo : null,
+  // Y a Configuración (comisiones, metas…), que en algunas páginas se carga
+  // después de este archivo: se espera a que estén todos los scripts.
+  new Promise(listo => (document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', listo, { once: true }) : listo()))
+    .then(() => Promise.all([
+      typeof configuracionListo !== 'undefined' ? configuracionListo : null,
+      typeof rifaBoletosListo !== 'undefined' ? rifaBoletosListo : null
+    ]))
 ]).then(([ventanas]) => ventanas);

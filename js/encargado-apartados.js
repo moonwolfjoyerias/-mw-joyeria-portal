@@ -364,7 +364,7 @@ function abrirModalConfirmarDeposito(ventanaId) {
 
   overlay.classList.add("open");
 
-  document.getElementById("continuarDepositoBtn").addEventListener("click", () => {
+  document.getElementById("continuarDepositoBtn").addEventListener("click", async () => {
 
     const monto = Number(document.getElementById("depositoMonto").value);
     const metodo = document.getElementById("depositoMetodo").value;
@@ -385,7 +385,7 @@ function abrirModalConfirmarDeposito(ventanaId) {
       return;
     }
 
-    if (metodo === "transferencia" && typeof existeReferenciaDuplicada === 'function' && existeReferenciaDuplicada(referencia)) {
+    if (metodo === "transferencia" && typeof referenciaYaUsada === 'function' && await referenciaYaUsada(referencia)) {
       error.style.display = "block";
       error.textContent = "Ese número de referencia ya existe.";
       return;
@@ -510,7 +510,7 @@ function abrirModalLiquidar(v) {
   wirearEleccionPiezasLiquidar(box, v, piezasActivas, recalcularLiquidar);
   box.querySelectorAll('input[name="decisionDepositoLiquidar"]').forEach(r => r.addEventListener("change", recalcularLiquidar));
 
-  document.getElementById("continuarLiquidarBtn").addEventListener("click", () => {
+  document.getElementById("continuarLiquidarBtn").addEventListener("click", async () => {
 
     const { idsSeleccionados, cubreTodo, decision, montoEsperado } = recalcularLiquidar();
     const metodo = document.getElementById("liquidarMetodo")?.value || null;
@@ -537,7 +537,7 @@ function abrirModalLiquidar(v) {
       return;
     }
 
-    if (metodo === "transferencia" && typeof existeReferenciaDuplicada === 'function' && existeReferenciaDuplicada(referencia)) {
+    if (metodo === "transferencia" && typeof referenciaYaUsada === 'function' && await referenciaYaUsada(referencia)) {
       error.style.display = "block";
       error.textContent = "Ese número de referencia ya existe.";
       return;

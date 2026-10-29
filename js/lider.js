@@ -86,7 +86,7 @@ function abrirModalBeneficios() {
             const esActual = r.key === miRangoActualKeyLider();
             return `
               <tr style="border-bottom:1px solid var(--mw-border);${esActual ? 'background:var(--mw-lilac-soft);' : ''}">
-                <td style="padding:0.5rem 0.6rem;font-weight:600;">${r.label}${esActual ? ' <span style="font-weight:400;color:var(--mw-purple);">(tú)</span>' : ''}</td>
+                <td style="padding:0.5rem 0.6rem;font-weight:600;">${r.label}${esActual ? ' <span style="font-weight:400;color:var(--mw-accent-text);">(tú)</span>' : ''}</td>
                 ${pct.map(p => `<td style="padding:0.5rem 0.6rem;">${p > 0 ? p + '%' : '—'}</td>`).join('')}
                 <td style="padding:0.5rem 0.6rem;">${fmtMoney(bono)}</td>
               </tr>

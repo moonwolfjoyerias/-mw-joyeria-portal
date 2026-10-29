@@ -173,7 +173,15 @@ async function crearSolicitudInscripcion({ solicitanteId, solicitanteNombre, sol
   const telefonoNorm = telefono.replace(/\D/g, '');
   const correoNorm = correo.toLowerCase();
 
-  const solicitudesExistentes = await obtenerSolicitudes();
+  // Una Emprendedora/Líder solo puede leer las solicitudes que ella envió
+  // (firestore.rules); los duplicados contra las de otras personas los
+  // marca Admin al revisarla (revisarSolicitudPublica, abajo).
+  let solicitudesExistentes = [];
+  try {
+    solicitudesExistentes = await obtenerSolicitudes();
+  } catch (error) {
+    solicitudesExistentes = [];
+  }
   const yaPendiente = solicitudesExistentes.some(s =>
     s.estado === 'pendiente' &&
     (s.correo.toLowerCase() === correoNorm || s.telefono.replace(/\D/g, '') === telefonoNorm)
@@ -274,7 +282,16 @@ async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, corr
   const telefonoNorm = telefono.replace(/\D/g, '');
   const correoNorm = correo.toLowerCase();
 
-  const solicitudesExistentes = await obtenerSolicitudes();
+  // Con Firebase real, quien se inscribe usa una sesión anónima que ya no
+  // puede leer las solicitudes de otras personas (ver firestore.rules); en
+  // ese caso los duplicados y el "riesgo de equipo inflado" los marca
+  // Admin al revisarla (revisarSolicitudPublica, abajo).
+  let solicitudesExistentes = [];
+  try {
+    solicitudesExistentes = await obtenerSolicitudes();
+  } catch (error) {
+    solicitudesExistentes = [];
+  }
   const yaPendiente = solicitudesExistentes.some(s =>
     s.estado === 'pendiente' &&
     (s.correo.toLowerCase() === correoNorm || s.telefono.replace(/\D/g, '') === telefonoNorm)
@@ -357,6 +374,7 @@ async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, corr
   // corre en login.html, sin sesión hasta hace un instante — ver su
   // comentario en notificaciones-modelo.js.
   if (typeof agregarNotificacionDirecta === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('solicitud_creada'))) {
+    // Si el aviso no se pudo crear, la solicitud ya quedó guardada: Admin la ve en Solicitudes.
     await agregarNotificacionDirecta({
       texto: `${nombreCompleto} se registró directamente desde el sitio${liderIndicado ? ` — indicó que su líder es "${liderIndicado}"` : ' — no indicó líder'}. ${riesgoEquipoInflado ? `⚠️ Ya hay ${riesgoEquipoInfladoConteo} solicitudes recientes indicando a esta misma líder — revísala con cuidado.` : 'Revisa su solicitud.'}`,
       link: `admin-solicitudes.html?solicitud=${solicitud.id}`,
@@ -368,6 +386,39 @@ async function crearSolicitudInscripcionPublica({ nombreCompleto, telefono, corr
 
   return { ok: true, solicitud };
 
+}
+
+// Lo que quien envía la solicitud ya no puede revisar por su cuenta (no
+// puede leer las solicitudes de otras personas): Admin lo ve al revisarla.
+// Mismas reglas que crearSolicitudInscripcion/crearSolicitudInscripcionPublica.
+function revisarSolicitudPublica(solicitud, todas) {
+  const correoNorm = String(solicitud.correo || '').trim().toLowerCase();
+  const telefonoNorm = String(solicitud.telefono || '').replace(/\D/g, '');
+  const otras = todas.filter(s => s.id !== solicitud.id);
+  let duplicada = null;
+  if (solicitud.estado === 'pendiente') {
+    if (otras.some(s => s.estado === 'pendiente' && ((correoNorm && String(s.correo || '').trim().toLowerCase() === correoNorm) || (telefonoNorm && String(s.telefono || '').replace(/\D/g, '') === telefonoNorm)))) {
+      duplicada = 'Hay otra solicitud pendiente con este correo o teléfono.';
+    } else if (typeof existePersonaConCorreoOTelefono === 'function' && existePersonaConCorreoOTelefono(solicitud.correo, solicitud.telefono)) {
+      duplicada = 'Ya existe una cuenta registrada con este correo o teléfono.';
+    }
+  }
+  if (solicitud.origen !== 'publico') return { riesgo: false, conteo: null, duplicada };
+  const liderNorm = String(solicitud.liderIndicado || '').trim().toLowerCase();
+  let conteo = null;
+  if (liderNorm) {
+    const referencia = new Date(solicitud.fechaSolicitud || Date.now()).getTime();
+    const limiteFecha = referencia - RIESGO_EQUIPO_INFLADO_DIAS * 24 * 60 * 60 * 1000;
+    const relacionadas = otras.filter(s =>
+      s.origen === 'publico' &&
+      String(s.liderIndicado || '').trim().toLowerCase() === liderNorm &&
+      new Date(s.fechaSolicitud).getTime() <= referencia &&
+      (s.estado === 'pendiente' || (s.estado === 'aprobada' && new Date(s.fechaRevision || s.fechaSolicitud).getTime() >= limiteFecha))
+    );
+    conteo = relacionadas.length + 1;
+  }
+  const riesgo = Boolean(solicitud.riesgoEquipoInflado) || (conteo !== null && conteo >= RIESGO_EQUIPO_INFLADO_TOPE);
+  return { riesgo, conteo: solicitud.riesgoEquipoInfladoConteo || conteo, duplicada };
 }
 
 // ============================================================

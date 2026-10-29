@@ -19,9 +19,15 @@
 // Mismo espíritu que historialLogros (js/personas-ejemplo.js): bitácora
 // que solo crece, nunca se reescribe.
 //
-// ⚠️ TEMPORAL: localStorage simula Firestore. La estructura ya está
-// pensada para ser un documento por versión en una colección
-// "configuracion" — ver guardarNuevaVersionParametro().
+// FIRESTORE (oct-2026): con Firebase real, cada versión es un documento de
+// `configuracionVersiones/{id}` y la configuración simple vive en
+// `configuracion/simple` — así vale en todos los equipos (antes cada
+// navegador tenía la suya). Solo Administración escribe; cualquier cuenta
+// con sesión lee (las cuentas de Líder calculan con estos valores). Las
+// versiones "semilla" (valores originales del sistema) no se guardan: se
+// calculan en cada página. La primera vez, lo que el navegador de Admin
+// tenía guardado se sube a Firestore (ver _migrarConfiguracionLocal).
+// Sin Firebase (modo demo) sigue en localStorage, igual que antes.
 //
 // ⚠️ LÍMITE DE SEGURIDAD CONOCIDO (ver sección "Usuarios y permisos" de
 // la página): ocultar botones con JavaScript no es una barrera de
@@ -49,7 +55,20 @@ function configHoyISO() {
 // ALMACÉN DE VERSIONES (append-only)
 // ============================================================
 
-function obtenerVersionesConfig() {
+const CONFIG_COLECCION_VERSIONES = 'configuracionVersiones';
+const CONFIG_COLECCION = 'configuracion';
+const CONFIG_DOC_SIMPLE = 'simple';
+
+// Con Firebase real: lo que hay en el servidor (null = todavía no llega).
+let _configVersionesServidor = null; // Map id → versión
+let _configSimpleServidor = null;    // objeto o {} si no existe
+let _configSemillas = [];            // semillas calculadas en esta página (no se guardan)
+
+function _configEnFirestore() {
+  return typeof dbFirestore !== 'undefined' && Boolean(dbFirestore);
+}
+
+function _configVersionesLocal() {
   try {
     const datos = JSON.parse(localStorage.getItem(CONFIG_VERSIONES_KEY));
     return Array.isArray(datos) ? datos : [];
@@ -58,8 +77,35 @@ function obtenerVersionesConfig() {
   }
 }
 
+function obtenerVersionesConfig() {
+  if (!_configEnFirestore()) return _configVersionesLocal();
+  const servidor = _configVersionesServidor || new Map();
+  // Una semilla que Admin ya cerró (cambió el valor) vive en el servidor con el mismo id.
+  return [..._configSemillas.filter(v => !servidor.has(v.id)), ...servidor.values()].map(v => ({ ...v }));
+}
+
+function _esAdminConfig() {
+  const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+  return Boolean(sesion && sesion.rol === 'admin');
+}
+
 function guardarVersionesConfig(lista) {
-  localStorage.setItem(CONFIG_VERSIONES_KEY, JSON.stringify(lista));
+  if (!_configEnFirestore()) {
+    localStorage.setItem(CONFIG_VERSIONES_KEY, JSON.stringify(lista));
+    return;
+  }
+  // Solo lo que cambió (una versión nueva y la anterior que se cerró).
+  const actuales = new Map(obtenerVersionesConfig().map(v => [v.id, textoEstableFirestore(v)]));
+  const cambiadas = lista.filter(v => actuales.get(v.id) !== textoEstableFirestore(v));
+  if (!cambiadas.length) return;
+  _configVersionesServidor = _configVersionesServidor || new Map();
+  cambiadas.forEach(v => _configVersionesServidor.set(v.id, { ...v }));
+  const lote = dbFirestore.batch();
+  cambiadas.forEach(v => lote.set(dbFirestore.collection(CONFIG_COLECCION_VERSIONES).doc(String(v.id)), v));
+  lote.commit().catch(error => {
+    console.error('No se pudo guardar la configuración:', error);
+    if (typeof mostrarToast === 'function') mostrarToast('No se pudo guardar el cambio de Configuración en el servidor. Revisa la conexión y vuelve a intentarlo.');
+  });
 }
 
 function obtenerVersionesParametro(tipo, parametro) {
@@ -158,7 +204,7 @@ function _configYaSembrado(tipo, parametro) {
 
 function _sembrarValor(tipo, parametro, valor, seccion, etiqueta) {
   if (_configYaSembrado(tipo, parametro)) return;
-  const lista = obtenerVersionesConfig();
+  const lista = _configEnFirestore() ? _configSemillas : obtenerVersionesConfig();
   lista.push({
     id: `CFG-seed-${tipo}-${parametro}`,
     tipo,
@@ -174,7 +220,7 @@ function _sembrarValor(tipo, parametro, valor, seccion, etiqueta) {
     usuarioAdminNombre: 'Sistema',
     fechaModificacion: `${CONFIG_FECHA_SEMILLA}T00:00:00.000Z`
   });
-  guardarVersionesConfig(lista);
+  if (!_configEnFirestore()) guardarVersionesConfig(lista);
 }
 
 function asegurarSemillaConfiguracion() {
@@ -291,7 +337,7 @@ function obtenerConfigSimple() {
   };
 
   try {
-    const guardado = JSON.parse(localStorage.getItem(CONFIG_SIMPLE_KEY));
+    const guardado = _configEnFirestore() ? _configSimpleServidor : JSON.parse(localStorage.getItem(CONFIG_SIMPLE_KEY));
     if (!guardado || typeof guardado !== 'object') return porDefecto;
     return {
       datosMW: { ...porDefecto.datosMW, ...(guardado.datosMW || {}) },
@@ -310,7 +356,15 @@ function guardarConfigSimple(parcial, { seccion, descripcion } = {}) {
     sistema: { ...actual.sistema, ...(parcial.sistema || {}) },
     notificaciones: { ...actual.notificaciones, ...(parcial.notificaciones || {}) }
   };
-  localStorage.setItem(CONFIG_SIMPLE_KEY, JSON.stringify(nuevo));
+  if (_configEnFirestore()) {
+    _configSimpleServidor = nuevo;
+    dbFirestore.collection(CONFIG_COLECCION).doc(CONFIG_DOC_SIMPLE).set(nuevo).catch(error => {
+      console.error('No se pudo guardar la configuración:', error);
+      if (typeof mostrarToast === 'function') mostrarToast('No se pudo guardar el cambio de Configuración en el servidor. Revisa la conexión y vuelve a intentarlo.');
+    });
+  } else {
+    localStorage.setItem(CONFIG_SIMPLE_KEY, JSON.stringify(nuevo));
+  }
 
   if (typeof registrarAuditoriaAdmin === 'function') {
     registrarAuditoriaAdmin({
@@ -364,3 +418,69 @@ function obtenerHistorialCambiosConfig() {
     .filter(v => v.usuarioAdminId !== 'sistema')
     .sort((a, b) => b.fechaModificacion.localeCompare(a.fechaModificacion));
 }
+
+// ============================================================
+// CARGA DESDE FIRESTORE (en vivo)
+// ============================================================
+
+// La primera vez que Firestore no tiene configuración, el navegador de
+// Administración sube lo que tenía guardado (versiones y datos simples),
+// para no perder los cambios hechos antes de esta migración.
+async function _migrarConfiguracionLocal() {
+  if (!_esAdminConfig()) return;
+  const locales = _configVersionesLocal().filter(v => v.usuarioAdminId !== 'sistema' || v.vigenteHasta);
+  let simple = null;
+  try { simple = JSON.parse(localStorage.getItem(CONFIG_SIMPLE_KEY)); } catch (error) { simple = null; }
+  const lote = dbFirestore.batch();
+  let n = 0;
+  if (!_configVersionesServidor.size) {
+    locales.forEach(v => { lote.set(dbFirestore.collection(CONFIG_COLECCION_VERSIONES).doc(String(v.id)), v); _configVersionesServidor.set(v.id, v); n++; });
+  }
+  if (simple && typeof simple === 'object' && !_configSimpleServidor) {
+    lote.set(dbFirestore.collection(CONFIG_COLECCION).doc(CONFIG_DOC_SIMPLE), simple);
+    _configSimpleServidor = simple;
+    n++;
+  }
+  if (n) await lote.commit();
+}
+
+function _esperarSesionConfig() {
+  return new Promise(resolve => {
+    const inicio = Date.now();
+    (function revisar() {
+      const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+      if (sesion || Date.now() - inicio > 15000) return resolve(sesion);
+      setTimeout(revisar, 150);
+    })();
+  });
+}
+
+async function cargarConfiguracionRepo() {
+  if (!_configEnFirestore()) return;
+  await _esperarSesionConfig();
+  const primera = (consulta, aplicar) => new Promise((resolve, reject) => {
+    let inicial = true;
+    consulta.onSnapshot(snap => {
+      aplicar(snap);
+      if (inicial) { inicial = false; resolve(); return; }
+      window.dispatchEvent(new CustomEvent('mw:configuracion-actualizada'));
+    }, error => { if (inicial) { inicial = false; reject(error); } });
+  });
+  try {
+    await Promise.all([
+      primera(dbFirestore.collection(CONFIG_COLECCION_VERSIONES), snap => {
+        _configVersionesServidor = new Map(snap.docs.map(d => [d.id, { ...d.data(), id: d.id }]));
+      }),
+      primera(dbFirestore.collection(CONFIG_COLECCION).doc(CONFIG_DOC_SIMPLE), doc => {
+        _configSimpleServidor = doc.exists ? doc.data() : null;
+      })
+    ]);
+    await _migrarConfiguracionLocal();
+  } catch (error) {
+    // Sin conexión o sin permiso: se usan los valores originales del sistema.
+    console.error('No se pudo cargar la configuración:', error);
+    _configVersionesServidor = _configVersionesServidor || new Map();
+  }
+}
+
+const configuracionListo = cargarConfiguracionRepo();

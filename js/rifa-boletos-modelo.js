@@ -11,13 +11,20 @@
 // alguien gana boletos extra después (nueva compra en el mismo mes), se
 // le agregan folios nuevos al final, nunca se renumera a nadie.
 //
-// ⚠️ TEMPORAL: localStorage simula Firestore. Se reemplaza en Fase 3.
+// FIRESTORE (oct-2026): los folios de cada mes viven en `rifaBoletos/{AAAA-MM}`
+// ({ boletos: [...] }), así son los mismos en cualquier equipo. Los folios
+// nuevos se agregan en una transacción sobre lo que ya hay en el servidor
+// (dos administradoras a la vez no repiten folio). La primera vez, los
+// folios que este navegador ya tenía (quizá ya impresos) se suben tal cual.
+// Sin Firebase (modo demo) sigue en localStorage.
 
 const RIFA_BOLETOS_STORAGE_KEY = 'mw-rifa-boletos-folios-v1';
+const RIFA_BOLETOS_COLECCION = 'rifaBoletos';
+let RIFA_BOLETOS_CACHE = null; // mesKey → boletos (con Firebase real)
 
 const MESES_RIFA_BOLETOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-function obtenerRegistroBoletosRifa() {
+function _registroBoletosLocal() {
   try {
     const datos = JSON.parse(localStorage.getItem(RIFA_BOLETOS_STORAGE_KEY));
     return (datos && typeof datos === 'object' && !Array.isArray(datos)) ? datos : {};
@@ -26,9 +33,66 @@ function obtenerRegistroBoletosRifa() {
   }
 }
 
-function guardarRegistroBoletosRifa(registro) {
-  localStorage.setItem(RIFA_BOLETOS_STORAGE_KEY, JSON.stringify(registro));
+function _rifaBoletosEnFirestore() {
+  return typeof dbFirestore !== 'undefined' && Boolean(dbFirestore);
 }
+
+function obtenerRegistroBoletosRifa() {
+  if (_rifaBoletosEnFirestore()) return JSON.parse(JSON.stringify(RIFA_BOLETOS_CACHE || {}));
+  return _registroBoletosLocal();
+}
+
+function guardarRegistroBoletosRifa(registro, mesKey) {
+  if (!_rifaBoletosEnFirestore()) {
+    localStorage.setItem(RIFA_BOLETOS_STORAGE_KEY, JSON.stringify(registro));
+    return;
+  }
+  if (!mesKey) return;
+  RIFA_BOLETOS_CACHE = RIFA_BOLETOS_CACHE || {};
+  RIFA_BOLETOS_CACHE[mesKey] = registro[mesKey];
+  // En el servidor se vuelve a asignar sobre lo que ya tiene (transacción):
+  // nunca se renumera un folio que ya existía.
+  const ref = dbFirestore.collection(RIFA_BOLETOS_COLECCION).doc(mesKey);
+  dbFirestore.runTransaction(async tx => {
+    const doc = await tx.get(ref);
+    const enServidor = doc.exists && Array.isArray(doc.data().boletos) ? doc.data().boletos : [];
+    const boletos = _asignarFoliosRifa(enServidor, mesKey);
+    if (textoEstableFirestore(boletos) !== textoEstableFirestore(enServidor)) tx.set(ref, { boletos, mesKey });
+    return boletos;
+  }).then(boletos => {
+    RIFA_BOLETOS_CACHE[mesKey] = boletos;
+  }).catch(error => {
+    console.error('No se pudieron guardar los folios de la rifa:', error);
+    if (typeof mostrarToast === 'function') mostrarToast('No se pudieron guardar los folios de la rifa en el servidor. Vuelve a cargar la página antes de imprimir.');
+  });
+}
+
+async function cargarRifaBoletosRepo() {
+  if (!_rifaBoletosEnFirestore()) return;
+  const inicio = Date.now();
+  while (!(typeof obtenerSesionActiva === 'function' && obtenerSesionActiva()) && Date.now() - inicio < 15000) await new Promise(r => setTimeout(r, 150));
+  try {
+    const snap = await dbFirestore.collection(RIFA_BOLETOS_COLECCION).get();
+    RIFA_BOLETOS_CACHE = {};
+    snap.docs.forEach(d => { RIFA_BOLETOS_CACHE[d.id] = Array.isArray(d.data().boletos) ? d.data().boletos : []; });
+    // Folios que este navegador ya tenía (antes de Firestore): se suben tal cual.
+    const sesion = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
+    if (sesion && sesion.rol === 'admin') {
+      const locales = _registroBoletosLocal();
+      const faltan = Object.keys(locales).filter(mes => !RIFA_BOLETOS_CACHE[mes] && Array.isArray(locales[mes]) && locales[mes].length);
+      if (faltan.length) {
+        const lote = dbFirestore.batch();
+        faltan.forEach(mes => { lote.set(dbFirestore.collection(RIFA_BOLETOS_COLECCION).doc(mes), { boletos: locales[mes], mesKey: mes }); RIFA_BOLETOS_CACHE[mes] = locales[mes]; });
+        await lote.commit();
+      }
+    }
+  } catch (error) {
+    console.error('No se pudieron cargar los folios de la rifa:', error);
+    RIFA_BOLETOS_CACHE = RIFA_BOLETOS_CACHE || {};
+  }
+}
+
+const rifaBoletosListo = cargarRifaBoletosRepo();
 
 // Fecha oficial de sorteo de los boletos ganados en `mesKey`: día 15 del
 // mes SIGUIENTE (regla real del Plan MW, igual que la del cierre de
@@ -83,9 +147,9 @@ function calcularBoletosGanadosMes(persona, mesKey) {
   return 1 + Math.floor((comprasNormalesMes - meta) / montoPorBoletoExtra);
 }
 
-function sincronizarBoletosRifaMes(mesKey) {
-  const registro = obtenerRegistroBoletosRifa();
-  const boletosMes = registro[mesKey] || [];
+// Agrega a `boletosExistentes` los folios que falten (nunca renumera).
+function _asignarFoliosRifa(boletosExistentes, mesKey) {
+  const boletosMes = boletosExistentes.map(b => ({ ...b }));
   const yaAsignados = {};
   boletosMes.forEach(b => { yaAsignados[b.personaId] = (yaAsignados[b.personaId] || 0) + 1; });
 
@@ -111,8 +175,17 @@ function sincronizarBoletosRifaMes(mesKey) {
   });
 
   boletosMes.sort((a, b) => a.folio - b.folio);
-  registro[mesKey] = boletosMes;
-  guardarRegistroBoletosRifa(registro);
+  return boletosMes;
+}
+
+function sincronizarBoletosRifaMes(mesKey) {
+  const registro = obtenerRegistroBoletosRifa();
+  const antes = registro[mesKey] || [];
+  const boletosMes = _asignarFoliosRifa(antes, mesKey);
+  if (boletosMes.length !== antes.length) {
+    registro[mesKey] = boletosMes;
+    guardarRegistroBoletosRifa(registro, mesKey);
+  }
   return boletosMes;
 }
 
