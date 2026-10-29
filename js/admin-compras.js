@@ -155,6 +155,135 @@ async function leerArchivoAronium(archivo) {
   filasAronium = ligarClientesAronium(reporteAroniumActual.clientes);
   filtroAronium = filasAronium.some(f => f.via === 'pendiente') ? 'pendientes' : 'todas';
   renderVistaPreviaAronium();
+  if (colaLigarAronium().length) abrirLigarUnoPorUnoAronium();
+}
+
+// ============================================================
+// LIGAR UNO POR UNO (modal)
+// ============================================================
+// En vez de buscar fila por fila en la tabla: un modal con un cliente de
+// Aronium a la vez — se elige a su e/l (de las que ya están en la
+// página/BRILLO) o se descarta si no está, y pasa solo al siguiente.
+// Solo entran los clientes sin ligar que SÍ tienen compras que cuentan
+// (Efectivo/Terminal/Transferencia), de mayor a menor monto; los que no
+// tienen nada que cuente no cambian nada y se quedan en la tabla.
+
+function colaLigarAronium() {
+  return filasAronium
+    .filter(f => !f.personaId && !f.ignorar && f.via !== 'interno' && f.cliente.cuenta > 0)
+    .sort((a, b) => b.cliente.cuenta - a.cliente.cuenta);
+}
+
+// Sugerencias por parecido de nombre: cuántas palabras del nombre de
+// Aronium (sin acentos, de 3+ letras) tiene el nombre de cada e/l. Pide
+// al menos 2 en común (un solo apellido igual no basta), salvo que el
+// nombre de Aronium sea de una sola palabra.
+function sugerenciasPersonaAronium(cliente, personas, maximo = 3) {
+  const palabras = new Set(cliente.nombreNormalizado.split(' ').filter(p => p.length >= 3));
+  if (!palabras.size) return [];
+  const minimo = Math.min(2, palabras.size);
+  return personas
+    .map(p => {
+      const suyas = normalizarNombreAronium(nombreCompletoPersona(p)).split(' ').filter(x => x.length >= 3);
+      const comunes = new Set(suyas.filter(x => palabras.has(x))).size;
+      return { p, comunes, parecido: comunes / Math.max(palabras.size, suyas.length, 1) };
+    })
+    .filter(x => x.comunes >= minimo)
+    .sort((a, b) => b.comunes - a.comunes || b.parecido - a.parecido)
+    .slice(0, maximo)
+    .map(x => x.p);
+}
+
+function abrirLigarUnoPorUnoAronium() {
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+
+  const cola = colaLigarAronium();
+  const totalInicial = cola.length;
+  const personas = personasLigablesAronium().sort((a, b) => nombreCompletoPersona(a).localeCompare(nombreCompletoPersona(b), 'es'));
+  const hechos = [];
+
+  const terminar = () => {
+    overlay.classList.remove('open');
+    renderVistaPreviaAronium();
+    const ligados = hechos.filter(h => h === 'ligado').length;
+    const descartados = hechos.length - ligados;
+    if (hechos.length) mostrarToast(`Listo: ${ligados} ligado${ligados === 1 ? '' : 's'}, ${descartados} descartado${descartados === 1 ? '' : 's'}. Revisa y guarda la quincena.`);
+  };
+
+  const mostrar = () => {
+    const fila = cola[hechos.length];
+    if (!fila) { terminar(); return; }
+    const c = fila.cliente;
+    const sugeridas = sugerenciasPersonaAronium(c, personas);
+    box.style.maxWidth = '520px';
+    box.innerHTML = `
+      <button class="modal-close" data-close aria-label="Terminar después">&times;</button>
+      <p class="aronium-uno-progreso">Cliente ${hechos.length + 1} de ${totalInicial}</p>
+      <div class="aronium-uno-barra"><span style="width:${Math.round(hechos.length / totalInicial * 100)}%"></span></div>
+      <h3 class="aronium-uno-nombre">${escapeHTML(c.nombre)}</h3>
+      <p class="aronium-meta" style="margin-top:0;">Cliente ${escapeHTML(c.aroniumId)} en Aronium${c.codigoAronium ? ' · código ' + escapeHTML(c.codigoAronium) : ''} · cuenta como compra <strong>${fmtMoneyAronium(c.cuenta)}</strong>${c.totalReporte !== c.cuenta ? ` (total ${fmtMoneyAronium(c.totalReporte)})` : ''}</p>
+
+      <label for="aroniumUnoInput">¿Quién es en la página/BRILLO?</label>
+      <input id="aroniumUnoInput" class="aronium-persona-input" list="aroniumPersonasListaModal" placeholder="Escribe su nombre o usuario…" autocomplete="off">
+      <datalist id="aroniumPersonasListaModal">
+        ${personas.map(p => `<option value="${escapeAttribute(etiquetaPersonaAronium(p))}"></option>`).join('')}
+      </datalist>
+      ${sugeridas.length ? `
+        <div class="aronium-uno-sugerencias">
+          <span class="aronium-meta">¿Es alguna de estas?</span>
+          ${sugeridas.map(p => `<button type="button" class="filtro-chip" data-sugerida-aronium="${escapeAttribute(p.id)}">${escapeHTML(etiquetaPersonaAronium(p))}</button>`).join('')}
+        </div>` : ''}
+      <div id="aroniumUnoError" class="auth-error" style="display:none;"></div>
+
+      <button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;" id="aroniumUnoLigarBtn">Ligar y seguir</button>
+      <button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" id="aroniumUnoDescartarBtn">No está en la página/BRILLO — descartar</button>
+      <div class="aronium-uno-pie">
+        <button type="button" class="link-btn" id="aroniumUnoNoEsBtn" title="Público en general: ya no se vuelve a preguntar por este cliente">No es e/l, no volver a preguntar</button>
+        <button type="button" class="link-btn" data-close>Terminar después</button>
+      </div>
+    `;
+    overlay.classList.add('open');
+
+    const input = document.getElementById('aroniumUnoInput');
+    const error = document.getElementById('aroniumUnoError');
+    input.focus();
+
+    const ligar = (persona) => {
+      fila.personaId = persona.id; fila.via = 'manual'; fila.ignorar = false;
+      hechos.push('ligado');
+      renderVistaPreviaAronium();
+      mostrar();
+    };
+    const descartar = (via) => {
+      fila.personaId = null; fila.ignorar = true; fila.via = via;
+      hechos.push(via);
+      renderVistaPreviaAronium();
+      mostrar();
+    };
+
+    document.getElementById('aroniumUnoLigarBtn').addEventListener('click', () => {
+      const valor = input.value.trim();
+      const persona = personas.find(p => etiquetaPersonaAronium(p) === valor);
+      if (!persona) {
+        error.textContent = valor ? 'Elige a la persona de la lista que aparece al escribir.' : 'Escribe y elige a la persona, o descarta este cliente.';
+        error.style.display = 'block';
+        return;
+      }
+      ligar(persona);
+    });
+    box.querySelectorAll('[data-sugerida-aronium]').forEach(b => b.addEventListener('click', () => {
+      const persona = personas.find(p => p.id === b.getAttribute('data-sugerida-aronium'));
+      if (persona) ligar(persona);
+    }));
+    document.getElementById('aroniumUnoDescartarBtn').addEventListener('click', () => descartar('descartado'));
+    document.getElementById('aroniumUnoNoEsBtn').addEventListener('click', () => descartar('ignorado'));
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('aroniumUnoLigarBtn').click(); });
+    box.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', terminar));
+  };
+
+  mostrar();
 }
 
 function contarFilasAronium() {
@@ -187,7 +316,8 @@ function renderVistaPreviaAronium() {
         : filtroAronium === 'ligadas' ? !!f.personaId
           : (!f.personaId && f.ignorar));
 
-  const viaTexto = { numero: 'Por número de Aronium', codigo: 'Por código de Aronium', nombre: 'Por nombre', manual: 'Elegida a mano', interno: 'Cliente interno', ignorado: 'No es e/l', pendiente: 'Sin ligar' };
+  const viaTexto = { numero: 'Por número de Aronium', codigo: 'Por código de Aronium', nombre: 'Por nombre', manual: 'Elegida a mano', interno: 'Cliente interno', ignorado: 'No es e/l', descartado: 'Descartado: no está en la página/BRILLO', pendiente: 'Sin ligar' };
+  const porLigarUno = colaLigarAronium().length;
 
   vista.innerHTML = `
     <h3 class="cfg-card-title">Revisa el archivo: ${escapeHTML(reporteAroniumActual.archivo || '')}</h3>
@@ -197,15 +327,17 @@ function renderVistaPreviaAronium() {
       <div><span>Clientes en el reporte</span><strong>${reporteAroniumActual.clientes.length}</strong></div>
       <div><span>Ligados a una e/l</span><strong>${ligadas.length}</strong></div>
       <div><span>Sin ligar</span><strong class="${pendientes.length ? 'aronium-alerta' : ''}">${pendientes.length}</strong></div>
-      <div><span>No son e/l</span><strong>${ignoradas.length}</strong></div>
+      <div><span>Descartados / no son e/l</span><strong>${ignoradas.length}</strong></div>
       <div><span>Cuenta como compra (ligados)</span><strong>${fmtMoneyAronium(totalCuentaLigado)}</strong></div>
       <div><span>Total del reporte</span><strong>${fmtMoneyAronium(reporteAroniumActual.totalReporte)}</strong></div>
     </div>
     <p class="cfg-card-sub" style="margin-top:6px;">De ${fmtMoneyAronium(reporteAroniumActual.totalReporte)} del reporte, ${fmtMoneyAronium(totalCuentaReporte)} son Efectivo + Terminal + Transferencia (lo que cuenta).</p>
     ${reporteAroniumActual.advertencias.length ? `<div class="modal-note">${reporteAroniumActual.advertencias.map(escapeHTML).join('<br>')}</div>` : ''}
 
+    ${porLigarUno ? `<button type="button" class="btn btn-primary aronium-uno-btn" id="aroniumUnoPorUnoBtn">Ligar uno por uno (${porLigarUno} con compras)</button>` : ''}
+
     <div class="filtro-chips aronium-filtros">
-      ${[['pendientes', `Sin ligar (${pendientes.length})`], ['ligadas', `Ligados (${ligadas.length})`], ['ignoradas', `No son e/l (${ignoradas.length})`], ['todas', `Todos (${filasAronium.length})`]]
+      ${[['pendientes', `Sin ligar (${pendientes.length})`], ['ligadas', `Ligados (${ligadas.length})`], ['ignoradas', `Descartados / no son e/l (${ignoradas.length})`], ['todas', `Todos (${filasAronium.length})`]]
         .map(([v, t]) => `<button type="button" class="filtro-chip ${filtroAronium === v ? 'active' : ''}" data-filtro-aronium="${v}">${t}</button>`).join('')}
     </div>
 
@@ -263,6 +395,7 @@ function renderVistaPreviaAronium() {
     </div>
   `;
 
+  document.getElementById('aroniumUnoPorUnoBtn')?.addEventListener('click', abrirLigarUnoPorUnoAronium);
   vista.querySelectorAll('[data-filtro-aronium]').forEach(b => b.addEventListener('click', () => { filtroAronium = b.getAttribute('data-filtro-aronium'); renderVistaPreviaAronium(); }));
 
   vista.querySelectorAll('.aronium-persona-input').forEach(input => {

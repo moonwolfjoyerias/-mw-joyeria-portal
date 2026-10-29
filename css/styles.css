@@ -5629,3 +5629,14 @@ img[src*="#mwfoto="] { background: var(--mw-lilac-soft); }
   margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;
   background: var(--mw-lilac-soft); color: var(--mw-heading-d);
 }
+
+/* Compras (Aronium) → "Ligar uno por uno" (ver abrirLigarUnoPorUnoAronium
+   en js/admin-compras.js). */
+.aronium-uno-btn { margin: 12px 0 0; }
+.aronium-uno-progreso { margin: 0 0 6px; font-size: 0.75rem; color: var(--mw-text-muted); }
+.aronium-uno-barra { height: 4px; border-radius: 4px; background: var(--mw-border); overflow: hidden; margin-bottom: 14px; }
+.aronium-uno-barra span { display: block; height: 100%; background: var(--mw-purple); transition: width 0.2s; }
+.aronium-uno-nombre { margin: 0 0 4px; overflow-wrap: anywhere; }
+.aronium-uno-sugerencias { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+.aronium-uno-sugerencias .filtro-chip { font-size: 0.75rem; }
+.aronium-uno-pie { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
