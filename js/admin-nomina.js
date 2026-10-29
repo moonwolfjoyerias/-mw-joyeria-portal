@@ -1668,10 +1668,11 @@ function abrirModalEmpleadoNomina(id) {
     lector.readAsDataURL(archivo);
   });
 
-  document.getElementById('nomEmpGuardarBtn')?.addEventListener('click', () => {
+  document.getElementById('nomEmpGuardarBtn')?.addEventListener('click', async () => {
 
+    const nombreAnterior = empleado ? empleado.nombre : '';
     const datos = {
-      nombre: document.getElementById('nomEmpNombre').value.trim(),
+      nombre: document.getElementById('nomEmpNombre').value.trim().replace(/\s+/g, ' '),
       numeroEmpleado: document.getElementById('nomEmpNumero').value.trim(),
       cargo: document.getElementById('nomEmpCargo').value,
       fechaInicio: document.getElementById('nomEmpFechaInicio').value,
@@ -1700,8 +1701,24 @@ function abrirModalEmpleadoNomina(id) {
     }
 
     cerrar();
-    mostrarToast(empleado ? 'Empleado actualizado.' : 'Empleado agregado.');
     renderDatosEmpleados();
+
+    // Nombre corregido: también en su cuenta y en todo lo ya registrado
+    // con el nombre anterior (ver js/renombrar-personal.js).
+    if (empleado && nombreAnterior && datos.nombre && datos.nombre !== nombreAnterior && typeof renombrarPersonalInterno === 'function') {
+      mostrarToast('Actualizando el nombre en todo el portal…');
+      const cuenta = typeof obtenerCuentaInternaPorEmpleadoNomina === 'function' ? obtenerCuentaInternaPorEmpleadoNomina(empleado.id) : null;
+      const renombrado = cuenta
+        ? await renombrarCuentaInterna(cuenta.id, datos.nombre)
+        : await renombrarPersonalInterno({ empleadoIds: [empleado.id], nombreAnterior, nombreNuevo: datos.nombre });
+      mostrarToast(!renombrado.ok
+        ? renombrado.error
+        : (renombrado.errores.length
+          ? `Empleado actualizado, pero no se pudo revisar: ${renombrado.errores.join(', ')}.`
+          : 'Empleado actualizado. El nombre nuevo ya aparece en todo el portal.'));
+      return;
+    }
+    mostrarToast(empleado ? 'Empleado actualizado.' : 'Empleado agregado.');
 
   });
 

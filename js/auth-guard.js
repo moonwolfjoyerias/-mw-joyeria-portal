@@ -186,6 +186,30 @@ function establecerTema(tema) {
   }
 }
 
+// Admin corrigió el nombre de esta cuenta (Configuración → Usuarios y
+// permisos, ver js/renombrar-personal.js) mientras la persona tiene el
+// portal abierto: se actualizan su sesión, la burbuja de perfil y el
+// nombre con el que quedan registradas sus siguientes acciones, sin
+// volver a iniciar sesión.
+function aplicarNombreSesionPropia(nombre) {
+  const sesion = obtenerSesionActiva();
+  if (!sesion || !nombre || sesion.nombre === nombre) return;
+  guardarSesionActiva({ ...sesion, nombre });
+  if (sesion.rol === 'admin' && typeof ADMIN_IDENTIDAD !== 'undefined') ADMIN_IDENTIDAD.usuarioNombre = nombre;
+  if (sesion.rol === 'encargado' && typeof ENCARGADO_IDENTIDAD !== 'undefined') ENCARGADO_IDENTIDAD.usuarioNombre = nombre;
+  aplicarIdentidadSesionEnHeader();
+}
+
+let _escuchandoNombrePropio = false;
+function escucharNombrePropioSesion(uid) {
+  if (_escuchandoNombrePropio || typeof dbFirestore === 'undefined' || !dbFirestore) return;
+  _escuchandoNombrePropio = true;
+  dbFirestore.collection('users').doc(uid).onSnapshot((doc) => {
+    const nombre = doc.exists ? doc.data().nombre : '';
+    if (nombre) aplicarNombreSesionPropia(nombre);
+  }, () => { _escuchandoNombrePropio = false; });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   wireCerrarSesionLinks();
   // En modo Firebase, aplicarIdentidadSesionEnHeader() se llama desde el
@@ -222,6 +246,7 @@ if (typeof authFirebase !== 'undefined' && authFirebase) {
         const sesion = await construirSesionDesdeUsuarioFirebase(user);
         if (sesion) {
           guardarSesionActiva(sesion);
+          if (sesion.tipo === 'interna') escucharNombrePropioSesion(user.uid);
         } else {
           cerrarSesion();
         }
