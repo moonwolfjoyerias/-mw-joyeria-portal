@@ -393,9 +393,7 @@ async function mostrarPasoConfirmarApartar(producto, variante) {
     total: precioConDescuento(producto), productoId: producto.id, varianteId: variante.id
   };
 
-  const ventanaExistente = obtenerVentanasApartado().find(v =>
-    v.usuarioId === usuarioIdActual && v.estado !== 'vencida' && v.estado !== 'cerrada'
-  );
+  const ventanaExistente = buscarVentanaParaApartar(obtenerVentanasApartado(), usuarioIdActual);
 
   if (ventanaExistente) {
     const resultado = await agregarPiezaAVentana(ventanaExistente, datosPieza, null);
@@ -412,6 +410,7 @@ async function mostrarPasoConfirmarApartar(producto, variante) {
     return;
   }
 
+  cerrarVentanasVencidasSinPiezas(obtenerVentanasApartado(), usuarioIdActual, null);
   const persona = typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(usuarioIdActual) : null;
   const nuevaVentana = abrirVentanaApartado({
     // La etiqueta de su cuenta (Normal/Foránea/VIP): antes siempre se
