@@ -652,8 +652,51 @@ service cloud.firestore {
       allow update, delete: if miRol() in ['encargado', 'admin'];
     }
 
+    // Ventas de BRILLO: el personal interno las lee; cada emprendedora o
+    // líder puede abrir SUS tickets uno por uno (Mis compras → buscar). Cobra
+    // Encargado o Administración. Cancelar una venta es solo de
+    // Administración; Encargado solo marca "Regresar al inventario" (el campo
+    // cambioFisico). Una venta nunca se borra.
+    match /brilloVentas/{id} {
+      allow read: if esInterno() || (estaAutenticado() && resource.data.cliente.personaId == miPerfil().personaId);
+      allow create: if miRol() in ['encargado', 'admin'];
+      allow update: if esAdmin()
+        || (miRol() == 'encargado' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cambioFisico']));
+      allow delete: if false;
+    }
+    // Historial de tickets por persona y mes ({personaId}__{AAAA-MM}): la
+    // e/l lee solo los suyos (también los meses sin compras: el id lo dice).
+    match /brilloTicketsPersona/{id} {
+      allow read: if esInterno() || (estaAutenticado() && id.split('__')[0] == miPerfil().personaId);
+      allow create, update: if miRol() in ['encargado', 'admin'];
+      allow delete: if false;
+    }
+    // Saldo a favor (cambio físico) de cada e/l y sus movimientos.
+    match /brilloSaldos/{personaId} {
+      allow read: if esInterno() || (estaAutenticado() && personaId == miPerfil().personaId);
+      allow write: if miRol() in ['encargado', 'admin'];
+    }
+    match /brilloSaldoMovimientos/{id} {
+      allow read: if esInterno() || (estaAutenticado() && resource.data.personaId == miPerfil().personaId);
+      allow create: if miRol() in ['encargado', 'admin'];
+      allow update, delete: if false;
+    }
+    // Cambios físicos abiertos y garantías: los registra quien cobra.
+    match /brilloCambiosFisicos/{id} {
+      allow read: if esInterno();
+      allow write: if miRol() in ['encargado', 'admin'];
+    }
+    match /brilloGarantias/{folio} {
+      allow read: if esInterno();
+      allow create, update: if miRol() in ['encargado', 'admin'];
+      allow delete: if esAdmin();
+    }
+
+    // El resto de las colecciones de BRILLO: personal interno.
     match /{coleccion}/{id} {
-      allow read, write: if coleccion.matches('brillo[A-Z].*') && esInterno();
+      allow read, write: if coleccion.matches('brillo[A-Z].*')
+        && !(coleccion in ['brilloVentas', 'brilloTicketsPersona', 'brilloSaldos', 'brilloSaldoMovimientos', 'brilloCambiosFisicos', 'brilloGarantias'])
+        && esInterno();
     }
 
     // Todo lo que no esté arriba sigue en localStorage — se deniega por

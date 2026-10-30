@@ -5640,3 +5640,24 @@ img[src*="#mwfoto="] { background: var(--mw-lilac-soft); }
 .aronium-uno-sugerencias { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
 .aronium-uno-sugerencias .filtro-chip { font-size: 0.75rem; }
 .aronium-uno-pie { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* Mis compras → buscar mis tickets (js/mis-tickets.js) */
+.mis-tickets { margin-bottom: 18px; }
+.mis-tickets-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 10px 0; }
+.mis-tickets-filtros label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--mw-text-muted); }
+.mis-tickets-filtros input { padding: 0.5em 0.7em; border: 1px solid var(--mw-border); border-radius: 8px; font: inherit; }
+.mis-tickets-filtros .mis-tickets-pieza { flex: 1 1 220px; }
+.mis-tickets-filtros .btn { width: auto; }
+.mis-tickets-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mis-ticket { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; background: var(--surface); color: var(--mw-text); border: 1px solid var(--mw-border); border-radius: 10px; padding: 10px 14px; font: inherit; }
+button.mis-ticket { cursor: pointer; }
+button.mis-ticket:hover { border-color: var(--mw-lilac); }
+.mis-ticket span { display: flex; flex-direction: column; min-width: 0; }
+.mis-ticket small { color: var(--mw-text-muted); overflow-wrap: anywhere; }
+.mis-ticket-piezas { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 8px; }
+.mis-ticket-piezas li { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.mis-ticket-piezas img, .mis-ticket-piezas .sin-foto { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: var(--mw-lilac-soft); display: block; }
+.mis-ticket-piezas span { display: flex; flex-direction: column; min-width: 0; }
+.mis-ticket-piezas small { color: var(--mw-text-muted); }
+.mis-ticket-total { display: flex; justify-content: space-between; border-top: 1px solid var(--mw-border); padding-top: 8px; font-size: 1.05rem; }
+.mis-ticket-pagos { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.85rem; color: var(--mw-text-muted); margin: 6px 0; }
