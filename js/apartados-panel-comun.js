@@ -122,7 +122,11 @@ function obtenerVentanasFiltradas() {
       if (v.estado === "cerrada" && v.resolucionDeposito !== "credito") return false;
     }
 
-    const coincideEstado = filtroEstado === "todos" || filtroEstado === "ocultas" || v.estado === filtroEstado;
+    // "Vencida" = activas que ya pasaron su fecha y siguen pendientes de
+    // gestionar (vencer es solo un aviso: la ventana sigue activa hasta
+    // que Staff la liquida o la desaparta).
+    const coincideEstado = filtroEstado === "todos" || filtroEstado === "ocultas" ||
+      (filtroEstado === "vencida" ? v.estado === "activa" && ventanaEstaVencida(v) : v.estado === filtroEstado);
 
     const texto = [v.usuarioNombre, ...v.apartados.map(p => p.producto)].join(" ").toLowerCase();
     const coincideBusqueda = !terminoBusqueda || texto.includes(terminoBusqueda);
