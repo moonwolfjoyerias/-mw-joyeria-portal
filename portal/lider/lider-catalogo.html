@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Catálogo — Portal MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=58">
+  <link rel="stylesheet" href="../../css/styles.css?v=59">
   <link rel="icon" type="image/png" href="../../assets/images/favicon.png">
   <!-- Fase 2: SDK compat de Firebase — solo se activa si js/firebase-config.js tiene MODO_DEMO=false y credenciales reales; si no, no hace nada. -->
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
@@ -131,7 +131,11 @@
         </aside>
 
         <div class="catalog-grid-wrap">
-          <div class="catalog-toolbar">
+          <div class="catalog-toolbar catalog-toolbar-busqueda">
+            <div class="catalog-search">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input type="search" id="catalogoBuscar" placeholder="Buscar pieza…" aria-label="Buscar pieza">
+            </div>
             <span class="result-count" id="resultCount"></span>
           </div>
           <div class="catalog-product-grid" id="catalogGrid"></div>
@@ -172,6 +176,6 @@
   <script src="../../js/catalogo-variantes-modelo.js?v=11"></script>
   <script src="../../js/apartados-ejemplo.js?v=2"></script>
   <script src="../../js/catalogo-modelo.js?v=2"></script>
-  <script src="../../js/catalogo.js?v=14"></script>
+  <script src="../../js/catalogo.js?v=15"></script>
 </body>
 </html>

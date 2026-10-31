@@ -36,6 +36,7 @@ const filtro = {
   categorias: new Set(),
   coloresOro: new Set(),
   talla: '',
+  texto: '',
 };
 
 let usuarioIdActual = '';
@@ -56,6 +57,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const clearBtn = document.getElementById('clearFiltersBtn');
   if (clearBtn) clearBtn.addEventListener('click', limpiarFiltros);
+
+  document.getElementById('catalogoBuscar')?.addEventListener('input', (e) => {
+    filtro.texto = e.target.value;
+    aplicarFiltros();
+  });
 
   iniciarLinkCatalogoClientas();
 
@@ -234,6 +240,9 @@ function limpiarFiltros() {
   filtro.categorias.clear();
   filtro.coloresOro.clear();
   filtro.talla = '';
+  filtro.texto = '';
+  const buscar = document.getElementById('catalogoBuscar');
+  if (buscar) buscar.value = '';
   document.querySelectorAll('.filter-panel input[type="checkbox"]').forEach(cb => cb.checked = false);
   const tallaSelect = document.getElementById('filterTalla');
   if (tallaSelect) tallaSelect.value = '';
@@ -242,8 +251,27 @@ function limpiarFiltros() {
   aplicarFiltros();
 }
 
+// Buscador: cada palabra escrita debe aparecer (sin importar acentos ni
+// mayúsculas) en el nombre, descripción, categoría, color de oro,
+// material o color/talla de alguna variante.
+function _normalizarBusquedaCatalogo(texto) {
+  return String(texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function productoCoincideBusqueda(p) {
+  const palabras = _normalizarBusquedaCatalogo(filtro.texto).trim().split(/\s+/).filter(Boolean);
+  if (!palabras.length) return true;
+  const material = MATERIALES.find(m => m.key === p.material)?.label || p.material || '';
+  const donde = _normalizarBusquedaCatalogo([
+    p.nombre, p.descripcion, p.categoria, p.colorOro, material,
+    ...(p.variantes || []).map(v => [v.color, v.talla].filter(Boolean).join(' '))
+  ].join(' '));
+  return palabras.every(palabra => donde.includes(palabra));
+}
+
 function aplicarFiltros() {
   const resultado = obtenerCatalogoReal().filter((p) => {
+    if (!productoCoincideBusqueda(p)) return false;
     if (filtro.materiales.size > 0 && !filtro.materiales.has(p.material)) return false;
     if (filtro.categorias.size > 0 && !filtro.categorias.has(p.categoria)) return false;
     if (filtro.coloresOro.size > 0 && !filtro.coloresOro.has(p.colorOro)) return false;
@@ -262,7 +290,7 @@ function renderProductos(productos) {
   if (count) count.textContent = `${productos.length} pieza${productos.length === 1 ? '' : 's'}`;
 
   if (productos.length === 0) {
-    grid.innerHTML = '<div class="catalog-empty">No hay piezas que coincidan con estos filtros.</div>';
+    grid.innerHTML = '<div class="catalog-empty">No hay piezas que coincidan con tu búsqueda o filtros.</div>';
     return;
   }
 

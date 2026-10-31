@@ -5536,7 +5536,7 @@ img[src*="#mwfoto="] { background: var(--mw-lilac-soft); }
 .catalogo-link-acciones .btn-whatsapp svg { width: 15px; height: 15px; }
 .catalogo-vivo-card { cursor: pointer; }
 .catalogo-vivo-card:focus-visible { outline: 2px solid var(--mw-purple); outline-offset: 2px; }
-.catalogo-vivo-toolbar { gap: 12px; flex-wrap: wrap; }
+.catalogo-vivo-toolbar, .catalog-toolbar-busqueda { gap: 12px; flex-wrap: wrap; }
 .catalogo-vivo-hero .btn-whatsapp { margin-top: 0.6rem; }
 .detalle-miniaturas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .detalle-miniaturas button {
@@ -5546,7 +5546,7 @@ img[src*="#mwfoto="] { background: var(--mw-lilac-soft); }
 .detalle-miniaturas button.activa { border-color: var(--mw-purple); }
 .detalle-miniaturas img { width: 100%; height: 100%; object-fit: cover; display: block; }
 @media (max-width: 720px) {
-  .catalogo-vivo-toolbar .catalog-search { width: 100%; }
+  .catalogo-vivo-toolbar .catalog-search, .catalog-toolbar-busqueda .catalog-search { width: 100%; }
 }
 
 /* ===================================================
