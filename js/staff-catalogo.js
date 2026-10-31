@@ -60,6 +60,8 @@ function guardarCatalogo() {
 
 function inicializarEventos() {
 
+  window.MWEscaner?.conectarBuscador('searchInput');
+
   const addBtn = document.getElementById('agregarProductoBtn');
 
   if (addBtn) {
@@ -187,6 +189,7 @@ function renderCatalogo() {
       !p.nombre.toLowerCase().includes(search) &&
       !p.descripcion.toLowerCase().includes(search) &&
       !(p.id || '').toLowerCase().includes(search) &&
+      !(p.codigo || '').toLowerCase().includes(search) &&
       !(p.categoria || '').toLowerCase().includes(search)
     ) {
       return false;
@@ -660,6 +663,8 @@ function abrirModalProducto(producto = null) {
 
 
   overlay.classList.add('open');
+  // Cámara para escanear el QR de la etiqueta (js/escaner-qr.js).
+  window.MWEscaner?.conectarCodigoProducto({ catalogo: () => catalogoStaff, idEditando: producto?.id });
 
   renderGaleriaTemporal();
   renderVariantesTemporal();
