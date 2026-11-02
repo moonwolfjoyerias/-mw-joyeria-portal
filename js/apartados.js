@@ -208,7 +208,60 @@ function formatearPesos(monto) {
 }
 
 // ---------- Render de la lista ----------
+// "Canceladas recientemente": piezas que la TIENDA le canceló en los
+// últimos 30 días, con el motivo y qué pasó con su depósito, para que
+// no solo dependa de la notificación. Las que ella misma quitó no salen.
+const DIAS_CANCELADAS_RECIENTES = 30;
+
+function piezasCanceladasRecientes() {
+  if (!usuarioIdActual || typeof motivoCancelacionPieza !== 'function') return [];
+  const limite = Date.now() - DIAS_CANCELADAS_RECIENTES * 86400000;
+  return obtenerVentanasApartado()
+    .filter(v => v.usuarioId === usuarioIdActual)
+    .flatMap(ventana => ventana.apartados.map(pieza => ({ pieza, ventana, causa: motivoCancelacionPieza(pieza, ventana) })))
+    .filter(({ pieza, causa }) => causa && !(pieza.cancelacion && pieza.cancelacion.propia) && causa.fecha && new Date(causa.fecha).getTime() >= limite)
+    .sort((a, b) => b.causa.fecha.localeCompare(a.causa.fecha));
+}
+
+function textoDepositoCancelado(ventana) {
+  if (ventana.estado === 'activa' || ventana.estado === 'pendiente_deposito') return 'Tu apartado sigue abierto con tus otras piezas.';
+  if (ventana.resolucionDeposito === 'credito') {
+    const monto = Number(ventana.creditoAlQuitarPieza ?? (typeof creditoDeCierreEnAuditoria === 'function' ? creditoDeCierreEnAuditoria(ventana) : 0)) || 0;
+    return monto > 0
+      ? `Tu depósito de ${formatearPesos(monto)} quedó como crédito para tu próximo apartado.`
+      : 'Tu depósito quedó como crédito para tu próximo apartado.';
+  }
+  if (ventana.resolucionDeposito === 'perdido') return 'El depósito no se pudo conservar porque el apartado venció.';
+  return '';
+}
+
+function renderCanceladasRecientes() {
+  const cont = document.getElementById('apartadosCanceladas');
+  if (!cont) return;
+  const lista = piezasCanceladasRecientes();
+  cont.hidden = !lista.length;
+  if (!lista.length) { cont.innerHTML = ''; return; }
+  cont.innerHTML = `
+    <h3>Canceladas recientemente</h3>
+    <p class="apartados-canceladas-ayuda">Piezas que se cancelaron de tus apartados en los últimos ${DIAS_CANCELADAS_RECIENTES} días y por qué.</p>
+    ${lista.map(({ pieza, ventana, causa }) => {
+      const foto = fotoPiezaApartado(pieza);
+      const fecha = new Date(causa.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+      const deposito = textoDepositoCancelado(ventana);
+      return `<article class="cancelada-item">
+        <img src="${escapeAttribute(foto)}" alt="" class="${esFotoGenericaApartado(foto) ? 'generica' : ''}">
+        <div>
+          <strong>${escapeHTML(pieza.producto)}</strong>
+          <small>${escapeHTML([pieza.colorOro, pieza.variante].filter(Boolean).join(' · '))} · cancelada el ${fecha}</small>
+          <p class="cancelada-motivo"><span>Motivo:</span> ${escapeHTML(String(causa.motivo).replace(/[.\s]+$/, ''))}.</p>
+          ${deposito ? `<p class="cancelada-deposito">${escapeHTML(deposito)}</p>` : ''}
+        </div>
+      </article>`;
+    }).join('')}`;
+}
+
 function renderApartados() {
+  renderCanceladasRecientes();
   const banner = document.getElementById('envioGratisBanner');
   if (banner) banner.hidden = !esForaneaActual();
 
@@ -327,6 +380,8 @@ function quitarPieza(id) {
     const p = v.apartados.find(x => x.id === id);
     if (p) {
       p.estado = 'cancelada';
+      // La quitó ella: no sale en "Canceladas recientemente" (ver abajo).
+      p.cancelacion = { motivo: 'La quitaste tú', fecha: new Date().toISOString(), propia: true };
       if (typeof restaurarStockVariante === 'function') restaurarStockVariante(p.productoId, p.varianteId);
     }
     // LOG-11 de la auditoría: la clienta decide qué piezas quedan y

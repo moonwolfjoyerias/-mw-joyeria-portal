@@ -47,6 +47,7 @@ function guardarCatalogo() {
 function inicializarEventos() {
 
   window.MWEscaner?.conectarBuscador('searchInput');
+  window.MWDondePieza?.instalar();
 
   document.getElementById('agregarProductoBtn')?.addEventListener('click', () => abrirModalProducto());
   document.getElementById('searchInput')?.addEventListener('input', renderCatalogo);

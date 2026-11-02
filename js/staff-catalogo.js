@@ -61,6 +61,7 @@ function guardarCatalogo() {
 function inicializarEventos() {
 
   window.MWEscaner?.conectarBuscador('searchInput');
+  window.MWDondePieza?.instalar();
 
   const addBtn = document.getElementById('agregarProductoBtn');
 
