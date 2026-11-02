@@ -86,7 +86,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (wa) { waBtn.href = wa; waBtn.style.display = ''; }
 
   if (typeof catalogoRepoListo !== 'undefined') await catalogoRepoListo;
-  CATALOGO_VIVO = typeof obtenerCatalogoStaffStorage === 'function' ? obtenerCatalogoStaffStorage() : [];
+  CATALOGO_VIVO = (typeof obtenerCatalogoStaffStorage === 'function' ? obtenerCatalogoStaffStorage() : [])
+    .filter(p => p.mostrarEnCatalogo !== false); // solo lo que se muestra en catálogo
   document.getElementById('catalogoVivoContenido').style.display = '';
 
   renderFiltroMaterialesVivo();

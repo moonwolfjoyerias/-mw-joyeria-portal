@@ -5765,3 +5765,9 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 .lider-campo input, .lider-campo select { display: block; width: 100%; margin-top: 4px; height: 40px; padding: 0 10px; border: 1px solid var(--mw-border-d); border-radius: var(--radius-sm); background: var(--surface); color: inherit; font: inherit; }
 .lider-acciones { display: flex; gap: 10px; margin-top: 14px; }
 .lider-acciones .btn { flex: 1; }
+
+/* ---------- Productos solo de tienda (no se muestran en el catálogo de e/l) ---------- */
+.check-catalogo { display: flex !important; align-items: center; gap: 8px; font-family: inherit !important; font-size: 0.9rem !important; color: inherit !important; }
+.check-catalogo input { width: 18px; height: 18px; accent-color: var(--mw-purple); }
+.chip-solo-tienda { display: inline-block; margin-top: 4px; font-size: 0.7rem; padding: 1px 8px; border-radius: 999px; background: var(--mw-gold-soft, #f3e9c7); color: #7a5a00; }
+:root[data-theme="dark"] .chip-solo-tienda { color: #f0c860; }
