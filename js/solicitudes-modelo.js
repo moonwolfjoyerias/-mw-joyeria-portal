@@ -481,7 +481,10 @@ async function generarCredenciales(nombreCompleto) {
 // APROBAR / RECHAZAR (Administración)
 // ============================================================
 
-async function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
+// liderId (opcional): la líder que se eligió al aprobar ("¿Debajo de quién
+// queda?"). undefined = como antes (el solicitante, o sin líder si se
+// registró ella misma).
+async function aprobarSolicitud(solicitudId, { adminId, adminNombre, liderId }) {
 
   const solicitud = await obtenerSolicitudPorId(solicitudId);
 
@@ -522,8 +525,8 @@ async function aprobarSolicitud(solicitudId, { adminId, adminNombre }) {
     password: credenciales.passwordTemporal,
     numeroCuenta: credenciales.numeroCuenta,
     fechaAlta: new Date().toISOString(),
-    liderId: solicitud.solicitanteId,   // el solicitante queda como su líder directa
-    invitadaPor: solicitud.solicitanteId
+    liderId: liderId !== undefined ? liderId : solicitud.solicitanteId,   // el solicitante queda como su líder directa
+    invitadaPor: solicitud.solicitanteId || liderId || null
   });
 
   // Sin esto, la cuenta solo quedaba en el localStorage de este
