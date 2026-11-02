@@ -866,6 +866,8 @@ function quitarPiezaDeApartado(ventana, piezaId, motivo, empleado) {
       const monto = ventana.depositoApartadoDisponible;
       establecerCredito(ventana.usuarioId, monto);
       cerrarVentana(ventana, 'credito');
+      // Para "Descancelar": si la pieza vuelve, este crédito regresa a la ventana.
+      ventana.creditoAlQuitarPieza = monto;
       ventana.depositoPiso = 0;
       ventana.depositoExcedente = 0;
       ventana.depositoApartadoDisponible = 0;
@@ -877,6 +879,103 @@ function quitarPiezaDeApartado(ventana, piezaId, motivo, empleado) {
 
   return { pieza, ventanaCerrada };
 
+}
+
+// DESCANCELAR: vuelve a poner en el apartado una pieza que se había
+// quitado (quitarPiezaDeApartado), por ejemplo porque ya no había
+// existencia y volvió a llegar. Como cualquier apartado, descuenta una
+// pieza de la existencia del catálogo (primero se registra en el
+// catálogo la pieza que llegó; si no hay existencia, no se puede). Si al
+// quitarla la ventana se había cerrado y su depósito pasó a crédito, la
+// ventana se reabre y ese crédito vuelve a ser su depósito (lo que siga
+// disponible: si la persona ya usó parte, se avisa). Lo que ya se había
+// abonado a la pieza y regresó al depósito vuelve a la pieza.
+async function descancelarPiezaQuitada(ventana, piezaId, empleado) {
+
+  const pieza = ventana.apartados.find(p => p.id === piezaId);
+  if (!pieza || pieza.estado !== 'cancelada' || !pieza.retiro) {
+    return { ok: false, error: 'Esa pieza no se quitó del apartado (solo se pueden descancelar piezas quitadas).' };
+  }
+  if (ventana.estado === 'vencida') {
+    return { ok: false, error: 'Ese apartado se desapartó por vencimiento; abre uno nuevo.' };
+  }
+
+  if (typeof descontarStockVariante === 'function') {
+    const resultado = await descontarStockVariante(pieza.productoId, pieza.varianteId);
+    if (!resultado.ok) {
+      return { ok: false, error: `${resultado.error} Primero suma en el catálogo la pieza que llegó.` };
+    }
+  }
+
+  const fecha = new Date().toISOString();
+  const reabierta = ventana.estado === 'cerrada';
+  let creditoRegresado = 0;
+  let creditoFaltante = 0;
+
+  if (reabierta) {
+    const credito = Number(ventana.creditoAlQuitarPieza ?? creditoDeCierreEnAuditoria(ventana)) || 0;
+    if (credito > 0) {
+      const disponible = obtenerCreditoDisponible(ventana.usuarioId);
+      creditoRegresado = Math.min(credito, disponible);
+      creditoFaltante = credito - creditoRegresado;
+      if (creditoRegresado > 0) {
+        establecerCredito(ventana.usuarioId, disponible - creditoRegresado);
+        fijarDepositoVentana(ventana, creditoRegresado);
+      }
+    }
+    ventana.estado = 'activa';
+    ventana.resolucionDeposito = null;
+    delete ventana.creditoAlQuitarPieza;
+  }
+
+  // Lo abonado a la pieza que al quitarla regresó al excedente del depósito.
+  const abonado = sumarPagos(pieza.pagos);
+  if (abonado > 0) {
+    const devolver = Math.min(abonado, Number(ventana.depositoExcedente || 0));
+    ventana.depositoExcedente = Number(ventana.depositoExcedente || 0) - devolver;
+    ventana.depositoApartadoDisponible = Number(ventana.depositoPiso || 0) + ventana.depositoExcedente;
+    if (devolver < abonado) pieza.pagos.push({ monto: -(abonado - devolver), tipo: 'ajuste_descancelar', fecha });
+    pieza.saldo = Math.max(0, Number(pieza.total || 0) - sumarPagos(pieza.pagos));
+  }
+
+  pieza.retirosAnteriores = [...(Array.isArray(pieza.retirosAnteriores) ? pieza.retirosAnteriores : []), { ...pieza.retiro, descancelada: fecha }];
+  delete pieza.retiro;
+  pieza.estado = 'activa';
+  pieza.descancelada = { fecha, usuario: empleado?.nombre || 'Sistema' };
+
+  ventana.auditoria.push(registrarAuditoriaVentana(`Pieza descancelada (volvió al apartado): ${pieza.producto}`, empleado));
+  if (reabierta) {
+    ventana.auditoria.push(registrarAuditoriaVentana(
+      creditoRegresado > 0
+        ? `Apartado reabierto — $${creditoRegresado} de crédito regresaron como depósito${creditoFaltante > 0 ? ` (faltan $${creditoFaltante} que ya usó)` : ''}`
+        : 'Apartado reabierto',
+      empleado
+    ));
+  }
+
+  return { ok: true, pieza, reabierta, creditoRegresado, creditoFaltante };
+
+}
+
+// Ventanas cerradas antes de guardar creditoAlQuitarPieza: el monto está
+// en el último "Depósito de $X guardado como crédito" de su historial.
+function creditoDeCierreEnAuditoria(ventana) {
+  const entrada = (ventana.auditoria || []).slice().reverse().find(a => /^Depósito de \$\d+(\.\d+)? guardado como crédito$/.test(a.texto || ''));
+  return entrada ? Number(entrada.texto.match(/\$(\d+(\.\d+)?)/)[1]) : 0;
+}
+
+// Por qué se canceló una pieza, en palabras para la Emprendedora/Líder
+// (sección "Canceladas recientemente" de Mis apartados). null = no se
+// canceló, o la quitó ella misma.
+function motivoCancelacionPieza(pieza, ventana) {
+  if (!pieza || pieza.estado !== 'cancelada') return null;
+  if (pieza.retiro) return { motivo: pieza.retiro.motivo, fecha: pieza.retiro.fecha };
+  if (pieza.cancelacion) return pieza.cancelacion;
+  const fecha = ((ventana.auditoria || []).slice(-1)[0] || {}).fecha || null;
+  if (ventana.estado === 'vencida') return { motivo: 'El apartado venció sin liquidarse', fecha };
+  if (ventana.resolucionDeposito === 'sin_deposito') return { motivo: 'No se recibió el depósito del apartado', fecha };
+  if (ventana.estado === 'cerrada') return { motivo: 'La tienda canceló el apartado', fecha };
+  return null;
 }
 
 // "No depositó": la ventana nunca recibió su depósito, así que se cancela

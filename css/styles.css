@@ -5699,3 +5699,59 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 .escaner-qr-mira { position: absolute; inset: 18% 24%; border: 3px solid rgba(255, 255, 255, 0.92); border-radius: 14px; box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.35); }
 .escaner-qr-mensaje { text-align: center; color: var(--mw-text-muted); font-size: 0.88rem; margin: 10px 0 0; }
 .escaner-qr-mensaje.error { color: var(--mw-error-texto, #b3261e); }
+
+/* ---------- ¿Dónde está la pieza? (js/donde-pieza.js) ---------- */
+.donde-boton { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 10px; }
+.donde-fondo { position: fixed; inset: 0; z-index: 150; background: rgba(20, 14, 26, 0.55); display: flex; align-items: flex-start; justify-content: center; padding: 6vh 16px 16px; overflow-y: auto; }
+.donde-caja { background: var(--surface); border-radius: var(--radius); padding: 20px; width: min(640px, 100%); box-shadow: var(--shadow-hover); }
+.donde-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.donde-cabeza h3 { margin: 0; font-size: 1.2rem; }
+.donde-busqueda { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+.donde-busqueda input { flex: 1 1 auto; min-width: 0; height: 42px; padding: 0 12px; border: 1px solid var(--mw-border-d); border-radius: var(--radius-sm); background: var(--surface); color: inherit; font: inherit; }
+.donde-busqueda .boton-camara-qr { height: 42px; width: 42px; }
+.donde-vacio { color: var(--mw-text-muted); text-align: center; padding: 12px 0; margin: 0; }
+.donde-vacio.error { color: var(--mw-error-texto, #b3261e); }
+.donde-producto { border: 1px solid var(--mw-border-d); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; }
+.donde-producto header { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin-bottom: 10px; }
+.donde-producto header strong { font-size: 1.05rem; color: var(--mw-accent-text-strong); }
+.donde-producto header small { color: var(--mw-text-muted); font-family: monospace; }
+.donde-numeros { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.donde-numeros > div { background: var(--mw-lilac-soft, #f1ebfa); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; }
+.donde-numeros span { font-size: 0.78rem; color: var(--mw-text-muted); }
+.donde-numeros strong { font-size: 1.5rem; color: var(--mw-accent-text-strong); line-height: 1.2; }
+.donde-numeros small { font-size: 0.75rem; color: var(--mw-text-muted); }
+.donde-variantes { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.donde-variantes li { display: inline-flex; gap: 6px; border: 1px solid var(--mw-border-d); border-radius: 999px; padding: 2px 10px; font-size: 0.8rem; }
+.donde-producto h4 { font-size: 0.85rem; margin: 12px 0 6px; color: var(--mw-accent-text); }
+.donde-nota { font-size: 0.78rem; color: var(--mw-text-muted); margin: -2px 0 6px; }
+.donde-lista { list-style: none; margin: 0; padding: 0; }
+.donde-lista li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 12px; padding: 8px 0; border-top: 1px solid var(--mw-border-d); }
+.donde-lista li > div:first-child { display: flex; flex-direction: column; min-width: 0; }
+.donde-lista small { color: var(--mw-text-muted); font-size: 0.8rem; }
+.donde-acciones { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.donde-acciones a { color: var(--mw-accent-text); font-weight: 600; font-size: 0.82rem; text-decoration: none; white-space: nowrap; }
+.donde-estado { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: #e7f5ec; color: #23704a; }
+.donde-estado.pendiente { background: #fff4d6; color: #8a6100; }
+.donde-estado.vencida { background: #fde8e6; color: #b3261e; }
+:root[data-theme="dark"] .donde-estado { background: #1f3a2b; color: #8fd7ad; }
+:root[data-theme="dark"] .donde-estado.pendiente { background: #3a3016; color: #f0c860; }
+:root[data-theme="dark"] .donde-estado.vencida { background: #46201d; color: #ff8f85; }
+@media (max-width: 560px) { .donde-busqueda .btn { padding-inline: 12px; } }
+
+/* ---------- Mis apartados: canceladas recientemente ---------- */
+.apartados-canceladas { margin: -3rem 0 7.5rem; }
+.apartados-canceladas h3 { font-size: 1.1rem; margin: 0 0 4px; }
+.apartados-canceladas-ayuda { color: var(--mw-text-muted); font-size: 0.85rem; margin: 0 0 12px; }
+.cancelada-item { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--mw-border-d); border-left: 4px solid #d9776d; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; }
+.cancelada-item img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; flex: none; }
+.cancelada-item img.generica { opacity: 0.35; }
+.cancelada-item > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cancelada-item small { color: var(--mw-text-muted); }
+.cancelada-motivo { margin: 6px 0 0; }
+.cancelada-motivo span { font-weight: 600; color: var(--mw-error-texto, #b3261e); }
+.cancelada-deposito { margin: 2px 0 0; font-size: 0.85rem; color: var(--mw-text-muted); }
+
+/* ---------- Apartados: descancelar pieza ---------- */
+.action-btn.descancelar-btn { color: #23704a; border-color: #9fd2b4; width: auto; display: inline-flex; padding-inline: 12px; }
+:root[data-theme="dark"] .action-btn.descancelar-btn { color: #8fd7ad; border-color: #2f6b49; }
+#apartadosEmpty[style*="block"] + .apartados-canceladas { margin-top: 0; }

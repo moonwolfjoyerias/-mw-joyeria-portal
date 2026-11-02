@@ -99,9 +99,22 @@ function configurarEventos() {
 // FILTROS
 // ============================================================
 
+// Liga directa a una ventana (?ventana=ID), por ejemplo desde "¿Dónde
+// está la pieza?" del catálogo: se muestra y se abre aunque esté cerrada,
+// para poder descancelar una pieza quitada.
+const VENTANA_DE_LIGA = new URLSearchParams(window.location.search).get("ventana");
+let ventanaDeLigaAbierta = false;
+
 function obtenerVentanasFiltradas() {
 
+  if (VENTANA_DE_LIGA && !ventanaDeLigaAbierta && ventanas.some(v => v.id === VENTANA_DE_LIGA)) {
+    ventanaDeLigaAbierta = true;
+    filasExpandidas.add(VENTANA_DE_LIGA);
+  }
+
   return ventanas.filter(v => {
+
+    if (v.id === VENTANA_DE_LIGA && filtroEstado === "todos" && !terminoBusqueda) return true;
 
     // "Quitar de la vista" solo oculta la fila — la ventana, su historial
     // y su crédito siguen intactos, y se pueden ver con el filtro
@@ -187,6 +200,10 @@ function agregarEventosComunesFilas() {
 
   document.querySelectorAll("[data-cambiar-vencimiento]").forEach(btn => {
     btn.addEventListener("click", () => abrirModalCambiarVencimiento(btn.dataset.cambiarVencimiento));
+  });
+
+  document.querySelectorAll("[data-descancelar-pieza]").forEach(btn => {
+    btn.addEventListener("click", () => confirmarDescancelarPieza(btn.dataset.ventana, btn.dataset.descancelarPieza));
   });
 
   document.querySelectorAll("[data-sacar-bolsita]").forEach(btn => {
@@ -499,6 +516,62 @@ function piezaPendienteDeSacarDeBolsita(pieza) {
   return pieza.estado === "cancelada" && !!pieza.enBolsita && !pieza.sacadaDeBolsita;
 }
 
+// DESCANCELAR (descancelarPiezaQuitada en apartados-modelo.js): la pieza
+// quitada volvió a llegar. Cada rol confirma a su manera (Staff con
+// usuario/contraseña), igual que sacar de la bolsita.
+function confirmarDescancelarPieza(ventanaId, piezaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  const pieza = v?.apartados.find(p => p.id === piezaId);
+  if (!pieza || !pieza.retiro || pieza.estado !== "cancelada") return;
+
+  const reabre = v.estado === "cerrada"
+    ? " El apartado estaba cerrado: se reabre y, si su depósito quedó como crédito, vuelve a ser su depósito."
+    : "";
+  pedirConfirmacionPanelRol({
+    ventanaId,
+    titulo: "Descancelar pieza",
+    mensaje: `"${escapeHTML(pieza.producto)}" vuelve al apartado de ${escapeHTML(v.usuarioNombre)} y se descuenta una pieza de la existencia del catálogo (primero súmala en el catálogo si acaba de llegar).${reabre} Le llegará un aviso.`,
+    textoBoton: "Sí, descancelar",
+    onConfirmar: (empleado) => ejecutarDescancelarPieza(ventanaId, piezaId, empleado)
+  });
+
+}
+
+async function ejecutarDescancelarPieza(ventanaId, piezaId, empleado) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+
+  const r = await descancelarPiezaQuitada(v, piezaId, empleado);
+  if (!r.ok) { mostrarToast(r.error); return; }
+
+  if (typeof agregarNotificacion === "function") {
+    agregarNotificacion({
+      texto: `¡Buenas noticias! "${r.pieza.producto}" volvió a tu apartado.`,
+      link: "apartados",
+      paraId: v.usuarioId,
+      rolDestino: "emprendedora_lider"
+    });
+  }
+  registrarActividadApartadosRol({
+    accion: "descancelar_pieza_apartado",
+    descripcion: `Descanceló ${r.pieza.producto} en el apartado de ${v.usuarioNombre}${r.reabierta ? " (apartado reabierto)" : ""}`
+  }, empleado);
+
+  guardarVentanas();
+  if (typeof actualizarResumen === "function") actualizarResumen();
+  renderTabla();
+
+  const vencida = typeof ventanaEstaVencida === "function" && ventanaEstaVencida(v);
+  mostrarToast(
+    `Pieza descancelada por ${empleado.nombre}.` +
+    (r.creditoFaltante > 0 ? ` Ojo: $${r.creditoFaltante} de su crédito ya se habían usado.` : "") +
+    (vencida ? " Su fecha de vencimiento ya pasó: cámbiala si hace falta." : "")
+  );
+
+}
+
 function confirmarSacarDeBolsita(ventanaId, piezaId) {
 
   const v = ventanas.find(x => x.id === ventanaId);
@@ -765,6 +838,8 @@ function crearFilaDetalle(v) {
           ${piezaPendienteDeSacarDeBolsita(p) ? `<small style="display:block;margin-top:4px;color:#b94d4d;font-weight:600;">Se canceló y sigue en su bolsita: sácala y confirma aquí.</small>` : ""}
           ${p.sacadaDeBolsita ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">Sacada de la bolsita ${formatearFechaHora(p.sacadaDeBolsita.fecha)} · ${escapeHTML(p.sacadaDeBolsita.usuario || "")}</small>` : ""}
           ${p.retiro ? `<small style="display:block;margin-top:4px;color:#b94d4d;">Quitada del apartado: ${escapeHTML(p.retiro.motivo)} · ${escapeHTML(p.retiro.usuario || "")} · ${formatearFechaHora(p.retiro.fecha)}</small>` : ""}
+          ${p.retiro && p.estado === "cancelada" && v.estado !== "vencida" ? `<button class="action-btn descancelar-btn" data-descancelar-pieza="${p.id}" data-ventana="${v.id}" style="margin-top:6px;"><span>↺</span> Descancelar (llegó de nuevo)</button>` : ""}
+          ${p.descancelada ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">Descancelada ${formatearFechaHora(p.descancelada.fecha)} · ${escapeHTML(p.descancelada.usuario || "")}</small>` : ""}
         </div>
       </div>
     `;
