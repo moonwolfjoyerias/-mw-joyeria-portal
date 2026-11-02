@@ -274,19 +274,49 @@ function construirResolucionHTML(solicitud) {
 // APROBAR
 // ============================================================
 
-function abrirConfirmarAprobarAdmin(solicitud) {
+// La líder que indicó en el registro público, si coincide con alguien.
+function liderIndicadaSolAdmin(solicitud) {
+  const t = String(solicitud.liderIndicado || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  if (!t || typeof obtenerPersonas !== 'function') return null;
+  const n = p => [p.nombre, p.apellidos, p.usuario].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const coinciden = obtenerPersonas().filter(p => p.estado !== 'baja' && n(p).includes(t));
+  return coinciden.length === 1 ? coinciden[0] : null;
+}
+
+async function abrirConfirmarAprobarAdmin(solicitud) {
+
+  // ¿Debajo de quién queda? Si la elegida todavía es Emprendedora, se
+  // pregunta si se asciende o se pone otra (js/lider-o-ascender.js).
+  let liderId;
+  if (window.MWLider) {
+    const indicada = solicitud.origen === 'publico' ? liderIndicadaSolAdmin(solicitud) : null;
+    const eleccion = await window.MWLider.elegirLider({
+      titulo: '¿Debajo de quién queda?',
+      mensaje: solicitud.origen === 'publico'
+        ? (solicitud.liderIndicado ? `Indicó a "${escapeHTMLSolAdmin(solicitud.liderIndicado)}" (sin verificar).` : 'No indicó líder; pidió que el equipo le asigne una.')
+        : `La invitó ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)}.`,
+      preseleccionId: solicitud.origen === 'publico' ? (indicada?.id || '') : (solicitud.solicitanteId || ''),
+      buscarInicial: solicitud.origen === 'publico' && !indicada ? (solicitud.liderIndicado || '') : ''
+    });
+    if (!eleccion) return;
+    liderId = eleccion.liderId;
+  }
+  const lider = liderId && typeof obtenerPersonas === 'function' ? obtenerPersonas().find(p => p.id === liderId) : null;
 
   abrirAutorizacionAdmin({
     titulo: 'Aprobar solicitud',
-    mensaje: (solicitud.origen === 'publico'
-      ? `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora SIN líder asignada todavía${solicitud.liderIndicado ? ` (indicó que su líder es "${escapeHTMLSolAdmin(solicitud.liderIndicado)}" — verifícalo y asígnalo desde Emprendedoras/Líderes si corresponde)` : ' — pidió que el equipo le asigne una'}.`
-      : `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora y ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} quedará registrado(a) como su líder directa.`)
+    mensaje: (liderId !== undefined
+      ? `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora ${lider ? `con ${escapeHTMLSolAdmin(nombreCompletoPersona(lider))} como su líder directa` : 'SIN líder asignada todavía'}.`
+      : solicitud.origen === 'publico'
+        ? `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora SIN líder asignada todavía${solicitud.liderIndicado ? ` (indicó que su líder es "${escapeHTMLSolAdmin(solicitud.liderIndicado)}" — verifícalo y asígnalo desde Emprendedoras/Líderes si corresponde)` : ' — pidió que el equipo le asigne una'}.`
+        : `¿Confirmas la aprobación de esta solicitud? Se creará una nueva cuenta de Emprendedora y ${escapeHTMLSolAdmin(solicitud.solicitanteNombre)} quedará registrado(a) como su líder directa.`)
       + (solicitud.viveEnSLP === false ? ' Como no vive en San Luis Potosí ni zonas cercanas, la cuenta se creará como foránea.' : ''),
     onConfirmar: async () => {
 
       const resultado = await aprobarSolicitud(solicitud.id, {
         adminId: ADMIN_IDENTIDAD.usuarioId,
-        adminNombre: ADMIN_IDENTIDAD.usuarioNombre
+        adminNombre: ADMIN_IDENTIDAD.usuarioNombre,
+        liderId
       });
 
       if (!resultado.ok) {
@@ -321,7 +351,9 @@ function mostrarPantallaCredencialesAdmin({ solicitud, persona, credenciales }) 
       <div><span>Usuario</span><strong id="credUsuario">${escapeHTMLSolAdmin(credenciales.usuario)}</strong></div>
       <div><span>Contraseña temporal</span><strong id="credPassword">${escapeHTMLSolAdmin(credenciales.passwordTemporal)}</strong></div>
       <div><span>Rol</span><strong>Emprendedora</strong></div>
-      <div><span>Líder</span><strong>${solicitud.origen === 'publico'
+      <div><span>Líder</span><strong>${persona && 'liderId' in persona
+        ? (() => { const l = persona.liderId && typeof obtenerPersonas === 'function' ? obtenerPersonas().find(p => p.id === persona.liderId) : null; return l ? escapeHTMLSolAdmin(nombreCompletoPersona(l)) : 'Sin asignar'; })()
+        : solicitud.origen === 'publico'
         ? (solicitud.liderIndicado ? `${escapeHTMLSolAdmin(solicitud.liderIndicado)} (sin verificar — asígnalo desde Emprendedoras/Líderes)` : 'Sin asignar')
         : escapeHTMLSolAdmin(solicitud.solicitanteNombre)}</strong></div>
     </div>

@@ -1256,7 +1256,9 @@ async function renderSeccionUsuarios() {
 
   const personas = typeof obtenerPersonas === 'function' ? obtenerPersonas() : [];
   const internas = typeof obtenerCuentasInternas === 'function' ? obtenerCuentasInternas() : [];
-  const lideresParaSelect = personas.filter(p => p.tipo === 'lider');
+  // Cualquier e/l activa puede quedar como líder directa: si es Emprendedora,
+  // al crear la cuenta se pregunta si se asciende (js/lider-o-ascender.js).
+  const lideresParaSelect = personas.filter(p => p.estado !== 'baja');
 
   const personasEjemploPresentes = personas.filter(p => IDS_PERSONAS_EJEMPLO.includes(p.id));
   const internasEjemploPresentes = internas.filter(c => IDS_CUENTAS_INTERNAS_EJEMPLO.includes(c.id));
@@ -1487,10 +1489,10 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
 
   const normalizarBusquedaLider = (texto) => String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const lideresOrdenados = lideresParaSelect
-    .map(l => ({ id: l.id, nombre: nombreCompletoPersona(l) }))
+    .map(l => ({ id: l.id, nombre: nombreCompletoPersona(l), tipo: l.tipo }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
   const opcionesLider = (lista) => `<option value="">— Ninguna (es líder raíz) —</option>` +
-    lista.map(l => `<option value="${escapeAttributePersonas(l.id)}">${escapeHTMLPersonas(l.nombre)}</option>`).join('');
+    lista.map(l => `<option value="${escapeAttributePersonas(l.id)}">${escapeHTMLPersonas(l.nombre)}${l.tipo === 'lider' ? '' : ' — Emprendedora'}</option>`).join('');
 
   box.style.maxWidth = '460px';
   box.innerHTML = `
@@ -1524,7 +1526,7 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
         <small class="nota-si-no">Si contesta que no, la categoría se cambia a Foránea (puedes elegir VIP si aplica).</small>
       </div>
       <label class="cfg-span-2">Líder directa
-        <input type="search" id="cfgBuscarLider" placeholder="Buscar líder por nombre..." autocomplete="off">
+        <input type="search" id="cfgBuscarLider" placeholder="Buscar por nombre..." autocomplete="off">
         <select id="cfgNuevoLiderId" style="margin-top:6px;">${opcionesLider(lideresOrdenados)}</select>
         <small class="field-help" id="cfgBuscarLiderAyuda" style="display:none;"></small>
       </label>
@@ -1606,6 +1608,12 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
     if (passwordPersonalizada && passwordPersonalizada.length < 6) {
       error.style.display = 'block';
       error.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+      return;
+    }
+
+    // Si su líder elegida todavía es Emprendedora: ascenderla o poner otra.
+    if (liderId && window.MWLider && !(await window.MWLider.confirmarLider(liderId))) {
+      document.getElementById('cfgBuscarLider')?.focus();
       return;
     }
 

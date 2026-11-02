@@ -5755,3 +5755,13 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 .action-btn.descancelar-btn { color: #23704a; border-color: #9fd2b4; width: auto; display: inline-flex; padding-inline: 12px; }
 :root[data-theme="dark"] .action-btn.descancelar-btn { color: #8fd7ad; border-color: #2f6b49; }
 #apartadosEmpty[style*="block"] + .apartados-canceladas { margin-top: 0; }
+
+/* ---------- Líder: ascender o poner otra (js/lider-o-ascender.js) ---------- */
+.lider-fondo { position: fixed; inset: 0; z-index: 220; background: rgba(20, 14, 26, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.lider-caja { background: var(--surface); border-radius: var(--radius); padding: 22px; width: min(460px, 100%); box-shadow: var(--shadow-hover); }
+.lider-caja h3 { margin: 0 0 8px; font-size: 1.15rem; }
+.lider-texto { color: var(--mw-text-muted); margin: 0 0 14px; font-size: 0.9rem; }
+.lider-campo { display: block; font-size: 0.82rem; color: var(--mw-accent-text); margin-bottom: 10px; }
+.lider-campo input, .lider-campo select { display: block; width: 100%; margin-top: 4px; height: 40px; padding: 0 10px; border: 1px solid var(--mw-border-d); border-radius: var(--radius-sm); background: var(--surface); color: inherit; font: inherit; }
+.lider-acciones { display: flex; gap: 10px; margin-top: 14px; }
+.lider-acciones .btn { flex: 1; }
