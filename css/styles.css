@@ -5771,3 +5771,14 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 .check-catalogo input { width: 18px; height: 18px; accent-color: var(--mw-purple); }
 .chip-solo-tienda { display: inline-block; margin-top: 4px; font-size: 0.7rem; padding: 1px 8px; border-radius: 999px; background: var(--mw-gold-soft, #f3e9c7); color: #7a5a00; }
 :root[data-theme="dark"] .chip-solo-tienda { color: #f0c860; }
+
+/* ---------- Descargar Excel del catálogo (js/exportar-xlsx.js) ---------- */
+.excel-boton { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 10px; }
+.excel-boton + .donde-boton { margin-left: 0; }
+@media (max-width: 640px) {
+  .catalog-section-head:has(.excel-boton) { flex-wrap: wrap; gap: 10px; }
+  .catalog-section-head:has(.excel-boton) h2 { flex: 1 1 100%; }
+  .catalog-section-head .excel-boton,
+  .catalog-section-head .excel-boton + .donde-boton { margin: 0; flex: 1 1 calc(50% - 5px); justify-content: center; white-space: nowrap; font-size: 0.85rem; padding-left: 8px; padding-right: 8px; }
+  .catalog-section-head:has(.excel-boton) .catalog-add-btn { flex: 1 1 100%; justify-content: center; }
+}
