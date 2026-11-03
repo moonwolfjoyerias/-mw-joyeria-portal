@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof catalogoRepoListo !== 'undefined') await catalogoRepoListo;
 
   const categorias = ['oro-laminado', 'acero-inoxidable', 'exhibidores', 'souvenirs', 'fantasia', 'otros'];
-  const catalogo = typeof obtenerCatalogoStaffStorage === 'function' ? ordenarProductosMasRecientes(obtenerCatalogoStaffStorage()) : [];
+  // Solo lo que se muestra en el catálogo (premium).
+  const catalogo = typeof obtenerCatalogoStaffStorage === 'function' ? ordenarProductosMasRecientes(obtenerCatalogoStaffStorage().filter(p => p.mostrarEnCatalogo !== false)) : [];
 
   categorias.forEach((material) => {
     const grid = document.querySelector(`.product-grid[data-categoria="${material}"]`);

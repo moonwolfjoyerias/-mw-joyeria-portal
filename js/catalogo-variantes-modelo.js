@@ -426,6 +426,29 @@ function guardarCatalogoStaffStorage(catalogo) {
 // Descuenta 1 pieza de una variante exacta. Falla explícitamente (sin
 // tocar nada) si el producto/variante ya no existe o no tiene stock —
 // evita apartar una pieza que en realidad ya no hay.
+// Historial de Stock de BRILLO (brilloMovimientosStock): cada pieza que se
+// aparta o se cancela desde la página deja un movimiento en la misma
+// transacción que la existencia.
+function anotarMovimientoStockPagina(tx, productoId, varianteId, datos, cantidad, antes) {
+  const variante = (Array.isArray(datos.variantes) ? datos.variantes : []).find(v => v.id === varianteId) || {};
+  const quien = (typeof obtenerSesionActiva === 'function' && obtenerSesionActiva()?.nombre) || 'Página';
+  const ahora = new Date();
+  tx.set(dbFirestore.collection('brilloMovimientosStock').doc(`${ahora.getTime()}_${productoId}_${varianteId}_${Math.random().toString(36).slice(2, 7)}`), {
+    productoId: String(productoId),
+    varianteId: String(varianteId),
+    producto: String(datos.nombre || ''),
+    variante: typeof etiquetaVariante === 'function' ? etiquetaVariante(variante) : '',
+    codigo: String(datos.codigo || ''),
+    tipo: cantidad < 0 ? 'apartado' : 'cancelacion_apartado',
+    cantidad,
+    antes,
+    despues: antes + cantidad,
+    nota: 'Desde la página',
+    por: quien,
+    fecha: ahora.toISOString()
+  });
+}
+
 async function descontarStockVariante(productoId, varianteId) {
   if (!productoId || !varianteId) return { ok: true }; // pieza sin producto real vinculado (dato antiguo) — no hay nada que descontar
 
@@ -454,6 +477,7 @@ async function descontarStockVariante(productoId, varianteId) {
         }
         const variantesActualizadas = variantes.map((v, i) => i === indice ? { ...v, stock: v.stock - 1 } : v);
         tx.update(ref, { variantes: variantesActualizadas });
+        anotarMovimientoStockPagina(tx, productoId, varianteId, datos, -1, variante.stock);
         reflejarEnResumen({ ...datos, variantes: variantesActualizadas });
         actualizarVarianteEnCacheLocal(productoId, varianteId, variantesActualizadas.find(v => v.id === varianteId).stock);
         return { ok: true };
@@ -496,6 +520,7 @@ async function restaurarStockVariante(productoId, varianteId) {
         if (indice === -1) return;
         const variantesActualizadas = variantes.map((v, i) => i === indice ? { ...v, stock: (v.stock || 0) + 1 } : v);
         tx.update(ref, { variantes: variantesActualizadas });
+        anotarMovimientoStockPagina(tx, productoId, varianteId, datos, 1, variantes[indice].stock || 0);
         if (typeof escribirProductoEnResumenDesdeTransaccion === 'function') {
           escribirProductoEnResumenDesdeTransaccion(tx, productoId, { ...datos, variantes: variantesActualizadas });
         }

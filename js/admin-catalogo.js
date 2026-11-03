@@ -206,7 +206,7 @@ function renderProducto(p) {
 
   return `
     <tr>
-      <td><span class="catalog-product-id">${escapeHTML(p.codigo || p.id)}</span></td>
+      <td><span class="catalog-product-id">${escapeHTML(p.codigo || p.id)}</span>${p.mostrarEnCatalogo === false ? '<small class="chip-solo-tienda">Solo en tienda</small>' : ''}</td>
       <td>
         <div class="catalog-product-cell">
           <img src="${imagen}" alt="${escapeHTML(p.nombre)}" ${/isotipo-morado\.png/.test(imagen) ? '' : `data-zoom="${escapeAttribute(imagen)}" data-zoom-alt="${escapeAttribute(p.nombre)}"`}>
@@ -326,6 +326,11 @@ function abrirModalProducto(producto = null) {
         <label>Código del producto *</label>
         <input id="productoCodigo" type="text" placeholder="Ej. AN-045" value="${escapeAttribute(producto?.codigo || '')}">
         <small class="field-help">Solo lo ven Staff, Encargado y Admin (columna "ID del producto") — nunca Emprendedora/Líder.</small>
+      </div>
+
+      <div class="form-field full">
+        <label class="check-catalogo"><input type="checkbox" id="productoMostrarEnCatalogo" ${producto?.mostrarEnCatalogo === false ? '' : 'checked'}> Mostrar en el catálogo de Emprendedoras/Líderes (pieza premium)</label>
+        <small class="field-help">Si la quitas, la pieza sigue a la venta en la joyería (Productos de BRILLO), pero no aparece en el catálogo.</small>
       </div>
 
       <div class="form-field full">
@@ -623,6 +628,7 @@ function obtenerDatosProducto(idEditando) {
     nombre, descripcion, material, categoria, calidad, codigo, colorOro,
     variantes, precioEtiqueta, descuento,
     disponible: variantes.some(v => v.stock > 0),
+    mostrarEnCatalogo: document.getElementById('productoMostrarEnCatalogo')?.checked !== false,
     galeria: galeriaTemporalAdmin,
     imagen: galeriaTemporalAdmin[0]?.src || '',
     fotosEditadas: true // la galería viene de este formulario: se guarda en productosFotos (ver catalogo-firestore-sync.js)

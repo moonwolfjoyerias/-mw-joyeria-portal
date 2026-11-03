@@ -681,6 +681,23 @@ service cloud.firestore {
       allow create: if miRol() in ['encargado', 'admin'];
       allow update, delete: if false;
     }
+    // Configuración de BRILLO: tipos de pago (solo Administración) y mínimo
+    // de poco stock (también Encargado).
+    match /brilloConfig/{id} {
+      allow read: if esInterno();
+      allow write: if miRol() == 'admin' || (id == 'stock' && miRol() == 'encargado');
+    }
+    // Historial de Stock (BRILLO → Stock): inmutable. Lo escribe el equipo
+    // (ventas, entradas, ajustes, apartados) y, al apartar o cancelar desde
+    // su portal, la Emprendedora/Líder solo su movimiento de una pieza.
+    match /brilloMovimientosStock/{id} {
+      allow read: if esInterno();
+      allow create: if esInterno()
+        || (estaAutenticado()
+            && request.resource.data.tipo in ['apartado', 'cancelacion_apartado']
+            && request.resource.data.cantidad in [-1, 1]);
+      allow update, delete: if false;
+    }
     // Cambios físicos abiertos y garantías: los registra quien cobra.
     match /brilloCambiosFisicos/{id} {
       allow read: if esInterno();
@@ -695,7 +712,7 @@ service cloud.firestore {
     // El resto de las colecciones de BRILLO: personal interno.
     match /{coleccion}/{id} {
       allow read, write: if coleccion.matches('brillo[A-Z].*')
-        && !(coleccion in ['brilloVentas', 'brilloTicketsPersona', 'brilloSaldos', 'brilloSaldoMovimientos', 'brilloCambiosFisicos', 'brilloGarantias'])
+        && !(coleccion in ['brilloVentas', 'brilloTicketsPersona', 'brilloSaldos', 'brilloSaldoMovimientos', 'brilloCambiosFisicos', 'brilloGarantias', 'brilloMovimientosStock', 'brilloConfig'])
         && esInterno();
     }
 

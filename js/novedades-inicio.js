@@ -78,7 +78,8 @@ async function obtenerNovedadesInicio() {
       .slice(0, NOVEDADES_INICIO_CONSULTA);
   }
 
-  const piezas = productos.map(_piezaNovedad).filter(Boolean).slice(0, NOVEDADES_INICIO_MAX);
+  // Solo piezas del catálogo (premium): lo que es solo de tienda no se anuncia.
+  const piezas = productos.filter(p => p.mostrarEnCatalogo !== false).map(_piezaNovedad).filter(Boolean).slice(0, NOVEDADES_INICIO_MAX);
   _guardarNovedadesEnCache(piezas);
   return piezas;
 }

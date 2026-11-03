@@ -151,8 +151,11 @@ async function iniciarLinkCatalogoClientas() {
 }
 
 // ---------- Catálogo real (mismo que Staff/Encargado/Admin) ----------
+// Solo lo marcado "Mostrar en catálogo" (las piezas premium). Lo demás que
+// está a la venta en la joyería se ve en Productos de BRILLO, no aquí.
 function obtenerCatalogoReal() {
-  return typeof obtenerCatalogoStaffStorage === 'function' ? obtenerCatalogoStaffStorage() : [];
+  const todo = typeof obtenerCatalogoStaffStorage === 'function' ? obtenerCatalogoStaffStorage() : [];
+  return todo.filter(p => p.mostrarEnCatalogo !== false);
 }
 
 function categoriasDisponibles() {
