@@ -174,6 +174,7 @@ function crearApartadoPieza(datos = {}) {
     // base real para saber si esta pieza es Souvenir o normal; nunca
     // se recalcula después, aunque el producto cambie de categoría.
     material: datos.material || null,
+    precioEtiqueta: Number(datos.precioEtiqueta) || null,
     precio: total,
     total,
     pagos: Array.isArray(datos.pagos) ? datos.pagos : [],
@@ -689,11 +690,16 @@ async function agregarPiezaAVentana(ventana, datosPieza, empleado) {
   // El material se toma del catálogo real en este momento (no del
   // formulario, que no lo pide) — es la fuente de verdad para separar
   // Souvenir de compra normal en comisiones/constancia/rifas/activa.
-  const material = typeof obtenerCatalogoStaffStorage === 'function'
-    ? (obtenerCatalogoStaffStorage().find(p => p.id === datosPieza.productoId)?.material || null)
+  const producto = typeof obtenerCatalogoStaffStorage === 'function'
+    ? obtenerCatalogoStaffStorage().find(p => p.id === datosPieza.productoId)
     : null;
+  const material = producto?.material || null;
+  // Precio etiqueta al apartar: es el que ven Staff/Encargado/Admin en
+  // Apartados (ver precioEtiquetaPiezaPanel). Lo que se cobra sigue
+  // siendo `total` (precio emprendedora).
+  const precioEtiqueta = Number(datosPieza.precioEtiqueta ?? producto?.precioEtiqueta) || null;
 
-  const pieza = crearApartadoPieza({ ...datosPieza, material });
+  const pieza = crearApartadoPieza({ ...datosPieza, material, precioEtiqueta });
   ventana.apartados.push(pieza);
   ventana.auditoria.push(registrarAuditoriaVentana(`Pieza agregada: ${pieza.producto}`, empleado));
 

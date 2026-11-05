@@ -1172,6 +1172,12 @@ a:hover { color: var(--mw-gold); }
 .notif-panel .notif-delete-btn:hover { color: #bd4c4c; }
 .notif-panel .notif-empty { padding: 1.2em 1em; text-align: center; color: var(--mw-text-muted); font-size: 0.85rem; }
 .notif-panel .notif-header { padding: 0.7em 1em; font-family: var(--font-heading); font-size: 0.85rem; color: var(--mw-accent-text); border-bottom: 1px solid var(--mw-border); }
+.notif-panel .notif-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.notif-panel .notif-borrar-todas {
+  background: none; border: none; padding: 2px 4px; cursor: pointer;
+  font-family: var(--font-body); font-size: 0.72rem; color: var(--mw-text-muted); text-decoration: underline;
+}
+.notif-panel .notif-borrar-todas:hover, .notif-panel .notif-borrar-todas.confirmando { color: #bd4c4c; }
 
 /* Bandejas desplegables del panel de Admin (una por rol) */
 .notif-panel .notif-group { border-bottom: 1px solid var(--mw-border); }

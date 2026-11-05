@@ -249,6 +249,47 @@ function eliminarNotificacion(id) {
   if (typeof eliminarNotificacionDeFirestore === 'function') eliminarNotificacionDeFirestore(id);
 }
 
+// "Borrar todas": las que se ven en la campana de quien la usa (su
+// bandeja; en Admin, todos sus grupos). Mismo camino que borrar una:
+// fuera del panel al instante y un borrado suelto por documento en
+// Firestore, nunca un batch (uno ajeno no debe tumbar a los demás).
+function eliminarNotificaciones(ids) {
+  const quitar = new Set((ids || []).map(String));
+  if (!quitar.size) return;
+  const lista = obtenerNotificacionesCompartidas().filter(n => !quitar.has(String(n.id)));
+  NOTIFICACIONES_CACHE = lista;
+  try { localStorage.setItem(NOTIFICACIONES_STORAGE_KEY, JSON.stringify(lista)); } catch (error) { /* noop */ }
+  if (typeof actualizarPanelNotificacionesEnVivo === 'function') actualizarPanelNotificacionesEnVivo();
+  if (typeof eliminarNotificacionDeFirestore === 'function') quitar.forEach(id => eliminarNotificacionDeFirestore(id));
+}
+
+// Pide confirmar en el mismo botón (primer clic: "¿Borrar las N?",
+// segundo clic: borra) — sin ventana aparte, que en el celular tapa el
+// panel. Si no se confirma en unos segundos, vuelve a su texto.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest?.('[data-notif-borrar-todas]');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const panel = btn.closest('.notif-panel') || document;
+  const ids = [...panel.querySelectorAll('[data-notif-delete]')].map(b => b.getAttribute('data-notif-delete'));
+  if (!ids.length) return;
+  if (btn.dataset.confirmando !== '1') {
+    btn.dataset.confirmando = '1';
+    btn.classList.add('confirmando');
+    btn.textContent = `¿Borrar las ${ids.length}? Toca otra vez`;
+    setTimeout(() => {
+      if (!btn.isConnected) return;
+      btn.dataset.confirmando = '';
+      btn.classList.remove('confirmando');
+      btn.textContent = 'Borrar todas';
+    }, 4000);
+    return;
+  }
+  eliminarNotificaciones(ids);
+  if (typeof mostrarToast === 'function') mostrarToast(`${ids.length} notificación${ids.length === 1 ? '' : 'es'} borrada${ids.length === 1 ? '' : 's'}.`);
+});
+
 // Mismo patrón de delegación que el de arriba — el botón vive DENTRO
 // del mismo renglón que el <a>, por eso detiene la propagación: un
 // clic en "borrar" no debe además marcarla como leída ni navegar.

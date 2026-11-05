@@ -207,7 +207,7 @@ function renderNotificacionesAdminAgrupadas(panel, badge) {
     return;
   }
 
-  panel.innerHTML = grupos.map(g => {
+  panel.innerHTML = '<div class="notif-header"><span>Notificaciones</span><button type="button" class="notif-borrar-todas" data-notif-borrar-todas>Borrar todas</button></div>' + grupos.map(g => {
     if (!g.items.length) return '';
     const noLeidasGrupo = g.items.filter(n => !n.leida).length;
     return `

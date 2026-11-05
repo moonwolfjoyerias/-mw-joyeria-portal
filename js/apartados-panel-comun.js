@@ -49,6 +49,18 @@ function normalizarImagenApartadoPanel(imagen) {
   return imagen;
 }
 
+// Staff/Encargado/Admin ven el precio etiqueta de cada pieza (no el
+// precio emprendedora con el que se cobra). Piezas apartadas antes de
+// guardarlo: el del catálogo actual; si el producto ya no existe, el
+// precio de la pieza.
+function precioEtiquetaPiezaPanel(pieza) {
+  if (Number(pieza.precioEtiqueta) > 0) return Number(pieza.precioEtiqueta);
+  const producto = typeof obtenerCatalogoStaffStorage === 'function'
+    ? obtenerCatalogoStaffStorage().find(p => p.id === pieza.productoId)
+    : null;
+  return Number(producto?.precioEtiqueta) || Number(pieza.total) || 0;
+}
+
 function fotoPiezaApartadoPanel(pieza) {
   const producto = typeof obtenerCatalogoStaffStorage === 'function'
     ? obtenerCatalogoStaffStorage().find(p => p.id === pieza.productoId)
@@ -828,7 +840,7 @@ function crearFilaDetalle(v) {
         <div class="piece-thumb"><img src="${foto}" alt="${escapeAttribute(p.producto)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;${generica ? 'opacity:.35;' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(p.producto)}"`}></div>
         <div style="flex:1;">
           <strong>${escapeHTML(p.producto)}</strong>
-          <small>${escapeHTML([p.colorOro, p.variante].filter(Boolean).join(" · "))} · $${Number(p.total).toLocaleString("es-MX")} MXN</small>
+          <small>${escapeHTML([p.colorOro, p.variante].filter(Boolean).join(" · "))} · Precio etiqueta $${precioEtiquetaPiezaPanel(p).toLocaleString("es-MX")} MXN</small>
           <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
             <span class="status ${estadoPieza.clase}">${estadoPieza.texto}</span>
             ${elegidaParaPagar ? `<span class="pieza-elegida-persona">Avisó que la pagó</span>` : ""}
