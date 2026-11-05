@@ -46,7 +46,7 @@ const REMITENTE_NOMBRE = defineString('REMITENTE_NOMBRE', { default: 'MW Joyerí
 // esa misma.
 const REGION = defineString('REGION_FUNCIONES', { default: 'us-central1' });
 
-const PORTAL_URL = 'https://www.mwjoyeriayaccesorios.com';
+const PORTAL_URL = 'https://moonwolfjoyerias.github.io/-mw-joyeria-portal';
 
 // Mismas claves cortas que usan los avisos (PORTAL_LINKS de cada página
 // del portal de e/l).
