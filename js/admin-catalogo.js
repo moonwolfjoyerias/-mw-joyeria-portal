@@ -227,6 +227,7 @@ function renderProducto(p) {
         <div class="catalog-actions">
           <button class="action-btn primary-action" data-editar="${p.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></span> Editar</button>
           <button class="action-btn detail-action" data-stock="${p.id}"><span>◇</span> Existencia</button>
+          <button class="action-btn whatsapp-action" data-compartir="${p.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg></span> Compartir por WhatsApp</button>
           <button class="action-btn danger-action" data-eliminar="${p.id}"><span>×</span> Eliminar</button>
         </div>
       </td>
