@@ -5782,3 +5782,24 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
   .catalog-section-head .excel-boton + .donde-boton { margin: 0; flex: 1 1 calc(50% - 5px); justify-content: center; white-space: nowrap; font-size: 0.85rem; padding-left: 8px; padding-right: 8px; }
   .catalog-section-head:has(.excel-boton) .catalog-add-btn { flex: 1 1 100%; justify-content: center; }
 }
+
+/* ---------- Compartir por WhatsApp (js/compartir-pieza.js) ---------- */
+.action-btn.whatsapp-action { height: auto; min-height: 30px; padding: 4px 8px; line-height: 1.15; text-align: left; background: #eefaf2; border-color: #b9e3c7; color: #1f7a45; }
+.action-btn.whatsapp-action:hover { background: #e2f6e9; }
+.action-btn.whatsapp-action .icon-inline { width: 14px; height: 14px; flex: none; }
+.compartir-fondo { position: fixed; inset: 0; z-index: 150; background: rgba(20, 14, 26, 0.6); display: flex; align-items: flex-start; justify-content: center; padding: 4vh 16px 16px; overflow-y: auto; }
+.compartir-caja { background: var(--surface); border-radius: var(--radius); padding: 20px; width: min(520px, 100%); box-shadow: var(--shadow-hover); }
+.compartir-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
+.compartir-cabeza h3 { margin: 0; font-size: 1.2rem; }
+.compartir-nombre { margin: 0 0 10px; color: var(--mw-text-muted); }
+.compartir-ayuda { font-size: 0.85rem; color: var(--mw-text-muted); margin: 8px 0; }
+.compartir-variantes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.compartir-variante { border: 1px solid var(--mw-border); background: var(--surface); color: var(--mw-accent-text); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 0.85rem; cursor: pointer; }
+.compartir-variante small { color: var(--mw-text-muted); margin-left: 4px; }
+.compartir-variante.activa { background: var(--mw-purple); border-color: var(--mw-purple); color: #fff; }
+.compartir-variante.activa small { color: var(--mw-lilac-soft); }
+.compartir-vista { min-height: 160px; display: flex; align-items: center; justify-content: center; background: var(--mw-lilac-soft); border-radius: 12px; overflow: hidden; }
+.compartir-vista img { display: block; width: 100%; height: auto; max-height: 62vh; object-fit: contain; }
+.compartir-error { color: #b94d4d; font-size: 0.9rem; }
+.compartir-acciones { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.compartir-principal { display: inline-flex; align-items: center; gap: 8px; }
