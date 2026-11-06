@@ -214,6 +214,14 @@ function agregarEventosComunesFilas() {
     btn.addEventListener("click", () => abrirModalCambiarVencimiento(btn.dataset.cambiarVencimiento));
   });
 
+  document.querySelectorAll("[data-fechas-ventana]").forEach(btn => {
+    btn.addEventListener("click", () => abrirModalFechasVentana(btn.dataset.fechasVentana));
+  });
+
+  document.querySelectorAll("[data-agregar-excedente]").forEach(btn => {
+    btn.addEventListener("click", () => abrirModalAgregarExcedente(btn.dataset.agregarExcedente));
+  });
+
   document.querySelectorAll("[data-descancelar-pieza]").forEach(btn => {
     btn.addEventListener("click", () => confirmarDescancelarPieza(btn.dataset.ventana, btn.dataset.descancelarPieza));
   });
@@ -418,6 +426,137 @@ function confirmarBolsitaPieza(ventanaId, piezaId) {
 // Encargado/Admin confirman con el botón del modal; Staff además se
 // identifica con usuario/contraseña (pedirConfirmacionPanelRol).
 // ============================================================
+
+// ============================================================
+// FECHAS DEL APARTADO (clic en la celda de Vencimiento)
+// ============================================================
+// Pedido del Staff: ver cuándo se abrió la ventana, cuándo se apartó
+// cada pieza y cuándo se confirmó el pago (depósito y liquidación).
+
+function abrirModalFechasVentana(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+  const f = fechasVentana(v);
+  const fecha = (iso) => iso ? formatearFechaHora(iso) : "—";
+  const fila = (titulo, valor, extra = "") => `<div class="fechas-fila"><span>${titulo}</span><strong>${valor}</strong>${extra ? `<small>${extra}</small>` : ""}</div>`;
+  const nombrePago = { liquidacion: "Liquidación", excedente_aplicado: "Excedente aplicado", ajuste_descancelar: "Ajuste al descancelar" };
+  const estadoPieza = { activa: "Apartada", liquidada: "Liquidada", cancelada: "Quitada" };
+
+  const piezas = f.piezas.map(p => `
+    <li class="fechas-pieza">
+      <div class="fechas-pieza-cabeza"><strong>${escapeHTML(p.producto || "Pieza")}</strong><span class="status ${p.estado === "liquidada" ? "status-active" : p.estado === "cancelada" ? "status-cancelled" : "status-pending"}">${estadoPieza[p.estado] || escapeHTML(p.estado || "")}</span></div>
+      ${fila("Se apartó", fecha(p.apartada))}
+      ${p.pagos.map(x => fila(nombrePago[x.tipo] || "Pago", fecha(x.fecha), `$${Number(x.monto).toLocaleString("es-MX")} MXN${x.metodo ? ` · ${x.metodo === "transferencia" ? "transferencia" : x.metodo === "local" ? "en local" : escapeHTML(x.metodo)}` : ""}${x.referencia ? ` · ref. ${escapeHTML(x.referencia)}` : ""}`)).join("")}
+      ${p.liquidada ? "" : p.estado === "activa" ? fila("Pago", "Pendiente") : ""}
+      ${p.quitada ? fila("Se quitó", fecha(p.quitada)) : ""}
+    </li>`).join("");
+
+  const overlay = document.getElementById("modalOverlay");
+  const box = document.getElementById("modalBox");
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModal()">×</button>
+    <h3>Fechas del apartado</h3>
+    <p class="modal-sub">${escapeHTML(v.usuarioNombre)} · ${obtenerReglaCategoria(v.categoria).etiqueta}</p>
+    <div class="fechas-ventana">
+      ${fila("Abrió su ventana", fecha(f.apertura))}
+      ${f.requiereDeposito ? fila("Depósito confirmado", v.estado === "pendiente_deposito" ? "Pendiente" : fecha(f.depositoConfirmado), f.depositoConfirmado && f.depositoUsuario ? `por ${escapeHTML(f.depositoUsuario)}` : "") : ""}
+      ${f.excedentes.map(x => fila("Excedente agregado", fecha(x.fecha), `${escapeHTML(x.texto.replace(/^Excedente de depósito agregado: /, ""))}${x.usuario ? ` · por ${escapeHTML(x.usuario)}` : ""}`)).join("")}
+      ${fila("Vencimiento", f.vencimiento ? fecha(f.vencimiento) : "Sin vencimiento")}
+    </div>
+    <h4 class="fechas-subtitulo">Piezas (${f.piezas.length})</h4>
+    <ul class="fechas-piezas">${piezas || '<li class="fechas-vacio">Sin piezas</li>'}</ul>
+    <button class="btn btn-outline" style="width:100%;margin-top:12px;" type="button" onclick="cerrarModal()">Cerrar</button>
+  `;
+  overlay.classList.add("open");
+
+}
+
+// ============================================================
+// AGREGAR EXCEDENTE A UNA VENTANA ACTIVA
+// ============================================================
+
+function abrirModalAgregarExcedente(ventanaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v || v.estado !== "activa") return;
+
+  const overlay = document.getElementById("modalOverlay");
+  const box = document.getElementById("modalBox");
+  box.innerHTML = `
+    <button class="modal-close" onclick="cerrarModal()">×</button>
+    <h3>Agregar excedente</h3>
+    <p class="modal-sub">${escapeHTML(v.usuarioNombre)} ya tiene su apartado activo con $${Number(v.depositoApartadoDisponible || 0)} MXN de depósito. Anota el dinero que mandó de más: se suma a su depósito como excedente y después lo puedes aplicar a sus piezas con "Aplicar excedente". El vencimiento no cambia.</p>
+
+    <label for="excedenteMonto">Monto recibido</label>
+    <input id="excedenteMonto" type="number" min="1" step="0.01" placeholder="Ej. 300">
+
+    <label for="excedenteMetodo">Método de pago</label>
+    <select id="excedenteMetodo" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
+      <option value="">Selecciona una opción</option>
+      <option value="transferencia">Transferencia</option>
+      <option value="local">Pago en local</option>
+    </select>
+
+    <label for="excedenteReferencia">Número de referencia</label>
+    <input id="excedenteReferencia" type="text" placeholder="Obligatoria para transferencia">
+
+    <div id="excedenteError" class="auth-error" style="display:none;"></div>
+    <button class="btn btn-primary" style="width:100%;" type="button" id="continuarExcedenteBtn">Continuar</button>
+  `;
+  overlay.classList.add("open");
+  document.getElementById("excedenteMonto").focus();
+
+  document.getElementById("continuarExcedenteBtn").addEventListener("click", async () => {
+    const monto = Number(document.getElementById("excedenteMonto").value);
+    const metodo = document.getElementById("excedenteMetodo").value;
+    const referencia = document.getElementById("excedenteReferencia").value.trim();
+    const error = document.getElementById("excedenteError");
+    const mostrarError = (texto) => { error.style.display = "block"; error.textContent = texto; };
+
+    if (!Number.isFinite(monto) || monto <= 0) return mostrarError("Escribe el monto recibido.");
+    if (!metodo) return mostrarError("Selecciona el método de pago.");
+    if (metodo === "transferencia" && !referencia) return mostrarError("La referencia es obligatoria para una transferencia.");
+    if (metodo === "transferencia" && typeof referenciaYaUsada === "function" && await referenciaYaUsada(referencia)) return mostrarError("Ese número de referencia ya existe.");
+
+    pedirConfirmacionPanelRol({
+      ventanaId,
+      titulo: "Agregar excedente",
+      mensaje: `Vas a sumar $${monto} MXN al depósito de "${escapeHTML(v.usuarioNombre)}" como excedente.`,
+      textoBoton: "Sí, agregar",
+      onConfirmar: (empleado) => ejecutarAgregarExcedente(ventanaId, { monto, metodo, referencia: referencia || null }, empleado)
+    });
+  });
+
+}
+
+function ejecutarAgregarExcedente(ventanaId, datos, empleado) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  if (!v) return;
+  const r = agregarExcedenteDeposito(v, datos, empleado);
+  if (!r.ok) { mostrarToast(r.error); return; }
+
+  if (typeof agregarNotificacion === "function") {
+    agregarNotificacion({
+      texto: `Recibimos $${r.monto} más para tu apartado: ya quedaron en tu depósito.`,
+      link: "apartados",
+      paraId: v.usuarioId,
+      rolDestino: "emprendedora_lider"
+    });
+  }
+  registrarActividadApartadosRol({
+    accion: "agregar_excedente_deposito",
+    descripcion: `Excedente de $${r.monto} agregado al depósito de ${v.usuarioNombre}`
+  }, empleado);
+
+  guardarVentanas();
+  actualizarResumen();
+  renderTabla();
+  cerrarModal();
+  mostrarToast(`Excedente de $${r.monto} agregado.`);
+
+}
 
 function abrirModalCambiarVencimiento(ventanaId) {
 
@@ -795,7 +934,7 @@ function crearFilaVentana(v) {
       </td>
 
       <td>
-        ${obtenerTextoVencimiento(v)}
+        <button type="button" class="vencimiento-fechas-btn" data-fechas-ventana="${v.id}" title="Ver las fechas del apartado">${obtenerTextoVencimiento(v)} <small>Ver fechas</small></button>
         ${v.vencimientoAjustado ? `<small style="display:block;margin-top:3px;color:var(--mwv-766d83);">${v.vencimientoAjustado.modo === "personalizada" ? "Fecha personalizada" : `Plazo ${obtenerReglaCategoria(v.vencimientoAjustado.modo).etiqueta.toLowerCase()}`} · ${escapeHTML(v.vencimientoAjustado.usuario || "")}</small>` : ""}
         ${v.estado === "activa" ? `<button type="button" class="action-btn detail-action cambiar-vencimiento-btn" data-cambiar-vencimiento="${v.id}">Cambiar fecha</button>` : ""}
       </td>
@@ -926,6 +1065,12 @@ function obtenerAccionesVentana(v) {
       if (Number(v.depositoExcedente) > 0 && obtenerPiezasActivas(v).some(p => p.saldo > 0)) {
         html += `<button class="action-btn detail-action" data-aplicar-excedente="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2v20M17 7a5 5 0 0 0-5-2 4 4 0 0 0 0 8 4 4 0 0 1 0 8 5 5 0 0 1-5-2"/></svg></span> Aplicar excedente ($${v.depositoExcedente} MXN)</button>`;
       }
+    }
+
+    // Pedido del Staff: si ya con la ventana activa manda más dinero, se
+    // suma a su depósito como excedente (ver agregarExcedenteDeposito).
+    if (obtenerReglaCategoria(v.categoria).requiereDeposito) {
+      html += `<button class="action-btn detail-action" data-agregar-excedente="${v.id}"><span>＋</span> Agregar excedente</button>`;
     }
 
     if (ventanaEstaVencida(v)) {
