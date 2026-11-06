@@ -236,7 +236,7 @@ function renderNotifPanelPropio(panel, badge) {
   }
 
   if (notificaciones.length > 0) {
-    panel.innerHTML = '<div class="notif-header">Notificaciones</div>' +
+    panel.innerHTML = '<div class="notif-header"><span>Notificaciones</span><button type="button" class="notif-borrar-todas" data-notif-borrar-todas>Borrar todas</button></div>' +
       notificaciones.map(n => `
         <div class="notif-item-row">
           <a class="notif-item" data-notif-id="${n.id}" href="${resolverHrefNotificacion(n)}" style="${n.leida ? 'opacity:0.6;' : ''}">${n.texto}</a>
