@@ -224,6 +224,62 @@ function crearVentanaApartado(datos = {}) {
   return ventana;
 }
 
+// Pedido del Staff: una Emprendedora/Líder con la ventana YA activa
+// manda más dinero para su apartado. Se suma como EXCEDENTE de su
+// depósito (el piso ya está completo), y desde ahí se puede aplicar a
+// sus piezas con "Aplicar excedente" — igual que si lo hubiera
+// depositado desde el principio. No cambia el vencimiento.
+function agregarExcedenteDeposito(ventana, { monto, metodo, referencia }, empleado) {
+  const m = Math.round((Number(monto) || 0) * 100) / 100;
+  if (!ventana || ventana.estado !== 'activa') return { ok: false, error: 'Solo se puede agregar excedente a un apartado activo.' };
+  if (!(m > 0)) return { ok: false, error: 'Escribe el monto recibido.' };
+  if (!metodo || (metodo === 'transferencia' && !referencia)) return { ok: false, error: metodo ? 'La referencia es obligatoria para una transferencia.' : 'Selecciona el método de pago.' };
+  fijarDepositoVentana(ventana, Number(ventana.depositoApartadoDisponible || 0) + m);
+  registrarReferenciaPago(referencia, metodo, ventana);
+  ventana.auditoria.push(registrarAuditoriaVentana(
+    `Excedente de depósito agregado: $${m} (${metodo === 'transferencia' ? 'transferencia' : 'pago en local'}${referencia ? ` — referencia ${referencia}` : ''})`,
+    empleado
+  ));
+  return { ok: true, monto: m };
+}
+
+// Fechas de una ventana para el modal "Fechas del apartado": cuándo se
+// abrió, cuándo se confirmó el depósito (y excedentes agregados), y por
+// pieza cuándo se apartó y cuándo se liquidó o se quitó.
+function fechasVentana(ventana) {
+  const auditoria = Array.isArray(ventana.auditoria) ? ventana.auditoria : [];
+  const creada = auditoria.find(a => /^Ventana creada|^Apartado VIP/.test(a.texto || ''));
+  const primeraPieza = (ventana.apartados || []).map(p => p.fechaSolicitud).filter(Boolean).sort()[0];
+  const apertura = creada?.fecha || auditoria[0]?.fecha || primeraPieza || ventana.fechaInicio || null;
+  const depositos = auditoria.filter(a => /^Depósito de \$[\d.,]+ confirmado/.test(a.texto || ''));
+  const ultimo = depositos[depositos.length - 1];
+  const requiere = obtenerReglaCategoria(ventana.categoria).requiereDeposito;
+  const depositoConfirmado = ultimo ? ultimo.fecha
+    : (requiere && ventana.estado !== 'pendiente_deposito' && ventana.metodoDeposito ? ventana.fechaInicio : null);
+  const piezas = (ventana.apartados || []).map(p => {
+    const pagos = (p.pagos || []).filter(x => x && x.fecha && Number(x.monto) > 0).slice().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+    const liquidacion = p.estado === 'liquidada' ? (pagos.filter(x => x.tipo === 'liquidacion').pop() || pagos[pagos.length - 1] || null) : null;
+    return {
+      id: p.id,
+      producto: p.producto,
+      estado: p.estado,
+      apartada: p.fechaSolicitud || null,
+      pagos,
+      liquidada: liquidacion ? liquidacion.fecha : null,
+      quitada: p.estado === 'cancelada' && p.retiro ? p.retiro.fecha : null
+    };
+  });
+  return {
+    apertura,
+    requiereDeposito: requiere,
+    depositoConfirmado,
+    depositoUsuario: ultimo ? ultimo.usuario : null,
+    excedentes: auditoria.filter(a => /^Excedente de depósito agregado/.test(a.texto || '')).map(a => ({ fecha: a.fecha, texto: a.texto, usuario: a.usuario })),
+    vencimiento: ventana.fechaVencimiento || null,
+    piezas
+  };
+}
+
 // Permite usar el excedente del depósito (lo que pasa de $50) en un
 // pago AHORA, mientras la ventana sigue activa — sin esperar a que se
 // liquide o cierre por completo. El piso de $50 nunca se toca aquí,
