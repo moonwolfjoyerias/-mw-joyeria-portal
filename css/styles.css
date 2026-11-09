@@ -5846,3 +5846,9 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 .fechas-pieza-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .fechas-vacio { color: var(--mw-text-muted); }
 @media (max-width: 480px) { .fechas-fila { grid-template-columns: 1fr; } .fechas-fila > small { grid-column: 1; } }
+
+/* Configuración → Usuarios y permisos: buscador de cuentas (ver
+   wireBuscadorCuentas en js/admin-configuracion.js). */
+.cfg-buscador-cuentas { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cfg-buscador-cuentas .catalog-search { width: 100%; max-width: 440px; }
+.cfg-buscador-conteo { font-size: 0.8rem; color: var(--mw-text-muted); }

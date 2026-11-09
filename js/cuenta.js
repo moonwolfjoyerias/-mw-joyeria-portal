@@ -73,6 +73,8 @@ function renderPerfil() {
   else if (persona && !persona.liderId) textoLider = 'Sin líder asignada';
   else if (!persona && demo) textoLider = CUENTA_EJEMPLO.lider;
   setText('perfilLider', textoLider);
+  // Su usuario para iniciar sesión (el mismo que ve Admin en Configuración).
+  setText('perfilUsuario', persona?.usuario || (typeof obtenerSesionActiva === 'function' && obtenerSesionActiva()?.usuario) || '—');
   setText('perfilTelefono', persona?.telefono || (!persona && demo ? CUENTA_EJEMPLO.telefono : '—'));
   setText('perfilCorreo', persona?.correo || (!persona && demo ? CUENTA_EJEMPLO.correo : '—'));
 }
