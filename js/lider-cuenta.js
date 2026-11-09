@@ -112,6 +112,8 @@ function renderPerfilLider() {
   // Sin rango todavía: solo "Líder" (no "Líder Sin Rango").
   const rangoPerfil = RANGOS_MW[idxRango(persona?.rangoActualKey || 'sin_rango')];
   setText('perfilLider', rangoPerfil.key === 'sin_rango' ? 'Líder' : `Líder ${rangoPerfil.label}`);
+  // Su usuario para iniciar sesión (el mismo que ve Admin en Configuración).
+  setText('perfilUsuario', persona?.usuario || (typeof obtenerSesionActiva === 'function' && obtenerSesionActiva()?.usuario) || '—');
   setText('perfilTelefono', persona?.telefono || (!persona && demo ? PERFIL_LIDER_EJEMPLO.telefono : '—'));
   setText('perfilCorreo', persona?.correo || (!persona && demo ? PERFIL_LIDER_EJEMPLO.correo : '—'));
 

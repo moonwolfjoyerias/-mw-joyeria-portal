@@ -1265,6 +1265,13 @@ async function renderSeccionUsuarios() {
   const totalEjemploPresentes = personasEjemploPresentes.length + internasEjemploPresentes.length;
 
   cont.innerHTML = `
+    <div class="cfg-card cfg-buscador-cuentas">
+      <div class="catalog-search">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="cfgBuscarCuentas" placeholder="Buscar cuenta por nombre o usuario…" aria-label="Buscar cuenta" value="${escapeAttributePersonas(busquedaCuentasCfg)}">
+      </div>
+      <span class="cfg-buscador-conteo" id="cfgBuscarCuentasConteo"></span>
+    </div>
     ${totalEjemploPresentes ? `
     <div class="cfg-card" style="border:1px solid #e8c25a;background:#fffaf0;">
       <h3 class="cfg-card-title">Cuentas de ejemplo (${totalEjemploPresentes})</h3>
@@ -1300,7 +1307,7 @@ async function renderSeccionUsuarios() {
         <button class="btn btn-primary" id="cfgCrearCuentaPersonaBtn" style="width:auto;" type="button">＋ Crear cuenta</button>
       </div>
       <div class="catalog-table-wrap cfg-tabla-wrap" style="margin-top:10px;">
-        <table class="catalog-table">
+        <table class="catalog-table cfg-tabla-cuentas">
           <thead><tr><th>Nombre</th><th>Usuario</th><th>Tipo</th><th>Estado</th><th>Contraseña</th><th>Acciones</th></tr></thead>
           <tbody>
             ${personas.length ? personas.map(p => `
@@ -1333,7 +1340,7 @@ async function renderSeccionUsuarios() {
         <button class="btn btn-primary" id="cfgCrearCuentaInternaBtn" style="width:auto;" type="button">＋ Crear cuenta</button>
       </div>
       <div class="catalog-table-wrap cfg-tabla-wrap" style="margin-top:10px;">
-        <table class="catalog-table">
+        <table class="catalog-table cfg-tabla-cuentas">
           <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Permisos</th><th>Contraseña</th><th>Acciones</th></tr></thead>
           <tbody>
             ${internas.length ? internas.map(c => `
@@ -1371,6 +1378,7 @@ async function renderSeccionUsuarios() {
 
   wireCuentasPersonas(cont, lideresParaSelect);
   wireCuentasInternas(cont);
+  wireBuscadorCuentas(cont);
   wireEliminarCuentasEjemplo(cont, personasEjemploPresentes, internasEjemploPresentes);
 
   cont.querySelectorAll('[data-cfg-ver-password]').forEach(btn => {
@@ -1388,6 +1396,51 @@ async function renderSeccionUsuarios() {
 // ============================================================
 // ELIMINAR CUENTAS DE EJEMPLO (limpieza de una sola vez)
 // ============================================================
+
+// Buscador de cuentas (Emprendedoras/Líderes e internas): filtra las
+// filas por nombre, usuario y tipo/rol, sin importar acentos ni
+// mayúsculas. Se recuerda lo escrito para que no se borre cuando la
+// sección se vuelve a pintar (al crear, renombrar o eliminar una cuenta).
+let busquedaCuentasCfg = '';
+
+function _normalizarBusquedaCuentas(texto) {
+  return String(texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function filtrarTablasCuentas(cont) {
+  const palabras = _normalizarBusquedaCuentas(busquedaCuentasCfg).trim().split(/\s+/).filter(Boolean);
+  let visibles = 0;
+  let total = 0;
+  cont.querySelectorAll('.cfg-tabla-cuentas tbody').forEach((tbody) => {
+    tbody.querySelector('.cfg-sin-resultados')?.remove();
+    const filas = [...tbody.querySelectorAll('tr')].filter(tr => !tr.querySelector('.catalog-empty-cell'));
+    let visiblesTabla = 0;
+    filas.forEach((tr) => {
+      const celdas = [...tr.children].slice(0, 3).map(td => td.textContent).join(' ');
+      const coincide = palabras.every(p => _normalizarBusquedaCuentas(celdas).includes(p));
+      tr.hidden = !coincide;
+      if (coincide) visiblesTabla++;
+    });
+    total += filas.length;
+    visibles += visiblesTabla;
+    if (palabras.length && filas.length && !visiblesTabla) {
+      const columnas = tbody.closest('table').querySelectorAll('thead th').length;
+      tbody.insertAdjacentHTML('beforeend', `<tr class="cfg-sin-resultados"><td colspan="${columnas}" class="catalog-empty-cell">Ninguna cuenta coincide con la búsqueda.</td></tr>`);
+    }
+  });
+  const conteo = cont.querySelector('#cfgBuscarCuentasConteo');
+  if (conteo) conteo.textContent = palabras.length ? `${visibles} de ${total} cuenta${total === 1 ? '' : 's'}` : '';
+}
+
+function wireBuscadorCuentas(cont) {
+  const input = cont.querySelector('#cfgBuscarCuentas');
+  if (!input) return;
+  input.addEventListener('input', () => {
+    busquedaCuentasCfg = input.value;
+    filtrarTablasCuentas(cont);
+  });
+  filtrarTablasCuentas(cont);
+}
 
 function wireEliminarCuentasEjemplo(cont, personasEjemploPresentes, internasEjemploPresentes) {
 
