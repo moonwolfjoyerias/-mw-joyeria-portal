@@ -7,7 +7,7 @@
 //
 // tipo determina el color y qué botón de enlace se muestra:
 //   presencial -> "Ver ubicación" (Google Maps)
-//   virtual    -> "Unirme por Zoom"
+//   virtual    -> "Ver enlace de reunión"
 //
 // origen distingue un evento oficial de MW ('mw', la mayoría) de uno
 // que una Emprendedora/Líder organizó e invitó a las demás (nace de
