@@ -370,6 +370,9 @@ function abrirModalDetalleProducto(productoId) {
     <div class="detalle-producto-layout">
       <div class="detalle-producto-foto">
         <img id="detalleProductoImg" src="${seleccionUnica ? fotoVarianteProducto(producto, seleccionUnica) : normalizarImagenProducto(producto, true)}" alt="${escapeAttribute(producto.nombre)}" class="${fotoGenerica ? 'foto-generica' : ''}">
+        <button type="button" class="galeria-flecha galeria-anterior" id="galeriaAnterior" aria-label="Foto anterior" hidden>&#8249;</button>
+        <button type="button" class="galeria-flecha galeria-siguiente" id="galeriaSiguiente" aria-label="Foto siguiente" hidden>&#8250;</button>
+        <span class="galeria-contador" id="galeriaContador" aria-live="polite" hidden></span>
       </div>
       <div class="detalle-producto-info">
         <h3>${escapeHTMLCatalogoVariantes(producto.nombre)}</h3>
@@ -399,9 +402,67 @@ function abrirModalDetalleProducto(productoId) {
   const apartarBtn = document.getElementById('detalleApartarBtn');
   const img = document.getElementById('detalleProductoImg');
 
+  // Galería: TODAS las fotos del producto (de cualquier variante o sin
+  // variante), con flechas, contador, deslizar el dedo y teclado ← →.
+  // Elegir un color/talla salta a la foto de esa variante.
+  const galeria = { fotos: [], indice: 0 };
+  const anterior = document.getElementById('galeriaAnterior');
+  const siguiente = document.getElementById('galeriaSiguiente');
+  const contador = document.getElementById('galeriaContador');
+
+  function mostrarFoto(i) {
+    const n = galeria.fotos.length;
+    if (!n || !img) return;
+    galeria.indice = (i + n) % n;
+    img.src = galeria.fotos[galeria.indice].src;
+    img.classList.remove('foto-generica');
+    if (contador) contador.textContent = `${galeria.indice + 1} / ${n}`;
+  }
+
+  function irAFotoDeVariante(variante) {
+    if (!galeria.fotos.length) return false;
+    const i = variante && variante.fotoId ? galeria.fotos.findIndex(f => f.id === variante.fotoId) : -1;
+    mostrarFoto(i >= 0 ? i : 0);
+    return true;
+  }
+
+  (async () => {
+    let fotos = fotosEmbebidasProducto(producto);
+    if (!fotos.length && !(Array.isArray(producto.fotosIds) && !producto.fotosIds.length)) {
+      try { fotos = await cargarGaleriaProducto(producto.id); } catch (error) { fotos = []; }
+    }
+    if (!img || !img.isConnected) return; // ya cerró el modal
+    galeria.fotos = (fotos || []).filter(f => f && f.src);
+    if (!galeria.fotos.length) return;
+    const elegida = select && select.value ? buscarVariante(producto, select.value) : seleccionUnica;
+    irAFotoDeVariante(elegida);
+    const varias = galeria.fotos.length > 1;
+    [anterior, siguiente, contador].forEach(el => { if (el) el.hidden = !varias; });
+  })();
+
+  anterior?.addEventListener('click', () => mostrarFoto(galeria.indice - 1));
+  siguiente?.addEventListener('click', () => mostrarFoto(galeria.indice + 1));
+
+  let inicioX = null;
+  img?.addEventListener('touchstart', (e) => { inicioX = e.touches[0].clientX; }, { passive: true });
+  img?.addEventListener('touchend', (e) => {
+    if (inicioX === null || galeria.fotos.length < 2) return;
+    const dx = e.changedTouches[0].clientX - inicioX;
+    inicioX = null;
+    if (Math.abs(dx) > 40) mostrarFoto(galeria.indice + (dx < 0 ? 1 : -1));
+  });
+
+  const alTeclear = (e) => {
+    if (!img || !img.isConnected || !overlay.classList.contains('open')) { document.removeEventListener('keydown', alTeclear); return; }
+    if (galeria.fotos.length < 2 || e.target.closest?.('select, input, textarea')) return;
+    if (e.key === 'ArrowLeft') mostrarFoto(galeria.indice - 1);
+    if (e.key === 'ArrowRight') mostrarFoto(galeria.indice + 1);
+  };
+  document.addEventListener('keydown', alTeclear);
+
   select?.addEventListener('change', () => {
     const variante = buscarVariante(producto, select.value);
-    if (img) img.src = variante ? fotoVarianteProducto(producto, variante) : normalizarImagenProducto(producto, true);
+    if (!irAFotoDeVariante(variante) && img) img.src = variante ? fotoVarianteProducto(producto, variante) : normalizarImagenProducto(producto, true);
     if (apartarBtn) apartarBtn.disabled = !select.value;
   });
 
