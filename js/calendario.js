@@ -405,7 +405,7 @@ function abrirModalEvento(id) {
 
   const { dia, mes } = formatearFechaCorta(ev.fecha);
   const etiquetaTipo = ev.tipo === 'presencial' ? 'Presencial' : 'Virtual';
-  const textoBoton = ev.tipo === 'presencial' ? 'Ver ubicación' : 'Unirme por Zoom';
+  const textoBoton = ev.tipo === 'presencial' ? 'Ver ubicación' : 'Ver enlace de reunión';
 
   const asistentes = Array.isArray(ev.asistentes) ? ev.asistentes : [];
   const yaConfirmo = asistentes.some(a => a.personaId === obtenerIdPersonaActualPortal());
