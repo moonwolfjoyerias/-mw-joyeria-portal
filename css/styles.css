@@ -5852,3 +5852,11 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 .cfg-buscador-cuentas { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .cfg-buscador-cuentas .catalog-search { width: 100%; max-width: 440px; }
 .cfg-buscador-conteo { font-size: 0.8rem; color: var(--mw-text-muted); }
+
+/* ---------- Mis apartados / Mi carrito: cantidad −1+ por artículo ---------- */
+.apartado-cantidad { display: inline-flex; align-items: center; border: 1.5px solid var(--mw-border); border-radius: 999px; overflow: hidden; flex-shrink: 0; background: var(--surface); }
+.apartado-cantidad button { width: 34px; height: 34px; border: 0; background: transparent; color: var(--mw-accent-text); font-size: 1.15rem; font-weight: 700; cursor: pointer; line-height: 1; }
+.apartado-cantidad button:hover:not(:disabled) { background: var(--mw-lilac-soft); }
+.apartado-cantidad button:disabled { color: var(--mw-text-muted); opacity: 0.45; cursor: not-allowed; }
+.apartado-cantidad-num { min-width: 28px; text-align: center; font-weight: 700; color: var(--mw-text); }
+.apartado-prices .price-subtotal { display: block; font-size: 0.78rem; color: var(--mw-text-muted); margin-top: 2px; }
