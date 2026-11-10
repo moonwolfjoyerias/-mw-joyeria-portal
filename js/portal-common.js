@@ -4,6 +4,7 @@
 // datos de ejemplo (NOTIFICACIONES_EJEMPLO, EVENTOS_EJEMPLO).
 
 document.addEventListener('DOMContentLoaded', async () => {
+  initMiCarritoForanea();
   // FASE 2 (Firebase): el badge de notificaciones de Admin (dentro de
   // initNotifPanel → admin-comun.js) revisa apartados vencidos — espera
   // a que la caché tenga datos reales antes de calcular ese conteo.
@@ -19,6 +20,50 @@ document.addEventListener('DOMContentLoaded', async () => {
   initSidebarMovil();
   initTablasMovil();
 });
+
+// ---------- Foráneas: "Mis apartados" se llama "Mi carrito" ----------
+// Pedido del negocio: para las Emprendedoras/Líderes con etiqueta
+// Foránea, el menú, los enlaces y el título de la página dicen "Mi
+// carrito". Se recuerda en este navegador (para que no parpadee y para
+// las páginas que no cargan las personas) y se confirma con su cuenta.
+function initMiCarritoForanea() {
+  if (!/\/portal\/(emprendedora|lider)\//.test(window.location.pathname)) return;
+  const id = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : '';
+  const clave = `mw-mi-carrito:${id}`;
+  let recordado = null;
+  try { recordado = localStorage.getItem(clave); } catch (e) { /* sin almacenamiento */ }
+  if (recordado === '1') aplicarNombreMiCarrito(true);
+
+  const revisar = () => {
+    const persona = typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(id) : null;
+    if (!persona) return;
+    const foranea = persona.categoria === 'foranea';
+    try { localStorage.setItem(clave, foranea ? '1' : '0'); } catch (e) { /* sin almacenamiento */ }
+    aplicarNombreMiCarrito(foranea);
+  };
+  if (typeof personasRepoListo !== 'undefined') personasRepoListo.then(revisar).catch(() => {});
+  else revisar();
+}
+
+function aplicarNombreMiCarrito(foranea) {
+  const cambiar = (texto) => foranea
+    ? texto.replace(/Mis apartados/g, 'Mi carrito').replace(/mis apartados/g, 'mi carrito')
+    : texto.replace(/Mi carrito/g, 'Mis apartados').replace(/mi carrito/g, 'mis apartados');
+  const enNodosDeTexto = (el) => {
+    const recorrido = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let nodo;
+    while ((nodo = recorrido.nextNode())) {
+      const nuevo = cambiar(nodo.nodeValue);
+      if (nuevo !== nodo.nodeValue) nodo.nodeValue = nuevo;
+    }
+  };
+  document.querySelectorAll('a[href*="-apartados.html"]').forEach(enNodosDeTexto);
+  if (/-apartados\.html$/.test(window.location.pathname)) {
+    const h1 = document.querySelector('.portal-header h1');
+    if (h1) enNodosDeTexto(h1);
+    document.title = cambiar(document.title);
+  }
+}
 
 // ---------- UI-01 de la auditoría: menú lateral colapsable en móvil ----------
 // Antes, en una pantalla angosta, .sidebar se apilaba COMPLETA (los

@@ -298,24 +298,40 @@ function renderApartados() {
   Array.from(seleccionCarrito).forEach(id => { if (!idsPagables.has(id)) seleccionCarrito.delete(id); });
   Array.from(piezasVistasCarrito).forEach(id => { if (!idsPagables.has(id)) piezasVistasCarrito.delete(id); });
 
-  list.innerHTML = items.map(({ pieza }) => {
+  // Piezas iguales (mismo artículo, variante, precio y ventana) van en una
+  // sola fila con su cantidad: − quita una, + aparta otra si hay existencia.
+  gruposActuales = agruparPiezasApartado(items, idsPagables);
+
+  list.innerHTML = gruposActuales.map((grupo, i) => {
+    const pieza = grupo.piezas[0];
+    const n = grupo.piezas.length;
     const foto = fotoPiezaApartado(pieza);
     const generica = esFotoGenericaApartado(foto);
-    const pagable = idsPagables.has(pieza.id);
+    const etiqueta = precioEtiquetaApartado(pieza);
+    const unitario = Number(pieza.total) || 0;
+    const seleccionadas = grupo.piezas.filter(p => seleccionCarrito.has(p.id)).length;
+    const hayMas = existenciaDisponibleApartado(pieza) > 0;
     return `
-    <div class="apartado-row" data-id="${pieza.id}">
-      ${pagable ? `<input type="checkbox" data-seleccionar="${pieza.id}" ${seleccionCarrito.has(pieza.id) ? 'checked' : ''} title="Pagar esta pieza ahora">` : ''}
+    <div class="apartado-row" data-grupo="${i}">
+      ${grupo.pagable ? `<input type="checkbox" data-seleccionar-grupo="${i}" ${seleccionadas === n ? 'checked' : ''} title="Pagar ${n === 1 ? 'esta pieza' : 'estas piezas'} ahora">` : ''}
       <div class="apartado-photo"><img src="${foto}" alt="${escapeAttribute(pieza.producto)}" class="${generica ? 'foto-generica' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(pieza.producto)}"`}></div>
       <div class="apartado-info">
         <h4>${escapeHTML(pieza.producto)}</h4>
         <span class="variant">${escapeHTML([pieza.colorOro, pieza.variante].filter(Boolean).join(' · '))}</span>
       </div>
+      <div class="apartado-cantidad" role="group" aria-label="Cantidad de ${escapeAttribute(pieza.producto)}">
+        <button type="button" data-menos="${i}" aria-label="Quitar una pieza">−</button>
+        <span class="apartado-cantidad-num">${n}</span>
+        <button type="button" data-mas="${i}" aria-label="Apartar otra pieza" ${pieza.productoId && hayMas ? '' : 'disabled'} title="${pieza.productoId && hayMas ? 'Apartar otra pieza igual' : 'Ya no hay más piezas de esta variante'}">+</button>
+      </div>
       <div class="apartado-prices">
-        <span class="price-emprendedora">$${pieza.total} MXN</span>
+        ${etiqueta > unitario ? `<span class="price-public">$${etiqueta.toLocaleString('es-MX')} MXN</span>` : ''}
+        <span class="price-emprendedora">$${unitario.toLocaleString('es-MX')} MXN</span>
+        ${n > 1 ? `<span class="price-subtotal">Subtotal $${(unitario * n).toLocaleString('es-MX')} MXN</span>` : ''}
       </div>
       <div class="apartado-actions">
-        <button data-editar="${pieza.id}">Editar</button>
-        <button class="quitar" data-quitar="${pieza.id}">Quitar</button>
+        ${n === 1 ? `<button data-editar="${pieza.id}">Editar</button>` : ''}
+        <button class="quitar" data-quitar-grupo="${i}">Quitar${n > 1 ? ' todas' : ''}</button>
       </div>
     </div>
   `;
@@ -323,21 +339,103 @@ function renderApartados() {
 
   wirearZoomFotos(list);
 
-  list.querySelectorAll('[data-quitar]').forEach(btn => {
-    btn.addEventListener('click', () => quitarPieza(btn.getAttribute('data-quitar')));
+  list.querySelectorAll('[data-quitar-grupo]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const grupo = gruposActuales[Number(btn.getAttribute('data-quitar-grupo'))];
+      if (!grupo) return;
+      if (grupo.piezas.length > 1 && !confirm(`¿Quitar las ${grupo.piezas.length} piezas de "${grupo.piezas[0].producto}"?`)) return;
+      quitarPiezas(grupo.piezas.map(p => p.id));
+    });
+  });
+  list.querySelectorAll('[data-menos]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const grupo = gruposActuales[Number(btn.getAttribute('data-menos'))];
+      if (!grupo) return;
+      // Se quita la que no tiene abonos (si hay), empezando por la última.
+      const pieza = grupo.piezas.slice().reverse().find(p => !(p.pagos || []).length) || grupo.piezas[grupo.piezas.length - 1];
+      quitarPiezas([pieza.id]);
+    });
+  });
+  list.querySelectorAll('[data-mas]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const grupo = gruposActuales[Number(btn.getAttribute('data-mas'))];
+      if (grupo) apartarOtraPieza(grupo, btn);
+    });
   });
   list.querySelectorAll('[data-editar]').forEach(btn => {
     btn.addEventListener('click', () => abrirModalEditar(btn.getAttribute('data-editar')));
   });
-  list.querySelectorAll('[data-seleccionar]').forEach(cb => {
+  list.querySelectorAll('[data-seleccionar-grupo]').forEach(cb => {
     cb.addEventListener('change', () => {
-      const id = cb.getAttribute('data-seleccionar');
-      if (cb.checked) seleccionCarrito.add(id); else seleccionCarrito.delete(id);
+      const grupo = gruposActuales[Number(cb.getAttribute('data-seleccionar-grupo'))];
+      if (!grupo) return;
+      grupo.piezas.forEach(p => { if (cb.checked) seleccionCarrito.add(p.id); else seleccionCarrito.delete(p.id); });
       actualizarResumen();
     });
   });
 
   actualizarResumen();
+}
+
+// ---------- Cantidad (piezas iguales agrupadas) ----------
+let gruposActuales = [];
+let agregandoPieza = false;
+
+function agruparPiezasApartado(items, idsPagables) {
+  const grupos = new Map();
+  items.forEach(({ pieza, ventana }) => {
+    const pagable = idsPagables.has(pieza.id);
+    const clave = [ventana.id, pieza.productoId || `nombre:${pieza.producto}`, pieza.varianteId || pieza.variante || '', Number(pieza.total) || 0, pagable].join('|');
+    if (!grupos.has(clave)) grupos.set(clave, { ventana, pagable, piezas: [] });
+    grupos.get(clave).piezas.push(pieza);
+  });
+  return Array.from(grupos.values());
+}
+
+function productoDePiezaApartado(pieza) {
+  const catalogo = typeof obtenerCatalogoStaffStorage === 'function' ? obtenerCatalogoStaffStorage() : [];
+  return catalogo.find(p => p.id === pieza.productoId) || null;
+}
+
+// Precio etiqueta guardado al apartar; si es una pieza vieja, el del catálogo.
+function precioEtiquetaApartado(pieza) {
+  if (Number(pieza.precioEtiqueta) > 0) return Number(pieza.precioEtiqueta);
+  return Number(productoDePiezaApartado(pieza)?.precioEtiqueta) || 0;
+}
+
+function existenciaDisponibleApartado(pieza) {
+  const producto = productoDePiezaApartado(pieza);
+  const variante = producto && Array.isArray(producto.variantes) ? producto.variantes.find(v => v.id === pieza.varianteId) : null;
+  return variante ? Number(variante.stock) || 0 : 0;
+}
+
+// "+": aparta otra pieza igual en la MISMA ventana, como "Apartar" en el
+// catálogo (descuenta la existencia en una transacción; si ya no hay, avisa).
+async function apartarOtraPieza(grupo, boton) {
+  if (agregandoPieza) return;
+  const pieza = grupo.piezas[0];
+  const producto = productoDePiezaApartado(pieza);
+  const variante = producto ? producto.variantes.find(v => v.id === pieza.varianteId) : null;
+  if (!producto || !variante) { mostrarToast('Esa pieza ya no está en el catálogo.'); return; }
+  const ventana = obtenerVentanasApartado().find(v => v.id === grupo.ventana.id);
+  if (!ventana || ventana.estado === 'cerrada' || ventana.estado === 'vencida') { mostrarToast('Este apartado ya no admite piezas nuevas.'); return; }
+
+  agregandoPieza = true;
+  if (boton) boton.disabled = true;
+  try {
+    const datosPieza = {
+      producto: producto.nombre, variante: etiquetaVariante(variante), colorOro: producto.colorOro || '',
+      total: precioConDescuento(producto), productoId: producto.id, varianteId: variante.id
+    };
+    const resultado = await agregarPiezaAVentana(ventana, datosPieza, null);
+    if (!resultado.ok) { mostrarToast(resultado.error || 'Ya no hay más piezas de esta variante.'); return; }
+    guardarVentanasApartado(obtenerVentanasApartado().map(v => v.id === ventana.id ? ventana : v));
+    notificarEquipoOperativo(`${ventana.usuarioNombre} apartó otra pieza de "${producto.nombre}" (${datosPieza.variante}).`, ventana.usuarioNombre);
+    mostrarToast('Se apartó otra pieza');
+  } finally {
+    agregandoPieza = false;
+    renderApartados();
+  }
 }
 
 function actualizarResumen() {
@@ -369,21 +467,27 @@ function actualizarResumen() {
 
 // ---------- Quitar / Editar ----------
 function quitarPieza(id) {
-  const encontrado = obtenerPiezasPropiasConVentana().find(({ pieza }) => pieza.id === id);
-  if (!encontrado) return;
-  const { pieza, ventana } = encontrado;
+  quitarPiezas([id]);
+}
+
+// Quita una o varias piezas iguales (botón − o "Quitar todas") con un solo
+// guardado y un solo aviso al equipo.
+function quitarPiezas(ids) {
+  const encontradas = obtenerPiezasPropiasConVentana().filter(({ pieza }) => ids.includes(pieza.id));
+  if (!encontradas.length) return;
+  const { pieza, ventana } = encontradas[0];
   const nombrePersona = ventana.usuarioNombre;
-  const nombrePieza = pieza.producto;
+  const n = encontradas.length;
+  const nombrePieza = n > 1 ? `${pieza.producto} ×${n}` : pieza.producto;
   const variantePieza = pieza.variante;
 
   mutarVentanaPropia(ventana.id, v => {
-    const p = v.apartados.find(x => x.id === id);
-    if (p) {
+    v.apartados.filter(x => ids.includes(x.id) && x.estado === 'activa').forEach(p => {
       p.estado = 'cancelada';
       // La quitó ella: no sale en "Canceladas recientemente" (ver abajo).
       p.cancelacion = { motivo: 'La quitaste tú', fecha: new Date().toISOString(), propia: true };
       if (typeof restaurarStockVariante === 'function') restaurarStockVariante(p.productoId, p.varianteId);
-    }
+    });
     // LOG-11 de la auditoría: la clienta decide qué piezas quedan y
     // cuáles quita — Staff/Encargado/Admin no deciden eso por ella,
     // pero sí necesitan ver con claridad qué cambió para ir a liberar
