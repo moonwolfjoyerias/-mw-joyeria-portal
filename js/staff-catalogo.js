@@ -142,9 +142,7 @@ function renderFiltros() {
 
     categoria.innerHTML =
       `<option value="">Todas las categorías</option>` +
-      CATEGORIAS_STAFF.map(c =>
-        `<option value="${c}">${c}</option>`
-      ).join('');
+      opcionesFiltroCategoriasSelect(CATEGORIAS_STAFF);
 
   }
 
@@ -202,7 +200,7 @@ function renderCatalogo() {
     }
 
 
-    if (categoria && p.categoria !== categoria) {
+    if (categoria && !productoEnCategoriaFiltro(p, categoria)) {
       return false;
     }
 
@@ -364,7 +362,7 @@ function renderProducto(p) {
         </div>
       </td>
       <td><span class="catalog-description">${escapeHTML(p.descripcion || 'Sin descripción')}</span></td>
-      <td>${escapeHTML(p.categoria || 'Sin categoría')}</td>
+      <td>${escapeHTML(etiquetaCategoriaProducto(p) || 'Sin categoría')}</td>
       <td>${escapeHTML(material)}</td>
       <td>${escapeHTML(colorTalla)}</td>
       <td><strong>$${formatearPrecio(p.precioEtiqueta)} MXN</strong></td>
@@ -549,6 +547,7 @@ function abrirModalProducto(producto = null) {
         </select>
 
       </div>
+${htmlCampoSubcategoriaDije(producto)}
 
 
       <div class="form-field">
@@ -687,6 +686,8 @@ function abrirModalProducto(producto = null) {
   document
     .getElementById('productoGaleriaInput')
     ?.addEventListener('change', manejarGaleria);
+
+  conectarCampoSubcategoriaDije();
 
 
   document
@@ -1041,6 +1042,7 @@ function obtenerDatosProducto(idEditando) {
     descripcion,
     material,
     categoria,
+    subcategoria: leerCampoSubcategoriaDije(categoria),
     calidad,
     codigo,
     colorOro,

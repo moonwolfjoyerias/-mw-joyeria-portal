@@ -192,12 +192,14 @@ function renderFiltroCategorias() {
   if (!wrap) return;
   const cats = categoriasDisponibles();
   // conserva selección previa que siga siendo válida
-  filtro.categorias.forEach(c => { if (!cats.includes(c)) filtro.categorias.delete(c); });
+  const validos = valoresFiltroCategorias(cats);
+  filtro.categorias.forEach(c => { if (!validos.includes(c)) filtro.categorias.delete(c); });
   wrap.innerHTML = cats.map(c => `
     <label class="filter-option">
       <input type="checkbox" value="${c}" data-filter="categoria" ${filtro.categorias.has(c) ? 'checked' : ''}>
       ${c}
     </label>
+    ${c === 'Dijes' ? htmlFiltroSubcategoriasDijes(filtro.categorias) : ''}
   `).join('');
   wrap.querySelectorAll('input').forEach(cb => cb.addEventListener('change', (e) => {
     if (e.target.checked) filtro.categorias.add(e.target.value); else filtro.categorias.delete(e.target.value);
@@ -266,7 +268,7 @@ function productoCoincideBusqueda(p) {
   if (!palabras.length) return true;
   const material = MATERIALES.find(m => m.key === p.material)?.label || p.material || '';
   const donde = _normalizarBusquedaCatalogo([
-    p.nombre, p.descripcion, p.categoria, p.colorOro, material,
+    p.nombre, p.descripcion, p.categoria, etiquetaCategoriaProducto(p), p.colorOro, material,
     ...(p.variantes || []).map(v => [v.color, v.talla].filter(Boolean).join(' '))
   ].join(' '));
   return palabras.every(palabra => donde.includes(palabra));
@@ -276,7 +278,7 @@ function aplicarFiltros() {
   const resultado = obtenerCatalogoReal().filter((p) => {
     if (!productoCoincideBusqueda(p)) return false;
     if (filtro.materiales.size > 0 && !filtro.materiales.has(p.material)) return false;
-    if (filtro.categorias.size > 0 && !filtro.categorias.has(p.categoria)) return false;
+    if (!productoEnCategoriasFiltro(p, filtro.categorias)) return false;
     if (filtro.coloresOro.size > 0 && !filtro.coloresOro.has(p.colorOro)) return false;
     const variantes = p.variantes || [];
     if (filtro.talla && !variantes.some(v => v.talla === filtro.talla)) return false;
@@ -309,7 +311,7 @@ function renderProductos(productos) {
       </div>
       <div class="cp-body">
         <h4>${escapeHTMLCatalogoVariantes(p.nombre)}</h4>
-        <div class="cp-meta">${escapeHTMLCatalogoVariantes([p.colorOro, p.categoria, metaVariantes].filter(Boolean).join(' · ')) || '&nbsp;'}</div>
+        <div class="cp-meta">${escapeHTMLCatalogoVariantes([p.colorOro, etiquetaCategoriaProducto(p), metaVariantes].filter(Boolean).join(' · ')) || '&nbsp;'}</div>
         <div class="cp-price">
           <span class="price-public">$${p.precioEtiqueta} MXN</span>
           <span class="price-emprendedora">$${precioConDescuento(p)} MXN</span>
@@ -378,7 +380,7 @@ function abrirModalDetalleProducto(productoId) {
         <h3>${escapeHTMLCatalogoVariantes(producto.nombre)}</h3>
         <div class="detail-grid">
           <div class="full" style="grid-column:1/-1;"><span>Descripción</span><strong>${escapeHTMLCatalogoVariantes(producto.descripcion || 'Sin descripción')}</strong></div>
-          <div><span>Categoría</span><strong>${escapeHTMLCatalogoVariantes(producto.categoria || 'Sin categoría')}</strong></div>
+          <div><span>Categoría</span><strong>${escapeHTMLCatalogoVariantes(etiquetaCategoriaProducto(producto) || 'Sin categoría')}</strong></div>
           <div><span>Material</span><strong>${escapeHTMLCatalogoVariantes(material)}</strong></div>
           ${producto.colorOro ? `<div><span>Color de oro</span><strong>${escapeHTMLCatalogoVariantes(producto.colorOro)}</strong></div>` : ''}
           <div><span>Precio etiqueta</span><strong>$${producto.precioEtiqueta} MXN</strong></div>

@@ -77,7 +77,7 @@ function renderFiltros() {
   const categoria = document.getElementById('filterCategoria');
   if (categoria) {
     categoria.innerHTML = `<option value="">Todas las categorías</option>` +
-      CATEGORIAS_STAFF.map(c => `<option value="${c}">${c}</option>`).join('');
+      opcionesFiltroCategoriasSelect(CATEGORIAS_STAFF);
   }
 
 }
@@ -112,7 +112,7 @@ function renderCatalogo() {
     ) return false;
 
     if (material && p.material !== material) return false;
-    if (categoria && p.categoria !== categoria) return false;
+    if (categoria && !productoEnCategoriaFiltro(p, categoria)) return false;
     if (estado === 'disponible' && stockTotalProducto(p) <= 0) return false;
     if (estado === 'agotado' && stockTotalProducto(p) > 0) return false;
 
@@ -214,7 +214,7 @@ function renderProducto(p) {
         </div>
       </td>
       <td><span class="catalog-description">${escapeHTML(p.descripcion || 'Sin descripción')}</span></td>
-      <td>${escapeHTML(p.categoria || 'Sin categoría')}</td>
+      <td>${escapeHTML(etiquetaCategoriaProducto(p) || 'Sin categoría')}</td>
       <td>${escapeHTML(material)}</td>
       <td>${escapeHTML(colorTalla)}</td>
       <td><strong>$${formatearPrecio(p.precioEtiqueta)} MXN</strong></td>
@@ -314,6 +314,7 @@ function abrirModalProducto(producto = null) {
           ${CATEGORIAS_STAFF.map(c => `<option value="${c}" ${producto?.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}
         </select>
       </div>
+${htmlCampoSubcategoriaDije(producto)}
 
       <div class="form-field">
         <label>Color de oro</label>
@@ -383,6 +384,7 @@ function abrirModalProducto(producto = null) {
   });
 
   document.getElementById('productoGaleriaInput')?.addEventListener('change', manejarGaleriaEncargado);
+  conectarCampoSubcategoriaDije();
 
   document.getElementById('productoMaterial')?.addEventListener('change', (e) => {
     const select = document.getElementById('productoDescuentoSelect');
@@ -627,6 +629,7 @@ function obtenerDatosProducto(idEditando) {
 
   return {
     nombre, descripcion, material, categoria, calidad, codigo, colorOro,
+    subcategoria: leerCampoSubcategoriaDije(categoria),
     variantes, precioEtiqueta, descuento,
     disponible: variantes.some(v => v.stock > 0),
     mostrarEnCatalogo: document.getElementById('productoMostrarEnCatalogo')?.checked !== false,
