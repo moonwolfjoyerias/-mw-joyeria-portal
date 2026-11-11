@@ -224,8 +224,9 @@
   }
 
   const aBlob = c => new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
-  const nombreArchivo = (producto, variante) =>
-    (['mw', producto.codigo || producto.nombre || 'pieza', variante?.color, variante?.talla].filter(Boolean).join('-')
+  // sinCodigo: para Emprendedora/Líder el archivo lleva el nombre, nunca el código interno.
+  const nombreArchivo = (producto, variante, sinCodigo) =>
+    (['mw', (sinCodigo ? '' : producto.codigo) || producto.nombre || 'pieza', variante?.color, variante?.talla].filter(Boolean).join('-')
       .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'mw-pieza') + '.jpg';
 
   function descargar(blob, nombre) {
@@ -248,10 +249,19 @@
     abierto = null;
   }
 
-  function abrir(productoCrudo) {
+  // opciones (Emprendedora/Líder desde el detalle de la pieza):
+  //   soloDisponibles → solo las variantes con existencia, sin mostrar cuántas
+  //                     hay ni el código interno (tampoco en el nombre del archivo)
+  //   varianteId      → la variante que ya tenía elegida
+  function abrir(productoCrudo, opciones = {}) {
     cerrar();
     const producto = typeof migrarProductoAVariantes === 'function' ? migrarProductoAVariantes(productoCrudo) : productoCrudo;
-    const variantes = Array.isArray(producto.variantes) && producto.variantes.length ? producto.variantes : [null];
+    const todas = Array.isArray(producto.variantes) ? producto.variantes : [];
+    const conExistencia = todas.filter(v => (Number(v.stock) || 0) > 0);
+    const lista = opciones.soloDisponibles && conExistencia.length ? conExistencia : todas;
+    const variantes = lista.length ? lista : [null];
+    const mostrarExistencia = !opciones.soloDisponibles;
+    const inicial = Math.max(0, variantes.findIndex(v => v && v.id === opciones.varianteId));
     const etiqueta = v => (typeof etiquetaVariante === 'function' ? etiquetaVariante(v) : [v.color, v.talla].filter(Boolean).join(' · ') || 'Única');
     const celular = enCelular();
     const fondo = document.createElement('div');
@@ -262,11 +272,11 @@
           <h3>Compartir por WhatsApp</h3>
           <button type="button" class="btn btn-outline" data-cerrar>Cerrar</button>
         </div>
-        <p class="compartir-nombre"><strong>${esc(producto.nombre || 'Sin nombre')}</strong>${producto.codigo ? ` · ${esc(producto.codigo)}` : ''}</p>
+        <p class="compartir-nombre"><strong>${esc(producto.nombre || 'Sin nombre')}</strong>${producto.codigo && mostrarExistencia ? ` · ${esc(producto.codigo)}` : ''}</p>
         ${variantes.length > 1 ? `
           <p class="compartir-ayuda">Elige la variante:</p>
           <div class="compartir-variantes">
-            ${variantes.map((v, i) => `<button type="button" class="compartir-variante${i === 0 ? ' activa' : ''}" data-variante="${i}">${esc(etiqueta(v))} <small>${Number(v.stock) || 0} pza</small></button>`).join('')}
+            ${variantes.map((v, i) => `<button type="button" class="compartir-variante${i === inicial ? ' activa' : ''}" data-variante="${i}">${esc(etiqueta(v))}${mostrarExistencia ? ` <small>${Number(v.stock) || 0} pza</small>` : ''}</button>`).join('')}
           </div>` : ''}
         <div class="compartir-vista"><p class="compartir-ayuda">Preparando la imagen…</p></div>
         <p class="compartir-error" role="alert" hidden></p>
@@ -303,7 +313,7 @@
         if (estado.url) URL.revokeObjectURL(estado.url);
         estado.blob = blob;
         estado.url = URL.createObjectURL(blob);
-        estado.nombre = nombreArchivo(producto, variantes[i]);
+        estado.nombre = nombreArchivo(producto, variantes[i], !mostrarExistencia);
         vista.innerHTML = `<img src="${estado.url}" alt="Imagen para compartir de ${esc(producto.nombre || 'la pieza')}">`;
         botones.forEach(b => { b.disabled = false; });
       } catch (e) {
@@ -332,7 +342,7 @@
         } else descargar(estado.blob, estado.nombre);
       }
     });
-    preparar(0);
+    preparar(inicial);
   }
 
   function productoPorId(id) {

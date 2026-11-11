@@ -252,6 +252,21 @@ function conectarCampoSubcategoriaDije() {
   }));
 }
 
+// Exhibidores no llevan color de oro: el campo se oculta al elegir ese
+// material (y se guarda vacío, ver colorOroParaGuardar).
+function conectarColorOroSegunMaterial() {
+  const material = document.getElementById('productoMaterial');
+  const campo = document.getElementById('productoColorOro')?.closest('.form-field');
+  if (!material || !campo) return;
+  const ajustar = () => { campo.hidden = material.value === 'exhibidores'; };
+  material.addEventListener('change', ajustar);
+  ajustar();
+}
+
+function colorOroParaGuardar(material, colorOro) {
+  return material === 'exhibidores' ? '' : (colorOro || '');
+}
+
 // Lo que se guarda: '' si no es dije o no se marcó nada.
 function leerCampoSubcategoriaDije(categoria) {
   if (categoria !== 'Dijes') return '';
