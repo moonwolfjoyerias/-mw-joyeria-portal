@@ -168,6 +168,96 @@ const CATEGORIAS_STAFF = [
   'Relicarios', 'Rosarios', 'Simuladores', 'Semanarios', 'Tobilleras', 'Tiaras'
 ];
 
+// Subcategorías de Dijes (campo `subcategoria` del producto). Al dar de
+// alta un dije, S/E/A marca "Religioso" o "Cruz" (solo una); si no marca
+// ninguna, queda como dije normal ('otros'). En los filtros salen debajo
+// de "Dijes" con el valor "Dijes:<clave>"; marcar "Dijes" trae todos.
+// BRILLO usa las mismas claves (src/pagina/producto.ts).
+const SUBCATEGORIAS_DIJES = [
+  { key: 'religiosos', label: 'Dijes religiosos', casilla: 'Religioso' },
+  { key: 'cruces', label: 'Cruces', casilla: 'Cruz' },
+  { key: 'otros', label: 'Otros dijes' }
+];
+
+function subcategoriaDije(producto) {
+  if (!producto || producto.categoria !== 'Dijes') return '';
+  return producto.subcategoria === 'religiosos' || producto.subcategoria === 'cruces' ? producto.subcategoria : 'otros';
+}
+
+// "Dijes religiosos", "Cruces" o la categoría tal cual.
+function etiquetaCategoriaProducto(producto) {
+  const sub = subcategoriaDije(producto);
+  if (sub === 'religiosos' || sub === 'cruces') return SUBCATEGORIAS_DIJES.find(s => s.key === sub).label;
+  return producto?.categoria || '';
+}
+
+// ¿El producto entra en este valor de filtro ("Anillos", "Dijes" o "Dijes:cruces")?
+function productoEnCategoriaFiltro(producto, valor) {
+  if (!valor) return true;
+  const [categoria, sub] = String(valor).split(':');
+  if (producto?.categoria !== categoria) return false;
+  return !sub || subcategoriaDije(producto) === sub;
+}
+
+// Con varios valores marcados (filtros de casillas): entra si coincide con alguno.
+function productoEnCategoriasFiltro(producto, valores) {
+  const lista = Array.from(valores || []);
+  return !lista.length || lista.some(v => productoEnCategoriaFiltro(producto, v));
+}
+
+// Valores válidos de filtro para una lista de categorías (agrega las de Dijes).
+function valoresFiltroCategorias(categorias) {
+  return categorias.flatMap(c => (c === 'Dijes' ? [c, ...SUBCATEGORIAS_DIJES.map(s => `Dijes:${s.key}`)] : [c]));
+}
+
+// Casillas de las subcategorías de Dijes para los filtros de casillas.
+function htmlFiltroSubcategoriasDijes(seleccion, escapar) {
+  const esc = escapar || (s => String(s));
+  return SUBCATEGORIAS_DIJES.map(s => `
+    <label class="filter-option filter-sub">
+      <input type="checkbox" value="Dijes:${s.key}" data-filter="categoria" ${seleccion && seleccion.has(`Dijes:${s.key}`) ? 'checked' : ''}>
+      ${esc(s.label)}
+    </label>`).join('');
+}
+
+// Opciones de <select> de categorías con las de Dijes debajo.
+function opcionesFiltroCategoriasSelect(categorias) {
+  return categorias.map(c => `<option value="${c}">${c}</option>` +
+    (c === 'Dijes' ? SUBCATEGORIAS_DIJES.map(s => `<option value="Dijes:${s.key}">— ${s.label}</option>`).join('') : '')
+  ).join('');
+}
+
+// Campo del formulario de producto: casillas "Religioso" / "Cruz", visibles
+// solo cuando la categoría es Dijes (ver conectarCampoSubcategoriaDije).
+function htmlCampoSubcategoriaDije(producto) {
+  const actual = subcategoriaDije(producto);
+  return `
+      <div class="form-field full" id="productoSubcategoriaCampo" ${producto?.categoria === 'Dijes' ? '' : 'hidden'}>
+        <label>Tipo de dije</label>
+        <div class="subcategoria-dije">
+          ${SUBCATEGORIAS_DIJES.filter(s => s.casilla).map(s => `
+            <label class="check-catalogo"><input type="checkbox" data-subcategoria-dije="${s.key}" ${actual === s.key ? 'checked' : ''}> ${s.casilla}</label>`).join('')}
+        </div>
+        <small class="field-help">Marca solo una. Si no marcas ninguna, se queda como dije normal.</small>
+      </div>`;
+}
+
+function conectarCampoSubcategoriaDije() {
+  const select = document.getElementById('productoCategoria');
+  const campo = document.getElementById('productoSubcategoriaCampo');
+  if (!select || !campo) return;
+  select.addEventListener('change', () => { campo.hidden = select.value !== 'Dijes'; });
+  campo.querySelectorAll('[data-subcategoria-dije]').forEach(cb => cb.addEventListener('change', () => {
+    if (cb.checked) campo.querySelectorAll('[data-subcategoria-dije]').forEach(o => { if (o !== cb) o.checked = false; });
+  }));
+}
+
+// Lo que se guarda: '' si no es dije o no se marcó nada.
+function leerCampoSubcategoriaDije(categoria) {
+  if (categoria !== 'Dijes') return '';
+  return document.querySelector('#productoSubcategoriaCampo [data-subcategoria-dije]:checked')?.dataset.subcategoriaDije || '';
+}
+
 
 const COLORES_ORO_STAFF = [
   'Amarillo',

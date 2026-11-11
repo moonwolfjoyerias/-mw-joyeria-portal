@@ -135,12 +135,14 @@ function renderFiltroMaterialesVivo() {
 function renderFiltroCategoriasVivo() {
   const wrap = document.getElementById('filterCategorias');
   const cats = categoriasDisponiblesVivo();
-  filtroVivo.categorias.forEach(c => { if (!cats.includes(c)) filtroVivo.categorias.delete(c); });
+  const validos = valoresFiltroCategorias(cats);
+  filtroVivo.categorias.forEach(c => { if (!validos.includes(c)) filtroVivo.categorias.delete(c); });
   wrap.innerHTML = cats.map(c => `
     <label class="filter-option">
       <input type="checkbox" value="${escapeAttribute(c)}" data-filter="categoria" ${filtroVivo.categorias.has(c) ? 'checked' : ''}>
       ${escapeHTML(c)}
     </label>
+    ${c === 'Dijes' ? htmlFiltroSubcategoriasDijes(filtroVivo.categorias, escapeHTML) : ''}
   `).join('');
   wrap.querySelectorAll('input').forEach(cb => cb.addEventListener('change', (e) => {
     if (e.target.checked) filtroVivo.categorias.add(e.target.value); else filtroVivo.categorias.delete(e.target.value);
@@ -200,12 +202,12 @@ function _normalizarTextoVivo(texto) {
 function productoCoincideVivo(p) {
   if (!productoDisponible(p)) return false;
   if (filtroVivo.materiales.size > 0 && !filtroVivo.materiales.has(p.material)) return false;
-  if (filtroVivo.categorias.size > 0 && !filtroVivo.categorias.has(p.categoria)) return false;
+  if (!productoEnCategoriasFiltro(p, filtroVivo.categorias)) return false;
   if (filtroVivo.coloresOro.size > 0 && !filtroVivo.coloresOro.has(p.colorOro)) return false;
   if (filtroVivo.talla && !variantesDisponibles(p).some(v => v.talla === filtroVivo.talla)) return false;
   const texto = _normalizarTextoVivo(filtroVivo.texto).trim();
   if (!texto) return true;
-  const donde = _normalizarTextoVivo([p.nombre, p.descripcion, p.categoria, p.colorOro, _materialVivo(p)].join(' '));
+  const donde = _normalizarTextoVivo([p.nombre, p.descripcion, p.categoria, etiquetaCategoriaProducto(p), p.colorOro, _materialVivo(p)].join(' '));
   return texto.split(/\s+/).every(palabra => donde.includes(palabra));
 }
 
@@ -224,7 +226,7 @@ function renderProductosVivo(productos) {
 
   grid.innerHTML = productos.map((p) => {
     const foto = fotoPrincipalProducto(p);
-    const meta = [p.colorOro, p.categoria].filter(Boolean).join(' · ');
+    const meta = [p.colorOro, etiquetaCategoriaProducto(p)].filter(Boolean).join(' · ');
     return `
     <article class="catalog-product-card catalogo-vivo-card" data-producto="${escapeAttribute(p.id)}" tabindex="0" role="button" aria-label="Ver ${escapeAttribute(p.nombre)}">
       <div class="cp-photo">

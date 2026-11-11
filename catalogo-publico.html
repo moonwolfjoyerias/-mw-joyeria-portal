@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Catálogo — MW Joyería</title>
   <meta name="description" content="Catálogo público de joyería MW con piezas en oro laminado y acero inoxidable.">
-  <link rel="stylesheet" href="css/styles.css?v=69">
+  <link rel="stylesheet" href="css/styles.css?v=70">
   <link rel="icon" type="image/png" href="assets/images/favicon.png">
 </head>
 <body>
@@ -127,7 +127,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js?v=2"></script>
   <script src="js/firebase-init.js?v=4"></script>
-  <script src="js/staff-catalogo-ejemplo.js?v=4"></script>
+  <script src="js/staff-catalogo-ejemplo.js?v=5"></script>
   <script src="js/catalogo-firestore-sync.js?v=6"></script>
   <script src="js/dom-utils.js?v=7"></script>
   <script src="js/catalogo-variantes-modelo.js?v=12"></script>
@@ -203,12 +203,14 @@
       const wrap = document.getElementById('filterCategorias');
       if (!wrap) return;
       const cats = categoriasDisponibles();
-      filtro.categorias.forEach(c => { if (!cats.includes(c)) filtro.categorias.delete(c); });
+      const validos = valoresFiltroCategorias(cats);
+      filtro.categorias.forEach(c => { if (!validos.includes(c)) filtro.categorias.delete(c); });
       wrap.innerHTML = cats.map(c => `
         <label class="filter-option">
           <input type="checkbox" value="${escapeHTMLPublico(c)}" data-filter="categoria" ${filtro.categorias.has(c) ? 'checked' : ''}>
           ${escapeHTMLPublico(c)}
         </label>
+        ${c === 'Dijes' ? htmlFiltroSubcategoriasDijes(filtro.categorias, escapeHTMLPublico) : ''}
       `).join('');
       wrap.querySelectorAll('input').forEach(cb => cb.addEventListener('change', (e) => {
         if (e.target.checked) filtro.categorias.add(e.target.value); else filtro.categorias.delete(e.target.value);
@@ -269,7 +271,7 @@
     function productoCoincideFiltro(p) {
       if (!productoDisponible(p)) return false;
       if (filtro.materiales.size > 0 && !filtro.materiales.has(p.material)) return false;
-      if (filtro.categorias.size > 0 && !filtro.categorias.has(p.categoria)) return false;
+      if (!productoEnCategoriasFiltro(p, filtro.categorias)) return false;
       if (filtro.coloresOro.size > 0 && !filtro.coloresOro.has(p.colorOro)) return false;
       if (!filtro.talla) return true;
       return variantesDisponibles(p).some((v) => v.talla === filtro.talla);
@@ -293,7 +295,7 @@
 
       grid.innerHTML = productos.map((p) => {
         const variantes = variantesDisponibles(p);
-        const meta = [p.colorOro, p.categoria, ...variantes.map(etiquetaVariante)].filter(Boolean).join(' · ');
+        const meta = [p.colorOro, etiquetaCategoriaProducto(p), ...variantes.map(etiquetaVariante)].filter(Boolean).join(' · ');
         const foto = normalizarImagenPublico(p);
         // Tocar la foto la abre en grande (ver abrirImagenEnGrande en
         // js/dom-utils.js), ya en tamaño completo.
