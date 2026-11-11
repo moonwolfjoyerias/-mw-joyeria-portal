@@ -688,6 +688,7 @@ ${htmlCampoSubcategoriaDije(producto)}
     ?.addEventListener('change', manejarGaleria);
 
   conectarCampoSubcategoriaDije();
+  conectarColorOroSegunMaterial();
 
 
   document
@@ -1045,7 +1046,7 @@ function obtenerDatosProducto(idEditando) {
     subcategoria: leerCampoSubcategoriaDije(categoria),
     calidad,
     codigo,
-    colorOro,
+    colorOro: colorOroParaGuardar(material, colorOro),
     variantes,
     precioEtiqueta,
     descuento,

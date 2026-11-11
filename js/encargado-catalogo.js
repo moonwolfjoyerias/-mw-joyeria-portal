@@ -385,6 +385,7 @@ ${htmlCampoSubcategoriaDije(producto)}
 
   document.getElementById('productoGaleriaInput')?.addEventListener('change', manejarGaleriaEncargado);
   conectarCampoSubcategoriaDije();
+  conectarColorOroSegunMaterial();
 
   document.getElementById('productoMaterial')?.addEventListener('change', (e) => {
     const select = document.getElementById('productoDescuentoSelect');
@@ -628,7 +629,8 @@ function obtenerDatosProducto(idEditando) {
   const variantes = variantesTemporalEncargado.map(v => crearVarianteProducto(v));
 
   return {
-    nombre, descripcion, material, categoria, calidad, codigo, colorOro,
+    nombre, descripcion, material, categoria, calidad, codigo,
+    colorOro: colorOroParaGuardar(material, colorOro),
     subcategoria: leerCampoSubcategoriaDije(categoria),
     variantes, precioEtiqueta, descuento,
     disponible: variantes.some(v => v.stock > 0),

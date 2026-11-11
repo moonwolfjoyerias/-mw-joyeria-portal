@@ -395,10 +395,24 @@ function abrirModalDetalleProducto(productoId) {
           </select>
           <button class="btn btn-primary" style="width:100%;margin-top:12px;" id="detalleApartarBtn" ${seleccionUnica ? '' : 'disabled'}>Apartar</button>
         ` : `<p class="modal-sub">Ya no hay existencia de esta pieza.</p>`}
+        ${window.MWCompartirPieza ? `
+          <button class="btn btn-outline compartir-detalle-btn" style="width:100%;margin-top:10px;" type="button" id="detalleCompartirBtn">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>
+            Compartir por WhatsApp
+          </button>
+          <small class="field-help" style="display:block;text-align:center;margin-top:4px;">La imagen lleva solo el precio etiqueta.</small>` : ''}
       </div>
     </div>
   `;
   overlay.classList.add('open');
+
+  // Compartir por WhatsApp: la misma imagen que usa S/E/A (foto, isotipo y
+  // datos con el precio etiqueta — nunca el precio emprendedora), con solo
+  // las variantes disponibles y sin mostrar cuántas piezas hay.
+  document.getElementById('detalleCompartirBtn')?.addEventListener('click', () => {
+    const elegida = document.getElementById('detalleVarianteSelect')?.value || seleccionUnica?.id || '';
+    window.MWCompartirPieza?.abrir(producto, { soloDisponibles: true, varianteId: elegida });
+  });
 
   const select = document.getElementById('detalleVarianteSelect');
   const apartarBtn = document.getElementById('detalleApartarBtn');
