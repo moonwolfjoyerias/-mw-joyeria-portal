@@ -1006,7 +1006,7 @@ function crearFilaDetalle(v) {
 
   return `
     <tr class="expand-row">
-      <td colspan="6" style="background:#faf8fc;padding:16px 20px;">
+      <td colspan="6" style="padding:16px 20px;">
 
         <div class="eyebrow" style="margin-bottom:8px;">Piezas del apartado</div>
         ${piezas}
