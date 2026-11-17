@@ -5866,3 +5866,26 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 .subcategoria-dije { display: flex; flex-wrap: wrap; gap: 8px 20px; }
 #productoSubcategoriaCampo[hidden] { display: none; }
 .form-field[hidden] { display: none !important; }
+
+/* ---------- Mi árbol de mi-equipo (e/l) ---------- */
+.arbol-me-mes { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--mw-text-muted); }
+.arbol-me-mes select { padding: 0.4rem 0.6rem; border: 1px solid var(--mw-border); border-radius: var(--radius-sm); background: var(--surface); color: var(--mw-text); }
+.arbol-me-cifras { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.7rem; margin: 0.8rem 0; }
+.arbol-me-cifras > div { display: flex; flex-direction: column; gap: 2px; background: var(--mw-lilac-soft); border-radius: var(--radius-sm); padding: 0.6rem 0.8rem; }
+.arbol-me-cifras span { font-size: 0.75rem; color: var(--mw-text-muted); }
+.arbol-me-cifras b { font-family: var(--font-heading); color: var(--mw-accent-text); font-size: 1.05rem; }
+.arbol-me-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin: 0.8rem 0; }
+.arbol-me-barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 0.5rem; }
+.arbol-me-barra input { flex: 1 1 200px; padding: 0.5rem 0.7rem; border: 1px solid var(--mw-border); border-radius: var(--radius-sm); }
+.arbol-me-barra button { min-width: 34px; padding: 0.35rem 0.6rem; border: 1px solid var(--mw-border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; }
+.arbol-me-lienzo { max-height: 65vh; overflow: auto; }
+.arbol-me-nivel { border: 1px solid var(--mw-border); border-radius: var(--radius-sm); padding: 0.5rem 0.8rem; margin-bottom: 0.6rem; }
+.arbol-me-nivel summary { cursor: pointer; }
+.arbol-me-nivel ul { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+.arbol-me-nivel li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding: 4px 0; border-bottom: 1px solid var(--mw-border); font-size: 0.85rem; }
+.arbol-me-tabla { overflow-x: auto; margin: 0.6rem 0; }
+.arbol-me-tabla table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.arbol-me-tabla th, .arbol-me-tabla td { padding: 6px 8px; border-bottom: 1px solid var(--mw-border); text-align: left; }
+.arbol-me-ok { color: #2e7d4f; font-weight: 600; }
+.arbol-me-no { color: #b23b3b; font-weight: 600; }
+.arbol-me-gana td { background: #EAF3EC; }
