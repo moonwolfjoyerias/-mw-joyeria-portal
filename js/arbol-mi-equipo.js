@@ -1,13 +1,14 @@
-// MW JOYERÍA — Mi árbol de mi-equipo (Emprendedoras y Líderes)
+// MW JOYERÍA — Árbol de tu equipo (Emprendedoras y Líderes), con los datos de mi-equipo
 //
 // Cada e/l ve SU rama del árbol de "mi-equipo" (la misma base que ya usan:
 // proyecto gala-mw-2026, documento arbolEquipo/team-tree-v2), con sus
-// puntos por periodo, resumen por línea, su auditoría de rango, su línea
-// de boletos de rifa y el Excel de su equipo. Solo lee: lo edita
+// puntos por periodo, resumen por línea, su auditoría de rango y el Excel
+// de su equipo (los boletos de rifa se ven en Mi cuenta). Solo lee: lo edita
 // Administración en BRILLO o en mi-equipo.
 //
-// Se encuentra a la persona por su usuario del portal (MW####), que es la
-// "Membresía" de mi-equipo; si no, por su nombre completo. Los cálculos son
+// Se encuentra a la persona por el vínculo que pone Administración en BRILLO
+// (portalPersonaId); si no tiene, por su usuario (MW####) igual a la
+// "Membresía" de mi-equipo, y si no, por su nombre completo. Los cálculos son
 // copia de mi-equipo/index.html (y de BRILLO src/arbol/modelo.ts): si
 // cambia uno, cambian los tres.
 (function () {
@@ -157,8 +158,6 @@
     return { info, esManual: !!man, total: periodo('p1', propia.p1) + periodo('p2', propia.p2) };
   }
   const tasasTexto = k => { const t = [1, 2, 3, 4, 5].map(l => TASAS[l][k]).filter(r => r > 0); return t.length ? t.map(r => r + '%').join(' – ') : 'Ninguno'; };
-  const boletos = total => (total < 3000 ? 0 : Math.floor((total - 3000) / 1000) + 1);
-  function fechaSorteo(k) { const [y, m] = k.split('-').map(Number); const d = new Date(y, m, 15); const n = MESES[d.getMonth()]; return `15 de ${n[0].toUpperCase()}${n.slice(1)} ${d.getFullYear()}`; }
   function mesesConPuntos() {
     const s = new Set([mesKey(new Date())]);
     miembros.forEach(m => { if (m.pointsHistory) Object.keys(m.pointsHistory).forEach(k => s.add(k)); if (m.pointsMonthKey) s.add(m.pointsMonthKey); });
@@ -166,17 +165,22 @@
   }
 
   // ---------- encontrar a la persona ----------
+  // Primero el vínculo que pone Administración en BRILLO (Árbol → Vincular
+  // con la página); luego la membresía igual al usuario, y al final el nombre.
   function buscarme() {
     const id = typeof obtenerIdPersonaActualPortal === 'function' ? obtenerIdPersonaActualPortal() : null;
     const p = id && typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(id) : null;
     if (!p) return null;
+    const vinculada = miembros.find(m => m.portalPersonaId === p.id);
+    if (vinculada) return vinculada;
+    const libres = miembros.filter(m => !m.portalPersonaId);
     const u = String(p.usuario || '').trim().toUpperCase();
     if (u) {
-      const porCodigo = miembros.filter(m => String(m.clientCode || '').trim().toUpperCase() === u);
+      const porCodigo = libres.filter(m => String(m.clientCode || '').trim().toUpperCase() === u);
       if (porCodigo.length === 1) return porCodigo[0];
     }
     const n = normalizar(typeof nombreCompletoPersona === 'function' ? nombreCompletoPersona(p) : p.nombre);
-    const porNombre = n ? miembros.filter(m => normalizar(m.fullName) === n) : [];
+    const porNombre = n ? libres.filter(m => normalizar(m.fullName) === n) : [];
     return porNombre.length === 1 ? porNombre[0] : null;
   }
 
@@ -187,31 +191,28 @@
     const el = caja();
     if (!el) return;
     if (!yo) {
-      el.innerHTML = `<div class="org-tree-card-header"><h3>Mi árbol de mi-equipo</h3></div>
-        <p class="hint">No encontramos tu lugar en el árbol de mi-equipo. Se busca por tu usuario (MW…) como "Membresía" o por tu nombre completo. Pide a Administración que lo revise.</p>`;
+      el.innerHTML = `<div class="org-tree-card-header"><h3>Árbol de tu equipo</h3></div>
+        <p class="hint">Todavía no encontramos tu lugar en el árbol. Pide a Administración que vincule tu cuenta con tu membresía.</p>`;
       return;
     }
     const meses = mesesConPuntos();
     if (!meses.includes(mk)) mk = meses[0];
     const p = puntos(yo, mk);
     const total = p.p1 + p.p2;
-    const b = boletos(total);
     const prof = conLinea(yo.id);
     const equipo = prof.size - 1;
     const r = rangoDelMes(yo.id, mk);
     el.innerHTML = `
       <div class="org-tree-card-header">
-        <h3>Mi árbol de mi-equipo</h3>
+        <h3>Árbol de tu equipo</h3>
         <label class="arbol-me-mes">Mes <select id="arbolMeMes">${meses.map(k => `<option value="${k}" ${k === mk ? 'selected' : ''}>${etiquetaMes(k)}</option>`).join('')}</select></label>
       </div>
       <div class="arbol-me-cifras">
         <div><span>Periodo 1</span><b>${pts(p.p1)}</b></div>
         <div><span>Periodo 2</span><b>${pts(p.p2)}</b></div>
         <div><span>Total del mes</span><b>${pts(total)}</b></div>
-        <div><span>Boletos de rifa</span><b>${b}</b></div>
         ${equipo ? `<div><span>Personas en tu equipo</span><b>${equipo}</b></div><div><span>Rango del mes</span><b>${esc(r.rango.label)}</b></div>` : ''}
       </div>
-      <p class="hint">${b ? `Con tus compras de ${etiquetaMes(mk)} tienes ${b} boleto(s) para la rifa del ${fechaSorteo(mk)}.` : `Te faltan ${pts(3000 - total)} puntos en ${etiquetaMes(mk)} para tu primer boleto de rifa (uno al llegar a 3,000 y uno más por cada 1,000).`}</p>
       ${equipo ? `
       <div class="arbol-me-acciones">
         <button type="button" class="btn btn-secondary" id="arbolMeLineas">Resumen por línea</button>
@@ -362,14 +363,14 @@
   document.addEventListener('DOMContentLoaded', async () => {
     const el = caja();
     if (!el || typeof firebase === 'undefined' || typeof firebase.firestore !== 'function') return;
-    el.innerHTML = '<p class="hint">Cargando tu árbol de mi-equipo…</p>';
+    el.innerHTML = '<p class="hint">Cargando el árbol de tu equipo…</p>';
     if (typeof personasRepoListo !== 'undefined') { try { await personasRepoListo; } catch (e) { /* sigue */ } }
     let db;
     try {
       const app = firebase.apps.find(a => a.name === 'mi-equipo') || firebase.initializeApp(FIREBASE_MI_EQUIPO, 'mi-equipo');
       db = app.firestore();
     } catch (e) {
-      el.innerHTML = '<p class="hint">No se pudo conectar con el árbol de mi-equipo.</p>';
+      el.innerHTML = '<p class="hint">No se pudo cargar el árbol de tu equipo.</p>';
       return;
     }
     mk = mesKey(new Date());
@@ -379,6 +380,6 @@
       miembros = miembros.filter(m => m && typeof m.id === 'string').map(m => Object.assign({}, m, { fullName: String(m.fullName || '') }));
       yo = buscarme();
       pintar();
-    }, () => { el.innerHTML = '<p class="hint">No se pudo leer el árbol de mi-equipo. Revisa tu conexión.</p>'; });
+    }, () => { el.innerHTML = '<p class="hint">No se pudo cargar el árbol de tu equipo. Revisa tu conexión.</p>'; });
   });
 })();
