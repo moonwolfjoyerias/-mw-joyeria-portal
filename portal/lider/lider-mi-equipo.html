@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mi equipo — Portal MW</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="../../css/styles.css?v=71">
+  <link rel="stylesheet" href="../../css/styles.css?v=72">
   <link rel="icon" type="image/png" href="../../assets/images/favicon.png">
   <!-- Fase 2: SDK compat de Firebase — solo se activa si js/firebase-config.js tiene MODO_DEMO=false y credenciales reales; si no, no hace nada. -->
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
@@ -112,6 +112,8 @@
         <div class="period-label" id="equipoPeriodLabel"></div>
       </div>
 
+      <div class="org-tree-card" id="arbolMiEquipoCard"></div>
+
       <div class="org-tree-card">
         <div class="org-tree-card-header">
           <h3>Árbol de tu equipo</h3>
@@ -212,5 +214,7 @@
   <script src="../../js/configuracion-modelo.js?v=4"></script>
   <script src="../../js/alertas-inactividad-modelo.js?v=3"></script>
   <script src="../../js/mi-equipo.js?v=5"></script>
+  <script src="../../js/exportar-xlsx.js?v=2"></script>
+  <script src="../../js/arbol-mi-equipo.js?v=1"></script>
 </body>
 </html>

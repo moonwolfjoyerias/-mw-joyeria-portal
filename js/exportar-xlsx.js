@@ -29,10 +29,13 @@
 
   function hojaXml(h) {
     const cols = h.columnas.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${c.ancho || 15}" customWidth="1"/>`).join('');
-    const enc = `<row r="1">${h.columnas.map((c, i) => celda(`${columna(i)}1`, c.titulo, 1)).join('')}</row>`;
-    const filas = h.filas.map((f, r) => `<row r="${r + 2}">${f.map((v, i) => celda(`${columna(i)}${r + 2}`, v)).join('')}</row>`).join('');
+    // sinEncabezado: reportes armados a mano (las columnas solo dan el ancho).
+    const inicio = h.sinEncabezado ? 1 : 2;
+    const enc = h.sinEncabezado ? '' : `<row r="1">${h.columnas.map((c, i) => celda(`${columna(i)}1`, c.titulo, 1)).join('')}</row>`;
+    const filas = h.filas.map((f, r) => `<row r="${r + inicio}">${f.map((v, i) => celda(`${columna(i)}${r + inicio}`, v)).join('')}</row>`).join('');
+    const congelar = h.sinEncabezado ? '' : '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>';
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-      + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+      + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' + congelar
       + `<cols>${cols}</cols><sheetData>${enc}${filas}</sheetData></worksheet>`;
   }
 
