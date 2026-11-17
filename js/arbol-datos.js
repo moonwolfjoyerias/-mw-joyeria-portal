@@ -171,11 +171,19 @@
       if (man) info = Object.assign({}, info, { rango: POR_KEY[man] });
       const propia = puntos(lider, k);
       const prof = conLinea(id);
-      const equipo = miembros.filter(m => prof.has(m.id) && m.id !== id).map(m => Object.assign({ linea: prof.get(m.id) }, puntos(m, k)));
+      const equipo = miembros.filter(m => prof.has(m.id) && m.id !== id).map(m => Object.assign({ id: m.id, nombre: m.fullName, linea: prof.get(m.id) }, puntos(m, k)));
       const min = (info.rango.key === 'diamante' || info.rango.key === 'corona') ? 3000 : MIN_CALIFICADA;
-      const periodo = (campo, compra) => (compra < min ? 0 : equipo.reduce((s, t) => s + (t[campo] * (t.linea <= 5 ? (TASAS[t.linea][info.rango.key] || 0) : 0) / 100) / (1 + IVA), 0));
-      const p1 = periodo('p1', propia.p1), p2 = periodo('p2', propia.p2);
-      return { info, esManual: !!man, periodo1: p1, periodo2: p2, total: p1 + p2 };
+      const gated1 = propia.p1 < min, gated2 = propia.p2 < min;
+      const tasa = linea => (linea <= 5 ? (TASAS[linea][info.rango.key] || 0) : 0);
+      // Comisión neta (sin IVA) por persona y periodo.
+      const neta = (pts, linea, gated) => (gated ? 0 : (pts * tasa(linea) / 100) / (1 + IVA));
+      const detalle = equipo.map(t => Object.assign({}, t, { tasa: tasa(t.linea), comisionP1: neta(t.p1, t.linea, gated1), comisionP2: neta(t.p2, t.linea, gated2) }));
+      const p1 = detalle.reduce((s, t) => s + t.comisionP1, 0), p2 = detalle.reduce((s, t) => s + t.comisionP2, 0);
+      const lineas = Array.from(new Set(detalle.map(t => t.linea))).sort((a, b) => a - b).map(l => {
+        const filas = detalle.filter(t => t.linea === l).sort((a, b) => a.nombre.localeCompare(b.nombre));
+        return { linea: l, tasa: tasa(l), filas, puntos: filas.reduce((s, t) => s + t.p1 + t.p2, 0), comision: filas.reduce((s, t) => s + t.comisionP1 + t.comisionP2, 0) };
+      });
+      return { info, esManual: !!man, periodo1: p1, periodo2: p2, total: p1 + p2, gated1, gated2, minCompra: min, compraP1: propia.p1, compraP2: propia.p2, lineas };
     });
   }
   const tasasTexto = k => { const t = [1, 2, 3, 4, 5].map(l => TASAS[l][k]).filter(r => r > 0); return t.length ? t.map(r => r + '%').join(' – ') : 'Ninguno'; };
@@ -230,6 +238,7 @@
     // Rango recalificado en ese mes (clave de la página).
     rangoMes(persona, k) { const m = miembroDePersona(persona); return m ? A_PAGINA[rangoDelMes(m.id, k).rango.key] : null; },
     // Rango vigente en ese mes: el recalificado el mes anterior, o el que Admin capturó a mano.
+    comisionesPersona(persona, k) { const m = miembroDePersona(persona); return m ? comisionesDelMes(m.id, k) : null; },
     rangoVigente(persona, k) {
       const m = miembroDePersona(persona);
       if (!m) return null;
