@@ -110,7 +110,7 @@ function renderPerfilLider() {
 
   setText('perfilNombre', nombre);
   // Sin rango todavía: solo "Líder" (no "Líder Sin Rango").
-  const rangoPerfil = RANGOS_MW[idxRango(persona?.rangoActualKey || 'sin_rango')];
+  const rangoPerfil = RANGOS_MW[idxRango(persona && window.ArbolMW ? window.ArbolMW.rangoMostrar(persona) : (persona?.rangoActualKey || 'sin_rango'))];
   setText('perfilLider', rangoPerfil.key === 'sin_rango' ? 'Líder' : `Líder ${rangoPerfil.label}`);
   // Su usuario para iniciar sesión (el mismo que ve Admin en Configuración).
   setText('perfilUsuario', persona?.usuario || (typeof obtenerSesionActiva === 'function' && obtenerSesionActiva()?.usuario) || '—');
@@ -197,7 +197,9 @@ function renderRifaLider() {
   const persona = obtenerPersonaConPlanMWAlDia();
   if (!persona) return;
 
-  const montoAcumuladoMes = (persona.rifa && persona.rifa.montoAcumuladoMes) || 0;
+  // Árbol de mi-equipo (la verdad): sus puntos del mes en curso, si está en el árbol.
+  const puntosArbolMes = window.ArbolMW ? window.ArbolMW.puntosMes(persona, window.ArbolMW.mesKey(new Date())) : null;
+  const montoAcumuladoMes = puntosArbolMes ? puntosArbolMes.p1 + puntosArbolMes.p2 : ((persona.rifa && persona.rifa.montoAcumuladoMes) || 0);
   // Admin → Configuración → Plan MW es dueña de estas dos reglas; si no
   // está cargada aquí, se usan los mismos valores fijos de siempre.
   const meta = (typeof obtenerValorVigente === 'function' && obtenerValorVigente('rifa', 'meta_mensual')) || (persona.rifa && persona.rifa.meta) || 3000;
@@ -287,7 +289,7 @@ function renderProgresoRangoCuenta() {
   const persona = obtenerPersonaConPlanMWAlDia();
   if (!persona) return;
 
-  const idxActual = idxRango(persona.rangoActualKey || 'sin_rango');
+  const idxActual = idxRango(window.ArbolMW ? window.ArbolMW.rangoMostrar(persona) : (persona.rangoActualKey || 'sin_rango'));
   const esUltimo = idxActual === RANGOS_MW.length - 1;
   const siguiente = esUltimo ? null : RANGOS_MW[idxActual + 1];
 

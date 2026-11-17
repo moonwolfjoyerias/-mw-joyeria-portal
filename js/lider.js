@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // stats en cero y 'sin_rango' si todavía no se le ha asignado nada
 // (mismos valores por defecto que ya pone crearPersonaEjemplo()).
 function miRangoActualKeyLider() {
+  if (miPersonaLider && window.ArbolMW) return window.ArbolMW.rangoMostrar(miPersonaLider);
   return miPersonaLider?.rangoActualKey || 'sin_rango';
 }
 

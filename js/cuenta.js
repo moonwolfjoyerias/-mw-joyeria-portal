@@ -104,7 +104,9 @@ function renderRifa() {
   // está cargada aquí, se usan los mismos valores fijos de siempre.
   const meta = (typeof obtenerValorVigente === 'function' && obtenerValorVigente('rifa', 'meta_mensual')) || (persona.rifa && persona.rifa.meta) || 3000;
   const montoPorBoletoExtra = (typeof obtenerValorVigente === 'function' && obtenerValorVigente('rifa', 'monto_por_boleto_extra')) || 1000;
-  const montoAcumuladoMes = (persona.rifa && persona.rifa.montoAcumuladoMes) || 0;
+  // Árbol de mi-equipo (la verdad): sus puntos del mes en curso, si está en el árbol.
+  const puntosArbolMes = window.ArbolMW ? window.ArbolMW.puntosMes(persona, window.ArbolMW.mesKey(new Date())) : null;
+  const montoAcumuladoMes = puntosArbolMes ? puntosArbolMes.p1 + puntosArbolMes.p2 : ((persona.rifa && persona.rifa.montoAcumuladoMes) || 0);
 
   const pctBase = Math.min(100, (montoAcumuladoMes / meta) * 100);
 

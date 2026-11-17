@@ -574,4 +574,8 @@ function existePersonaConCorreoOTelefono(correo, telefono, excluirId) {
 // (no en ese archivo, que se carga primero) porque cargarPersonasRepo()
 // necesita construirPersonasEjemplo(), definida arriba en este mismo
 // archivo, para la semilla.
-const personasRepoListo = cargarPersonasRepo();
+//
+// En las páginas que cargan js/arbol-datos.js, además se espera al árbol de
+// mi-equipo (la verdad para rangos y boletos), con un tope de unos segundos:
+// así todo lo que pinta rangos/boletos ya lo tiene disponible.
+const personasRepoListo = cargarPersonasRepo().then(r => (typeof window !== 'undefined' && window.arbolMWListo ? window.arbolMWListo.then(() => r, () => r) : r));

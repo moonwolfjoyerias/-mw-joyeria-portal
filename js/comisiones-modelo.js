@@ -147,6 +147,10 @@ function obtenerRangoManualComision(personaId, periodoKey) {
 
 function calcularRangoAplicadoPeriodo(persona, periodoKey) {
 
+  // El árbol de mi-equipo manda: rango recalificado el mes anterior (o el capturado a mano en mi-equipo).
+  const vigenteArbol = typeof window !== 'undefined' && window.ArbolMW && periodoKey ? window.ArbolMW.rangoVigente(persona, String(periodoKey).slice(0, 7)) : null;
+  if (vigenteArbol) return { rangoKey: vigenteArbol.rangoKey, origen: vigenteArbol.esManual ? 'rango asignado en mi-equipo' : 'calificado en mi-equipo el mes anterior' };
+
   const rangoManual = obtenerRangoManualComision(persona.id, periodoKey);
   if (rangoManual) return { rangoKey: rangoManual, origen: 'ajuste manual de Admin (solo este mes de pago)' };
 

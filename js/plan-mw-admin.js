@@ -105,6 +105,23 @@ function calcularAscensoRango(persona, mesKey) {
 
   mesKey = mesKey || mesKeyActualComprasModelo();
 
+  // Árbol de mi-equipo (la verdad): si ya calificó un rango mayor al que
+  // tiene registrado, ese es su ascenso (puede saltar más de un rango).
+  const historicoArbol = typeof window !== 'undefined' && window.ArbolMW ? window.ArbolMW.rangoHistoricoPersona(persona, mesKey) : null;
+  if (historicoArbol) {
+    const idxRegistrado = Math.max(0, RANGOS_MW.findIndex(r => r.key === (persona.rangoActualKey || 'sin_rango')));
+    const idxArbol = RANGOS_MW.findIndex(r => r.key === historicoArbol.rangoKey);
+    if (idxArbol > idxRegistrado) {
+      const logrado = obtenerRangoConfigurado(RANGOS_MW[idxArbol]);
+      const cuando = historicoArbol.mesKey && window.ArbolMW.etiquetaMes(historicoArbol.mesKey);
+      return {
+        siguiente: logrado,
+        items: [{ label: 'Calificado en mi-equipo', cumple: true, valores: `${logrado.label}${cuando ? ` en ${cuando}` : ''}`, ratio: 1, faltante: 0, unidad: 'personas' }],
+        elegible: true
+      };
+    }
+  }
+
   const idxActual = RANGOS_MW.findIndex(r => r.key === persona.rangoActualKey);
   const esUltimo = idxActual === RANGOS_MW.length - 1;
   const siguiente = esUltimo ? null : obtenerRangoConfigurado(RANGOS_MW[idxActual + 1]);
@@ -193,6 +210,10 @@ function calcularRangoEfectivoMes(persona, mesKey) {
 
   if (persona.tipo !== 'lider') return 'sin_rango';
 
+  // El árbol de mi-equipo manda para quien esté en él.
+  const deArbol = typeof window !== 'undefined' && window.ArbolMW ? window.ArbolMW.rangoMes(persona, mesKey) : null;
+  if (deArbol) return deArbol;
+
   const statsReales = typeof calcularStatsRangoLider === 'function'
     ? calcularStatsRangoLider(persona, mesKey, 'p2')
     : persona.stats;
@@ -234,6 +255,7 @@ function procesarRangoEfectivoMensual(persona) {
   if (typeof mesKeyActualComprasModelo !== 'function') return false;
 
   persona.historialRangoEfectivo = persona.historialRangoEfectivo || [];
+  const enArbol = typeof window !== 'undefined' && window.ArbolMW && !!window.ArbolMW.miembroDePersona(persona);
 
   const mesKeyHoy = mesKeyActualComprasModelo();
   let cursor = (persona.fechaAlta || mesKeyHoy).slice(0, 7);
@@ -243,10 +265,15 @@ function procesarRangoEfectivoMensual(persona) {
 
   while (cursor < mesKeyHoy && vueltas < 240) {
 
-    if (!persona.historialRangoEfectivo.some(h => h.mesKey === cursor)) {
+    const yaCerrado = persona.historialRangoEfectivo.find(h => h.mesKey === cursor);
+    if (!yaCerrado) {
       const rangoKey = calcularRangoEfectivoMes(persona, cursor);
       persona.historialRangoEfectivo.push({ mesKey: cursor, rangoKey });
       huboCambios = true;
+    } else if (enArbol) {
+      // Con el árbol de mi-equipo (la verdad), un mes cerrado se corrige si el árbol dice otra cosa.
+      const rangoArbol = calcularRangoEfectivoMes(persona, cursor);
+      if (yaCerrado.rangoKey !== rangoArbol) { yaCerrado.rangoKey = rangoArbol; yaCerrado.origen = 'mi-equipo'; huboCambios = true; }
     }
 
     cursor = _siguienteMesKey(cursor);
@@ -452,7 +479,16 @@ function procesarCierresMensualesPlanMW(persona) {
       huboCambios = true;
     }
 
-    if (!persona.rifa.mesesProcesados.includes(cursor)) {
+    const boletosArbol = typeof window !== 'undefined' && window.ArbolMW ? window.ArbolMW.boletosMes(persona, cursor) : null;
+    if (boletosArbol !== null) {
+      // El árbol de mi-equipo manda: los boletos del mes salen de sus puntos (y se corrigen si cambian).
+      const antes = persona.rifa.boletosPorMes[cursor] || 0;
+      if (antes !== boletosArbol) {
+        if (boletosArbol > 0) persona.rifa.boletosPorMes[cursor] = boletosArbol; else delete persona.rifa.boletosPorMes[cursor];
+        huboCambios = true;
+      }
+      if (!persona.rifa.mesesProcesados.includes(cursor)) { persona.rifa.mesesProcesados.push(cursor); huboCambios = true; }
+    } else if (!persona.rifa.mesesProcesados.includes(cursor)) {
       const comprasNormalesMes = obtenerComprasLiquidadasPersonaMes(persona.id, cursor).normal;
       if (comprasNormalesMes >= META_RIFA_MENSUAL) {
         const extra = Math.floor((comprasNormalesMes - META_RIFA_MENSUAL) / MONTO_POR_BOLETO_EXTRA_RIFA);
@@ -471,7 +507,9 @@ function procesarCierresMensualesPlanMW(persona) {
   // se marca como "procesado" hasta que el mes efectivamente termine).
   const comprasMesActual = obtenerComprasLiquidadasPersonaMes(persona.id, mesKeyHoy).normal;
   if (persona.constancia.montoMesActual !== comprasMesActual) { persona.constancia.montoMesActual = comprasMesActual; huboCambios = true; }
-  if (persona.rifa.montoAcumuladoMes !== comprasMesActual) { persona.rifa.montoAcumuladoMes = comprasMesActual; huboCambios = true; }
+  const puntosArbolHoy = typeof window !== 'undefined' && window.ArbolMW ? window.ArbolMW.puntosMes(persona, mesKeyHoy) : null;
+  const montoRifaMes = puntosArbolHoy ? puntosArbolHoy.p1 + puntosArbolHoy.p2 : comprasMesActual;
+  if (persona.rifa.montoAcumuladoMes !== montoRifaMes) { persona.rifa.montoAcumuladoMes = montoRifaMes; huboCambios = true; }
 
   // Fecha real en que se alcanzaron los $8,000 del mes en curso — se
   // guarda una sola vez por mesKey (idempotente), en cuanto se detecta
