@@ -133,6 +133,9 @@ function mesKeyAnteriorRifaBoletos(mesKey) {
 // liquidadas de este mes, para no mostrar siempre 0 mientras el mes
 // sigue abierto.
 function calcularBoletosGanadosMes(persona, mesKey) {
+  // El árbol de mi-equipo manda (1 boleto al llegar a 3,000 pts y 1 más por cada 1,000).
+  const deArbol = typeof window !== 'undefined' && window.ArbolMW ? window.ArbolMW.boletosMes(persona, mesKey) : null;
+  if (deArbol !== null) return deArbol;
   const mesActual = typeof mesKeyActualComprasModelo === 'function' ? mesKeyActualComprasModelo() : mesKey;
 
   if (mesKey < mesActual) {

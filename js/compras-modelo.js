@@ -176,6 +176,9 @@ const UMBRAL_EQUIPO_CALIFICADO = 1500;   // compra total (normal+souvenir) del s
 // solo miraba el sub-periodo de hoy, lo cual dejaba pasar a personas
 // que solo habían calificado/activado en uno de los dos.
 function calcularStatsRangoLider(lider, mesKey, subPeriodoVigente) {
+  // El árbol de mi-equipo manda (js/arbol-datos.js) para quien esté en él.
+  const deArbol = typeof window !== 'undefined' && window.ArbolMW ? window.ArbolMW.statsRango(lider, mesKey) : null;
+  if (deArbol) return deArbol;
   if (typeof calcularDescendenciaPersona !== 'function') {
     return { personasActivas: 0, produccionGrupalMes: 0, personasCalificadas: 0, compraPersonalPeriodo1: 0, compraPersonalPeriodo2: 0 };
   }
@@ -246,6 +249,11 @@ function calcularProduccionPorLineaLider(liderId, mesKey) {
 // solo no cuenta aquí para no dejar que una sola línea cargue sola con
 // todo el rango.
 function calcularProduccionCapadaParaRango(liderId, mesKey, produccionRequerida) {
+  // Árbol de mi-equipo: 100% de la línea más fuerte en su compra propia + 50% de su equipo; las demás completas.
+  if (typeof window !== 'undefined' && window.ArbolMW && typeof obtenerPersonaPorId === 'function') {
+    const deArbol = window.ArbolMW.statsRango(obtenerPersonaPorId(liderId), mesKey);
+    if (deArbol) return deArbol.produccionValidaRango;
+  }
   const lineas = calcularProduccionPorLineaLider(liderId, mesKey);
   const topePorLinea = produccionRequerida * 0.5;
   return lineas.reduce((suma, l) => suma + Math.min(l.produccion, topePorLinea), 0);
