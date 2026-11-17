@@ -54,7 +54,13 @@ const CATEGORIAS_APARTADO = {
 // sus valores vigentes hoy; si no, esta página sigue igual que siempre.
 // Solo aplica a ventanas NUEVAS — una ventana ya abierta conserva la
 // fecha de vencimiento que ya se le calculó.
-if (typeof obtenerValorVigente === 'function') {
+//
+// BUG corregido (nov-2026): antes esto se leía UNA vez al cargar el archivo,
+// antes de que la configuración llegara de Firestore, así que siempre se
+// usaban $50/$200 y 3/15 días aunque Admin los cambiara. Ahora se vuelve a
+// aplicar cuando llega la configuración y cada vez que Admin la cambia.
+function aplicarConfiguracionApartados() {
+  if (typeof obtenerValorVigente !== 'function') return;
   const depositoConfigurado = obtenerValorVigente('apartado', 'deposito_base');
   if (typeof depositoConfigurado === 'number') DEPOSITO_BASE = depositoConfigurado;
 
@@ -66,6 +72,13 @@ if (typeof obtenerValorVigente === 'function') {
 
   const diasForaneaConfigurado = obtenerValorVigente('apartado', 'ventana_foranea_dias');
   if (typeof diasForaneaConfigurado === 'number') CATEGORIAS_APARTADO.foranea.dias = diasForaneaConfigurado;
+}
+aplicarConfiguracionApartados();
+if (typeof window !== 'undefined') {
+  window.addEventListener('mw:configuracion-actualizada', aplicarConfiguracionApartados);
+  // configuracion-modelo.js puede cargarse antes o después de este archivo.
+  const esperarConfig = () => { if (typeof configuracionListo !== 'undefined') configuracionListo.then(aplicarConfiguracionApartados, () => {}); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', esperarConfig, { once: true }); else esperarConfig();
 }
 
 // Depósito mínimo para empezar a apartar según la etiqueta de la
