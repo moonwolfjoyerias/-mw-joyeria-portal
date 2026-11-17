@@ -143,11 +143,11 @@
     document.getElementById('arbolMeCuenta').textContent = `${iCoincidencia + 1} / ${coincidencias.length}`;
   }
 
-  function modal(html) {
+  function modal(html, extra) {
     const overlay = document.getElementById('modalOverlay');
     const box = document.getElementById('modalBox');
     if (!overlay || !box) return;
-    box.className = 'modal-box modal-box-xwide';
+    box.className = 'modal-box modal-box-xwide' + (extra ? ' ' + extra : '');
     box.innerHTML = `<button type="button" class="modal-close" id="arbolMeCerrar" aria-label="Cerrar">×</button>${html}`;
     overlay.classList.add('open');
     const cerrar = () => { overlay.classList.remove('open'); box.className = 'modal-box'; };
@@ -182,15 +182,59 @@
     grid.querySelectorAll('[data-linea]').forEach(b => b.addEventListener('click', () => abrirLineas(Number(b.getAttribute('data-linea')))));
   }
 
+  // "JUANA MARIA DEL CARMEN" → "Juana Maria del Carmen" (los códigos MW se quedan como están).
+  const MENORES = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e']);
+  const nombreBonito = n => String(n || '').trim().split(/\s+/).map((w, i) => {
+    if (/\d/.test(w)) return w.toUpperCase();
+    const l = w.toLocaleLowerCase('es-MX');
+    return i > 0 && MENORES.has(l) ? l : l.charAt(0).toLocaleUpperCase('es-MX') + l.slice(1);
+  }).join(' ');
+  // Separa la membresía que a veces viene pegada al nombre ("… GRIMALDO MW25057").
+  const separarCodigo = n => {
+    const partes = String(n || '').trim().split(/\s+/);
+    const codigo = partes.filter(w => /^\(?MW[\d-]+\)?$/i.test(w)).map(w => w.replace(/[()]/g, '').toUpperCase());
+    return { nombre: nombreBonito(partes.filter(w => !/^\(?MW[\d-]+\)?$/i.test(w)).join(' ')), codigo: codigo[0] || '' };
+  };
+  const iniciales = n => nombreBonito(n).split(' ').filter(w => !/\d/.test(w) && !MENORES.has(w)).slice(0, 2).map(w => w[0]).join('');
+
+  function bloqueLinea(d, lista, conTitulo) {
+    const filas = lista.map(m => Object.assign({ m }, puntos(m, mk))).map(f => Object.assign(f, { total: f.p1 + f.p2 }))
+      .sort((a, b) => b.total - a.total || a.m.fullName.localeCompare(b.m.fullName));
+    const total = filas.reduce((s, f) => s + f.total, 0);
+    const conCompra = filas.filter(f => f.total > 0).length;
+    const maximo = Math.max(1, ...filas.map(f => f.total));
+    const num = (v, clase) => `<span class="lm-num${v ? '' : ' cero'}${clase ? ' ' + clase : ''}">${pts(v)}</span>`;
+    return `<section class="lm-bloque">
+      ${conTitulo ? `<h4 class="lm-titulo-linea">Línea ${d}</h4>` : ''}
+      <div class="lm-resumen">
+        <div><span>Personas</span><b>${filas.length}</b></div>
+        <div><span>Puntos de la línea</span><b>${pts(total)}</b></div>
+        <div><span>Con compras este mes</span><b>${conCompra} de ${filas.length}</b></div>
+      </div>
+      <div class="lm-encabezado" aria-hidden="true"><span>Persona</span><span>P1</span><span>P2</span><span>Total</span></div>
+      <ul class="lm-lista">${filas.map(f => `
+        <li class="lm-fila${f.total ? '' : ' sin-compra'}">
+          <span class="lm-avatar" aria-hidden="true">${esc(iniciales(f.m.fullName))}</span>
+          <span class="lm-persona">
+            <span class="lm-nombre">${esc(separarCodigo(f.m.fullName).nombre)}${(separarCodigo(f.m.fullName).codigo || f.m.clientCode) ? ` <span class="lm-codigo">${esc(separarCodigo(f.m.fullName).codigo || f.m.clientCode)}</span>` : ''}</span>
+            <span class="lm-barra" aria-hidden="true"><span style="width:${Math.round((f.total / maximo) * 100)}%"></span></span>
+          </span>
+          <span class="lm-cifras">
+            <span class="lm-cifra"><small>P1</small>${num(f.p1)}</span>
+            <span class="lm-cifra"><small>P2</small>${num(f.p2)}</span>
+            <span class="lm-cifra"><small>Total</small>${num(f.total, 'total')}</span>
+          </span>
+        </li>`).join('')}</ul>
+    </section>`;
+  }
+
   function abrirLineas(soloLinea) {
     const niveles = nivelesDeYo();
-    const html = Array.from(niveles.keys()).filter(d => !soloLinea || d === soloLinea).sort((a, b) => a - b).map(d => {
-      const lista = niveles.get(d).slice().sort((a, b) => a.fullName.localeCompare(b.fullName));
-      const totalNivel = lista.reduce((s, m) => { const p = puntos(m, mk); return s + p.p1 + p.p2; }, 0);
-      return `<details class="arbol-me-nivel" ${d === 1 || soloLinea ? 'open' : ''}><summary><b>Línea ${d}</b> · ${lista.length} persona(s) · ${pts(totalNivel)} pts total</summary>
-        <ul>${lista.map(m => { const p = puntos(m, mk); return `<li><span>${esc(m.fullName)}</span><span>P1 <b>${pts(p.p1)}</b> · P2 <b>${pts(p.p2)}</b> · Total <b>${pts(p.p1 + p.p2)}</b></span></li>`; }).join('')}</ul></details>`;
-    }).join('');
-    modal(`<h3>${soloLinea ? `Línea ${soloLinea}` : 'Resumen por línea'}</h3><p class="modal-sub">${esc(yo.fullName)} — ${etiquetaMes(mk)}</p>${html || '<p class="hint">Todavía no hay personas en esta línea.</p>'}`);
+    const lineas = Array.from(niveles.keys()).filter(d => !soloLinea || d === soloLinea).sort((a, b) => a - b);
+    const html = lineas.map(d => bloqueLinea(d, niveles.get(d), !soloLinea)).join('');
+    modal(`<div class="lm-cabeza"><h3>${soloLinea ? `Línea ${soloLinea}` : 'Resumen por línea'}</h3>
+      <p class="modal-sub">${esc(separarCodigo(yo.fullName).nombre)} · ${etiquetaMes(mk)}</p></div>
+      ${html || '<p class="hint">Todavía no hay personas en esta línea.</p>'}`, 'linea-modal');
   }
 
   function abrirAuditoria() {
