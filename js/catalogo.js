@@ -292,7 +292,7 @@ function renderProductos(productos) {
   const count = document.getElementById('resultCount');
   if (!grid) return;
 
-  if (count) count.textContent = `${productos.length} pieza${productos.length === 1 ? '' : 's'}`;
+  if (count) count.textContent = `${productos.length} modelo${productos.length === 1 ? '' : 's'}`;
 
   if (productos.length === 0) {
     grid.innerHTML = '<div class="catalog-empty">No hay piezas que coincidan con tu búsqueda o filtros.</div>';
