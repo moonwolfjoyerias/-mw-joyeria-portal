@@ -5889,3 +5889,14 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 .arbol-me-ok { color: #2e7d4f; font-weight: 600; }
 .arbol-me-no { color: #b23b3b; font-weight: 600; }
 .arbol-me-gana td { background: #EAF3EC; }
+
+/* Árbol en modo oscuro: los niveles 3-5 tenían fondos claros fijos y el
+   texto (claro en modo oscuro) no se leía. */
+:root[data-theme="dark"] .org-node.lvl-3 { background: #1f3326; border-color: #4f8d66; }
+:root[data-theme="dark"] .org-node.lvl-4 { background: #3a2226; border-color: #a86a6a; }
+:root[data-theme="dark"] .org-node.lvl-5 { background: #1f2a40; border-color: #6f8fc9; }
+:root[data-theme="dark"] .org-tree-wrap, :root[data-theme="dark"] .arbol-me-tabla { color-scheme: dark; }
+:root[data-theme="dark"] .arbol-me-gana td { background: #1f3326; }
+:root[data-theme="dark"] .arbol-me-ok { color: #8fd18a; }
+:root[data-theme="dark"] .arbol-me-no { color: #e59a9a; }
+.equipo-toolbar.titulo-lineas { flex-direction: column; align-items: flex-start; gap: 0.2rem; }

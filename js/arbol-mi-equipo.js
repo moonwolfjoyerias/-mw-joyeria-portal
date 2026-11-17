@@ -49,6 +49,7 @@
     const el = caja();
     if (!el) return;
     if (!yo) {
+      pintarLineas();
       el.innerHTML = `<div class="org-tree-card-header"><h3>Árbol de tu equipo</h3></div>
         <p class="hint">Todavía no encontramos tu lugar en el árbol. Pide a Administración que vincule tu cuenta con tu membresía.</p>`;
       return;
@@ -77,8 +78,8 @@
       <p class="hint">Tu rango vigente es el que calificaste en ${etiquetaMes(mesAnterior(mk))}${vig.esManual ? ' (asignado por Administración)' : ''}: con él se pagan tus comisiones de ${etiquetaMes(mk)}. Lo que logres en ${etiquetaMes(mk)} será tu rango de ${etiquetaMes(mesSiguiente(mk))}; si lo cumples en el Periodo 1 (al día 15) queda consolidado desde ahí.</p>
       ${equipo ? `
       <div class="arbol-me-acciones">
-        <button type="button" class="btn btn-secondary" id="arbolMeLineas">Resumen por línea</button>
-        <button type="button" class="btn btn-secondary" id="arbolMeAuditoria">Mi auditoría de rango</button>
+        ${document.getElementById('nivelesGrid') ? '' : '<button type="button" class="btn btn-outline" id="arbolMeLineas">Resumen por línea</button>'}
+        <button type="button" class="btn btn-outline" id="arbolMeAuditoria">Mi auditoría de rango</button>
         <button type="button" class="btn btn-primary" id="arbolMeExcel">Descargar Excel de mi equipo</button>
       </div>
       <div class="tree-toolbar arbol-me-barra">
@@ -88,6 +89,7 @@
       </div>
       <div class="org-tree-wrap arbol-me-lienzo" id="arbolMeLienzo"><div id="arbolMeArbol" style="zoom:${zoom}">${arbolHtml()}</div></div>` : '<p class="hint">Todavía no tienes personas debajo de ti en el árbol.</p>'}`;
     conectar();
+    pintarLineas();
   }
 
   function arbolHtml() {
@@ -108,7 +110,7 @@
     const $ = id => document.getElementById(id);
     $('arbolMeMes') && $('arbolMeMes').addEventListener('change', e => { mk = e.target.value; pintar(); });
     if (!$('arbolMeLienzo')) return;
-    $('arbolMeLineas').addEventListener('click', abrirLineas);
+    $('arbolMeLineas') && $('arbolMeLineas').addEventListener('click', () => abrirLineas());
     $('arbolMeAuditoria').addEventListener('click', abrirAuditoria);
     $('arbolMeExcel').addEventListener('click', descargarExcel);
     const ponerZoom = z => { zoom = Math.min(1.6, Math.max(0.4, +z.toFixed(2))); $('arbolMeArbol').style.zoom = zoom; $('arbolMeZoom').textContent = `${Math.round(zoom * 100)}%`; };
@@ -153,17 +155,42 @@
     overlay.addEventListener('click', e => { if (e.target === overlay) cerrar(); }, { once: true });
   }
 
-  function abrirLineas() {
+  function nivelesDeYo() {
     const prof = conLinea(yo.id);
     const niveles = new Map();
     A().miembros.forEach(m => { const d = prof.get(m.id); if (!d) return; if (!niveles.has(d)) niveles.set(d, []); niveles.get(d).push(m); });
-    const html = Array.from(niveles.keys()).sort((a, b) => a - b).map(d => {
+    return niveles;
+  }
+
+  // Tarjetas "Línea 1…N" de Mi equipo (líderes): el resumen por línea del árbol.
+  function pintarLineas() {
+    const grid = document.getElementById('nivelesGrid');
+    if (!grid) return;
+    if (!yo) { grid.innerHTML = ''; return; }
+    const niveles = nivelesDeYo();
+    const maximo = Math.max(5, ...Array.from(niveles.keys()));
+    grid.innerHTML = Array.from({ length: maximo }, (_, i) => i + 1).map(d => {
+      const lista = niveles.get(d) || [];
+      const total = lista.reduce((s, m) => { const p = puntos(m, mk); return s + p.p1 + p.p2; }, 0);
+      return `<button type="button" class="team-level-card" style="text-align:left; cursor:pointer; width:100%;" data-linea="${d}">
+        <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <h4>Línea ${d}</h4>
+        <span class="tl-count">${lista.length}</span>
+        <span class="tl-sub">Personas · ${pts(total)} pts · toca para ver</span>
+      </button>`;
+    }).join('');
+    grid.querySelectorAll('[data-linea]').forEach(b => b.addEventListener('click', () => abrirLineas(Number(b.getAttribute('data-linea')))));
+  }
+
+  function abrirLineas(soloLinea) {
+    const niveles = nivelesDeYo();
+    const html = Array.from(niveles.keys()).filter(d => !soloLinea || d === soloLinea).sort((a, b) => a - b).map(d => {
       const lista = niveles.get(d).slice().sort((a, b) => a.fullName.localeCompare(b.fullName));
       const totalNivel = lista.reduce((s, m) => { const p = puntos(m, mk); return s + p.p1 + p.p2; }, 0);
-      return `<details class="arbol-me-nivel" ${d === 1 ? 'open' : ''}><summary><b>Línea ${d}</b> · ${lista.length} persona(s) · ${pts(totalNivel)} pts total</summary>
+      return `<details class="arbol-me-nivel" ${d === 1 || soloLinea ? 'open' : ''}><summary><b>Línea ${d}</b> · ${lista.length} persona(s) · ${pts(totalNivel)} pts total</summary>
         <ul>${lista.map(m => { const p = puntos(m, mk); return `<li><span>${esc(m.fullName)}</span><span>P1 <b>${pts(p.p1)}</b> · P2 <b>${pts(p.p2)}</b> · Total <b>${pts(p.p1 + p.p2)}</b></span></li>`; }).join('')}</ul></details>`;
     }).join('');
-    modal(`<h3>Resumen por línea</h3><p class="modal-sub">${esc(yo.fullName)} — ${etiquetaMes(mk)}</p>${html}`);
+    modal(`<h3>${soloLinea ? `Línea ${soloLinea}` : 'Resumen por línea'}</h3><p class="modal-sub">${esc(yo.fullName)} — ${etiquetaMes(mk)}</p>${html || '<p class="hint">Todavía no hay personas en esta línea.</p>'}`);
   }
 
   function abrirAuditoria() {

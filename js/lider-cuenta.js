@@ -355,10 +355,15 @@ function renderProgresoRangoCuenta() {
 // (calcularDescendenciaPersona) — un equipo vacío da niveles vacíos y
 // comisión $0, no el ticket de ejemplo.
 function renderTicketComisiones() {
-  if (typeof calcularComisionesLider !== 'function') return;
-
   const persona = obtenerPersonaConPlanMWAlDia();
   if (!persona) return;
+
+  // El árbol de mi-equipo manda (js/arbol-datos.js) si la líder está en él.
+  if (window.ArbolMW && window.ArbolMW.miembroDePersona(persona)) {
+    renderTicketComisionesArbol(persona);
+    return;
+  }
+  if (typeof calcularComisionesLider !== 'function') return;
 
   const periodoKey = typeof obtenerPeriodoActualKey === 'function' ? obtenerPeriodoActualKey() : new Date().toISOString().slice(0, 7);
   const rP1 = calcularComisionesLider(persona, periodoKey, 'p1');
@@ -405,6 +410,51 @@ function renderTicketComisiones() {
     });
   });
 
+}
+
+// Comisiones del mes en curso con el árbol de mi-equipo: rango vigente (el
+// que calificó el mes anterior), tasa por línea y comisión neta (sin IVA)
+// de cada persona en P1 + P2 — los mismos números que Admin ve en BRILLO.
+function renderTicketComisionesArbol(persona) {
+  const A = window.ArbolMW;
+  const mesKey = A.mesKey(new Date());
+  const c = A.comisionesPersona(persona, mesKey);
+  const wrap = document.getElementById('ticketNiveles');
+  if (!c || !wrap) return;
+  const avisos = [];
+  if (c.gated1) avisos.push(`Periodo 1: tu compra personal (${fmtMoney(c.compraP1)}) no llegó al mínimo de ${fmtMoney(c.minCompra)} de tu rango, así que ese periodo no genera comisión.`);
+  if (c.gated2) avisos.push(`Periodo 2: tu compra personal (${fmtMoney(c.compraP2)}) aún no llega al mínimo de ${fmtMoney(c.minCompra)} de tu rango.`);
+  wrap.innerHTML = (avisos.length ? `<div class="ct-detail-empty">${avisos.join('<br>')}</div>` : '') + (c.lineas.length ? c.lineas.map((l, i) => `
+      <div class="ct-row-wrap">
+        <button type="button" class="ct-row" data-toggle-nivel="${i}" aria-expanded="false">
+          <div>
+            <span class="ct-level">Línea ${l.linea}</span>
+            <span class="ct-detail">${l.puntos.toLocaleString('es-MX')} pts × ${l.tasa}%</span>
+          </div>
+          <span class="ct-amount">${fmtMoney(l.comision)} <span class="ct-chevron">▾</span></span>
+        </button>
+        <div class="ct-detail-list" id="ctDetalle${i}" hidden>
+          ${l.filas.map(f => `
+            <div class="ct-detail-row">
+              <div>
+                <strong>${escapeHTML(f.nombre)}</strong>
+                <span class="ct-detail-sub">P1 ${f.p1.toLocaleString('es-MX')} · P2 ${f.p2.toLocaleString('es-MX')} pts este mes</span>
+              </div>
+              <div class="ct-detail-nums"><strong>${fmtMoney(f.comisionP1 + f.comisionP2)}</strong></div>
+            </div>`).join('')}
+        </div>
+      </div>`).join('') : '<div class="ct-detail-empty">Todavía no tienes personas en tu equipo.</div>');
+  setText('ticketTotal', fmtMoney(c.total));
+  setText('ticketRango', c.info.rango.label + (c.esManual ? ' (asignado)' : ''));
+  wrap.querySelectorAll('[data-toggle-nivel]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const detalle = document.getElementById(`ctDetalle${btn.getAttribute('data-toggle-nivel')}`);
+      if (!detalle) return;
+      detalle.hidden = !detalle.hidden;
+      btn.classList.toggle('open', !detalle.hidden);
+      btn.setAttribute('aria-expanded', String(!detalle.hidden));
+    });
+  });
 }
 
 // Desglose por emprendedora de un nivel: compra y comisión real de

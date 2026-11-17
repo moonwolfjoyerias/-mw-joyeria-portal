@@ -363,6 +363,8 @@ function puntosSubPeriodoEquipo(personaId, subPeriodo) {
 
 // ---------- Tarjetas de nivel ----------
 function renderNivelCards() {
+  // Con la tarjeta "Árbol de tu equipo", las líneas las pinta js/arbol-mi-equipo.js con los datos de mi-equipo.
+  if (document.getElementById('arbolMiEquipoCard')) return;
   if (typeof calcularDescendenciaPersona !== 'function') return;
   const { conNivel } = calcularDescendenciaPersona(obtenerLiderActualId());
   const porNivel = { 1: [], 2: [], 3: [], 4: [], 5: [] };
