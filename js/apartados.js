@@ -284,7 +284,11 @@ function renderApartados() {
   if (empty) empty.style.display = 'none';
 
   const ventanaPago = obtenerVentanaActivaPrincipal();
-  const idsPagables = new Set(ventanaPago ? obtenerPiezasActivas(ventanaPago).map(p => p.id) : []);
+  // Solo se paga lo que Staff ya guardó en la bolsita: así nadie paga una
+  // pieza que todavía no está apartada físicamente (p. ej. recién llegada).
+  const activasPago = ventanaPago ? obtenerPiezasActivas(ventanaPago) : [];
+  const idsPagables = new Set(activasPago.filter(piezaEnBolsitaApartado).map(p => p.id));
+  idsPendientesBolsita = new Set(activasPago.filter(p => !piezaEnBolsitaApartado(p)).map(p => p.id));
 
   // Toda pieza pagable nueva nace preseleccionada; una ya quitada/pagada
   // se limpia de ambos sets. Una pieza que la persona desmarcó a mano
@@ -311,13 +315,15 @@ function renderApartados() {
     const unitario = Number(pieza.total) || 0;
     const seleccionadas = grupo.piezas.filter(p => seleccionCarrito.has(p.id)).length;
     const hayMas = existenciaDisponibleApartado(pieza) > 0;
+    const pendienteBolsita = !grupo.pagable && idsPendientesBolsita.has(pieza.id);
     return `
-    <div class="apartado-row" data-grupo="${i}">
-      ${grupo.pagable ? `<input type="checkbox" data-seleccionar-grupo="${i}" ${seleccionadas === n ? 'checked' : ''} title="Pagar ${n === 1 ? 'esta pieza' : 'estas piezas'} ahora">` : ''}
+    <div class="apartado-row${pendienteBolsita ? ' apartado-row--sin-bolsita' : ''}" data-grupo="${i}">
+      ${grupo.pagable ? `<input type="checkbox" data-seleccionar-grupo="${i}" ${seleccionadas === n ? 'checked' : ''} title="Pagar ${n === 1 ? 'esta pieza' : 'estas piezas'} ahora">` : (pendienteBolsita ? `<input type="checkbox" disabled title="Todavía no se puede pagar: falta que el equipo la guarde en tu bolsita">` : '')}
       <div class="apartado-photo"><img src="${foto}" alt="${escapeAttribute(pieza.producto)}" class="${generica ? 'foto-generica' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(pieza.producto)}"`}></div>
       <div class="apartado-info">
         <h4>${escapeHTML(pieza.producto)}</h4>
         <span class="variant">${escapeHTML([pieza.colorOro, pieza.variante].filter(Boolean).join(' · '))}</span>
+        ${pendienteBolsita ? `<span class="apartado-aviso-bolsita">Aún no está guardada en tu bolsita. Podrás pagarla en cuanto el equipo la guarde.</span>` : ''}
       </div>
       <div class="apartado-cantidad" role="group" aria-label="Cantidad de ${escapeAttribute(pieza.producto)}">
         <button type="button" data-menos="${i}" aria-label="Quitar una pieza">−</button>
@@ -438,6 +444,12 @@ async function apartarOtraPieza(grupo, boton) {
   }
 }
 
+// Una pieza está lista para pagarse cuando Staff ya la guardó en su bolsita.
+function piezaEnBolsitaApartado(pieza) {
+  return !!(pieza && pieza.enBolsita);
+}
+let idsPendientesBolsita = new Set();
+
 function actualizarResumen() {
   const items = obtenerPiezasPropiasConVentana();
   const seleccionadas = items.filter(({ pieza }) => seleccionCarrito.has(pieza.id));
@@ -455,6 +467,18 @@ function actualizarResumen() {
         ? `Te faltan ${formatearPesos(falta)} para tener tu envío gratis`
         : '¡Tu envío es gratis!';
     }
+  }
+  let aviso = document.getElementById('summaryBolsita');
+  if (!aviso && envio && envio.parentNode) {
+    aviso = document.createElement('span');
+    aviso.id = 'summaryBolsita';
+    aviso.className = 'summary-bolsita';
+    envio.parentNode.appendChild(aviso);
+  }
+  if (aviso) {
+    const pendientes = idsPendientesBolsita.size;
+    aviso.hidden = pendientes === 0;
+    aviso.textContent = pendientes ? `${pendientes} pieza${pendientes === 1 ? '' : 's'} aún no ${pendientes === 1 ? 'está guardada' : 'están guardadas'} en tu bolsita; ${pendientes === 1 ? 'podrás pagarla' : 'podrás pagarlas'} en cuanto el equipo ${pendientes === 1 ? 'la guarde' : 'las guarde'}.` : '';
   }
   const btn = document.getElementById('pagarSeleccionadasBtn');
   if (btn) {
@@ -689,6 +713,13 @@ function abrirModalPago() {
   const piezasActivas = obtenerPiezasActivas(ventana);
   const piezas = piezasActivas.filter(p => seleccionCarrito.has(p.id));
   if (!piezas.length) return;
+  const sinBolsita = piezas.filter(p => !piezaEnBolsitaApartado(p));
+  if (sinBolsita.length) {
+    if (typeof mostrarToast === 'function') mostrarToast(`Todavía no puedes pagar ${sinBolsita.length === 1 ? `"${sinBolsita[0].producto}"` : `${sinBolsita.length} de tus piezas`}: falta que el equipo ${sinBolsita.length === 1 ? 'la guarde' : 'las guarde'} en tu bolsita.`);
+    sinBolsita.forEach(p => seleccionCarrito.delete(p.id));
+    renderApartados();
+    return;
+  }
 
   const total = piezas.reduce((sum, p) => sum + Number(p.total || 0), 0);
   const esVip = ventana.categoria === 'vip';
