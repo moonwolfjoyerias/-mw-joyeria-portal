@@ -5945,3 +5945,10 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
   .lm-cifra small { display: block; }
 }
 .lm-codigo { display: inline-block; margin-left: 0.35rem; font-size: 0.68rem; letter-spacing: 0.04em; color: var(--mw-text-muted); border: 1px solid var(--mw-border); border-radius: 999px; padding: 1px 7px; vertical-align: 1px; font-weight: 400; }
+
+/* Mis apartados: pieza que aún no está guardada en la bolsita (no se puede pagar). */
+.apartado-aviso-bolsita { display: block; margin-top: 0.35rem; font-size: 0.78rem; line-height: 1.35; color: #8a5a12; background: var(--mw-gold-soft); border-radius: var(--radius-sm); padding: 0.3rem 0.55rem; max-width: 34ch; }
+:root[data-theme="dark"] .apartado-aviso-bolsita { color: #F0D58A; }
+.apartado-row--sin-bolsita input[type="checkbox"][disabled] { opacity: 0.4; cursor: not-allowed; }
+.summary-bolsita { display: block; font-size: 0.78rem; color: #8a5a12; margin-top: 2px; }
+:root[data-theme="dark"] .summary-bolsita { color: #F0D58A; }
