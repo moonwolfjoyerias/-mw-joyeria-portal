@@ -5900,3 +5900,48 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 :root[data-theme="dark"] .arbol-me-ok { color: #8fd18a; }
 :root[data-theme="dark"] .arbol-me-no { color: #e59a9a; }
 .equipo-toolbar.titulo-lineas { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+
+/* ---------- Modal "Línea N" del árbol ---------- */
+.modal-box.linea-modal { padding: 1.8rem 1.8rem 1.4rem; max-width: min(760px, 100%); }
+.linea-modal .lm-cabeza { padding-right: 2rem; margin-bottom: 1.1rem; }
+.linea-modal .lm-cabeza h3 { font-family: var(--font-heading); letter-spacing: 0.04em; margin-bottom: 0.2rem; }
+.linea-modal .lm-cabeza .modal-sub { margin: 0; }
+.lm-bloque + .lm-bloque { margin-top: 1.6rem; }
+.lm-titulo-linea { font-family: var(--font-heading); font-size: 1rem; margin: 0 0 0.6rem; color: var(--mw-accent-text); }
+.lm-resumen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; margin-bottom: 1.1rem; }
+.lm-resumen > div { background: var(--mw-lilac-soft); border-radius: var(--radius-sm); padding: 0.7rem 0.9rem; display: flex; flex-direction: column; gap: 2px; }
+.lm-resumen span { font-size: 0.72rem; color: var(--mw-text-muted); letter-spacing: 0.02em; }
+.lm-resumen b { font-family: var(--font-heading); font-size: 1.25rem; color: var(--mw-accent-text); font-weight: 700; }
+.lm-encabezado { display: grid; grid-template-columns: 1fr repeat(3, 72px); gap: 0 0.5rem; padding: 0 0.8rem 0.4rem calc(0.8rem + 40px + 0.8rem); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mw-text-muted); border-bottom: 1px solid var(--mw-border); }
+.lm-encabezado span:not(:first-child) { text-align: right; }
+.lm-lista { list-style: none; margin: 0; padding: 0; }
+.lm-fila { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 0.8rem; padding: 0.7rem 0.8rem; border-bottom: 1px solid var(--mw-border); border-radius: var(--radius-sm); }
+.lm-fila:last-child { border-bottom: 0; }
+@media (hover: hover) and (pointer: fine) { .lm-fila:hover { background: var(--mw-surface-soft); } }
+.lm-avatar { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--mw-lilac-soft); color: var(--mw-accent-text); font-family: var(--font-heading); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.02em; }
+.lm-persona { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lm-nombre { font-weight: 500; color: var(--mw-text); font-size: 0.92rem; line-height: 1.3; overflow-wrap: anywhere; }
+.lm-barra { display: block; height: 4px; border-radius: 999px; background: var(--mw-lilac-soft); overflow: hidden; max-width: 260px; }
+.lm-barra span { display: block; height: 100%; border-radius: inherit; background: var(--mw-purple); }
+.lm-cifras { display: grid; grid-template-columns: repeat(3, 72px); gap: 0 0.5rem; }
+.lm-cifra { display: flex; flex-direction: column; align-items: flex-end; }
+.lm-cifra small { display: none; font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mw-text-muted); }
+.lm-num { font-variant-numeric: tabular-nums; font-size: 0.92rem; color: var(--mw-text); }
+.lm-num.total { font-weight: 700; color: var(--mw-accent-text); }
+.lm-num.cero { color: var(--mw-text-muted); opacity: 0.55; font-weight: 400; }
+.lm-fila.sin-compra .lm-avatar { opacity: 0.6; }
+.lm-fila.sin-compra .lm-nombre { color: var(--mw-text-muted); }
+:root[data-theme="dark"] .lm-barra span { background: var(--mw-lilac); }
+@media (max-width: 640px) {
+  .modal-box.linea-modal { padding: 1.3rem 1rem 1rem; }
+  .lm-resumen { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
+  .lm-resumen > div { padding: 0.55rem 0.6rem; }
+  .lm-resumen b { font-size: 1.05rem; }
+  .lm-encabezado { display: none; }
+  .lm-fila { grid-template-columns: 36px 1fr; padding: 0.7rem 0.4rem; row-gap: 0.5rem; }
+  .lm-avatar { width: 36px; height: 36px; font-size: 0.78rem; }
+  .lm-cifras { grid-column: 2; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lm-cifra { align-items: flex-start; }
+  .lm-cifra small { display: block; }
+}
+.lm-codigo { display: inline-block; margin-left: 0.35rem; font-size: 0.68rem; letter-spacing: 0.04em; color: var(--mw-text-muted); border: 1px solid var(--mw-border); border-radius: 999px; padding: 1px 7px; vertical-align: 1px; font-weight: 400; }
