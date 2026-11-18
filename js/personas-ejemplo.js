@@ -578,4 +578,8 @@ function existePersonaConCorreoOTelefono(correo, telefono, excluirId) {
 // En las páginas que cargan js/arbol-datos.js, además se espera al árbol de
 // mi-equipo (la verdad para rangos y boletos), con un tope de unos segundos:
 // así todo lo que pinta rangos/boletos ya lo tiene disponible.
-const personasRepoListo = cargarPersonasRepo().then(r => (typeof window !== 'undefined' && window.arbolMWListo ? window.arbolMWListo.then(() => r, () => r) : r));
+const personasRepoListo = cargarPersonasRepo().then(r => {
+  if (typeof window === 'undefined') return r;
+  const esperas = [...(window.mwEsperas || []), ...(window.arbolMWListo ? [window.arbolMWListo] : [])];
+  return esperas.length ? Promise.all(esperas.map(p => p.catch(() => null))).then(() => r) : r;
+});

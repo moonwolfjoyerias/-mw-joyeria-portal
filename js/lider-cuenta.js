@@ -228,6 +228,8 @@ function renderRifaLider() {
 function renderConstanciaLider() {
   const persona = obtenerPersonaConPlanMWAlDia();
   if (!persona) return;
+  // Plan de constancia que lleva Administración en BRILLO (js/plan-constancia.js).
+  if (window.PlanConstanciaMW && window.PlanConstanciaMW.render()) return;
 
   // Admin → Configuración → Plan MW puede tener premios propios por
   // hito; si no, se usan los mismos hitos reales de siempre.

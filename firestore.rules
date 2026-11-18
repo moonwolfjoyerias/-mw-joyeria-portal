@@ -302,6 +302,14 @@ service cloud.firestore {
       allow read, write: if estaAutenticado() && (esAdmin() || miPerfil().personaId == id);
     }
 
+    // planConstancia/{personaId} — Plan de constancia (lo administra BRILLO):
+    // lo que lleva acumulado cada e/l en su reto y sus premios entregados.
+    // Lo lee la persona misma y Administración; solo Administración escribe.
+    match /planConstancia/{id} {
+      allow read: if estaAutenticado() && (esAdmin() || miPerfil().personaId == id);
+      allow write: if estaAutenticado() && esAdmin();
+    }
+
     // personasMeta/estado — igual que catalogoMeta/apartadosMeta: solo
     // trackea si Personas ya se sembró antes en este proyecto.
     match /personasMeta/{id} {
