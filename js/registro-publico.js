@@ -28,6 +28,10 @@ let registroDatosPaso1 = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('inscribirseBtn')?.addEventListener('click', () => abrirModalRegistroPaso1());
+  // Los botones "Quiero comenzar a emprender" de la página pública
+  // (Contacto, Nosotros, Ventajas del plan) llegan con ?inscribirme=1:
+  // se abre de una vez el formulario de Inscribirme.
+  if (new URLSearchParams(window.location.search).has('inscribirme')) abrirModalRegistroPaso1();
 
   // login.html no carga portal-common.js (es una página pública, no un
   // portal con sesión) — ahí es donde vive normalmente el cierre
