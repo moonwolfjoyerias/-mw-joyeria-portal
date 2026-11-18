@@ -54,6 +54,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderFiltroColorOro();
   renderFiltroTalla();
   aplicarFiltros();
+  // Los − N + de cada pieza siguen en vivo lo que cambie en su apartado
+  // (desde Mis apartados en otra pestaña, o lo que haga el equipo).
+  let refrescoApartadosCatalogo = null;
+  window.addEventListener('mw:apartados-actualizados', () => {
+    clearTimeout(refrescoApartadosCatalogo);
+    refrescoApartadosCatalogo = setTimeout(aplicarFiltros, 150);
+  });
 
   const clearBtn = document.getElementById('clearFiltersBtn');
   if (clearBtn) clearBtn.addEventListener('click', limpiarFiltros);
@@ -82,6 +89,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 // había compartido desde este dispositivo, al abrir el catálogo cuando
 // cambió su nombre o teléfono.
 const TARJETA_CATALOGO_STORAGE_PREFIJO = 'mw_tarjetaCatalogo_';
+// Título que la e/l le pone a su catálogo ("Joyería de Cami"). Vacío = "Catálogo de <su nombre>".
+let tituloCatalogoActual = '';
+const TITULO_CATALOGO_MAX = 60;
 
 function urlCatalogoClientas() {
   return new URL(`../../catalogo-vivo.html?e=${encodeURIComponent(usuarioIdActual)}`, window.location.href).href;
@@ -90,7 +100,7 @@ function urlCatalogoClientas() {
 function datosTarjetaCatalogo() {
   const persona = typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(usuarioIdActual) : null;
   const nombre = (persona ? [persona.nombre, persona.apellidos].filter(Boolean).join(' ') : '') || usuarioNombreActual || '';
-  return { nombre: nombre.trim().slice(0, 120), telefono: String(persona?.telefono || '').replace(/\D/g, '').slice(0, 20) };
+  return { nombre: nombre.trim().slice(0, 120), telefono: String(persona?.telefono || '').replace(/\D/g, '').slice(0, 20), titulo: tituloCatalogoActual.trim().slice(0, TITULO_CATALOGO_MAX) };
 }
 
 async function guardarTarjetaCatalogo(soloSiCambio) {
@@ -146,8 +156,82 @@ async function iniciarLinkCatalogoClientas() {
     if (ventana) ventana.location.href = wa; else window.location.href = wa;
   });
 
+  // Botón para el título del catálogo (junto a Copiar / Compartir).
+  const acciones = (copiarBtn || compartirBtn).parentNode;
+  if (acciones && !document.getElementById('tituloCatalogoBtn')) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.id = 'tituloCatalogoBtn';
+    b.className = 'btn btn-outline btn-sm';
+    b.textContent = 'Nombre de mi catálogo';
+    b.addEventListener('click', abrirModalTituloCatalogo);
+    acciones.appendChild(b);
+  }
+
+  // Lo que ya tiene guardado (para no perder su título al actualizar nombre/teléfono).
+  try {
+    if (typeof dbFirestore !== 'undefined' && dbFirestore && usuarioIdActual) {
+      const d = await dbFirestore.collection('catalogoTarjetas').doc(String(usuarioIdActual)).get();
+      if (d.exists && typeof d.data().titulo === 'string') tituloCatalogoActual = d.data().titulo;
+    }
+  } catch (error) { /* sin título guardado */ }
+
   if (typeof personasRepoListo !== 'undefined') await personasRepoListo;
   guardarTarjetaCatalogo(true).catch(() => { /* se reintenta al copiar el link */ });
+}
+
+function tituloPorOmisionCatalogo() {
+  const nombre = datosTarjetaCatalogo().nombre;
+  return nombre ? `Catálogo de ${nombre}` : 'Catálogo MW';
+}
+
+// La e/l elige cómo se llama el catálogo que ven sus clientas.
+function abrirModalTituloCatalogo() {
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>Nombre de mi catálogo</h3>
+    <p class="modal-sub">Así lo verán tus clientas arriba de tu catálogo. Si lo dejas vacío dice "${escapeHTMLCatalogoTitulo(tituloPorOmisionCatalogo())}".</p>
+    <label for="tituloCatalogoInput">Título</label>
+    <input type="text" id="tituloCatalogoInput" maxlength="${TITULO_CATALOGO_MAX}" placeholder="${escapeHTMLCatalogoTitulo(tituloPorOmisionCatalogo())}" value="${escapeHTMLCatalogoTitulo(tituloCatalogoActual)}">
+    <p class="titulo-catalogo-cuenta" id="tituloCatalogoCuenta"></p>
+    <div class="titulo-catalogo-vista"><span>Tus clientas verán:</span><strong id="tituloCatalogoVista"></strong></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline" id="tituloCatalogoQuitar">Usar el de siempre</button>
+      <button type="button" class="btn btn-primary" id="tituloCatalogoGuardar">Guardar</button>
+    </div>`;
+  overlay.classList.add('open');
+  const input = document.getElementById('tituloCatalogoInput');
+  const pintar = () => {
+    document.getElementById('tituloCatalogoVista').textContent = input.value.trim() || tituloPorOmisionCatalogo();
+    document.getElementById('tituloCatalogoCuenta').textContent = `${input.value.length} / ${TITULO_CATALOGO_MAX}`;
+  };
+  input.addEventListener('input', pintar);
+  pintar();
+  input.focus();
+  const cerrar = () => overlay.classList.remove('open');
+  box.querySelector('[data-close]').addEventListener('click', cerrar);
+  const guardar = async (valor) => {
+    const anterior = tituloCatalogoActual;
+    tituloCatalogoActual = valor.trim().slice(0, TITULO_CATALOGO_MAX);
+    try {
+      await guardarTarjetaCatalogo(false);
+      cerrar();
+      mostrarToast(tituloCatalogoActual ? `Tu catálogo ahora se llama "${tituloCatalogoActual}".` : 'Tu catálogo vuelve a usar tu nombre.');
+    } catch (error) {
+      tituloCatalogoActual = anterior;
+      mostrarToast('No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.');
+    }
+  };
+  document.getElementById('tituloCatalogoGuardar').addEventListener('click', () => guardar(input.value));
+  document.getElementById('tituloCatalogoQuitar').addEventListener('click', () => guardar(''));
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); guardar(input.value); } });
+}
+
+function escapeHTMLCatalogoTitulo(t) {
+  return String(t || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
 // ---------- Catálogo real (mismo que Staff/Encargado/Admin) ----------
@@ -316,13 +400,18 @@ function renderProductos(productos) {
           <span class="price-public">$${p.precioEtiqueta} MXN</span>
           <span class="price-emprendedora">$${precioConDescuento(p)} MXN</span>
         </div>
-        ${disponibles.length
-          ? `<button class="btn btn-primary btn-apartar" data-apartar="${p.id}">Apartar</button>`
-          : `<button class="btn btn-outline btn-apartar" disabled style="opacity:0.5;cursor:not-allowed;">No disponible</button>`}
+        ${controlCantidadCatalogo(p, disponibles)}
       </div>
     </div>
   `;
   }).join('');
+
+  grid.querySelectorAll('[data-cat-mas]').forEach(btn => {
+    btn.addEventListener('click', () => sumarPiezaCatalogo(btn.getAttribute('data-cat-mas'), btn));
+  });
+  grid.querySelectorAll('[data-cat-menos]').forEach(btn => {
+    btn.addEventListener('click', () => restarPiezaCatalogo(btn.getAttribute('data-cat-menos')));
+  });
 
   grid.querySelectorAll('[data-detalle]').forEach(el => {
     el.addEventListener('click', () => abrirModalDetalleProducto(el.getAttribute('data-detalle')));
@@ -343,6 +432,99 @@ function renderProductos(productos) {
       abrirModalDetalleProducto(productoId);
     });
   });
+}
+
+// ---------- − N + en cada pieza del catálogo ----------
+// Cuántas piezas de este modelo lleva ya en su apartado (cualquier
+// color/talla). Con 0 se ve el botón "Apartar" de siempre; con 1 o más,
+// "− N +": el − quita la última que apartó de ese modelo (como en Mis
+// apartados) y el + aparta otra al momento si solo hay una opción
+// disponible, o abre el elegir color/talla si hay varias.
+function piezasPropiasDeProductoCatalogo(productoId) {
+  if (!usuarioIdActual || typeof obtenerVentanasApartado !== 'function') return [];
+  return obtenerVentanasApartado()
+    .filter(v => v.usuarioId === usuarioIdActual && v.estado !== 'cerrada' && Array.isArray(v.apartados))
+    .flatMap(ventana => ventana.apartados
+      .filter(p => p.estado === 'activa' && p.productoId === productoId)
+      .map(pieza => ({ pieza, ventana })));
+}
+
+function controlCantidadCatalogo(p, disponibles) {
+  const n = piezasPropiasDeProductoCatalogo(p.id).length;
+  if (!n) {
+    return disponibles.length
+      ? `<button class="btn btn-primary btn-apartar" data-apartar="${p.id}">Apartar</button>`
+      : `<button class="btn btn-outline btn-apartar" disabled style="opacity:0.5;cursor:not-allowed;">No disponible</button>`;
+  }
+  const nombre = escapeAttribute(p.nombre);
+  const hayMas = disponibles.length > 0;
+  return `
+    <div class="cp-cantidad" role="group" aria-label="Piezas de ${nombre} en tu apartado">
+      <button type="button" data-cat-menos="${p.id}" aria-label="Quitar una pieza de tu apartado" title="Quitar una de tu apartado">−</button>
+      <span class="cp-cantidad-num" title="${n} en tu apartado">${n}</span>
+      <button type="button" data-cat-mas="${p.id}" aria-label="Apartar otra pieza" ${hayMas ? '' : 'disabled'} title="${hayMas ? (disponibles.length > 1 ? 'Apartar otra (elige color/talla)' : 'Apartar otra') : 'Ya no hay más piezas disponibles'}">+</button>
+    </div>
+    <small class="cp-cantidad-ayuda">${n === 1 ? 'Ya está en tu apartado' : `${n} en tu apartado`}</small>`;
+}
+
+let sumandoPiezaCatalogo = false;
+async function sumarPiezaCatalogo(productoId, boton) {
+  if (sumandoPiezaCatalogo) return;
+  const producto = obtenerCatalogoReal().find(p => p.id === productoId);
+  if (!producto) return;
+  const disponibles = variantesDisponibles(producto);
+  if (!disponibles.length) { mostrarToast('Ya no hay más piezas disponibles de este modelo.'); return; }
+  if (disponibles.length > 1) { abrirModalDetalleProducto(productoId); return; }
+  const ventana = buscarVentanaParaApartar(obtenerVentanasApartado(), usuarioIdActual);
+  // Sin ventana abierta (p. ej. ya venció) sigue el camino normal, que
+  // pide el depósito si hace falta.
+  if (!ventana) { mostrarPasoConfirmarApartar(producto, disponibles[0]); return; }
+  const variante = disponibles[0];
+  const datosPieza = {
+    producto: producto.nombre, variante: etiquetaVariante(variante), colorOro: producto.colorOro || '',
+    total: precioConDescuento(producto), productoId: producto.id, varianteId: variante.id
+  };
+  sumandoPiezaCatalogo = true;
+  if (boton) boton.disabled = true;
+  try {
+    const resultado = await agregarPiezaAVentana(ventana, datosPieza, null);
+    if (!resultado.ok) { mostrarToast(resultado.error || 'Ya no hay más piezas de este modelo.'); return; }
+    guardarVentanasApartado(obtenerVentanasApartado().map(v => v.id === ventana.id ? ventana : v));
+    notificarEquipoCatalogo(`${ventana.usuarioNombre || usuarioNombreActual} apartó otra pieza de "${producto.nombre}" (${datosPieza.variante}).`, ventana.usuarioNombre || usuarioNombreActual);
+    if (ventana.estado !== 'activa') notificarDisponibilidadCondicionadaADeposito(ventana);
+    mostrarToast(ventana.estado === 'activa' ? 'Se apartó otra pieza' : 'Se apartó otra pieza. Sigue pendiente tu depósito.');
+  } finally {
+    sumandoPiezaCatalogo = false;
+    aplicarFiltros();
+  }
+}
+
+function restarPiezaCatalogo(productoId) {
+  const propias = piezasPropiasDeProductoCatalogo(productoId);
+  if (!propias.length) { aplicarFiltros(); return; }
+  // La última que apartó, de preferencia una sin abonos (igual que Mis apartados).
+  const elegida = propias.slice().reverse().find(({ pieza }) => !(pieza.pagos || []).length) || propias[propias.length - 1];
+  const { pieza } = elegida;
+  const ventanas = obtenerVentanasApartado();
+  const ventana = ventanas.find(v => v.id === elegida.ventana.id);
+  const real = ventana && ventana.apartados.find(x => x.id === pieza.id && x.estado === 'activa');
+  if (!real) { aplicarFiltros(); return; }
+  real.estado = 'cancelada';
+  real.cancelacion = { motivo: 'La quitaste tú', fecha: new Date().toISOString(), propia: true };
+  if (typeof restaurarStockVariante === 'function') restaurarStockVariante(real.productoId, real.varianteId);
+  ventana.cambioClienteSinRevisar = { texto: `Quitó "${real.producto}" (${real.variante})`, fecha: new Date().toISOString() };
+  guardarVentanasApartado(ventanas);
+  notificarEquipoCatalogo(`Se quitó "${real.producto}" (${real.variante}) del apartado de ${ventana.usuarioNombre} — revisa si hay que liberar la pieza.`, ventana.usuarioNombre);
+  aplicarFiltros();
+  mostrarToast(`Se quitó 1 pieza (${real.variante}) de tu apartado. Se le avisó al equipo.`);
+}
+
+// Mismo aviso que manda Mis apartados (js/apartados.js
+// notificarEquipoOperativo), que no se carga en esta página.
+function notificarEquipoCatalogo(texto, nombrePersona) {
+  if (typeof agregarNotificacion !== 'function') return;
+  const query = nombrePersona ? `?buscar=${encodeURIComponent(nombrePersona)}` : '';
+  agregarNotificacion({ texto, link: `staff-apartados.html${query}`, rolDestino: 'staff', origen: 'emprendedora_lider' });
 }
 
 // Modal enriquecido de Apartar (solo Emprendedora/Líder — Staff,

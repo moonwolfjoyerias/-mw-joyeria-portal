@@ -75,8 +75,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!TARJETA_VIVO) { mostrarLinkNoDisponible(); return; }
 
   const nombre = String(TARJETA_VIVO.nombre || '').trim();
-  document.title = nombre ? `Catálogo de ${nombre} — MW Joyería` : 'Catálogo — MW Joyería';
-  document.getElementById('catalogoVivoTitulo').textContent = nombre ? `Catálogo de ${nombre}` : 'Catálogo MW';
+  // La e/l puede ponerle su propio título ("Joyería de Cami"); si no, su nombre.
+  const titulo = String(TARJETA_VIVO.titulo || '').trim() || (nombre ? `Catálogo de ${nombre}` : 'Catálogo MW');
+  document.title = `${titulo} — MW Joyería`;
+  document.getElementById('catalogoVivoTitulo').textContent = titulo;
 
   const wa = linkWhatsappVivo(`¡Hola${_primerNombreVivo() ? ` ${_primerNombreVivo()}` : ''}! Vi tu catálogo de MW Joyería y me interesa una pieza.`);
   document.getElementById('catalogoVivoSub').textContent = wa

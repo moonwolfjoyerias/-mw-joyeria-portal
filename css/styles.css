@@ -5952,3 +5952,63 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 .apartado-row--sin-bolsita input[type="checkbox"][disabled] { opacity: 0.4; cursor: not-allowed; }
 .summary-bolsita { display: block; font-size: 0.78rem; color: #8a5a12; margin-top: 2px; }
 :root[data-theme="dark"] .summary-bolsita { color: #F0D58A; }
+
+/* ---------- Tarjeta virtual (Mi cuenta) ---------- */
+.tarjeta-mw { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.2rem; align-items: center; background: linear-gradient(135deg, #5E1A8A, #3A0F57); color: #fff; border-radius: 18px; padding: 1.3rem 1.4rem; box-shadow: 0 10px 30px rgba(58, 15, 87, 0.28); position: relative; margin: 0.6rem 0 1rem; max-width: 560px; }
+.tarjeta-mw::after { content: ''; position: absolute; inset: 10px; border: 1px solid rgba(203, 146, 79, 0.7); border-radius: 12px; pointer-events: none; }
+.tm-lado { display: flex; flex-direction: column; justify-content: space-between; gap: 1.4rem; min-width: 0; }
+.tm-marca { display: flex; align-items: center; gap: 0.6rem; font-family: var(--font-heading); letter-spacing: 0.08em; font-size: 0.95rem; }
+.tm-marca img { width: 34px; height: 34px; object-fit: contain; }
+.tm-datos { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.tm-tipo { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: #C5ABF6; }
+.tm-nombre { font-family: var(--font-heading); font-size: 1.2rem; line-height: 1.25; overflow-wrap: anywhere; }
+.tm-usuario { font-size: 1rem; font-weight: 600; letter-spacing: 0.06em; color: #F8F4EF; }
+.tm-qr { background: #fff; border-radius: 12px; padding: 8px; width: 150px; height: 150px; position: relative; z-index: 1; }
+.tm-qr svg { width: 100%; height: 100%; display: block; }
+.tm-acciones { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.tm-acciones .btn { min-height: 44px; }
+.tarjeta-mw-capa { position: fixed; inset: 0; z-index: 1000; background: #F8F4EF; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 1.2rem; }
+.tarjeta-mw--grande { grid-template-columns: 1fr; justify-items: center; text-align: center; max-width: 420px; width: 100%; padding: 1.6rem; }
+.tarjeta-mw--grande .tm-lado { align-items: center; gap: 0.8rem; }
+.tarjeta-mw--grande .tm-qr { width: min(78vw, 300px); height: min(78vw, 300px); }
+.tm-ayuda { color: #5b4b6b; font-size: 0.9rem; margin: 0; text-align: center; }
+.tm-cerrar { position: absolute; top: 12px; right: 14px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid #d9cfe3; background: #fff; color: #3A0F57; font-size: 1.5rem; line-height: 1; cursor: pointer; }
+@media (max-width: 560px) {
+  .tarjeta-mw { grid-template-columns: 1fr; justify-items: start; }
+  .tm-qr { width: 170px; height: 170px; justify-self: center; }
+}
+
+/* Nombre del catálogo de la e/l */
+.titulo-catalogo-cuenta { text-align: right; font-size: 0.75rem; color: var(--mw-text-muted); margin: 0.25rem 0 0.6rem; }
+.titulo-catalogo-vista { display: flex; flex-direction: column; gap: 2px; background: var(--mw-lilac-soft); border-radius: var(--radius-sm); padding: 0.7rem 0.9rem; margin-bottom: 1rem; }
+.titulo-catalogo-vista span { font-size: 0.75rem; color: var(--mw-text-muted); }
+.titulo-catalogo-vista strong { font-family: var(--font-heading); color: var(--mw-accent-text); font-size: 1.1rem; overflow-wrap: anywhere; }
+.modal-box .modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; }
+.modal-box .modal-actions .btn { min-height: 44px; }
+
+/* ---------- Burbuja del carrito (e/l) ---------- */
+.burbuja-carrito { position: relative; z-index: 900; flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--mw-purple, #5E1A8A); color: #fff; box-shadow: 0 8px 22px rgba(58, 15, 87, 0.32); text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.burbuja-carrito svg { width: 22px; height: 22px; }
+.burbuja-carrito--flotante { position: fixed; top: 14px; right: 18px; width: 50px; height: 50px; }
+.burbuja-carrito-centinela { width: 0; height: 0; align-self: flex-start; }
+@media (max-width: 720px) {
+  /* En la barra morada de arriba, a la izquierda del botón del menú (.sidebar-toggle: right 1rem, 36 px). */
+  .burbuja-carrito, .burbuja-carrito--flotante { position: fixed; top: 0.45rem; right: calc(1rem + 36px + 12px); width: 40px; height: 40px; z-index: 61; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.3); box-shadow: none; }
+  .burbuja-carrito svg { width: 20px; height: 20px; }
+  .burbuja-carrito-num { border-color: var(--mw-purple, #5E1A8A); }
+  :root[data-theme="dark"] .burbuja-carrito { background: rgba(255,255,255,0.14); }
+}
+.burbuja-carrito-num { position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #CB924F; color: #fff; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--surface, #fff); font-family: var(--font-body); }
+.burbuja-carrito.vacia .burbuja-carrito-num { background: var(--mw-text-muted, #8a7f95); }
+.burbuja-carrito:active { transform: scale(0.95); }
+@media (hover: hover) and (pointer: fine) { .burbuja-carrito:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(58, 15, 87, 0.38); } }
+@media (min-width: 721px) { :root[data-theme="dark"] .burbuja-carrito { background: #7b3bb0; } }
+@media (prefers-reduced-motion: reduce) { .burbuja-carrito { transition: none; } }
+
+/* ---------- Catálogo e/l: − N + en cada pieza ---------- */
+.catalog-product-card .cp-cantidad { margin-top: auto; display: flex; align-items: center; justify-content: space-between; width: 100%; border: 1.5px solid var(--mw-accent, #5E1A8A); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.catalog-product-card .cp-cantidad button { flex: 0 0 40px; height: 36px; border: 0; background: transparent; color: var(--mw-accent-text); font-size: 1.2rem; font-weight: 700; cursor: pointer; line-height: 1; }
+.catalog-product-card .cp-cantidad button:hover:not(:disabled) { background: var(--mw-lilac-soft); }
+.catalog-product-card .cp-cantidad button:disabled { color: var(--mw-text-muted); opacity: 0.45; cursor: not-allowed; }
+.catalog-product-card .cp-cantidad-num { flex: 1; text-align: center; font-weight: 700; color: var(--mw-text); }
+.catalog-product-card .cp-cantidad-ayuda { display: block; text-align: center; margin-top: 4px; font-size: 0.74rem; color: var(--mw-text-muted); }
