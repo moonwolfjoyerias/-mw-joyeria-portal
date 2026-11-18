@@ -1302,13 +1302,13 @@ async function renderSeccionUsuarios() {
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:0.4rem;">
         <div>
           <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Cuentas — Emprendedoras/Líderes</h3>
-          <p class="cfg-card-sub" style="margin-bottom:0;">Crear cuentas nuevas, ver/restablecer su contraseña o eliminarlas.</p>
+          <p class="cfg-card-sub" style="margin-bottom:0;">Crear cuentas nuevas o eliminarlas. Por seguridad, aquí no se ven ni se cambian contraseñas.</p>
         </div>
         <button class="btn btn-primary" id="cfgCrearCuentaPersonaBtn" style="width:auto;" type="button">＋ Crear cuenta</button>
       </div>
       <div class="catalog-table-wrap cfg-tabla-wrap" style="margin-top:10px;">
         <table class="catalog-table cfg-tabla-cuentas">
-          <thead><tr><th>Nombre</th><th>Usuario</th><th>Tipo</th><th>Estado</th><th>Contraseña</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Usuario</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>
             ${personas.length ? personas.map(p => `
               <tr>
@@ -1317,15 +1317,10 @@ async function renderSeccionUsuarios() {
                 <td>${p.tipo === 'lider' ? 'Líder' : 'Emprendedora'}</td>
                 <td><span class="badge ${p.estado === 'activa' ? 'badge-pagada' : 'badge-pendiente'}">${escapeHTMLPersonas(ESTADOS_CUENTA_PERSONA[p.estado] || p.estado)}</span></td>
                 <td style="white-space:nowrap;">
-                  <span class="cfg-password-texto" data-password-real="${escapeAttributePersonas(obtenerPasswordPersona(p.id) || '(sin contraseña)')}" style="font-family:monospace;">••••••••</span>
-                  <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-                </td>
-                <td style="white-space:nowrap;">
-                  <button type="button" class="cfg-icon-btn" data-cfg-reset-persona="${p.id}" title="Restablecer contraseña"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7.5" cy="15.5" r="3.5"/><path d="M10 13L19 4"/><path d="M15 8l2 2"/></svg></button>
                   <button type="button" class="cfg-icon-btn" data-cfg-eliminar-persona="${p.id}" title="Eliminar cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
                 </td>
               </tr>
-            `).join('') : `<tr><td colspan="6" class="catalog-empty-cell">Todavía no hay cuentas registradas.</td></tr>`}
+            `).join('') : `<tr><td colspan="5" class="catalog-empty-cell">Todavía no hay cuentas registradas.</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -1341,7 +1336,7 @@ async function renderSeccionUsuarios() {
       </div>
       <div class="catalog-table-wrap cfg-tabla-wrap" style="margin-top:10px;">
         <table class="catalog-table cfg-tabla-cuentas">
-          <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Permisos</th><th>Contraseña</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Permisos</th><th>Acciones</th></tr></thead>
           <tbody>
             ${internas.length ? internas.map(c => `
               <tr>
@@ -1354,22 +1349,17 @@ async function renderSeccionUsuarios() {
                     : '—'}
                 </td>
                 <td style="white-space:nowrap;">
-                  <span class="cfg-password-texto" data-password-real="${escapeAttributePersonas(c.password || '(sin contraseña)')}" style="font-family:monospace;">••••••••</span>
-                  <button type="button" class="cfg-icon-btn" data-cfg-ver-password title="Mostrar/ocultar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-                </td>
-                <td style="white-space:nowrap;">
                   <button type="button" class="cfg-icon-btn" data-cfg-renombrar-interna="${c.id}" title="Corregir nombre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></button>
-                  <button type="button" class="cfg-icon-btn" data-cfg-reset-interna="${c.id}" ${c.id === ADMIN_IDENTIDAD.usuarioId ? 'disabled' : ''} title="${c.id === ADMIN_IDENTIDAD.usuarioId ? 'No puedes restablecer tu propia contraseña' : 'Restablecer contraseña'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7.5" cy="15.5" r="3.5"/><path d="M10 13L19 4"/><path d="M15 8l2 2"/></svg></button>
                   <button type="button" class="cfg-icon-btn" data-cfg-eliminar-interna="${c.id}" title="Eliminar cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
                 </td>
               </tr>
-            `).join('') : `<tr><td colspan="6" class="catalog-empty-cell">Todavía no hay cuentas registradas.</td></tr>`}
+            `).join('') : `<tr><td colspan="5" class="catalog-empty-cell">Todavía no hay cuentas registradas.</td></tr>`}
           </tbody>
         </table>
       </div>
 
       <div class="cfg-disclosure">
-        <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Las contraseñas se guardan en texto plano para que puedas recuperarlas si alguien las olvida — esto es aceptable únicamente porque este portal todavía no tiene un backend real. Con Firebase Auth, esto se reemplazará por "restablecer contraseña" en vez de "ver la contraseña actual".
+        <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Por seguridad, Administración no puede ver ni cambiar contraseñas: la contraseña de una cuenta nueva se muestra una sola vez, al crearla, para entregársela a la persona.
         <br><br>
         <code>admin01</code> y <code>encargado01</code> son las cuentas fijas de esta demo (Claudia y Valentina Cruz). Eliminarlas aquí no cierra su acceso al portal, porque ese acceso todavía no depende de esta lista — es solo la cuenta que usan para reautorizar acciones en Apartados/Catálogo/etc.
       </div>
@@ -1380,16 +1370,6 @@ async function renderSeccionUsuarios() {
   wireCuentasInternas(cont);
   wireBuscadorCuentas(cont);
   wireEliminarCuentasEjemplo(cont, personasEjemploPresentes, internasEjemploPresentes);
-
-  cont.querySelectorAll('[data-cfg-ver-password]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const span = btn.previousElementSibling;
-      if (!span) return;
-      const mostrando = span.textContent === span.dataset.passwordReal;
-      span.textContent = mostrando ? '••••••••' : span.dataset.passwordReal;
-      btn.innerHTML = mostrando ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3.5 3.5l17 17"/><path d="M10.6 5.2A10.6 10.6 0 0112 5c6.5 0 10 7 10 7a15.6 15.6 0 01-3.4 4.2M6.5 6.6A15.7 15.7 0 002 12s3.5 7 10 7a10.4 10.4 0 004.1-.8"/><path d="M9.9 10a3 3 0 004.1 4.1"/></svg>';
-    });
-  });
 
 }
 
@@ -1498,10 +1478,6 @@ function wireEliminarCuentasEjemplo(cont, personasEjemploPresentes, internasEjem
 function wireCuentasPersonas(cont, lideresParaSelect) {
 
   document.getElementById('cfgCrearCuentaPersonaBtn')?.addEventListener('click', () => abrirModalCrearCuentaPersona(lideresParaSelect));
-
-  cont.querySelectorAll('[data-cfg-reset-persona]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalResetPassword('persona', btn.getAttribute('data-cfg-reset-persona')));
-  });
 
   cont.querySelectorAll('[data-cfg-eliminar-persona]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1752,20 +1728,6 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
 function wireCuentasInternas(cont) {
 
   document.getElementById('cfgCrearCuentaInternaBtn')?.addEventListener('click', abrirModalCrearCuentaInterna);
-
-  cont.querySelectorAll('[data-cfg-reset-interna]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-cfg-reset-interna');
-      // Sección 19.1/19.2 del documento de requisitos: nadie puede
-      // restablecer su propia contraseña, ni siquiera Admin — debe
-      // pedírselo a otra cuenta con este mismo acceso.
-      if (id === ADMIN_IDENTIDAD.usuarioId) {
-        mostrarToast('No puedes restablecer tu propia contraseña. Pídeselo a otra cuenta de Admin.');
-        return;
-      }
-      abrirModalResetPassword('interna', id);
-    });
-  });
 
   cont.querySelectorAll('[data-cfg-eliminar-interna]').forEach(btn => {
     btn.addEventListener('click', () => {

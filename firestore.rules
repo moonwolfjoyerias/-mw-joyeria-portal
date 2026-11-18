@@ -164,7 +164,8 @@ service cloud.firestore {
 
     // catalogoTarjetas/{personaId} — lo único que muestra el link de
     // catálogo que cada Emprendedora/Líder comparte con sus clientas
-    // (catalogo-vivo.html?e=...): su nombre y su WhatsApp. Lectura
+    // (catalogo-vivo.html?e=...): su nombre, su WhatsApp y el título que
+    // ella le ponga a su catálogo ("Joyería de Cami"). Lectura
     // pública (las clientas no inician sesión); solo la propia persona
     // o el equipo interno la escriben, y solo con esos campos. Se
     // borra al dar de baja/inactivar la cuenta (el link deja de
@@ -172,7 +173,8 @@ service cloud.firestore {
     match /catalogoTarjetas/{id} {
       allow read: if true;
       allow create, update: if estaAutenticado() && (esInterno() || miPerfil().personaId == id)
-        && request.resource.data.keys().hasOnly(['nombre', 'telefono', 'actualizado'])
+        && request.resource.data.keys().hasOnly(['nombre', 'telefono', 'titulo', 'actualizado'])
+        && (!('titulo' in request.resource.data) || (request.resource.data.titulo is string && request.resource.data.titulo.size() <= 60))
         && request.resource.data.nombre is string && request.resource.data.nombre.size() <= 120
         && request.resource.data.telefono is string && request.resource.data.telefono.size() <= 20
         && request.resource.data.actualizado is string && request.resource.data.actualizado.size() <= 40;
