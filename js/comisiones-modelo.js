@@ -470,7 +470,104 @@ function calcularFilaComision(persona, nivel, pct, liderId, periodoKey, subPerio
 
 }
 
+// Personas del árbol → su cuenta de la página (para nombres, ajustes y avisos).
+function mapaMiembrosAPersonasComisiones() {
+  const A = typeof window !== 'undefined' ? window.ArbolMW : null;
+  const mapa = new Map();
+  if (!A || !A.cargado) return mapa;
+  obtenerPersonas().forEach(p => {
+    const m = A.miembroDePersona(p);
+    if (m && !mapa.has(m.id)) mapa.set(m.id, p);
+  });
+  return mapa;
+}
+
+// El árbol de mi-equipo es la verdad para las comisiones: si la líder está
+// en el árbol, los niveles, puntos y montos salen de ahí (igual que BRILLO y
+// mi-equipo). Los ajustes manuales de Admin siguen aplicando encima.
+function calcularComisionesLiderArbol(liderPersona, periodoKey, subPeriodo, c) {
+  const A = window.ArbolMW;
+  const campoPts = subPeriodo === 'p1' ? 'p1' : 'p2';
+  const campoCom = subPeriodo === 'p1' ? 'comisionP1' : 'comisionP2';
+  const gated = subPeriodo === 'p1' ? c.gated1 : c.gated2;
+  const personasDe = mapaMiembrosAPersonasComisiones();
+  const ivaDivisor = obtenerIvaDivisorVigente(periodoKey);
+  const niveles = [1, 2, 3, 4, 5].map(nivel => {
+    const linea = c.lineas.find(l => l.linea === nivel);
+    const pct = gated ? 0 : (linea ? linea.tasa : 0);
+    const filas = (linea ? linea.filas : []).map(t => {
+      const persona = personasDe.get(t.id) || { id: `arbol-${t.id}`, nombre: t.nombre, apellidos: '', tipo: 'emprendedora', delArbol: true };
+      const clave = construirClaveAjuste(liderPersona.id, persona.id, periodoKey, subPeriodo);
+      const ajuste = obtenerAjuste(clave);
+      const comisionCalculada = t[campoCom];
+      return {
+        persona,
+        nivel,
+        pct,
+        compraNormal: t[campoPts],
+        compraSouvenir: 0,
+        base: t[campoPts] / ivaDivisor,
+        comisionCalculada,
+        comisionFinal: ajuste ? ajuste.valorNuevo : comisionCalculada,
+        ajuste,
+        clave
+      };
+    });
+    return { nivel, pct, filas, totalNivel: filas.reduce((s, f) => s + f.comisionFinal, 0) };
+  });
+  const todasLasFilas = niveles.flatMap(n => n.filas);
+  const rangoKey = A.aPagina(c.info.rango.key);
+  return {
+    lider: liderPersona,
+    rangoKey,
+    origenRango: c.esManual ? 'rango asignado en mi-equipo' : `calificado en mi-equipo en ${A.etiquetaMes(A.mesAnterior(periodoKey))}`,
+    niveles,
+    totalComision: niveles.reduce((s, n) => s + n.totalNivel, 0),
+    personasConComision: todasLasFilas.filter(f => f.comisionFinal > 0).length,
+    personasSinComision: todasLasFilas.filter(f => !(f.comisionFinal > 0)).length,
+    compraConsiderada: todasLasFilas.reduce((s, f) => s + f.compraNormal, 0),
+    tieneAjustes: todasLasFilas.some(f => f.ajuste),
+    bono: obtenerBonoRangoPeriodoArbol(liderPersona, periodoKey),
+    estadoPago: obtenerEstadoPago(liderPersona.id, periodoKey, subPeriodo),
+    totalEquipo: todasLasFilas.length,
+    delArbol: true,
+    sinCompraMinima: gated,
+    minCompra: c.minCompra,
+    compraLider: subPeriodo === 'p1' ? c.compraP1 : c.compraP2
+  };
+}
+
+// Bono por rango con el árbol: el rango con el que cobra este mes lo logró
+// por PRIMERA VEZ el mes anterior (igual que BRILLO → Pago y comprobante).
+function obtenerBonoRangoPeriodoArbol(persona, periodoKey) {
+  const A = window.ArbolMW;
+  const m = A && A.miembroDePersona(persona);
+  if (!m) return null;
+  const base = A.mesAnterior(periodoKey);
+  const ahora = A.rangoDelMes(m.id, base).rango;
+  const antes = A.rangoHistorico(m.id, A.mesAnterior(base)).rango;
+  if (!ahora || ahora.key === 'sinRango' || A.ORDEN[ahora.key] <= A.ORDEN[antes.key]) return null;
+  const rango = A.aPagina(ahora.key);
+  if (!BONOS_RANGO[rango]) return null;
+  const clave = `${persona.id}__${rango}`;
+  const registro = obtenerBonos()[clave];
+  return {
+    rango,
+    monto: obtenerMontoBonoRango(rango, periodoKey),
+    fechaAscenso: `${base}-01T00:00:00.000Z`,
+    pagado: !!registro,
+    fechaPago: registro?.fechaPago || null,
+    registradoPor: registro?.registradoPor || null,
+    clave
+  };
+}
+
 function calcularComisionesLider(liderPersona, periodoKey, subPeriodo) {
+
+  const deArbol = typeof window !== 'undefined' && window.ArbolMW && window.ArbolMW.cargado
+    ? window.ArbolMW.comisionesPersona(liderPersona, String(periodoKey).slice(0, 7))
+    : null;
+  if (deArbol) return calcularComisionesLiderArbol(liderPersona, periodoKey, subPeriodo, deArbol);
 
   const { conNivel } = calcularDescendenciaPersona(liderPersona.id);
   const { rangoKey, origen } = calcularRangoAplicadoPeriodo(liderPersona, periodoKey);
