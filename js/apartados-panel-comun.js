@@ -226,6 +226,10 @@ function agregarEventosComunesFilas() {
     btn.addEventListener("click", () => confirmarDescancelarPieza(btn.dataset.ventana, btn.dataset.descancelarPieza));
   });
 
+  document.querySelectorAll("[data-ocultar-pieza]").forEach(btn => {
+    btn.addEventListener("click", () => confirmarOcultarPieza(btn.dataset.ventana, btn.dataset.ocultarPieza));
+  });
+
   document.querySelectorAll("[data-sacar-bolsita]").forEach(btn => {
     btn.addEventListener("click", () => confirmarSacarDeBolsita(btn.dataset.ventana, btn.dataset.sacarBolsita));
   });
@@ -723,6 +727,39 @@ async function ejecutarDescancelarPieza(ventanaId, piezaId, empleado) {
 
 }
 
+// × en una pieza cancelada: deja de verse para todos (panel del equipo,
+// BRILLO y "Canceladas recientemente" de la e/l). No se borra nada: queda
+// en la auditoría. Si todavía está en su bolsita, primero hay que sacarla.
+function piezaOcultaDeLaVista(pieza) {
+  return !!(pieza && pieza.estado === "cancelada" && pieza.ocultaDeLaVista);
+}
+
+function confirmarOcultarPieza(ventanaId, piezaId) {
+
+  const v = ventanas.find(x => x.id === ventanaId);
+  const pieza = v?.apartados.find(p => p.id === piezaId);
+  if (!pieza || pieza.estado !== "cancelada" || piezaPendienteDeSacarDeBolsita(pieza)) return;
+
+  pedirConfirmacionPanelRol({
+    ventanaId,
+    titulo: "Quitar de la vista",
+    mensaje: `¿Quitar de la vista "${escapeHTML(pieza.producto)}" (cancelada) del apartado de ${escapeHTML(v.usuarioNombre)}? Ya no aparecerá en la página ni en BRILLO para nadie; queda en el historial del apartado.`,
+    textoBoton: "Sí, quitar de la vista",
+    onConfirmar: (empleado) => {
+      const actual = ventanas.find(x => x.id === ventanaId);
+      const p = actual?.apartados.find(x => x.id === piezaId);
+      if (!p || p.estado !== "cancelada") return;
+      p.ocultaDeLaVista = { fecha: new Date().toISOString(), usuario: empleado.nombre };
+      actual.auditoria.push(registrarAuditoriaVentana(`${p.producto}: pieza cancelada quitada de la vista`, empleado));
+      registrarActividadApartadosRol({ accion: "ocultar_pieza_cancelada", descripcion: `Quitó de la vista ${p.producto} (cancelada) del apartado de ${actual.usuarioNombre}` }, empleado);
+      guardarVentanas();
+      renderTabla();
+      mostrarToast(`Pieza quitada de la vista por ${empleado.nombre}.`);
+    }
+  });
+
+}
+
 function confirmarSacarDeBolsita(ventanaId, piezaId) {
 
   const v = ventanas.find(x => x.id === ventanaId);
@@ -954,7 +991,11 @@ function crearFilaVentana(v) {
 
 function crearFilaDetalle(v) {
 
-  const piezas = !v.apartados.length ? "<small>Sin piezas</small>" : v.apartados.map(p => {
+  // Las canceladas que el equipo quitó de la vista (×) ya no se listan
+  // (siguen en la auditoría de la ventana).
+  const visibles = v.apartados.filter(p => !piezaOcultaDeLaVista(p));
+  const ocultas = v.apartados.length - visibles.length;
+  const piezas = (!visibles.length ? "<small>Sin piezas</small>" : visibles.map(p => {
 
     const estadoPieza = obtenerEstadoPieza(p.estado);
     const foto = fotoPiezaApartadoPanel(p);
@@ -974,8 +1015,13 @@ function crearFilaDetalle(v) {
 
     const elegidaParaPagar = p.estado === "activa" && v.fechaDeclaracionPago && Array.isArray(v.piezasDeclaradasPago) && v.piezasDeclaradasPago.includes(p.id);
 
+    const quitarDeVista = p.estado === "cancelada" && !piezaPendienteDeSacarDeBolsita(p)
+      ? `<button type="button" class="pieza-quitar-vista" data-ventana="${v.id}" data-ocultar-pieza="${p.id}" title="Quitar de la vista esta pieza cancelada" aria-label="Quitar de la vista ${escapeAttribute(p.producto)}">×</button>`
+      : "";
+
     return `
-      <div class="piece-cell" style="margin-bottom:10px;align-items:flex-start;">
+      <div class="piece-cell" style="margin-bottom:10px;align-items:flex-start;position:relative;">
+        ${quitarDeVista}
         <div class="piece-thumb"><img src="${foto}" alt="${escapeAttribute(p.producto)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;${generica ? 'opacity:.35;' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(p.producto)}"`}></div>
         <div style="flex:1;">
           <strong>${escapeHTML(p.producto)}</strong>
@@ -995,7 +1041,7 @@ function crearFilaDetalle(v) {
       </div>
     `;
 
-  }).join("");
+  }).join("")) + (ocultas ? `<small class="piezas-ocultas-nota">${ocultas} pieza${ocultas === 1 ? "" : "s"} cancelada${ocultas === 1 ? "" : "s"} quitada${ocultas === 1 ? "" : "s"} de la vista (quedan en el historial).</small>` : "");
 
   const auditoria = v.auditoria.slice().reverse().map(a => `
     <div class="log-box" style="margin-bottom:8px;">

@@ -6022,3 +6022,14 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 .rifa-premio-el strong { font-family: var(--font-heading, Cinzel, Georgia, serif); color: var(--mw-accent-text); font-size: 1.05rem; }
 .rifa-premio-el p { margin: 6px 0 0; color: var(--mw-text-muted); }
 @media (max-width: 520px) { .rifa-premio-el { grid-template-columns: 1fr; } }
+
+/* ---------- Apartados: × para quitar de la vista una pieza cancelada ---------- */
+.pieza-quitar-vista { position: absolute; top: -4px; right: -4px; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--mw-border); background: var(--surface); color: var(--mw-text-muted); font-size: 1.05rem; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.pieza-quitar-vista:hover { color: #b23b3b; border-color: #b23b3b; }
+.pieza-quitar-vista:focus-visible { outline: 2px solid var(--mw-purple); outline-offset: 2px; }
+.piezas-ocultas-nota { display: block; margin-top: 4px; color: var(--mw-text-muted); font-style: italic; }
+/* e/l: confirmar antes de quitar una pieza */
+.aviso-quitar-bolsita { margin: 10px 0 4px; padding: 10px 12px; border-radius: 10px; font-size: 0.9rem; }
+.aviso-quitar-bolsita.no { background: var(--mw-lilac-soft); color: var(--mw-text); }
+.aviso-quitar-bolsita.si { background: #fff4da; color: #6b4a00; }
+:root[data-theme="dark"] .aviso-quitar-bolsita.si { background: #3a2f12; color: #f3d48a; }

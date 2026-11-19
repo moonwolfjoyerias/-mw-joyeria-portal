@@ -219,7 +219,7 @@ function piezasCanceladasRecientes() {
   return obtenerVentanasApartado()
     .filter(v => v.usuarioId === usuarioIdActual)
     .flatMap(ventana => ventana.apartados.map(pieza => ({ pieza, ventana, causa: motivoCancelacionPieza(pieza, ventana) })))
-    .filter(({ pieza, causa }) => causa && !(pieza.cancelacion && pieza.cancelacion.propia) && causa.fecha && new Date(causa.fecha).getTime() >= limite)
+    .filter(({ pieza, causa }) => causa && !pieza.ocultaDeLaVista && !(pieza.cancelacion && pieza.cancelacion.propia) && causa.fecha && new Date(causa.fecha).getTime() >= limite)
     .sort((a, b) => b.causa.fecha.localeCompare(a.causa.fecha));
 }
 
@@ -349,8 +349,7 @@ function renderApartados() {
     btn.addEventListener('click', () => {
       const grupo = gruposActuales[Number(btn.getAttribute('data-quitar-grupo'))];
       if (!grupo) return;
-      if (grupo.piezas.length > 1 && !confirm(`¿Quitar las ${grupo.piezas.length} piezas de "${grupo.piezas[0].producto}"?`)) return;
-      quitarPiezas(grupo.piezas.map(p => p.id));
+      confirmarQuitarPiezasEL(grupo.piezas, () => quitarPiezas(grupo.piezas.map(p => p.id)));
     });
   });
   list.querySelectorAll('[data-menos]').forEach(btn => {
@@ -359,7 +358,7 @@ function renderApartados() {
       if (!grupo) return;
       // Se quita la que no tiene abonos (si hay), empezando por la última.
       const pieza = grupo.piezas.slice().reverse().find(p => !(p.pagos || []).length) || grupo.piezas[grupo.piezas.length - 1];
-      quitarPiezas([pieza.id]);
+      confirmarQuitarPiezasEL([pieza], () => quitarPiezas([pieza.id]));
     });
   });
   list.querySelectorAll('[data-mas]').forEach(btn => {
@@ -504,6 +503,7 @@ function quitarPiezas(ids) {
   const n = encontradas.length;
   const nombrePieza = n > 1 ? `${pieza.producto} ×${n}` : pieza.producto;
   const variantePieza = pieza.variante;
+  const textoBolsita = textoBolsitaPiezasQuitadas(encontradas.map(e => e.pieza));
 
   mutarVentanaPropia(ventana.id, v => {
     v.apartados.filter(x => ids.includes(x.id) && x.estado === 'activa').forEach(p => {
@@ -520,11 +520,11 @@ function quitarPiezas(ids) {
     // expandir la fila para verlo); ahora también queda marcado en la
     // propia fila hasta que alguien del equipo la revise (ver
     // crearFilaVentana en apartados-panel-comun.js).
-    v.cambioClienteSinRevisar = { texto: `Quitó "${nombrePieza}" (${variantePieza})`, fecha: new Date().toISOString() };
+    v.cambioClienteSinRevisar = { texto: `Quitó "${nombrePieza}" (${variantePieza}) · ${encontradas.some(e => e.pieza.enBolsita) ? 'estaba en bolsita' : 'no estaba en bolsita'}`, fecha: new Date().toISOString() };
   });
 
   renderApartados();
-  notificarEquipoOperativo(`Se quitó "${nombrePieza}" (${variantePieza}) del apartado de ${nombrePersona} — revisa si hay que liberar la pieza.`, nombrePersona);
+  notificarEquipoOperativo(`Se quitó "${nombrePieza}" (${variantePieza}) del apartado de ${nombrePersona}. ${textoBolsita}`, nombrePersona);
   mostrarToast('Se le notificó al equipo de tus cambios');
 }
 
