@@ -505,6 +505,13 @@ function restarPiezaCatalogo(productoId) {
   // La última que apartó, de preferencia una sin abonos (igual que Mis apartados).
   const elegida = propias.slice().reverse().find(({ pieza }) => !(pieza.pagos || []).length) || propias[propias.length - 1];
   const { pieza } = elegida;
+  // Pide confirmación y le dice si ya estaba guardada en su bolsita.
+  if (typeof confirmarQuitarPiezasEL === 'function') confirmarQuitarPiezasEL([pieza], () => quitarPiezaCatalogo(elegida));
+  else quitarPiezaCatalogo(elegida);
+}
+
+function quitarPiezaCatalogo(elegida) {
+  const { pieza } = elegida;
   const ventanas = obtenerVentanasApartado();
   const ventana = ventanas.find(v => v.id === elegida.ventana.id);
   const real = ventana && ventana.apartados.find(x => x.id === pieza.id && x.estado === 'activa');
@@ -512,9 +519,10 @@ function restarPiezaCatalogo(productoId) {
   real.estado = 'cancelada';
   real.cancelacion = { motivo: 'La quitaste tú', fecha: new Date().toISOString(), propia: true };
   if (typeof restaurarStockVariante === 'function') restaurarStockVariante(real.productoId, real.varianteId);
-  ventana.cambioClienteSinRevisar = { texto: `Quitó "${real.producto}" (${real.variante})`, fecha: new Date().toISOString() };
+  ventana.cambioClienteSinRevisar = { texto: `Quitó "${real.producto}" (${real.variante}) · ${real.enBolsita ? 'estaba en bolsita' : 'no estaba en bolsita'}`, fecha: new Date().toISOString() };
   guardarVentanasApartado(ventanas);
-  notificarEquipoCatalogo(`Se quitó "${real.producto}" (${real.variante}) del apartado de ${ventana.usuarioNombre} — revisa si hay que liberar la pieza.`, ventana.usuarioNombre);
+  const textoBolsita = typeof textoBolsitaPiezasQuitadas === 'function' ? textoBolsitaPiezasQuitadas([real]) : '';
+  notificarEquipoCatalogo(`Se quitó "${real.producto}" (${real.variante}) del apartado de ${ventana.usuarioNombre}. ${textoBolsita}`.trim(), ventana.usuarioNombre);
   aplicarFiltros();
   mostrarToast(`Se quitó 1 pieza (${real.variante}) de tu apartado. Se le avisó al equipo.`);
 }

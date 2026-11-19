@@ -1269,3 +1269,47 @@ const apartadosRepoListo = Promise.all([
       typeof rifaBoletosListo !== 'undefined' ? rifaBoletosListo : null
     ]))
 ]).then(([ventanas]) => ventanas);
+
+// ============================================================
+// e/l: confirmar antes de quitar piezas de su apartado (Mis apartados y
+// el − del Catálogo). Le dice si cada pieza ya estaba guardada en su
+// bolsita (el equipo la sacará) o si todavía no (no hay nada que sacar).
+// ============================================================
+function textoBolsitaPiezasQuitadas(piezas) {
+  const enBolsita = piezas.filter(p => p && p.enBolsita).length;
+  if (!enBolsita) return piezas.length === 1 ? 'No estaba guardada en su bolsita: no hay que sacar nada.' : 'No estaban guardadas en su bolsita: no hay que sacar nada.';
+  if (enBolsita === piezas.length) return piezas.length === 1 ? 'Estaba guardada en su bolsita: hay que sacarla.' : 'Estaban guardadas en su bolsita: hay que sacarlas.';
+  return `${enBolsita} de ${piezas.length} estaban guardadas en su bolsita: hay que sacar esas.`;
+}
+
+function confirmarQuitarPiezasEL(piezas, onConfirmar) {
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  const lista = (piezas || []).filter(Boolean);
+  if (!lista.length) return;
+  if (!overlay || !box) { if (window.confirm('¿Quitar de tu apartado?')) onConfirmar(); return; }
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const enBolsita = lista.filter(p => p.enBolsita).length;
+  const n = lista.length;
+  const nombre = n === 1 ? `"${esc(lista[0].producto)}"${lista[0].variante ? ` (${esc(lista[0].variante)})` : ''}` : `${n} piezas de "${esc(lista[0].producto)}"`;
+  const aviso = !enBolsita
+    ? `<p class="aviso-quitar-bolsita no">${n === 1 ? 'Todavía no estaba guardada en tu bolsita' : 'Todavía no estaban guardadas en tu bolsita'}: se libera al momento.</p>`
+    : enBolsita === n
+      ? `<p class="aviso-quitar-bolsita si">${n === 1 ? 'Ya estaba guardada en tu bolsita' : 'Ya estaban guardadas en tu bolsita'}: el equipo ${n === 1 ? 'la sacará' : 'las sacará'} y ${n === 1 ? 'la regresará' : 'las regresará'} a la venta.</p>`
+      : `<p class="aviso-quitar-bolsita si">${enBolsita} de ${n} ya estaban guardadas en tu bolsita: el equipo las sacará.</p>`;
+  box.classList.remove('modal-box-xwide');
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <h3>¿Quitar de tu apartado?</h3>
+    <p class="modal-sub">Vas a quitar ${nombre}. Ya no quedará apartada para ti.</p>
+    ${aviso}
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline" data-close>No, dejarla</button>
+      <button type="button" class="btn btn-primary" id="confirmarQuitarELBtn">Sí, quitar</button>
+    </div>`;
+  overlay.classList.add('open');
+  document.getElementById('confirmarQuitarELBtn')?.addEventListener('click', () => {
+    overlay.classList.remove('open');
+    onConfirmar();
+  }, { once: true });
+}
