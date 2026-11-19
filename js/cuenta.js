@@ -229,6 +229,20 @@ function renderRifaMesCuenta() {
     return;
   }
 
+  if (config.modo === 'premio') {
+    const premio = config.premio && String(config.premio.nombre || '').trim() ? config.premio : null;
+    sub.textContent = premio ? 'Esto es lo que se rifa este mes. Gana boletos con tus compras del mes.' : 'Muy pronto sabrás qué se rifa este mes.';
+    contenido.innerHTML = premio ? `
+      <div class="rifa-premio-el">
+        ${premio.fotoUrl ? `<img src="${premio.fotoUrl}" alt="${escapeHTML(premio.nombre)}">` : ''}
+        <div>
+          <strong>${escapeHTML(premio.nombre)}</strong>
+          ${premio.descripcion ? `<p>${escapeHTML(premio.descripcion)}</p>` : ''}
+        </div>
+      </div>` : '';
+    return;
+  }
+
   if (config.modo === 'solicitud') {
     sub.textContent = 'Escribe y sube una foto de algo que te gustaría que se rifara este mes.';
     const solicitud = obtenerSolicitudRifaPersona(persona.id, mesKey);

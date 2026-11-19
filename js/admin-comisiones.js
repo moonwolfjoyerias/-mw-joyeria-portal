@@ -225,8 +225,12 @@ function construirCardLider(r) {
   const estadoPagoClase = ambosPagados ? 'badge-pagada' : 'badge-pendiente';
   const tieneAjustes = rP1.tieneAjustes || rP2.tieneAjustes;
 
-  const minimo = typeof calcularCumpleRangoActual === 'function' ? calcularCumpleRangoActual(r.lider, periodoActual) : { aplica: false, cumple: true };
-  const avisoMinimo = minimo.aplica && !minimo.cumple
+  const delArbol = !!rP1.delArbol;
+  const minimo = !delArbol && typeof calcularCumpleRangoActual === 'function' ? calcularCumpleRangoActual(r.lider, periodoActual) : { aplica: false, cumple: true };
+  const sinMinimoArbol = delArbol ? [rP1, rP2].filter(x => x.sinCompraMinima).map(x => x === rP1 ? 'P1' : 'P2') : [];
+  const avisoMinimo = sinMinimoArbol.length
+    ? `<span class="badge badge-correccion" title="Su compra en el periodo no llegó a ${fmtMoneyComm(rP1.minCompra)} (puntos del árbol)">Sin compra mínima en ${sinMinimoArbol.join(' y ')}: no cobra ese periodo</span>`
+    : minimo.aplica && !minimo.cumple
     ? `<span class="badge badge-correccion" title="${minimo.items.filter(it => !it.cumple).map(it => `${it.label}: ${it.valores}`).join(' · ')}">No alcanza el mínimo de ${rangoLabel(r.rangoKey)} este periodo</span>`
     : '';
 
@@ -243,7 +247,7 @@ function construirCardLider(r) {
             <span class="badge ${estadoPagoClase}">${estadoPagoLabel}</span>
             ${tieneAjustes ? '<span class="badge badge-ascenso"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="7"/></svg></span> Con ajustes manuales</span>' : ''}
             ${avisoMinimo}
-            <button class="btn-link-ajuste" type="button" data-rango-manual="${r.lider.id}">${typeof obtenerRangoManualComision === 'function' && obtenerRangoManualComision(r.lider.id, periodoActual) ? 'Cambiar rango manual de este mes' : 'Ajustar rango manual de este mes'}</button>
+            ${delArbol ? '<span class="badge badge-pagada" title="Rango, puntos y montos del árbol de mi-equipo">Del árbol de mi-equipo</span><span class="bp-sub">El rango manual se cambia en BRILLO → Plan MW → Comisiones.</span>' : `<button class="btn-link-ajuste" type="button" data-rango-manual="${r.lider.id}">${typeof obtenerRangoManualComision === 'function' && obtenerRangoManualComision(r.lider.id, periodoActual) ? 'Cambiar rango manual de este mes' : 'Ajustar rango manual de este mes'}</button>`}
           </div>
         </div>
         <div class="comm-lider-totales">

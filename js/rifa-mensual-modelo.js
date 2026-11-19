@@ -10,6 +10,9 @@
 //   votacion  — Admin sube opciones (nombre, foto, descripción) y cada
 //               persona vota por una (puede cambiar su voto mientras el
 //               mes siga abierto).
+//   premio    — "Premio del mes": Admin sube qué se va a rifar (nombre,
+//               foto, descripción) y a las e/l les aparece en su Mi cuenta.
+//               Lo mismo se puede subir desde BRILLO (Plan MW → Rifa).
 //
 // Admin decide el modo del mes en curso y ve todas las solicitudes o el
 // detalle de todos los votos (sección 9 del encargo original — "no crear
@@ -24,7 +27,7 @@ const RIFA_MENSUAL_CONFIG_KEY = 'mw-rifa-mensual-config-v1';
 const RIFA_MENSUAL_SOLICITUDES_KEY = 'mw-rifa-mensual-solicitudes-v1';
 const RIFA_MENSUAL_VOTOS_KEY = 'mw-rifa-mensual-votos-v1';
 
-const MODOS_RIFA_MENSUAL = { solicitud: 'Solicitud', votacion: 'Votación' };
+const MODOS_RIFA_MENSUAL = { solicitud: 'Solicitud', votacion: 'Votación', premio: 'Premio del mes' };
 
 function obtenerMesKeyActualRifaMensual() {
   if (typeof mesKeyActualComprasModelo === 'function') return mesKeyActualComprasModelo();
@@ -103,6 +106,33 @@ function establecerGanadorRifaMes(mesKey, { personaId, personaNombre }, { usuari
   }
 
   return { ok: true, config: actual };
+}
+
+// Modo "Premio del mes": lo que se va a rifar (uno solo por mes).
+function establecerPremioRifaMes(mesKey, { nombre, fotoUrl, descripcion }, { usuarioId, usuarioNombre } = {}) {
+  nombre = String(nombre || '').trim();
+  if (!nombre) return { ok: false, error: 'Escribe qué se va a rifar.' };
+
+  const configs = obtenerConfigsRifaMensual();
+  const actual = configs[mesKey] || { mesKey, modo: null, opciones: [] };
+  actual.premio = { nombre, descripcion: String(descripcion || '').trim(), fotoUrl: fotoUrl || '', actualizadoEn: new Date().toISOString() };
+  actual.actualizadoEn = actual.premio.actualizadoEn;
+  actual.actualizadoPorId = usuarioId || null;
+  actual.actualizadoPorNombre = usuarioNombre || null;
+  configs[mesKey] = actual;
+  guardarConfigsRifaMensual(configs);
+
+  if (typeof registrarAuditoriaAdmin === 'function') {
+    registrarAuditoriaAdmin({ modulo: 'rifa_mensual', accion: 'guardar_premio', descripcion: `Rifa del mes ${mesKey}: premio del mes "${nombre}"` });
+  }
+
+  return { ok: true, config: actual };
+}
+
+// El premio del mes, si Admin eligió ese modo y ya lo subió (o null).
+function obtenerPremioRifaMes(mesKey) {
+  const config = obtenerConfigRifaMes(mesKey);
+  return config.modo === 'premio' && config.premio && String(config.premio.nombre || '').trim() ? config.premio : null;
 }
 
 function agregarOpcionRifaMes(mesKey, { nombre, fotoUrl, descripcion }, { usuarioId, usuarioNombre } = {}) {

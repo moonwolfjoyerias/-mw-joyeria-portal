@@ -49,6 +49,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  // Desde la pestaña Comisiones (otra página) se llega con ?vista=rifa|rangos.
+  const vistaInicial = new URLSearchParams(window.location.search).get('vista');
+  if (vistaInicial && vistaInicial !== 'seguimiento') document.querySelector(`#planmwNavPrincipal [data-planmw-vista="${vistaInicial}"]`)?.click();
+
   document.getElementById('descargarTodosBoletosBtn')?.addEventListener('click', generarPDFBoletosRifa);
 
   document.getElementById('exportarHistorialRangosBtn')?.addEventListener('click', () => {
@@ -71,6 +75,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('rifaAgregarOpcionBtn')?.addEventListener('click', () => {
     abrirModalOpcionRifa(obtenerMesKeyActualRifaMensual(), null);
+  });
+
+  document.getElementById('rifaPremioBtn')?.addEventListener('click', () => {
+    abrirModalOpcionRifa(obtenerMesKeyActualRifaMensual(), null, { premio: true });
   });
 
 });
@@ -427,9 +435,32 @@ function renderRifaMes() {
   opcionesBloque.hidden = config.modo !== 'votacion';
   if (config.modo === 'votacion') renderOpcionesRifaMes(config);
 
+  const premioBloque = document.getElementById('rifaPremioBloque');
+  if (premioBloque) {
+    premioBloque.hidden = config.modo !== 'premio';
+    if (config.modo === 'premio') renderPremioRifaMes(config);
+  }
+
   renderResultadosRifaMes(config);
   renderBoletosRifaMes();
 
+}
+
+function renderPremioRifaMes(config) {
+  const card = document.getElementById('rifaPremioCard');
+  const btn = document.getElementById('rifaPremioBtn');
+  const premio = config.premio && String(config.premio.nombre || '').trim() ? config.premio : null;
+  if (btn) btn.textContent = premio ? 'Cambiar premio' : '+ Subir premio';
+  if (!card) return;
+  card.innerHTML = premio ? `
+    <div class="rifa-opcion-card rifa-premio-card">
+      ${premio.fotoUrl ? `<img src="${premio.fotoUrl}" alt="${escapeHTMLPersonas(premio.nombre)}">` : '<div class="rifa-opcion-sinfoto">Sin foto</div>'}
+      <div class="rifa-opcion-body">
+        <strong>${escapeHTMLPersonas(premio.nombre)}</strong>
+        ${premio.descripcion ? `<p>${escapeHTMLPersonas(premio.descripcion)}</p>` : ''}
+        <span class="bp-sub">Las Emprendedoras y Líderes lo ven en su Mi cuenta.</span>
+      </div>
+    </div>` : '<p class="bp-sub">Todavía no subes el premio: mientras tanto, a las e/l les aparece "Muy pronto sabrás qué se rifa este mes".</p>';
 }
 
 function renderOpcionesRifaMes(config) {
@@ -495,6 +526,12 @@ function renderResultadosRifaMes(config) {
     return;
   }
 
+  if (config.modo === 'premio') {
+    tituloEl.textContent = 'Premio del mes';
+    bloque.innerHTML = '<p class="bp-sub">En este modo no hay solicitudes ni votos: las e/l solo ven lo que se rifa. Siguen ganando boletos con sus puntos del árbol.</p>';
+    return;
+  }
+
   if (config.modo === 'solicitud') {
     const solicitudes = obtenerSolicitudesRifaMes(mesKey);
     tituloEl.textContent = `Solicitudes recibidas (${solicitudes.length})`;
@@ -552,10 +589,12 @@ function renderResultadosRifaMes(config) {
 // ---------- Modal: agregar/editar opción de votación ----------
 let rifaOpcionFotoTemporal;
 
-function abrirModalOpcionRifa(mesKey, opcionId) {
+function abrirModalOpcionRifa(mesKey, opcionId, { premio: esPremio = false } = {}) {
 
   const config = obtenerConfigRifaMes(mesKey);
-  const opcion = opcionId ? (config.opciones || []).find(o => o.id === opcionId) : null;
+  const opcion = esPremio
+    ? (config.premio && config.premio.nombre ? config.premio : null)
+    : (opcionId ? (config.opciones || []).find(o => o.id === opcionId) : null);
   rifaOpcionFotoTemporal = opcion ? opcion.fotoUrl : '';
 
   const overlay = document.getElementById('modalOverlay');
@@ -565,9 +604,9 @@ function abrirModalOpcionRifa(mesKey, opcionId) {
   box.style.maxWidth = '420px';
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <h3>${opcion ? 'Editar opción' : 'Nueva opción de la rifa'}</h3>
+    <h3>${esPremio ? (opcion ? 'Cambiar el premio del mes' : 'Premio del mes') : (opcion ? 'Editar opción' : 'Nueva opción de la rifa')}</h3>
     <p class="modal-sub">${formatearPeriodoLabel(mesKey)}</p>
-    <label for="rifaOpcionNombre">Nombre del regalo</label>
+    <label for="rifaOpcionNombre">${esPremio ? 'Qué se rifa' : 'Nombre del regalo'}</label>
     <input type="text" id="rifaOpcionNombre" value="${(opcion ? opcion.nombre : '').replace(/"/g, '&quot;')}">
     <label for="rifaOpcionDescripcion" style="margin-top:10px;">Descripción</label>
     <textarea id="rifaOpcionDescripcion" rows="3">${opcion ? escapeHTMLPersonas(opcion.descripcion || '') : ''}</textarea>
@@ -590,15 +629,13 @@ function abrirModalOpcionRifa(mesKey, opcionId) {
       if (error) { error.textContent = 'Selecciona un archivo de imagen válido.'; error.style.display = 'block'; }
       return;
     }
-    if (archivo.size > 2 * 1024 * 1024) {
-      e.target.value = '';
-      if (error) { error.textContent = 'La imagen no puede superar 2 MB.'; error.style.display = 'block'; }
-      return;
-    }
     if (error) error.style.display = 'none';
-    const lector = new FileReader();
-    lector.onload = () => { rifaOpcionFotoTemporal = lector.result; };
-    lector.readAsDataURL(archivo);
+    // Se reduce a 900 px (JPEG): el mes entero vive en un solo documento de
+    // Firestore (máx. 1 MB), así que una foto grande del celular no cabría.
+    reducirFotoRifa(archivo).then(dataUrl => { rifaOpcionFotoTemporal = dataUrl; }).catch(() => {
+      e.target.value = '';
+      if (error) { error.textContent = 'No se pudo leer la foto.'; error.style.display = 'block'; }
+    });
   });
 
   document.getElementById('rifaOpcionGuardarBtn')?.addEventListener('click', () => {
@@ -606,12 +643,14 @@ function abrirModalOpcionRifa(mesKey, opcionId) {
     const descripcion = document.getElementById('rifaOpcionDescripcion').value.trim();
     const error = document.getElementById('rifaOpcionError');
     if (!nombre) {
-      if (error) { error.textContent = 'Escribe el nombre del regalo.'; error.style.display = 'block'; }
+      if (error) { error.textContent = esPremio ? 'Escribe qué se va a rifar.' : 'Escribe el nombre del regalo.'; error.style.display = 'block'; }
       return;
     }
 
     const identidad = { usuarioId: ADMIN_IDENTIDAD.usuarioId, usuarioNombre: ADMIN_IDENTIDAD.usuarioNombre };
-    const resultado = opcion
+    const resultado = esPremio
+      ? establecerPremioRifaMes(mesKey, { nombre, fotoUrl: rifaOpcionFotoTemporal, descripcion }, identidad)
+      : opcion
       ? editarOpcionRifaMes(mesKey, opcion.id, { nombre, fotoUrl: rifaOpcionFotoTemporal, descripcion })
       : agregarOpcionRifaMes(mesKey, { nombre, fotoUrl: rifaOpcionFotoTemporal, descripcion }, identidad);
 
@@ -621,10 +660,31 @@ function abrirModalOpcionRifa(mesKey, opcionId) {
     }
 
     overlay.classList.remove('open');
-    mostrarToast(opcion ? 'Opción actualizada.' : 'Opción agregada.');
+    mostrarToast(esPremio ? 'Premio del mes guardado. Ya lo ven las e/l en su Mi cuenta.' : (opcion ? 'Opción actualizada.' : 'Opción agregada.'));
     renderRifaMes();
   });
 
+}
+
+function reducirFotoRifa(archivo, ladoMax = 900, calidad = 0.82) {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onerror = () => reject(lector.error);
+    lector.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('imagen'));
+      img.onload = () => {
+        const escala = Math.min(1, ladoMax / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * escala);
+        canvas.height = Math.round(img.height * escala);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', calidad));
+      };
+      img.src = lector.result;
+    };
+    lector.readAsDataURL(archivo);
+  });
 }
 
 // ============================================================
