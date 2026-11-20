@@ -6053,3 +6053,52 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 .badge-prospecto { background: #fff4da; color: #6b4a00; font-size: 0.7rem; padding: 1px 7px; border-radius: 999px; }
 .asist-aviso-prospecto { font-size: 0.82rem; margin: 0 0 10px; padding: 8px 10px; border-radius: 8px; background: #fff4da; color: #6b4a00; }
 :root[data-theme="dark"] .asist-aviso-prospecto { background: #3a2f12; color: #f3d48a; }
+
+/* Tarjeta de acompañantes del evento: casilla y opciones con los colores de
+   MW (antes heredaba el estilo de los campos de texto: casilla gigante) y una
+   sola tipografía para las etiquetas. */
+.evento-acompanantes label,
+.evento-acompanantes .etiqueta-campo {
+  font-family: var(--font-body);
+  font-variant: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--mw-text);
+  margin: 0;
+}
+.evento-acompanantes .check-linea { display: flex; align-items: center; gap: 10px; cursor: pointer; line-height: 1.35; }
+.evento-acompanantes input[type="checkbox"],
+.evento-acompanantes input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+  accent-color: var(--mw-purple, #5E1A8A);
+  cursor: pointer;
+}
+.evento-acompanantes #eventoAcompOpciones { gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--mw-border); }
+.evento-acompanantes #eventoAcompOpciones > label { margin-top: 4px; }
+.evento-acompanantes .etiqueta-campo { margin-top: 10px; }
+/* Sí / No como dos botones elegibles. */
+.evento-acompanantes .pregunta-si-no { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; }
+.evento-acompanantes .pregunta-si-no .opcion-si-no {
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1.5px solid var(--mw-border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-weight: 500;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.evento-acompanantes .pregunta-si-no .opcion-si-no input { position: absolute; opacity: 0; pointer-events: none; }
+.evento-acompanantes .pregunta-si-no .opcion-si-no:has(input:checked) { border-color: var(--mw-purple, #5E1A8A); background: var(--mw-lilac-soft); color: var(--mw-accent-text); font-weight: 600; }
+.evento-acompanantes .pregunta-si-no .opcion-si-no:has(input:focus-visible) { outline: 2px solid var(--mw-purple, #5E1A8A); outline-offset: 2px; }
+.evento-acompanantes .pregunta-si-no .opcion-si-no { position: relative; }
+.evento-acompanantes .field-help { font-size: 0.8rem; line-height: 1.45; color: var(--mw-text-muted); margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) { .evento-acompanantes .pregunta-si-no .opcion-si-no { transition: none; } }

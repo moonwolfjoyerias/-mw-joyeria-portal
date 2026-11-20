@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     filtro.texto = e.target.value;
     aplicarFiltros();
   });
+  document.getElementById('ordenCatalogo')?.addEventListener('change', aplicarFiltros);
 
   iniciarLinkCatalogoClientas();
 
@@ -368,7 +369,16 @@ function aplicarFiltros() {
     if (filtro.talla && !variantes.some(v => v.talla === filtro.talla)) return false;
     return true;
   });
-  renderProductos(ordenarProductosMasRecientes(resultado));
+  renderProductos(ordenarProductosCatalogo(resultado));
+}
+
+// "Ordenar" de la barra (si la página lo tiene): más nuevas (como
+// siempre), o por el precio de la e/l de menor a mayor y al revés.
+function ordenarProductosCatalogo(productos) {
+  const orden = document.getElementById('ordenCatalogo')?.value || 'nuevas';
+  if (orden === 'nuevas') return ordenarProductosMasRecientes(productos);
+  const signo = orden === 'mayor' ? -1 : 1;
+  return [...productos].sort((a, b) => signo * (Number(precioConDescuento(a)) - Number(precioConDescuento(b))));
 }
 
 function renderProductos(productos) {
@@ -389,8 +399,8 @@ function renderProductos(productos) {
     const fotoProducto = normalizarImagenProducto(p);
     const fotoGenerica = esFotoGenericaProducto(p);
     return `
-    <div class="catalog-product-card">
-      <div class="cp-photo" data-detalle="${p.id}" style="${fotoGenerica ? '' : 'cursor:pointer;'}">
+    <div class="catalog-product-card" data-producto="${p.id}">
+      <div class="cp-photo" data-detalle="${p.id}" role="button" tabindex="0" aria-label="Ver detalles: ${escapeAttribute(p.nombre)}">
         <img src="${fotoProducto}" alt="${escapeAttribute(p.nombre)}" class="${fotoGenerica ? 'foto-generica' : ''}">
       </div>
       <div class="cp-body">
@@ -413,8 +423,20 @@ function renderProductos(productos) {
     btn.addEventListener('click', () => restarPiezaCatalogo(btn.getAttribute('data-cat-menos')));
   });
 
+  // Tocar cualquier parte de la tarjeta (menos sus botones) abre la
+  // ficha de la pieza; con teclado, Enter/Espacio sobre la foto.
+  grid.querySelectorAll('[data-producto]').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('button, a, .cp-cantidad')) return;
+      abrirModalDetalleProducto(card.getAttribute('data-producto'));
+    });
+  });
   grid.querySelectorAll('[data-detalle]').forEach(el => {
-    el.addEventListener('click', () => abrirModalDetalleProducto(el.getAttribute('data-detalle')));
+    el.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      abrirModalDetalleProducto(el.getAttribute('data-detalle'));
+    });
   });
 
   // El botón "Apartar" conserva su atajo de siempre: con una sola
@@ -554,6 +576,11 @@ function abrirModalDetalleProducto(productoId) {
   const material = MATERIALES.find(m => m.key === producto.material)?.label || producto.material || '';
   const fotoGenerica = esFotoGenericaProducto(producto);
   const seleccionUnica = disponibles.length === 1 ? disponibles[0] : null;
+  const precioEl = precioConDescuento(producto);
+  const ganancia = Math.round((Number(producto.precioEtiqueta) - Number(precioEl)) * 100) / 100;
+  // Hasta 12 opciones de color/talla se ven como botones para elegir;
+  // con más, la lista desplegable de siempre.
+  const conOpciones = disponibles.length > 0 && disponibles.length <= 12;
 
   box.classList.add('modal-box-xwide');
 
@@ -567,30 +594,46 @@ function abrirModalDetalleProducto(productoId) {
         <span class="galeria-contador" id="galeriaContador" aria-live="polite" hidden></span>
       </div>
       <div class="detalle-producto-info">
-        <h3>${escapeHTMLCatalogoVariantes(producto.nombre)}</h3>
-        <div class="detail-grid">
-          <div class="full" style="grid-column:1/-1;"><span>Descripción</span><strong>${escapeHTMLCatalogoVariantes(producto.descripcion || 'Sin descripción')}</strong></div>
-          <div><span>Categoría</span><strong>${escapeHTMLCatalogoVariantes(etiquetaCategoriaProducto(producto) || 'Sin categoría')}</strong></div>
-          <div><span>Material</span><strong>${escapeHTMLCatalogoVariantes(material)}</strong></div>
-          ${producto.colorOro ? `<div><span>Color de oro</span><strong>${escapeHTMLCatalogoVariantes(producto.colorOro)}</strong></div>` : ''}
-          <div><span>Precio etiqueta</span><strong>$${producto.precioEtiqueta} MXN</strong></div>
-          <div><span>Descuento</span><strong>${producto.descuento || 0}% ($${precioConDescuento(producto)} MXN)</strong></div>
+        <div>
+          <h3>${escapeHTMLCatalogoVariantes(producto.nombre)}</h3>
+          <p class="detalle-meta">${escapeHTMLCatalogoVariantes([material, producto.colorOro].filter(Boolean).join(' · '))}</p>
         </div>
+        <div class="detalle-precio">
+          <b>$${precioEl} MXN</b>
+          <s>$${producto.precioEtiqueta} MXN</s>
+          ${ganancia > 0 ? `<span class="detalle-ganas">Ganas $${ganancia} al venderla</span>` : ''}
+        </div>
+        ${producto.descripcion ? `<p class="detalle-descripcion">${escapeHTMLCatalogoVariantes(producto.descripcion)}</p>` : ''}
+        <dl class="detalle-caracteristicas">
+          <div><dt>Categoría</dt><dd>${escapeHTMLCatalogoVariantes(etiquetaCategoriaProducto(producto) || 'Sin categoría')}</dd></div>
+          <div><dt>Material</dt><dd>${escapeHTMLCatalogoVariantes(material)}</dd></div>
+          ${producto.colorOro ? `<div><dt>Color de oro</dt><dd>${escapeHTMLCatalogoVariantes(producto.colorOro)}</dd></div>` : ''}
+          <div><dt>Precio etiqueta</dt><dd>$${producto.precioEtiqueta} MXN</dd></div>
+          <div><dt>Tu descuento</dt><dd>${producto.descuento || 0}%</dd></div>
+        </dl>
 
         ${disponibles.length ? `
-          <label for="detalleVarianteSelect">Color / talla</label>
-          <select id="detalleVarianteSelect" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
-            ${seleccionUnica ? '' : '<option value="">Selecciona...</option>'}
-            ${disponibles.map(v => `<option value="${v.id}" ${seleccionUnica && seleccionUnica.id === v.id ? 'selected' : ''}>${escapeHTMLCatalogoVariantes(etiquetaVariante(v))}</option>`).join('')}
-          </select>
-          <button class="btn btn-primary" style="width:100%;margin-top:12px;" id="detalleApartarBtn" ${seleccionUnica ? '' : 'disabled'}>Apartar</button>
+          <div class="detalle-variantes">
+            <span class="detalle-etiqueta" id="detalleVarianteEt">Color / talla</span>
+            ${conOpciones ? `
+              <div class="detalle-opciones" role="radiogroup" aria-labelledby="detalleVarianteEt">
+                ${disponibles.map(v => `<label class="opcion-variante"><input type="radio" name="detalleVariante" value="${v.id}" ${seleccionUnica && seleccionUnica.id === v.id ? 'checked' : ''}><span>${escapeHTMLCatalogoVariantes(etiquetaVariante(v))}</span></label>`).join('')}
+              </div>` : ''}
+            <select id="detalleVarianteSelect" aria-labelledby="detalleVarianteEt" ${conOpciones ? 'hidden' : ''}>
+              ${seleccionUnica ? '' : '<option value="">Selecciona...</option>'}
+              ${disponibles.map(v => `<option value="${v.id}" ${seleccionUnica && seleccionUnica.id === v.id ? 'selected' : ''}>${escapeHTMLCatalogoVariantes(etiquetaVariante(v))}</option>`).join('')}
+            </select>
+          </div>
         ` : `<p class="modal-sub">Ya no hay existencia de esta pieza.</p>`}
-        ${window.MWCompartirPieza ? `
-          <button class="btn btn-outline compartir-detalle-btn" style="width:100%;margin-top:10px;" type="button" id="detalleCompartirBtn">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>
-            Compartir por WhatsApp
-          </button>
-          <small class="field-help" style="display:block;text-align:center;margin-top:4px;">La imagen lleva solo el precio etiqueta.</small>` : ''}
+        ${window.MWCompartirPieza ? `<p class="detalle-ayuda">Al compartir por WhatsApp, la imagen lleva solo el precio etiqueta.</p>` : ''}
+        <div class="detalle-acciones">
+          ${window.MWCompartirPieza ? `
+            <button class="btn btn-outline compartir-detalle-btn" type="button" id="detalleCompartirBtn">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>
+              Compartir
+            </button>` : ''}
+          ${disponibles.length ? `<button class="btn btn-primary" type="button" id="detalleApartarBtn" ${seleccionUnica ? '' : 'disabled'}>${seleccionUnica ? 'Apartar' : 'Elige color / talla'}</button>` : ''}
+        </div>
       </div>
     </div>
   `;
@@ -669,7 +712,19 @@ function abrirModalDetalleProducto(productoId) {
   select?.addEventListener('change', () => {
     const variante = buscarVariante(producto, select.value);
     if (!irAFotoDeVariante(variante) && img) img.src = variante ? fotoVarianteProducto(producto, variante) : normalizarImagenProducto(producto, true);
-    if (apartarBtn) apartarBtn.disabled = !select.value;
+    if (apartarBtn) {
+      apartarBtn.disabled = !select.value;
+      apartarBtn.textContent = select.value ? 'Apartar' : 'Elige color / talla';
+    }
+  });
+  // Los botones de color/talla solo mueven el <select> (que sigue
+  // siendo el que manda: foto de la variante y botón Apartar).
+  box.querySelectorAll('input[name="detalleVariante"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      if (!select || !radio.checked) return;
+      select.value = radio.value;
+      select.dispatchEvent(new Event('change'));
+    });
   });
 
   apartarBtn?.addEventListener('click', () => {
