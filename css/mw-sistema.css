@@ -227,3 +227,46 @@ body.mw2 .detalle-acciones .btn svg { flex: none; }
 @media (prefers-reduced-motion: reduce) {
   body.mw2 *, body.mw2 *::before, body.mw2 *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ---------- Encabezado del catálogo ----------
+   El link para clientas va junto en una tarjetita con su título. En
+   celular: título a la izquierda, campana y avatar a la derecha en el
+   mismo renglón, y debajo el texto y la tarjeta del link. */
+body.mw2 .catalogo-link-acciones {
+  display: grid; grid-template-columns: repeat(3, auto); justify-content: start; align-items: center; gap: 8px;
+  margin-top: 14px; padding: 12px; border-radius: var(--mw2-r-tarjeta);
+  background: var(--mw-lilac-soft); width: fit-content; max-width: 100%;
+}
+body.mw2 .catalogo-link-titulo { grid-column: 1 / -1; margin: 0; font-size: 0.8rem; font-weight: 600; color: var(--mw-accent-text); }
+body.mw2 .catalogo-link-acciones .btn {
+  min-height: 40px; margin: 0; padding: 0 14px; border-radius: var(--mw2-r-campo);
+  font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  transition: transform 160ms var(--mw2-ease);
+}
+body.mw2 .catalogo-link-acciones .btn:active { transform: scale(0.97); }
+body.mw2 .catalogo-link-acciones .btn-outline { background: var(--surface); }
+body.mw2 #compartirLinkCatalogoBtn { order: -1; }
+body.mw2 .catalogo-link-titulo { order: -2; }
+
+@media (max-width: 720px) {
+  body.mw2 .portal-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; row-gap: 4px; }
+  body.mw2 .portal-header > div:first-child { display: contents; }
+  body.mw2 .portal-header h1 { grid-column: 1; grid-row: 1; margin: 0; }
+  body.mw2 .portal-header .portal-sub { grid-column: 1 / -1; font-size: 0.85rem; }
+  body.mw2 .portal-header .catalogo-link-acciones { grid-column: 1 / -1; width: 100%; grid-template-columns: 1fr 1fr; margin-top: 10px; }
+  body.mw2 #compartirLinkCatalogoBtn { grid-column: 1 / -1; min-height: var(--mw2-toque); font-size: 0.875rem; }
+  body.mw2 .portal-header-actions { grid-column: 2; grid-row: 1; gap: 8px; }
+  body.mw2 .portal-header-actions .notif-bell { width: 40px; height: 40px; }
+  body.mw2 .profile-btn { padding: 0; border: 0; background: none; box-shadow: none; gap: 0; }
+  /* El nombre se esconde a la vista pero lo sigue leyendo el lector de pantalla. */
+  body.mw2 .profile-btn .profile-info { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  body.mw2 .profile-btn > svg { display: none; }
+  body.mw2 .profile-btn .profile-avatar { width: 40px; height: 40px; }
+}
+
+/* Modo oscuro: sin recuadros oscuros dentro del buscador ni en el − N +. */
+body.mw2 .catalog-search input { background: transparent; }
+:root[data-theme="dark"] body.mw2 .catalog-product-card .cp-cantidad button { background: transparent; border: 0; box-shadow: none; }
+@media (hover: hover) and (pointer: fine) {
+  :root[data-theme="dark"] body.mw2 .catalog-product-card .cp-cantidad button:hover:not(:disabled) { background: var(--mw-lilac-soft); }
+}
