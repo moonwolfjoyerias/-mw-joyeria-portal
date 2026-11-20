@@ -430,6 +430,7 @@ function renderBloqueAsistencia(id) {
     ${config ? `
       <div class="asist-acompanantes">
         <p class="asist-info">${esc(textoAcompanantesEvento(config))}</p>
+        ${config.prospectos ? '<p class="asist-aviso-prospecto">Los prospectos <strong>no son parte de tu equipo</strong>: son personas que todavía no están en MW. No anotes aquí a una Emprendedora o Líder de tu equipo; ellas confirman su propia asistencia.</p>' : ''}
         <label class="check-linea"><input type="checkbox" id="llevoAcompananteChk" ${acomps.length ? 'checked' : ''}> Llevaré acompañante</label>
         <div id="acompLista" ${acomps.length ? '' : 'hidden'}>
           <div id="acompFilas">${(acomps.length ? acomps : [{ nombre: '' }]).map((c, i) => filaAcompananteHTML(c, config.prospectos, i)).join('')}</div>

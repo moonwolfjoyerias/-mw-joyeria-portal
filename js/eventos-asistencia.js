@@ -174,7 +174,7 @@ function htmlCamposAcompanantesEvento(evento) {
             <label for="eventoAcompMotivo">¿Por qué van los acompañantes? *</label>
             <textarea id="eventoAcompMotivo" rows="2" maxlength="200" placeholder="Ej. Es una comida familiar de fin de año">${_escAsistencia(acomp ? acomp.motivo : '')}</textarea>
           </div>
-          <small class="field-help">Al confirmar su asistencia, la e/l marca "Llevaré acompañante" y escribe el nombre de cada uno (y su teléfono si son prospectos).</small>
+          <small class="field-help">Al confirmar su asistencia, la e/l marca "Llevaré acompañante" y escribe el nombre de cada uno (y su teléfono si son prospectos). Si son prospectos, se le avisa que no son parte de su equipo (personas que todavía no están en MW).</small>
         </div>
       </div>`;
 }
