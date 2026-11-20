@@ -167,7 +167,7 @@ function htmlCamposAcompanantesEvento(evento) {
           <input id="eventoAcompLimite" type="number" min="1" max="${ACOMPANANTES_LIMITE_MAXIMO}" step="1" value="${acomp ? acomp.limite : 1}">
           <span class="etiqueta-campo">¿Los acompañantes son prospectos?</span>
           <div class="pregunta-si-no">
-            <label class="opcion-si-no"><input type="radio" name="eventoAcompProspectos" value="si" ${acomp && acomp.prospectos ? 'checked' : ''}> Sí, son prospectos</label>
+            <label class="opcion-si-no"><input type="radio" name="eventoAcompProspectos" value="si" ${acomp && acomp.prospectos ? 'checked' : ''}> Sí</label>
             <label class="opcion-si-no"><input type="radio" name="eventoAcompProspectos" value="no" ${acomp && !acomp.prospectos ? 'checked' : ''}> No</label>
           </div>
           <div id="eventoAcompMotivoCampo" ${acomp && !acomp.prospectos ? '' : 'hidden'}>
