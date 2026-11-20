@@ -16,6 +16,7 @@ let EVENTOS_ACTUALES = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (typeof eventosRepoListo !== 'undefined') await eventosRepoListo;
+  escucharMisAsistencias();
 
   EVENTOS_ACTUALES = typeof cargarEventosCompartidos === 'function'
     ? cargarEventosCompartidos()
@@ -377,24 +378,171 @@ async function enviarNuevaSolicitudEvento() {
 // Admin puede descargar la lista de asistencia desde el calendario.
 // ============================================================
 
-function confirmarAsistenciaEvento(id) {
+// Asistencia con acompañantes: cada e/l en su propio documento
+// (js/eventos-asistencia.js). Se escuchan en vivo sus confirmaciones.
+let MIS_ASISTENCIAS = new Map();
+let asistenciaEscuchando = false;
+
+function escucharMisAsistencias() {
+  if (asistenciaEscuchando || typeof escucharMisAsistenciasEventos !== 'function') return;
+  const personaId = obtenerIdPersonaActualPortal();
+  if (!personaId) return;
+  asistenciaEscuchando = true;
+  escucharMisAsistenciasEventos(personaId, mapa => {
+    MIS_ASISTENCIAS = mapa;
+    const abierto = document.getElementById('asistenciaBloque');
+    if (abierto && !abierto.dataset.editando) renderBloqueAsistencia(abierto.dataset.evento);
+  });
+}
+
+function filaAcompananteHTML(c, prospectos, i) {
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, x => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[x]);
+  return `<div class="acomp-fila" data-acomp-fila>
+      <input type="text" class="acomp-nombre" maxlength="80" placeholder="Nombre del acompañante ${i + 1}" value="${esc(c.nombre)}" aria-label="Nombre del acompañante ${i + 1}">
+      ${prospectos ? `<input type="tel" class="acomp-telefono" maxlength="20" placeholder="Teléfono (opcional)" value="${esc(c.telefono || '')}" aria-label="Teléfono del acompañante ${i + 1}">` : ''}
+      <button type="button" class="acomp-quitar" data-acomp-quitar aria-label="Quitar acompañante ${i + 1}">×</button>
+    </div>`;
+}
+
+function renderBloqueAsistencia(id) {
+  const ev = EVENTOS_ACTUALES.find(e => e.id === id);
+  const bloque = document.getElementById('asistenciaBloque');
+  if (!ev || !bloque) return;
+  const personaId = obtenerIdPersonaActualPortal();
+  const mia = MIS_ASISTENCIAS.get(ev.id) || null;
+  const vieja = !mia && Array.isArray(ev.asistentes) && ev.asistentes.some(a => a.personaId === personaId);
+  const confirmada = !!mia || vieja;
+  const config = typeof configAcompanantesEvento === 'function' ? configAcompanantesEvento(ev) : null;
+  const pasado = typeof eventoYaPasoAsistencia === 'function' && eventoYaPasoAsistencia(ev);
+  const acomps = mia ? mia.acompanantes : [];
+  const check = '<span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span>';
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, x => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[x]);
+
+  if (pasado) {
+    bloque.innerHTML = confirmada
+      ? `<p class="asist-estado">Asististe a este evento ${check}${acomps.length ? ` con ${acomps.map(a => esc(a.nombre)).join(', ')}` : ''}.</p>`
+      : '<p class="asist-estado">Este evento ya pasó.</p>';
+    return;
+  }
+
+  bloque.innerHTML = `
+    ${confirmada ? `<p class="asist-estado">Ya confirmaste tu asistencia ${check}</p>` : ''}
+    ${config ? `
+      <div class="asist-acompanantes">
+        <p class="asist-info">${esc(textoAcompanantesEvento(config))}</p>
+        <label class="check-linea"><input type="checkbox" id="llevoAcompananteChk" ${acomps.length ? 'checked' : ''}> Llevaré acompañante</label>
+        <div id="acompLista" ${acomps.length ? '' : 'hidden'}>
+          <div id="acompFilas">${(acomps.length ? acomps : [{ nombre: '' }]).map((c, i) => filaAcompananteHTML(c, config.prospectos, i)).join('')}</div>
+          <button type="button" class="btn-link-ajuste" id="acompAgregarBtn">+ Agregar otro acompañante</button>
+          <small class="field-help" id="acompCuenta"></small>
+        </div>
+      </div>` : ''}
+    <p class="auth-error" id="asistError" style="display:none;"></p>
+    ${!confirmada
+      ? '<button class="btn btn-outline" style="width:100%;" type="button" id="confirmarAsistenciaBtn">Confirmar asistencia</button>'
+      : `${config ? '<button class="btn btn-primary" style="width:100%;margin-bottom:0.5rem;" type="button" id="confirmarAsistenciaBtn">Guardar cambios</button>' : ''}
+         ${mia ? '<button class="btn btn-outline asist-cancelar" style="width:100%;" type="button" id="cancelarAsistenciaBtn">Cancelar mi asistencia</button>' : ''}`}
+  `;
+
+  const filas = () => Array.from(bloque.querySelectorAll('[data-acomp-fila]'));
+  const actualizarCuenta = () => {
+    if (!config) return;
+    const n = filas().length;
+    const btn = document.getElementById('acompAgregarBtn');
+    if (btn) btn.hidden = n >= config.limite;
+    const cuenta = document.getElementById('acompCuenta');
+    if (cuenta) cuenta.textContent = `${n} de ${config.limite} acompañante${config.limite === 1 ? '' : 's'}`;
+  };
+  const conectarFilas = () => {
+    bloque.querySelectorAll('[data-acomp-quitar]').forEach(b => {
+      b.onclick = () => {
+        b.closest('[data-acomp-fila]').remove();
+        if (!filas().length) {
+          document.getElementById('llevoAcompananteChk').checked = false;
+          document.getElementById('acompLista').hidden = true;
+          document.getElementById('acompFilas').innerHTML = filaAcompananteHTML({ nombre: '' }, config.prospectos, 0);
+          conectarFilas();
+        }
+        actualizarCuenta();
+      };
+    });
+    bloque.querySelectorAll('input').forEach(inp => { inp.addEventListener('input', () => { bloque.dataset.editando = '1'; }); });
+  };
+  if (config) {
+    document.getElementById('llevoAcompananteChk').addEventListener('change', e => {
+      bloque.dataset.editando = '1';
+      document.getElementById('acompLista').hidden = !e.target.checked;
+      if (e.target.checked) bloque.querySelector('.acomp-nombre')?.focus();
+    });
+    document.getElementById('acompAgregarBtn').addEventListener('click', () => {
+      if (filas().length >= config.limite) return;
+      document.getElementById('acompFilas').insertAdjacentHTML('beforeend', filaAcompananteHTML({ nombre: '' }, config.prospectos, filas().length));
+      conectarFilas();
+      actualizarCuenta();
+      filas().at(-1).querySelector('.acomp-nombre').focus();
+    });
+    conectarFilas();
+    actualizarCuenta();
+  }
+  document.getElementById('confirmarAsistenciaBtn')?.addEventListener('click', () => guardarAsistenciaEvento(ev.id));
+  document.getElementById('cancelarAsistenciaBtn')?.addEventListener('click', () => cancelarAsistenciaEvento(ev.id));
+}
+
+async function guardarAsistenciaEvento(id) {
+  const ev = EVENTOS_ACTUALES.find(e => e.id === id);
+  const bloque = document.getElementById('asistenciaBloque');
+  if (!ev || !bloque) return;
+  const config = configAcompanantesEvento(ev);
+  const error = document.getElementById('asistError');
+  const lleva = config && document.getElementById('llevoAcompananteChk')?.checked;
+  const lista = lleva ? Array.from(bloque.querySelectorAll('[data-acomp-fila]')).map(f => ({
+    nombre: f.querySelector('.acomp-nombre')?.value || '',
+    telefono: f.querySelector('.acomp-telefono')?.value || ''
+  })) : [];
+  if (lleva && !lista.some(a => a.nombre.trim())) {
+    error.textContent = 'Escribe el nombre de tu acompañante (o quita la marca de "Llevaré acompañante").';
+    error.style.display = 'block';
+    return;
+  }
+  if (lleva && lista.some(a => !a.nombre.trim() && a.telefono.trim())) {
+    error.textContent = 'Falta el nombre de un acompañante.';
+    error.style.display = 'block';
+    return;
+  }
+  if (lista.length > config?.limite) {
+    error.textContent = `Puedes llevar hasta ${config.limite} acompañante${config.limite === 1 ? '' : 's'}.`;
+    error.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('confirmarAsistenciaBtn');
+  if (btn) btn.disabled = true;
+  const r = await guardarMiAsistenciaEvento(ev, { id: obtenerIdPersonaActualPortal(), nombre: obtenerNombrePersonaActualPortal() || 'Sin nombre' }, lista);
+  if (!r.ok) {
+    if (btn) btn.disabled = false;
+    error.textContent = r.error;
+    error.style.display = 'block';
+    return;
+  }
+  delete bloque.dataset.editando;
+  MIS_ASISTENCIAS.set(ev.id, { eventoId: ev.id, acompanantes: r.acompanantes });
+  renderBloqueAsistencia(ev.id);
+  const n = r.acompanantes.length;
+  mostrarToast(r.nueva
+    ? `Tu asistencia quedó confirmada${n ? ` con ${n} acompañante${n === 1 ? '' : 's'}` : ''}.`
+    : `Guardamos tus cambios${n ? `: llevas ${n} acompañante${n === 1 ? '' : 's'}` : ': vas sin acompañante'}.`);
+}
+
+async function cancelarAsistenciaEvento(id) {
   const ev = EVENTOS_ACTUALES.find(e => e.id === id);
   if (!ev) return;
-
-  const personaId = obtenerIdPersonaActualPortal();
-  if (!Array.isArray(ev.asistentes)) ev.asistentes = [];
-  if (ev.asistentes.some(a => a.personaId === personaId)) return;
-
-  ev.asistentes.push({
-    personaId,
-    nombre: obtenerNombrePersonaActualPortal() || 'Sin nombre',
-    fecha: new Date().toISOString()
-  });
-
-  if (typeof guardarEventosCompartidos === 'function') guardarEventosCompartidos(EVENTOS_ACTUALES);
-
-  abrirModalEvento(id);
-  mostrarToast('Tu asistencia quedó confirmada.');
+  if (!window.confirm(`¿Cancelar tu asistencia a "${ev.titulo}"?${MIS_ASISTENCIAS.get(id)?.acompanantes?.length ? ' También se quitan tus acompañantes.' : ''}`)) return;
+  const r = await cancelarMiAsistenciaEvento(ev, obtenerIdPersonaActualPortal());
+  if (!r.ok) { mostrarToast(r.error); return; }
+  MIS_ASISTENCIAS.delete(id);
+  const bloque = document.getElementById('asistenciaBloque');
+  if (bloque) delete bloque.dataset.editando;
+  renderBloqueAsistencia(id);
+  mostrarToast('Cancelaste tu asistencia.');
 }
 
 function abrirModalEvento(id) {
@@ -406,9 +554,6 @@ function abrirModalEvento(id) {
   const { dia, mes } = formatearFechaCorta(ev.fecha);
   const etiquetaTipo = ev.tipo === 'presencial' ? 'Presencial' : 'Virtual';
   const textoBoton = ev.tipo === 'presencial' ? 'Ver ubicación' : 'Ver enlace de reunión';
-
-  const asistentes = Array.isArray(ev.asistentes) ? ev.asistentes : [];
-  const yaConfirmo = asistentes.some(a => a.personaId === obtenerIdPersonaActualPortal());
 
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
@@ -424,12 +569,10 @@ function abrirModalEvento(id) {
     <p class="modal-sub" style="margin-bottom:1.2rem;">${ev.descripcion}</p>
     <p class="modal-sub" style="margin-bottom:1rem;"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-7.58 7-12a7 7 0 10-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span> ${ev.lugarTexto}</p>
     <a href="${ev.enlace}" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%; display:block; text-align:center; box-sizing:border-box; margin-bottom:0.6rem;">${textoBoton}</a>
-    ${yaConfirmo
-      ? `<button class="btn btn-outline" style="width:100%;" type="button" disabled>Ya confirmaste tu asistencia <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span></button>`
-      : `<button class="btn btn-outline" style="width:100%;" type="button" id="confirmarAsistenciaBtn">Confirmar asistencia</button>`}
+    <div id="asistenciaBloque" data-evento="${ev.id}"></div>
   `;
 
-  document.getElementById('confirmarAsistenciaBtn')?.addEventListener('click', () => confirmarAsistenciaEvento(ev.id));
+  renderBloqueAsistencia(ev.id);
   overlay.classList.add('open');
 }
 

@@ -570,6 +570,27 @@ service cloud.firestore {
       allow write: if puedeModuloInterno('calendario');
     }
 
+    // eventosAsistencia/{eventoId}__{personaId} — confirmación de asistencia
+    // de una e/l a un evento, con sus acompañantes (js/eventos-asistencia.js
+    // y BRILLO). Cada e/l escribe o borra solo la suya, nunca con más
+    // acompañantes de los que permite el evento; el equipo del calendario
+    // puede leer y corregir todas.
+    function limiteAcompanantesEvento(eventoId) {
+      let a = get(/databases/$(database)/documents/eventos/$(eventoId)).data.get('acompanantes', {});
+      return a.get('permitido', false) == true ? a.get('limite', 0) : 0;
+    }
+    match /eventosAsistencia/{id} {
+      allow read: if estaAutenticado();
+      allow create, update: if puedeModuloInterno('calendario')
+        || (estaAutenticado()
+            && request.resource.data.personaId == miPerfil().personaId
+            && id == request.resource.data.eventoId + '__' + request.resource.data.personaId
+            && request.resource.data.acompanantes is list
+            && request.resource.data.acompanantes.size() <= limiteAcompanantesEvento(request.resource.data.eventoId));
+      allow delete: if puedeModuloInterno('calendario')
+        || (estaAutenticado() && resource.data.personaId == miPerfil().personaId);
+    }
+
     // auditoria/{id} — Bitácora de actividad ("Actividad"): quién hizo
     // qué y cuándo. Leerla sigue siendo exclusivo de Staff/Encargado/
     // Admin (Emprendedora/Líder no tiene esta pestaña), pero CREAR un
