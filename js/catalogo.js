@@ -164,7 +164,7 @@ async function iniciarLinkCatalogoClientas() {
     b.type = 'button';
     b.id = 'tituloCatalogoBtn';
     b.className = 'btn btn-outline btn-sm';
-    b.textContent = 'Nombre de mi catálogo';
+    b.textContent = 'Cambiar nombre';
     b.addEventListener('click', abrirModalTituloCatalogo);
     acciones.appendChild(b);
   }
