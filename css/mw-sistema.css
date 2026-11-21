@@ -270,3 +270,112 @@ body.mw2 .catalog-search input { background: transparent; }
 @media (hover: hover) and (pointer: fine) {
   :root[data-theme="dark"] body.mw2 .catalog-product-card .cp-cantidad button:hover:not(:disabled) { background: var(--mw-lilac-soft); }
 }
+
+/* =====================================================================
+   MIS APARTADOS (emprendedora-apartados.html / lider-apartados.html)
+   ===================================================================== */
+
+/* El reloj ya no es un bloque morado de media pantalla: una tarjeta
+   lila con el tiempo en un renglón. Vencida = tonos de error. */
+body.mw2 .countdown-box {
+  background: var(--mw-lilac-soft); color: var(--mw-text); text-align: left;
+  border-radius: var(--mw2-r-tarjeta); padding: 14px 16px; margin-bottom: 16px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 16px;
+}
+body.mw2 .countdown-box .countdown-label {
+  grid-column: 1; margin: 0; font-size: 0.85rem; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--mw-accent-text);
+}
+body.mw2 .countdown-box .countdown-timer { grid-column: 2; grid-row: 1 / span 2; gap: 4px; justify-content: flex-end; }
+body.mw2 .countdown-timer .unit { flex-direction: row; align-items: baseline; gap: 1px; }
+body.mw2 .countdown-timer .num {
+  font-family: var(--font-body); font-size: 1.25rem; font-weight: 700; color: var(--mw-accent-text);
+  background: none; padding: 0; min-width: 0; font-variant-numeric: tabular-nums;
+}
+body.mw2 .countdown-timer .lbl { margin: 0 4px 0 1px; font-size: 0.72rem; letter-spacing: 0; text-transform: lowercase; color: var(--mw-text-muted); }
+body.mw2 .countdown-timer .unit:last-child .lbl { margin-right: 0; }
+body.mw2 .countdown-box .countdown-note { grid-column: 1; margin: 0; font-size: 0.78rem; line-height: 1.45; color: var(--mw-text-muted); }
+body.mw2 .countdown-box:has(.countdown-timer[style*="none"]) .countdown-note { grid-column: 1 / -1; }
+body.mw2 .countdown-box--vencida { background: #FCEAEA; }
+body.mw2 .countdown-box--vencida .countdown-label, body.mw2 .countdown-box--vencida .num { color: #B03A3A; }
+:root[data-theme="dark"] body.mw2 .countdown-box--vencida { background: #3D1D21; }
+:root[data-theme="dark"] body.mw2 .countdown-box--vencida .countdown-label, :root[data-theme="dark"] body.mw2 .countdown-box--vencida .num { color: #F19A9A; }
+@media (max-width: 520px) {
+  body.mw2 .countdown-box { grid-template-columns: 1fr; }
+  body.mw2 .countdown-box .countdown-timer { grid-column: 1; grid-row: auto; justify-content: flex-start; }
+  body.mw2 .countdown-box .countdown-note { grid-column: 1; }
+}
+
+body.mw2 .envio-gratis-banner { border-radius: var(--mw2-r-tarjeta); }
+
+/* Cada pieza: foto, nombre y precio arriba; cantidad y acciones abajo. */
+body.mw2 .apartados-list { display: grid; gap: 10px; }
+body.mw2 .apartado-row { border-radius: var(--mw2-r-tarjeta); box-shadow: none; padding: 14px; gap: 12px; }
+body.mw2 .apartado-row input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; }
+body.mw2 .apartado-photo { border-radius: 10px; }
+body.mw2 .apartado-info h4 { font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; line-height: 1.3; color: var(--mw-text); margin: 0 0 2px; }
+body.mw2 .apartado-info .variant { font-size: 0.8rem; }
+body.mw2 .apartado-aviso-bolsita { display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: var(--mw2-r-campo); font-size: 0.75rem; max-width: none; }
+body.mw2 .apartado-prices .price-emprendedora { font-family: var(--font-body); font-size: 1.05rem; }
+body.mw2 .apartado-cantidad { border-color: var(--mw-border-d); }
+body.mw2 .apartado-cantidad button { width: 40px; height: 40px; transition: background-color 150ms ease, transform 120ms var(--mw2-ease); }
+body.mw2 .apartado-cantidad button:active:not(:disabled) { transform: scale(0.9); }
+:root[data-theme="dark"] body.mw2 .apartado-cantidad button { background: transparent; border: 0; box-shadow: none; }
+body.mw2 .apartado-actions button {
+  min-height: 40px; padding: 0 14px; border-radius: var(--mw2-r-campo); font-size: 0.8rem; font-weight: 600;
+  color: var(--mw-accent-text); border-color: var(--mw-border-d);
+  transition: transform 140ms var(--mw2-ease), border-color 150ms ease;
+}
+body.mw2 .apartado-actions button.quitar { color: #B03A3A; }
+:root[data-theme="dark"] body.mw2 .apartado-actions button.quitar { color: #F19A9A; }
+body.mw2 .apartado-actions button:active { transform: scale(0.97); }
+
+@media (max-width: 720px) {
+  body.mw2 .apartado-row {
+    display: grid; align-items: start; column-gap: 12px; row-gap: 10px;
+    grid-template-columns: auto 64px minmax(0, 1fr);
+    grid-template-areas:
+      "check foto info"
+      "check foto precio"
+      "cant  cant acciones";
+  }
+  body.mw2 .apartado-row > input[type="checkbox"] { grid-area: check; align-self: center; }
+  body.mw2 .apartado-photo { grid-area: foto; width: 64px; height: 64px; }
+  body.mw2 .apartado-info { grid-area: info; }
+  body.mw2 .apartado-prices { grid-area: precio; text-align: left; margin: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; }
+  body.mw2 .apartado-prices .price-emprendedora { order: -1; display: inline; }
+  body.mw2 .apartado-prices .price-public { display: inline; }
+  body.mw2 .apartado-prices .price-subtotal { flex-basis: 100%; margin: 0; }
+  body.mw2 .apartado-cantidad { grid-area: cant; justify-self: start; }
+  body.mw2 .apartado-actions { grid-area: acciones; justify-self: end; align-self: center; }
+}
+
+/* Barra para pagar: total a la izquierda, botón grande. */
+body.mw2 .cart-summary-bar { padding: 12px max(20px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); box-shadow: 0 -8px 24px rgb(36 23 49 / 0.08); }
+body.mw2 .cart-summary-bar .summary-total { font-size: 0.8rem; }
+body.mw2 .cart-summary-bar .summary-total strong { font-family: var(--font-body); font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+body.mw2 .cart-summary-bar button { min-height: var(--mw2-toque); border-radius: var(--mw2-r-campo); font-weight: 600; padding: 0 24px; transition: transform 160ms var(--mw2-ease); }
+body.mw2 .cart-summary-bar button:active:not(:disabled) { transform: scale(0.97); }
+@media (max-width: 900px) {
+  body.mw2 .cart-summary-bar { text-align: left; gap: 10px; }
+  body.mw2 .cart-summary-bar .summary-total { display: grid; grid-template-columns: 1fr auto; align-items: baseline; column-gap: 12px; }
+  body.mw2 .cart-summary-bar .summary-total strong { grid-column: 2; grid-row: 1; }
+  body.mw2 .cart-summary-bar .summary-total > span:not(#summaryCount) { grid-column: 1 / -1; }
+}
+
+/* Canceladas recientemente: tarjetas sobrias, el motivo bien visible. */
+body.mw2 .apartados-canceladas h3 { font-size: 1.15rem; }
+body.mw2 .cancelada-item { border-radius: var(--mw2-r-tarjeta); border: 1px solid var(--mw-border); border-left: 3px solid #d9776d; padding: 12px 14px; }
+body.mw2 .cancelada-item img { width: 56px; height: 56px; border-radius: 10px; }
+body.mw2 .cancelada-item strong { font-size: 0.95rem; }
+body.mw2 .cancelada-item small { font-size: 0.78rem; }
+body.mw2 .cancelada-motivo { font-size: 0.875rem; line-height: 1.45; }
+body.mw2 .cancelada-deposito { font-size: 0.8rem; }
+:root[data-theme="dark"] body.mw2 .apartado-actions button { background: transparent; }
+/* Que lo último de la página se pueda ver por encima de la barra de pago. */
+@media (max-width: 900px) {
+  body.mw2:has(.cart-summary-bar) .main-content { padding-bottom: calc(190px + env(safe-area-inset-bottom, 0px)); }
+  body.mw2 .apartados-canceladas { margin-bottom: 0; }
+}
+/* Datos para depositar: en Poppins, fáciles de leer y copiar. */
+body.mw2 .bank-details-box { border-radius: var(--mw2-r-tarjeta); }
+body.mw2 .bank-details-box .cf-value { font-family: var(--font-body); font-weight: 600; font-variant-numeric: tabular-nums; }
