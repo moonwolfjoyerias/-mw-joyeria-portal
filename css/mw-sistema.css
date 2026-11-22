@@ -379,3 +379,12 @@ body.mw2 .cancelada-deposito { font-size: 0.8rem; }
 /* Datos para depositar: en Poppins, fáciles de leer y copiar. */
 body.mw2 .bank-details-box { border-radius: var(--mw2-r-tarjeta); }
 body.mw2 .bank-details-box .cf-value { font-family: var(--font-body); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Ventanas que se abren ENCIMA de otra (compartir la pieza desde su
+   ficha, ver la foto en grande, etc.): van por arriba de .modal-overlay
+   (950), que se subió para quedar sobre la burbuja del carrito. */
+body.mw2 .compartir-fondo,
+body.mw2 .lightbox-overlay,
+body.mw2 .donde-fondo,
+body.mw2 .lider-fondo,
+body.mw2 .escaner-qr-fondo { z-index: 970; }
