@@ -369,8 +369,15 @@ function aplicarFiltros() {
     if (filtro.talla && !variantes.some(v => v.talla === filtro.talla)) return false;
     return true;
   });
-  renderProductos(ordenarProductosCatalogo(resultado));
+  renderProductos(ordenarProductosCatalogo(resultado), firmaFiltrosCatalogo());
 }
+
+// Si cambia algo de esto se regresa a la página 1 (sumar/restar piezas no).
+function firmaFiltrosCatalogo() {
+  return JSON.stringify([filtro.texto || '', [...filtro.materiales], [...filtro.categorias], [...filtro.coloresOro], filtro.talla || '', document.getElementById('ordenCatalogo')?.value || '']);
+}
+
+let paginasCatalogo = null;
 
 // "Ordenar" de la barra (si la página lo tiene): más nuevas (como
 // siempre), o por el precio de la e/l de menor a mayor y al revés.
@@ -381,12 +388,15 @@ function ordenarProductosCatalogo(productos) {
   return [...productos].sort((a, b) => signo * (Number(precioConDescuento(a)) - Number(precioConDescuento(b))));
 }
 
-function renderProductos(productos) {
+function renderProductos(todos, firma) {
   const grid = document.getElementById('catalogGrid');
   const count = document.getElementById('resultCount');
   if (!grid) return;
 
-  if (count) count.textContent = `${productos.length} modelo${productos.length === 1 ? '' : 's'}`;
+  if (count) count.textContent = `${todos.length} modelo${todos.length === 1 ? '' : 's'}`;
+  if (!paginasCatalogo && typeof crearPaginasCatalogo === 'function') paginasCatalogo = crearPaginasCatalogo({ grid, alCambiar: aplicarFiltros });
+  const productos = paginasCatalogo ? paginasCatalogo.cortar(todos, firma) : todos;
+  if (paginasCatalogo) paginasCatalogo.pintar(todos.length);
 
   if (productos.length === 0) {
     grid.innerHTML = '<div class="catalog-empty">No hay piezas que coincidan con tu búsqueda o filtros.</div>';

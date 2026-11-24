@@ -193,15 +193,99 @@ function _descargarUnaVez(clave, fn) {
   return _descargasFotosProducto.get(clave);
 }
 
+// ------------------------------------------------------------
+// Fotos guardadas en este dispositivo (IndexedDB)
+// ------------------------------------------------------------
+// Cada foto de producto cuesta una lectura de Firestore. Para no volver
+// a pagarla en cada visita, la miniatura y la galería se guardan en el
+// navegador junto con una "firma" del producto (ids de sus fotos + fecha
+// de su última edición). Si el producto se edita, la firma cambia y la
+// foto se vuelve a leer del servidor. Las galerías (más pesadas) se
+// limitan a las GALERIAS_GUARDADAS_MAX abiertas más recientemente.
+const _FOTOS_LOCALES_DB = 'mw-fotos-productos';
+const _GALERIAS_GUARDADAS_MAX = 80;
+let _fotosLocalesDb = null;
+
+function _abrirFotosLocales() {
+  if (_fotosLocalesDb) return _fotosLocalesDb;
+  _fotosLocalesDb = new Promise((resolve) => {
+    try {
+      if (typeof indexedDB === 'undefined') { resolve(null); return; }
+      const req = indexedDB.open(_FOTOS_LOCALES_DB, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('miniaturas')) db.createObjectStore('miniaturas');
+        if (!db.objectStoreNames.contains('galerias')) db.createObjectStore('galerias');
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+      req.onblocked = () => resolve(null);
+    } catch (error) { resolve(null); }
+  });
+  return _fotosLocalesDb;
+}
+
+async function _leerFotoLocal(almacen, id, firma) {
+  if (!firma) return undefined;
+  const db = await _abrirFotosLocales();
+  if (!db) return undefined;
+  return new Promise((resolve) => {
+    try {
+      const req = db.transaction(almacen, 'readonly').objectStore(almacen).get(id);
+      req.onsuccess = () => { const r = req.result; resolve(r && r.firma === firma ? r.valor : undefined); };
+      req.onerror = () => resolve(undefined);
+    } catch (error) { resolve(undefined); }
+  });
+}
+
+async function _guardarFotoLocal(almacen, id, firma, valor) {
+  if (!firma) return;
+  const db = await _abrirFotosLocales();
+  if (!db) return;
+  try {
+    const tx = db.transaction(almacen, 'readwrite');
+    const store = tx.objectStore(almacen);
+    store.put({ firma, valor, usado: Date.now() }, id);
+    if (almacen === 'galerias') {
+      // Solo las más recientes: se borran las más viejas si hay de más.
+      const todas = [];
+      const cursor = store.openCursor();
+      cursor.onsuccess = () => {
+        const c = cursor.result;
+        if (c) { todas.push([c.key, c.value.usado || 0]); c.continue(); return; }
+        if (todas.length > _GALERIAS_GUARDADAS_MAX) {
+          todas.sort((a, b) => a[1] - b[1]).slice(0, todas.length - _GALERIAS_GUARDADAS_MAX).forEach(([k]) => store.delete(k));
+        }
+      };
+    }
+  } catch (error) { /* sin espacio o bloqueado: se queda solo en memoria */ }
+}
+
+// Firma de las fotos de un producto según el catálogo cargado ('' si no se conoce).
+function _firmaFotosProducto(id) {
+  const lista = typeof CATALOGO_CACHE !== 'undefined' && Array.isArray(CATALOGO_CACHE) ? CATALOGO_CACHE : [];
+  const p = lista.find(x => String(x.id) === id);
+  if (!p || !Array.isArray(p.fotosIds)) return '';
+  return p.fotosIds.join(',') + '|' + ((p.ultimaAccion && p.ultimaAccion.fecha) || p.fechaAlta || '');
+}
+
 // Galería completa de un producto (productosFotos/{id}).
 function cargarGaleriaProducto(productoId) {
   const id = String(productoId);
   if (_galeriasProducto.has(id)) return Promise.resolve(_galeriasProducto.get(id));
   if (!_hayFotosEnServidor()) return Promise.resolve([]);
   return _descargarUnaVez('g:' + id, async () => {
+    const firma = _firmaFotosProducto(id);
+    const local = await _leerFotoLocal('galerias', id, firma);
+    if (Array.isArray(local)) {
+      _galeriasProducto.set(id, local);
+      _guardarFotoLocal('galerias', id, firma, local); // marca como usada
+      return local;
+    }
     const doc = await dbFirestore.collection(FOTOS_PRODUCTO_COLECCION).doc(id).get();
     const galeria = doc.exists && Array.isArray(doc.data().galeria) ? doc.data().galeria : [];
     _galeriasProducto.set(id, galeria);
+    _guardarFotoLocal('galerias', id, firma, galeria);
     return galeria;
   });
 }
@@ -214,11 +298,18 @@ function cargarMiniaturaProducto(productoId) {
   if (_miniaturasProducto.has(id)) return Promise.resolve(_miniaturasProducto.get(id));
   if (!_hayFotosEnServidor()) return Promise.resolve('');
   return _descargarUnaVez('m:' + id, async () => {
+    const firma = _firmaFotosProducto(id);
+    const local = await _leerFotoLocal('miniaturas', id, firma);
+    if (typeof local === 'string') {
+      _miniaturasProducto.set(id, local);
+      return local;
+    }
     const doc = await dbFirestore.collection(MINIATURAS_PRODUCTO_COLECCION).doc(id).get();
     const src = doc.exists && doc.data().src
       ? doc.data().src
       : ((await cargarGaleriaProducto(id))[0]?.src || '');
     _miniaturasProducto.set(id, src);
+    _guardarFotoLocal('miniaturas', id, firma, src);
     return src;
   });
 }
