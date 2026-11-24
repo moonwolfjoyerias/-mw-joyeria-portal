@@ -591,6 +591,27 @@ service cloud.firestore {
         || (estaAutenticado() && resource.data.personaId == miPerfil().personaId);
     }
 
+    // fotosPerfil/{clave} — foto de perfil (solo la imagen, ~25 KB). Va
+    // aparte de personas/ para que la Líder vea las fotos de su equipo sin
+    // poder leer nada más de ellas. Clave: personaId de la e/l, o
+    // "interna-{uid}" para Encargado/Admin (Staff no tiene foto: su cuenta
+    // es compartida). Solo la dueña sube o cambia la suya; Admin y
+    // Encargado pueden quitar una que no sea apropiada.
+    function esMiFotoPerfil(clave) {
+      return estaAutenticado() && miRol() != 'staff'
+        && (clave == 'interna-' + request.auth.uid
+            || (!esInterno() && clave == miPerfil().get('personaId', request.auth.uid)));
+    }
+    match /fotosPerfil/{clave} {
+      allow read: if estaAutenticado();
+      allow create, update: if esMiFotoPerfil(clave)
+        && request.resource.data.keys().hasOnly(['fotoUrl', 'usuario', 'nombre', 'actualizadoEn'])
+        && request.resource.data.fotoUrl is string
+        && request.resource.data.fotoUrl.size() < 250000
+        && request.resource.data.fotoUrl.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+');
+      allow delete: if esMiFotoPerfil(clave) || miRol() in ['admin', 'encargado'];
+    }
+
     // auditoria/{id} — Bitácora de actividad ("Actividad"): quién hizo
     // qué y cuándo. Leerla sigue siendo exclusivo de Staff/Encargado/
     // Admin (Emprendedora/Líder no tiene esta pestaña), pero CREAR un
