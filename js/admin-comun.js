@@ -138,20 +138,20 @@ const NOTIF_ADMIN_GRUPOS = [
 // así que este mapa fijo resuelve el link sin importar qué página de
 // Admin tenga abierta la campana.
 const ADMIN_NOTIF_LINK_MAP = {
-  inicio: 'admin-portal.html',
-  catalogo: 'admin-catalogo.html',
-  apartados: 'admin-apartados.html',
-  deseos: 'admin-lista-deseos.html',
-  misActividades: 'admin-actividad-staff.html',
-  calendario: 'admin-calendario.html',
-  notificaciones: 'admin-mi-cuenta.html'
+  inicio: 'admin-portal',
+  catalogo: 'admin-catalogo',
+  apartados: 'admin-apartados',
+  deseos: 'admin-lista-deseos',
+  misActividades: 'admin-actividad-staff',
+  calendario: 'admin-calendario',
+  notificaciones: 'admin-mi-cuenta'
 };
 
 function resolverLinkNotifAdmin(link) {
   if (typeof link !== 'string') return link || '';
   if (ADMIN_NOTIF_LINK_MAP[link]) return ADMIN_NOTIF_LINK_MAP[link];
-  if (/^(staff|encargado)-/.test(link)) return link.replace(/^(staff|encargado)-/, 'admin-');
-  return link; // Ya es un nombre de archivo admin-*.html (o similar).
+  if (/^(staff|encargado)-/.test(link)) return link.replace(/^(staff|encargado)-/, 'admin-').replace(/\.html(?=[?#]|$)/, '');
+  return link.replace(/\.html(?=[?#]|$)/, ''); // Nombre de archivo admin-*.html (o similar), sin el .html.
 }
 
 // Cada bandeja se muestra como un desplegable independiente (<details>)

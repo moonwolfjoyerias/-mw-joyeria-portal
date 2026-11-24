@@ -57,8 +57,8 @@ function aplicarNombreMiCarrito(foranea) {
       if (nuevo !== nodo.nodeValue) nodo.nodeValue = nuevo;
     }
   };
-  document.querySelectorAll('a[href*="-apartados.html"]').forEach(enNodosDeTexto);
-  if (/-apartados\.html$/.test(window.location.pathname)) {
+  document.querySelectorAll('a[href*="-apartados"]').forEach(enNodosDeTexto);
+  if (/-apartados(\.html)?$/.test(window.location.pathname)) {
     const h1 = document.querySelector('.portal-header h1');
     if (h1) enNodosDeTexto(h1);
     document.title = cambiar(document.title);
@@ -221,8 +221,15 @@ function initResumenDatePill() {
 // notificaciones-modelo.js) — se agrega como ?apartar=<id> a la URL ya
 // resuelta por PORTAL_LINKS, para que catalogo.js abra el modal de
 // Apartar directo en ese producto en vez de solo llevarla al catálogo.
+// Los avisos guardados traen "pagina.html?…" (la Cloud Function de
+// notificaciones push los lee así); al mostrarlos se quita el .html para
+// que la dirección quede limpia, igual que el resto de la página.
+function sinExtensionHtml(link) {
+  return typeof link === 'string' ? link.replace(/\.html(?=[?#]|$)/, '') : link;
+}
+
 function resolverHrefNotificacion(n) {
-  const base = (typeof PORTAL_LINKS !== 'undefined' && PORTAL_LINKS[n.link]) || n.link;
+  const base = sinExtensionHtml((typeof PORTAL_LINKS !== 'undefined' && PORTAL_LINKS[n.link]) || n.link);
   if (!n.productoId) return base;
   return `${base}${base.includes('?') ? '&' : '?'}apartar=${encodeURIComponent(n.productoId)}`;
 }

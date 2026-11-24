@@ -9,9 +9,9 @@
 // datos; en las demás lee solo sus propias ventanas (ventanasApartado donde
 // usuarioId es ella), igual que lo permite la regla de Firestore.
 (function () {
-  if (/-apartados\.html$/.test(window.location.pathname)) return;
+  if (/-apartados(\.html)?$/.test(window.location.pathname)) return;
   const esLider = window.location.pathname.includes('/portal/lider/');
-  const DESTINO = esLider ? '../lider/lider-apartados.html' : '../emprendedora/emprendedora-apartados.html';
+  const DESTINO = esLider ? '../lider/lider-apartados' : '../emprendedora/emprendedora-apartados';
   let boton = null;
   let ventanasPropias = null;
 

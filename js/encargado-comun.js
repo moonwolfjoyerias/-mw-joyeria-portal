@@ -110,13 +110,13 @@ function obtenerAuditoriaEncargado() {
 // ============================================================
 
 const ENCARGADO_MODULO_POR_PAGINA = {
-  'encargado-nomina.html': 'nomina',
-  'encargado-actividad-staff.html': 'actividadesStaff',
-  'encargado-catalogo.html': 'catalogo',
-  'encargado-apartados.html': 'apartados',
-  'encargado-lista-deseos.html': 'listaDeseos',
-  'encargado-calendario.html': 'calendario',
-  'encargado-actividad.html': 'actividad'
+  'encargado-nomina': 'nomina',
+  'encargado-actividad-staff': 'actividadesStaff',
+  'encargado-catalogo': 'catalogo',
+  'encargado-apartados': 'apartados',
+  'encargado-lista-deseos': 'listaDeseos',
+  'encargado-calendario': 'calendario',
+  'encargado-actividad': 'actividad'
 };
 
 function obtenerCuentaEncargadoActual() {
@@ -151,15 +151,15 @@ async function aplicarPermisosEncargadoEnPagina() {
 
   // Menú, barra inferior y accesos de Inicio ("Ir a Nómina →", etc.).
   document.querySelectorAll('a[href]').forEach(link => {
-    const archivo = link.getAttribute('href').split(/[?#]/)[0].split('/').pop();
+    const archivo = link.getAttribute('href').split(/[?#]/)[0].split('/').pop().replace(/\.html$/, '');
     const modulo = ENCARGADO_MODULO_POR_PAGINA[archivo];
     if (modulo && !tienePermisoEncargado(cuenta, modulo)) link.remove();
   });
 
-  const paginaActual = window.location.pathname.split('/').pop();
+  const paginaActual = window.location.pathname.split('/').pop().replace(/\.html$/, '');
   const moduloActual = ENCARGADO_MODULO_POR_PAGINA[paginaActual];
   if (moduloActual && !tienePermisoEncargado(cuenta, moduloActual)) {
-    window.location.replace('encargado-portal.html');
+    window.location.replace('encargado-portal');
   }
 
 }

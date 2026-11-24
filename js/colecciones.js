@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     grid.innerHTML = productos.map((p) => `
-      <a class="product-card" href="catalogo-publico.html?producto=${encodeURIComponent(p.id)}">
+      <a class="product-card" href="catalogo-publico?producto=${encodeURIComponent(p.id)}">
         <div class="product-photo">
           <img src="${normalizarImagenProductoPublico(p)}" alt="" class="${esFotoGenericaProductoPublico(p) ? 'foto-generica' : ''}">
         </div>

@@ -17,7 +17,7 @@
   <script src="../../js/arbol-datos.js?v=2"></script>
   <script src="../../js/auditoria-firestore-sync.js?v=2"></script>
   <script src="../../js/auth-service.js?v=6"></script>
-  <script src="../../js/auth-guard.js?v=5"></script>
+  <script src="../../js/auth-guard.js?v=6"></script>
   <!-- FEAT-08: EmailJS (envío de correos reales desde el navegador) — solo se activa si js/email-config.js tiene credenciales reales; si no, no hace nada. -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script src="../../js/email-config.js?v=1"></script>
@@ -26,7 +26,7 @@
 
   <div class="layout-portal">
     <aside class="sidebar">
-      <a href="../../index.html" class="brand-link">
+      <a href="../../" class="brand-link">
         <img src="../../assets/images/isotipo-blanco.png" alt="MOONWOLF Joyería">
         <span>
           <span class="logo-main">MOONWOLF</span>
@@ -34,59 +34,59 @@
         </span>
       </a>
       <nav>
-        <a href="../admin/admin-portal.html">
+        <a href="../admin/admin-portal">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
           Dashboard
         </a>
-        <a href="../admin/admin-catalogo.html" class="active">
+        <a href="../admin/admin-catalogo" class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/></svg>
           Catálogo
         </a>
-        <a href="../admin/admin-apartados.html">
+        <a href="../admin/admin-apartados">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg>
           Apartados
         </a>
-        <a href="../admin/admin-emprendedoras-lideres.html">
+        <a href="../admin/admin-emprendedoras-lideres">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M2 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M14 20c.3-2.6 2-4.5 4.5-4.5"/></svg>
           Emprendedoras
         </a>
-        <a href="../admin/admin-compras.html">
+        <a href="../admin/admin-compras">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h16v4H4z"/><path d="M5 8v12h14V8"/><path d="M10 12h4"/></svg>
           Compras Aronium
         </a>
-        <a href="../admin/admin-plan-mw.html">
+        <a href="../admin/admin-plan-mw">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7L2 9.2l7.1-.6z"/></svg>
           Plan MW
         </a>
-        <a href="../admin/admin-calendario.html">
+        <a href="../admin/admin-calendario">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
           Calendario
         </a>
-        <a href="../admin/admin-lista-deseos.html">
+        <a href="../admin/admin-lista-deseos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0112 5.5 5.5 5.5 0 0121.5 11c-2.5 4.6-9.5 9-9.5 9z"/></svg>
           Lista de deseos
         </a>
-        <a href="../admin/admin-actividad-staff.html">
+        <a href="../admin/admin-actividad-staff">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           Actividades del Staff
         </a>
-        <a href="../admin/admin-nomina.html">
+        <a href="../admin/admin-nomina">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>
           Nómina
         </a>
-        <a href="../admin/admin-solicitudes.html">
+        <a href="../admin/admin-solicitudes">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M9 11h6M9 15h6"/></svg>
           Solicitudes
         </a>
-        <a href="../admin/admin-actividad.html">
+        <a href="../admin/admin-actividad">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
           Bitácora
         </a>
-        <a href="../admin/admin-configuracion.html">
+        <a href="../admin/admin-configuracion">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
           Configuración
         </a>
-        <a href="../admin/admin-mi-cuenta.html">
+        <a href="../admin/admin-mi-cuenta">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
           Mi cuenta
         </a>
@@ -116,7 +116,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="profile-menu" id="profileMenu">
-            <a href="../../login.html" class="danger">Cerrar sesión</a>
+            <a href="../../login" class="danger">Cerrar sesión</a>
           </div>
         </div>
       </header>
@@ -287,21 +287,21 @@
   <script src="../../js/eventos-ejemplo.js?v=2"></script>
   <script>
   const PORTAL_LINKS = {
-    inicio: '../admin/admin-portal.html',
-    catalogo: '../admin/admin-catalogo.html',
-    apartados: '../admin/admin-apartados.html',
-    deseos: '../admin/admin-lista-deseos.html',
-    misActividades: '../admin/admin-actividad-staff.html',
-    calendario: '../admin/admin-calendario.html',
-    notificaciones: '../admin/admin-mi-cuenta.html',
+    inicio: '../admin/admin-portal',
+    catalogo: '../admin/admin-catalogo',
+    apartados: '../admin/admin-apartados',
+    deseos: '../admin/admin-lista-deseos',
+    misActividades: '../admin/admin-actividad-staff',
+    calendario: '../admin/admin-calendario',
+    notificaciones: '../admin/admin-mi-cuenta',
   };
   </script>
-  <script src="../../js/portal-common.js?v=10"></script>
+  <script src="../../js/portal-common.js?v=11"></script>
   <script src="../../js/notificaciones-firestore-sync.js?v=9"></script>
   <script src="../../js/notificaciones-modelo.js?v=12"></script>
   <script src="../../js/catalogo-modelo.js?v=2"></script>
   <script src="../../js/staff-catalogo-ejemplo.js?v=6"></script>
-  <script src="../../js/catalogo-firestore-sync.js?v=6"></script>
+  <script src="../../js/catalogo-firestore-sync.js?v=7"></script>
   <script src="../../js/dom-utils.js?v=7"></script>
   <script src="../../js/catalogo-variantes-modelo.js?v=12"></script>
   <script src="../../js/personas-firestore-sync.js?v=8"></script>
@@ -317,10 +317,10 @@
   <script src="../../js/compras-modelo.js?v=6"></script>
   <script src="../../js/plan-mw-admin.js?v=3"></script>
   <script src="../../js/alertas-inactividad-modelo.js?v=3"></script>
-  <script src="../../js/admin-comun.js?v=10"></script>
+  <script src="../../js/admin-comun.js?v=11"></script>
   <script src="../../js/email-modelo.js?v=2"></script>
   <script src="../../js/escaner-qr.js?v=1"></script>
-  <script src="../../js/donde-pieza.js?v=1"></script>
+  <script src="../../js/donde-pieza.js?v=2"></script>
   <script src="../../js/exportar-xlsx.js?v=2"></script>
   <script src="../../js/compartir-pieza.js?v=3"></script>
   <script src="../../js/admin-catalogo.js?v=22"></script>

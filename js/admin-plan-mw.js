@@ -397,7 +397,7 @@ function abrirDetallePlanMW(personaId) {
       </div>
     ` : `<p class="bp-sub" style="margin:0 0 12px;">Todavía no tiene logros confirmados.</p>`}
 
-    <a class="btn btn-primary" style="width:100%;display:block;text-align:center;margin-top:10px;" href="admin-emprendedoras-lideres.html?persona=${encodeURIComponent(persona.id)}">Ver perfil completo</a>
+    <a class="btn btn-primary" style="width:100%;display:block;text-align:center;margin-top:10px;" href="admin-emprendedoras-lideres?persona=${encodeURIComponent(persona.id)}">Ver perfil completo</a>
   `;
 
   overlay.classList.add('open');
