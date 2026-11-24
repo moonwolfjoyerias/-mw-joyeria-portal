@@ -557,7 +557,7 @@ function renderHistorialAronium() {
     abrirAutorizacionAdmin({
       titulo: 'Eliminar quincena',
       peligrosa: true,
-      mensaje: `Se borrarán las compras de Aronium de la ${etiquetaQuincenaAronium(clave)}. En esa quincena se volverán a usar los apartados liquidados para rango, comisiones, rifa y constancia.`,
+      mensaje: `Se borrarán las compras de Aronium de la ${etiquetaQuincenaAronium(clave)}. En esa quincena se volverán a usar los pedidos liquidados para rango, comisiones, rifa y constancia.`,
       onConfirmar: async () => {
         try {
           await eliminarImportacionAronium(clave);

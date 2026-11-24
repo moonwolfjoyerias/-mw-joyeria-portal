@@ -245,7 +245,7 @@ function crearVentanaApartado(datos = {}) {
 // depositado desde el principio. No cambia el vencimiento.
 function agregarExcedenteDeposito(ventana, { monto, metodo, referencia }, empleado) {
   const m = Math.round((Number(monto) || 0) * 100) / 100;
-  if (!ventana || ventana.estado !== 'activa') return { ok: false, error: 'Solo se puede agregar excedente a un apartado activo.' };
+  if (!ventana || ventana.estado !== 'activa') return { ok: false, error: 'Solo se puede agregar excedente a un pedido activo.' };
   if (!(m > 0)) return { ok: false, error: 'Escribe el monto recibido.' };
   if (!metodo || (metodo === 'transferencia' && !referencia)) return { ok: false, error: metodo ? 'La referencia es obligatoria para una transferencia.' : 'Selecciona el método de pago.' };
   fijarDepositoVentana(ventana, Number(ventana.depositoApartadoDisponible || 0) + m);
@@ -464,10 +464,10 @@ function cerrarVentanasVencidasSinPiezas(ventanas, usuarioId, empleado) {
       ventana.depositoPiso = 0;
       ventana.depositoExcedente = 0;
       ventana.depositoApartadoDisponible = 0;
-      ventana.auditoria.push(registrarAuditoriaVentana(`Ventana vencida sin piezas pendientes — depósito de $${monto} guardado como crédito para su nuevo apartado`, empleado));
+      ventana.auditoria.push(registrarAuditoriaVentana(`Ventana vencida sin piezas pendientes — depósito de $${monto} guardado como crédito para su nuevo pedido`, empleado));
     } else {
       cerrarVentana(ventana, 'no_aplica');
-      ventana.auditoria.push(registrarAuditoriaVentana('Ventana vencida sin piezas pendientes — cerrada al abrir un apartado nuevo', empleado));
+      ventana.auditoria.push(registrarAuditoriaVentana('Ventana vencida sin piezas pendientes — cerrada al abrir un pedido nuevo', empleado));
     }
     cerradas.push(ventana);
   });
@@ -525,7 +525,7 @@ function abrirVentanaApartado(datosPersona, empleado) {
 // activa, exactamente como si nunca hubiera requerido depósito.
 function aprobarVentanaVip(ventana, empleado) {
   ventana.estado = 'activa';
-  ventana.auditoria.push(registrarAuditoriaVentana('Apartado VIP aprobado', empleado));
+  ventana.auditoria.push(registrarAuditoriaVentana('Pedido VIP aprobado', empleado));
   return ventana;
 }
 
@@ -718,7 +718,7 @@ function calcularNuevoVencimientoVentana(ventana, modo, fechaISO) {
 
 function cambiarVencimientoVentana(ventana, { modo, fechaISO }, empleado) {
 
-  if (!ventana || ventana.estado !== 'activa') return { ok: false, error: 'Solo se puede cambiar la fecha de un apartado activo.' };
+  if (!ventana || ventana.estado !== 'activa') return { ok: false, error: 'Solo se puede cambiar la fecha de un pedido activo.' };
   const nueva = calcularNuevoVencimientoVentana(ventana, modo, fechaISO);
   if (!nueva) return { ok: false, error: modo === 'personalizada' ? 'Elige una fecha.' : 'Ese plazo no es válido.' };
   if (modo === 'personalizada' && new Date(nueva).getTime() <= Date.now()) {
@@ -831,7 +831,7 @@ function liquidarPiezasSeleccionadas(ventana, piezaIds, { monto, metodo, referen
   ventana.auditoria.push(registrarAuditoriaVentana(
     (siguenActivas > 0
       ? `${piezasElegidas.length} pieza${piezasElegidas.length === 1 ? '' : 's'} liquidada${piezasElegidas.length === 1 ? '' : 's'} del carrito (quedan ${siguenActivas} activa${siguenActivas === 1 ? '' : 's'})`
-      : `Apartado liquidado por completo (${piezasElegidas.length} pieza${piezasElegidas.length === 1 ? '' : 's'})`
+      : `Pedido liquidado por completo (${piezasElegidas.length} pieza${piezasElegidas.length === 1 ? '' : 's'})`
     ) + ` — $${monto}${referencia ? ` — referencia ${referencia}` : ''}`,
     empleado
   ));
@@ -890,7 +890,7 @@ function cancelarVentanaCompleta(ventana, empleado) {
   restaurarStockPiezasCanceladas(piezasActivas);
 
   ventana.auditoria.push(registrarAuditoriaVentana(
-    `Apartado cancelado por completo (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'})`,
+    `Pedido cancelado por completo (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'})`,
     empleado
   ));
 
@@ -926,7 +926,7 @@ function quitarPiezaDeApartado(ventana, piezaId, motivo, empleado) {
   pieza.estado = 'cancelada';
   pieza.retiro = { motivo, fecha: new Date().toISOString(), usuario: empleado?.nombre || 'Sistema' };
 
-  ventana.auditoria.push(registrarAuditoriaVentana(`Pieza quitada del apartado: ${pieza.producto} — motivo: ${motivo}`, empleado));
+  ventana.auditoria.push(registrarAuditoriaVentana(`Pieza quitada del pedido: ${pieza.producto} — motivo: ${motivo}`, empleado));
 
   if (abonado > 0) {
     ventana.depositoExcedente = Number(ventana.depositoExcedente || 0) + abonado;
@@ -969,10 +969,10 @@ async function descancelarPiezaQuitada(ventana, piezaId, empleado) {
 
   const pieza = ventana.apartados.find(p => p.id === piezaId);
   if (!pieza || pieza.estado !== 'cancelada' || !pieza.retiro) {
-    return { ok: false, error: 'Esa pieza no se quitó del apartado (solo se pueden descancelar piezas quitadas).' };
+    return { ok: false, error: 'Esa pieza no se quitó del pedido (solo se pueden descancelar piezas quitadas).' };
   }
   if (ventana.estado === 'vencida') {
-    return { ok: false, error: 'Ese apartado se desapartó por vencimiento; abre uno nuevo.' };
+    return { ok: false, error: 'Ese pedido se liberó por vencimiento; abre uno nuevo.' };
   }
 
   if (typeof descontarStockVariante === 'function') {
@@ -1018,12 +1018,12 @@ async function descancelarPiezaQuitada(ventana, piezaId, empleado) {
   pieza.estado = 'activa';
   pieza.descancelada = { fecha, usuario: empleado?.nombre || 'Sistema' };
 
-  ventana.auditoria.push(registrarAuditoriaVentana(`Pieza descancelada (volvió al apartado): ${pieza.producto}`, empleado));
+  ventana.auditoria.push(registrarAuditoriaVentana(`Pieza descancelada (volvió al pedido): ${pieza.producto}`, empleado));
   if (reabierta) {
     ventana.auditoria.push(registrarAuditoriaVentana(
       creditoRegresado > 0
-        ? `Apartado reabierto — $${creditoRegresado} de crédito regresaron como depósito${creditoFaltante > 0 ? ` (faltan $${creditoFaltante} que ya usó)` : ''}`
-        : 'Apartado reabierto',
+        ? `Pedido reabierto — $${creditoRegresado} de crédito regresaron como depósito${creditoFaltante > 0 ? ` (faltan $${creditoFaltante} que ya usó)` : ''}`
+        : 'Pedido reabierto',
       empleado
     ));
   }
@@ -1064,7 +1064,7 @@ function cancelarVentanaSinDeposito(ventana, empleado) {
 
   cerrarVentana(ventana, 'sin_deposito');
   ventana.auditoria.push(registrarAuditoriaVentana(
-    `Apartado cancelado: no se recibió el depósito (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'} regresaron al inventario)`,
+    `Pedido cancelado: no se recibió el depósito (${piezasActivas.length} pieza${piezasActivas.length === 1 ? '' : 's'} regresaron al inventario)`,
     empleado
   ));
 
@@ -1107,8 +1107,8 @@ function desapartarVentanaVencida(ventana, empleado) {
 
   ventana.auditoria.push(registrarAuditoriaVentana(
     montoPerdido > 0
-      ? `Apartado desapartado por vencimiento — depósito de $${montoPerdido} perdido`
-      : 'Apartado desapartado por vencimiento',
+      ? `Pedido liberado por vencimiento — depósito de $${montoPerdido} perdido`
+      : 'Pedido liberado por vencimiento',
     empleado
   ));
 
@@ -1172,7 +1172,7 @@ function verificarApartadosVencidosPendientes() {
       if (typeof agregarNotificacion === 'function' && (typeof estaEventoNotifActivo !== 'function' || estaEventoNotifActivo('apartado_vencido'))) {
         const piezas = obtenerPiezasActivas(ventana).length;
         agregarNotificacion({
-          texto: `El apartado de ${piezas} pieza${piezas === 1 ? '' : 's'} de ${ventana.usuarioNombre} ya venció.`,
+          texto: `El pedido de ${piezas} pieza${piezas === 1 ? '' : 's'} de ${ventana.usuarioNombre} ya venció.`,
           link: `admin-apartados.html?buscar=${encodeURIComponent(ventana.usuarioNombre)}`,
           rolDestino: 'admin',
           origen: 'emprendedora_lider',

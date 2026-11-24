@@ -112,7 +112,7 @@
           <div><strong>${esc(ventana.usuarioNombre)}</strong>
             <small>${piezas.length} pieza${piezas.length === 1 ? '' : 's'}${detalle ? ` · ${esc(detalle)}` : ''}${bolsita ? ` · ${bolsita} en bolsita` : ''}</small></div>
           <div class="donde-acciones"><span class="donde-estado ${est.clase}">${est.texto}</span>
-            <a href="${esc(ligaApartados(ventana.id))}">Ver apartado →</a></div>
+            <a href="${esc(ligaApartados(ventana.id))}">Ver pedido →</a></div>
         </li>`;
       }).join('');
 
@@ -121,20 +121,20 @@
       .map(({ ventana, pieza }) => `<li>
           <div><strong>${esc(ventana.usuarioNombre)}</strong>
             <small>Quitada el ${fechaCorta(pieza.retiro.fecha)} · ${esc(pieza.retiro.motivo)}${etiquetaDeVariante(p, pieza.varianteId, pieza) ? ` · ${esc(etiquetaDeVariante(p, pieza.varianteId, pieza))}` : ''}</small></div>
-          <div class="donde-acciones"><a href="${esc(ligaApartados(ventana.id))}">Descancelar en Apartados →</a></div>
+          <div class="donde-acciones"><a href="${esc(ligaApartados(ventana.id))}">Descancelar en Pedidos →</a></div>
         </li>`).join('');
 
     return `<section class="donde-producto">
       <header><strong>${esc(p.nombre)}</strong><small>${esc(p.codigo || '')}</small></header>
       <div class="donde-numeros">
         <div><span>Disponibles en el local</span><strong>${disponibles}</strong></div>
-        <div><span>Apartadas</span><strong>${totalApartadas}</strong>${totalApartadas ? `<small>${enBolsita} en bolsita</small>` : ''}</div>
+        <div><span>En pedidos</span><strong>${totalApartadas}</strong>${totalApartadas ? `<small>${enBolsita} en bolsita</small>` : ''}</div>
       </div>
       ${porVariante}
-      <h4>Quién la tiene apartada</h4>
-      ${filasApartadas ? `<ul class="donde-lista">${filasApartadas}</ul>` : '<p class="donde-vacio">Nadie la tiene apartada.</p>'}
-      ${filasQuitadas ? `<h4>Se quitó de un apartado (últimos ${DIAS_QUITADAS} días)</h4>
-        <p class="donde-nota">Si volvió a llegar: súmala en el catálogo y descancélala en su apartado.</p>
+      <h4>Quién la tiene en un pedido</h4>
+      ${filasApartadas ? `<ul class="donde-lista">${filasApartadas}</ul>` : '<p class="donde-vacio">Nadie la tiene en un pedido.</p>'}
+      ${filasQuitadas ? `<h4>Se quitó de un pedido (últimos ${DIAS_QUITADAS} días)</h4>
+        <p class="donde-nota">Si volvió a llegar: súmala en el catálogo y descancélala en su pedido.</p>
         <ul class="donde-lista">${filasQuitadas}</ul>` : ''}
     </section>`;
   }
@@ -179,11 +179,11 @@
         resultados.innerHTML = '<p class="donde-vacio">No hay ninguna pieza con ese código o nombre en el catálogo.</p>';
         return;
       }
-      resultados.innerHTML = '<p class="donde-vacio">Buscando en los apartados…</p>';
+      resultados.innerHTML = '<p class="donde-vacio">Buscando en los pedidos…</p>';
       try {
         await asegurarApartados();
       } catch (_) {
-        resultados.innerHTML = '<p class="donde-vacio error">No se pudieron cargar los apartados. Revisa la conexión.</p>';
+        resultados.innerHTML = '<p class="donde-vacio error">No se pudieron cargar los pedidos. Revisa la conexión.</p>';
         return;
       }
       const ventanas = obtenerVentanasApartado();

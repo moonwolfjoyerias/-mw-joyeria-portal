@@ -61,7 +61,7 @@ function abrirModalNuevaVentana() {
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon">+</div>
-    <h3>Nueva ventana de apartado</h3>
+    <h3>Nueva ventana de pedido</h3>
     <p class="modal-sub">Si la persona ya tiene crédito guardado de una ventana anterior, se usará automáticamente y no se pedirá otro depósito.</p>
 
     <label for="nvNombre">Nombre completo</label>
@@ -353,7 +353,7 @@ function abrirModalLiquidar(v) {
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
-    <h3>Liquidar apartado</h3>
+    <h3>Liquidar pedido</h3>
     <p class="modal-sub">${escapeHTML(v.usuarioNombre)} · ${piezasActivas.length} pieza${piezasActivas.length === 1 ? "" : "s"}</p>
 
     ${htmlEleccionPiezasLiquidar(v, piezasActivas)}
@@ -363,7 +363,7 @@ function abrirModalLiquidar(v) {
       <div class="auth-warning">
         <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span>
         <div>
-          <strong>Esta selección paga TODO el apartado — ¿qué hacer con el depósito de $${v.depositoApartadoDisponible} MXN?</strong>
+          <strong>Esta selección paga TODO el pedido — ¿qué hacer con el depósito de $${v.depositoApartadoDisponible} MXN?</strong>
           <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:400;">
             <input type="radio" name="decisionDepositoLiquidar" value="aplicar" checked> Aplicarlo a esta compra
           </label>
@@ -433,7 +433,7 @@ function abrirModalLiquidar(v) {
 
     if (!alcanceLiquidarElegido(box)) {
       error.style.display = "block";
-      error.textContent = "Elige si está pagando todo el apartado o solo algunas piezas.";
+      error.textContent = "Elige si está pagando todo el pedido o solo algunas piezas.";
       return;
     }
 
@@ -508,11 +508,11 @@ function abrirAutorizacion(accion) {
   const titulos = {
     "nueva-ventana": "Autorizar nueva ventana",
     "confirmar-deposito-ventana": "Autorizar depósito",
-    "aprobar-vip-ventana": "Aprobar apartado VIP",
+    "aprobar-vip-ventana": "Aprobar pedido VIP",
     "liquidar-ventana": "Autorizar liquidación",
     "aplicar-excedente-ventana": "Aplicar excedente de depósito",
     "cancelar-ventana": "Autorizar cancelación",
-    "desapartar-ventana": "Autorizar desapartar",
+    "desapartar-ventana": "Autorizar liberar pedido",
     "quitar-pieza": "Autorizar quitar pieza"
   };
 
@@ -715,9 +715,9 @@ async function ejecutarAccion(personal) {
       resolverDepositoVentana(v, accionPendiente.decisionDeposito, personal);
     }
 
-    mensaje = `Apartado liquidado por ${personal.nombre}.`;
+    mensaje = `Pedido liquidado por ${personal.nombre}.`;
     auditoriaAccion = 'liquidar_ventana';
-    auditoriaDescripcion = `Apartado de ${v.usuarioNombre} liquidado por $${accionPendiente.datos.monto} (${accionPendiente.piezaIds.length} pieza${accionPendiente.piezaIds.length === 1 ? '' : 's'})`;
+    auditoriaDescripcion = `Pedido de ${v.usuarioNombre} liquidado por $${accionPendiente.datos.monto} (${accionPendiente.piezaIds.length} pieza${accionPendiente.piezaIds.length === 1 ? '' : 's'})`;
 
   } else if (accionPendiente.tipo === "aplicar-excedente-ventana") {
 
@@ -730,9 +730,9 @@ async function ejecutarAccion(personal) {
   } else if (accionPendiente.tipo === "aprobar-vip-ventana") {
 
     aprobarVentanaVip(v, personal);
-    mensaje = `Apartado VIP aprobado por ${personal.nombre}.`;
+    mensaje = `Pedido VIP aprobado por ${personal.nombre}.`;
     auditoriaAccion = 'aprobar_vip_ventana';
-    auditoriaDescripcion = `Apartado VIP de ${v.usuarioNombre} aprobado`;
+    auditoriaDescripcion = `Pedido VIP de ${v.usuarioNombre} aprobado`;
 
     // Las cuentas VIP no ven el aviso de "confirmando depósito" (no
     // aplica — no depositan) ni un cronómetro hasta este momento, así
@@ -750,26 +750,26 @@ async function ejecutarAccion(personal) {
   } else if (accionPendiente.tipo === "cancelar-ventana") {
 
     cancelarVentanaCompleta(v, personal);
-    mensaje = `Apartado cancelado por ${personal.nombre}.`;
+    mensaje = `Pedido cancelado por ${personal.nombre}.`;
     auditoriaAccion = 'cancelar_ventana';
-    auditoriaDescripcion = `Apartado de ${v.usuarioNombre} cancelado`;
+    auditoriaDescripcion = `Pedido de ${v.usuarioNombre} cancelado`;
 
   } else if (accionPendiente.tipo === "desapartar-ventana") {
 
     desapartarVentanaVencida(v, personal);
-    mensaje = `Apartado desapartado por ${personal.nombre}.`;
+    mensaje = `Pedido liberado por ${personal.nombre}.`;
     auditoriaAccion = 'desapartar_ventana';
-    auditoriaDescripcion = `Apartado vencido de ${v.usuarioNombre} desapartado`;
+    auditoriaDescripcion = `Pedido vencido de ${v.usuarioNombre} liberado`;
 
   } else if (accionPendiente.tipo === "quitar-pieza") {
 
     const { piezaId, motivo } = accionPendiente;
     const resultadoQuitar = quitarPiezaDeApartado(v, piezaId, motivo, personal);
-    if (!resultadoQuitar) { cerrarModal(); mostrarToast("Esa pieza ya no está activa en el apartado."); accionPendiente = null; return; }
+    if (!resultadoQuitar) { cerrarModal(); mostrarToast("Esa pieza ya no está activa en el pedido."); accionPendiente = null; return; }
     notificarPiezaQuitada(v, resultadoQuitar.pieza, motivo);
-    mensaje = `Pieza quitada del apartado por ${personal.nombre}.`;
+    mensaje = `Pieza quitada del pedido por ${personal.nombre}.`;
     auditoriaAccion = 'quitar_pieza_apartado';
-    auditoriaDescripcion = `Pieza ${resultadoQuitar.pieza.producto} quitada del apartado de ${v.usuarioNombre} — motivo: ${motivo}`;
+    auditoriaDescripcion = `Pieza ${resultadoQuitar.pieza.producto} quitada del pedido de ${v.usuarioNombre} — motivo: ${motivo}`;
 
   }
 

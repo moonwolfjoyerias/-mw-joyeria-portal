@@ -435,7 +435,7 @@ async function apartarOtraPieza(grupo, boton) {
     const resultado = await agregarPiezaAVentana(ventana, datosPieza, null);
     if (!resultado.ok) { mostrarToast(resultado.error || 'Ya no hay más piezas de esta variante.'); return; }
     guardarVentanasApartado(obtenerVentanasApartado().map(v => v.id === ventana.id ? ventana : v));
-    notificarEquipoOperativo(`${ventana.usuarioNombre} apartó otra pieza de "${producto.nombre}" (${datosPieza.variante}).`, ventana.usuarioNombre);
+    notificarEquipoOperativo(`${ventana.usuarioNombre} pidió otra pieza de "${producto.nombre}" (${datosPieza.variante}).`, ventana.usuarioNombre);
     mostrarToast('Se apartó otra pieza');
   } finally {
     agregandoPieza = false;
@@ -524,7 +524,7 @@ function quitarPiezas(ids) {
   });
 
   renderApartados();
-  notificarEquipoOperativo(`Se quitó "${nombrePieza}" (${variantePieza}) del apartado de ${nombrePersona}. ${textoBolsita}`, nombrePersona);
+  notificarEquipoOperativo(`Se quitó "${nombrePieza}" (${variantePieza}) del pedido de ${nombrePersona}. ${textoBolsita}`, nombrePersona);
   mostrarToast('Se le notificó al equipo de tus cambios');
 }
 
@@ -576,7 +576,7 @@ function abrirModalEditar(id) {
     if (!resultado.ok) { mostrarToast(resultado.error); return; }
     overlay.classList.remove('open');
     renderApartados();
-    notificarEquipoOperativo(`Se cambió la variante de "${pieza.producto}" a "${resultado.etiqueta}" en el apartado de ${ventana.usuarioNombre} — confirma que la pieza esté disponible.`, ventana.usuarioNombre);
+    notificarEquipoOperativo(`Se cambió la variante de "${pieza.producto}" a "${resultado.etiqueta}" en el pedido de ${ventana.usuarioNombre} — confirma que la pieza esté disponible.`, ventana.usuarioNombre);
     mostrarToast('Se le notificó al equipo de tus cambios');
   });
 }
@@ -767,7 +767,7 @@ function abrirModalPago() {
       notificarEquipoOperativo(`${nombrePersona} decidió usar su depósito de $${montoDeposito} en este pago (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${totalFinal} MXN).`, nombrePersona);
       mostrarModalPagoConMonto(ventana, piezas, totalFinal, `Se descontará tu depósito de $${montoDeposito} y se notificó al equipo.`, 'aplicar', true);
     } else {
-      notificarEquipoOperativo(`${nombrePersona} guardará su depósito de $${montoDeposito} como crédito y pagará el total completo de su apartado (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${total} MXN).`, nombrePersona);
+      notificarEquipoOperativo(`${nombrePersona} guardará su depósito de $${montoDeposito} como crédito y pagará el total completo de su pedido (${piezas.length} pieza${piezas.length === 1 ? '' : 's'}, $${total} MXN).`, nombrePersona);
       mostrarModalPagoConMonto(ventana, piezas, total, 'Tu depósito quedó guardado como crédito y se notificó al equipo.', 'credito', true);
     }
   });

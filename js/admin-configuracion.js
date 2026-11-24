@@ -636,7 +636,7 @@ const EVENTOS_NOTIF_CONFIG = [
   { clave: 'cambio_rango_confirmado', label: 'Cambio de rango confirmado (avisa a la persona)' },
   { clave: 'constancia_hito_detectado', label: 'Se cumplió un hito del Reto de Constancia (avisa a Admin)' },
   { clave: 'recompensa_constancia_entregada', label: 'Recompensa de Constancia entregada (avisa a la persona)' },
-  { clave: 'apartado_vencido', label: 'El plazo de un apartado ya venció (avisa a Admin)' },
+  { clave: 'apartado_vencido', label: 'El plazo de un pedido ya venció (avisa a Admin)' },
   { clave: 'emprendedora_sin_actividad_detectada', label: 'Una Emprendedora lleva varias semanas sin compra mínima (avisa a su línea de líderes)' },
   { clave: 'emprendedora_actividad_recuperada', label: 'Una Emprendedora marcada sin actividad volvió a comprar (avisa a su línea de líderes)' }
 ];
@@ -700,7 +700,7 @@ function renderSeccionCorreos() {
       </p>
       <ul class="cfg-card-sub" style="margin:0 0 1.2rem 1.2rem;">
         <li>Nuevo evento de calendario avisa automáticamente por correo a todas las Emprendedoras/Líderes activas.</li>
-        <li>Las notificaciones personales de cada Emprendedora/Líder (apartados, pagos, comisiones) llegan también a su correo — las manda el servidor de Firebase con Brevo, no esta sección.</li>
+        <li>Las notificaciones personales de cada Emprendedora/Líder (pedidos, pagos, comisiones) llegan también a su correo — las manda el servidor de Firebase con Brevo, no esta sección.</li>
         <li>Para cualquier otro aviso (junta, promoción, etc.), úsalo manualmente aquí abajo.</li>
       </ul>
       <form id="cfgFormCorreo" class="cfg-form-grid">
@@ -921,16 +921,16 @@ function renderSeccionApartadosConfig() {
 
   cont.innerHTML = `
     <div class="cfg-card">
-      <h3 class="cfg-card-title">Reglas de Apartados</h3>
-      <p class="cfg-card-sub"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Cualquier cambio aquí solo aplica a ventanas de apartado <strong>nuevas</strong> — las que ya están abiertas conservan su depósito y fecha de vencimiento tal como se calcularon.</p>
+      <h3 class="cfg-card-title">Reglas de Pedidos</h3>
+      <p class="cfg-card-sub"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg></span> Cualquier cambio aquí solo aplica a ventanas de pedido <strong>nuevas</strong> — las que ya están abiertas conservan su depósito y fecha de vencimiento tal como se calcularon.</p>
       <div class="catalog-table-wrap cfg-tabla-wrap">
         <table class="catalog-table">
           <thead><tr><th>Depósito base</th><th>Depósito foránea</th><th>Ventana normal</th><th>Ventana foránea</th></tr></thead>
           <tbody><tr>
-            ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'deposito_base', seccion: 'Apartados', etiqueta: 'Depósito base', tipoValor: 'moneda' })}
-            ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'deposito_foranea', seccion: 'Apartados', etiqueta: 'Depósito foránea', tipoValor: 'moneda' })}
-            ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'ventana_normal_dias', seccion: 'Apartados', etiqueta: 'Ventana normal (días)', tipoValor: 'dias' })}
-            ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'ventana_foranea_dias', seccion: 'Apartados', etiqueta: 'Ventana foránea (días)', tipoValor: 'dias' })}
+            ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'deposito_base', seccion: 'Pedidos', etiqueta: 'Depósito base', tipoValor: 'moneda' })}
+            ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'deposito_foranea', seccion: 'Pedidos', etiqueta: 'Depósito foránea', tipoValor: 'moneda' })}
+            ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'ventana_normal_dias', seccion: 'Pedidos', etiqueta: 'Ventana normal (días)', tipoValor: 'dias' })}
+            ${construirCeldaVersionada({ tipo: 'apartado', parametro: 'ventana_foranea_dias', seccion: 'Pedidos', etiqueta: 'Ventana foránea (días)', tipoValor: 'dias' })}
           </tr></tbody>
         </table>
       </div>
@@ -1244,7 +1244,7 @@ async function renderSeccionUsuarios() {
 
   const cont = document.getElementById('seccion-usuarios');
   const filas = [
-    ['Dashboard / Catálogo / Apartados / Calendario / Lista de deseos / Actividad', 'si', 'según cuenta', 'si', '—', '—'],
+    ['Dashboard / Catálogo / Pedidos / Calendario / Lista de deseos / Actividad', 'si', 'según cuenta', 'si', '—', '—'],
     ['Actividades del Staff', 'si', 'según cuenta', '—', '—', '—'],
     ['Nómina', 'si', 'según cuenta', '—', '—', '—'],
     ['Comisiones', 'si', '—', '—', 'equipo propio', '—'],
@@ -1330,7 +1330,7 @@ async function renderSeccionUsuarios() {
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:0.4rem;">
         <div>
           <h3 class="cfg-card-title" style="margin-bottom:0.15rem;">Cuentas internas — Staff / Encargado / Admin</h3>
-          <p class="cfg-card-sub" style="margin-bottom:0;">Sirven para iniciar sesión y reautorizar acciones en Apartados, Catálogo, Lista de deseos, Nómina y Calendario. A diferencia de Staff (cuenta compartida), cada Encargado tiene su propia cuenta y sus propios permisos por módulo.</p>
+          <p class="cfg-card-sub" style="margin-bottom:0;">Sirven para iniciar sesión y reautorizar acciones en Pedidos, Catálogo, Lista de deseos, Nómina y Calendario. A diferencia de Staff (cuenta compartida), cada Encargado tiene su propia cuenta y sus propios permisos por módulo.</p>
         </div>
         <button class="btn btn-primary" id="cfgCrearCuentaInternaBtn" style="width:auto;" type="button">＋ Crear cuenta</button>
       </div>
@@ -1559,9 +1559,8 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
         <select id="cfgNuevoLiderId" style="margin-top:6px;">${opcionesLider(lideresOrdenados)}</select>
         <small class="field-help" id="cfgBuscarLiderAyuda" style="display:none;"></small>
       </label>
-      <label class="cfg-span-2">Contraseña (opcional)<input type="text" id="cfgNuevaPasswordPersona" placeholder="Déjalo vacío para usar la automática"></label>
     </div>
-    <div class="modal-note">El usuario se genera automáticamente (MW#### + iniciales del nombre). Si no escribes una contraseña aquí, también se genera automáticamente con ese mismo esquema.</div>
+    <div class="modal-note">Se creará una contraseña automática: <strong>MW#### + iniciales del nombre</strong> (MW#### es su número de usuario). Se la mostramos al terminar para que se la compartas.</div>
     <div id="cfgCrearPersonaError" class="auth-error" style="display:none;"></div>
     <div style="display:flex;gap:10px;margin-top:14px;">
       <button class="btn btn-outline" style="flex:1;" id="cfgCancelarCrearPersonaBtn" type="button">Cancelar</button>
@@ -1615,7 +1614,6 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
     const categoria = document.getElementById('cfgNuevaCategoria').value;
     const respuestaSLP = document.querySelector('input[name="cfgViveEnSLP"]:checked')?.value;
     const liderId = document.getElementById('cfgNuevoLiderId').value || null;
-    const passwordPersonalizada = document.getElementById('cfgNuevaPasswordPersona').value.trim();
     const error = document.getElementById('cfgCrearPersonaError');
     const btnConfirmar = document.getElementById('cfgConfirmarCrearPersonaBtn');
 
@@ -1634,11 +1632,6 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
       error.textContent = 'Ya existe una cuenta con ese correo o teléfono.';
       return;
     }
-    if (passwordPersonalizada && passwordPersonalizada.length < 6) {
-      error.style.display = 'block';
-      error.textContent = 'La contraseña debe tener al menos 6 caracteres.';
-      return;
-    }
 
     // Si su líder elegida todavía es Emprendedora: ascenderla o poner otra.
     if (liderId && window.MWLider && !(await window.MWLider.confirmarLider(liderId))) {
@@ -1651,12 +1644,10 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
 
     const nombreCompleto = [nombre, apellidos].filter(Boolean).join(' ');
     const credenciales = await generarCredenciales(nombreCompleto);
-    // BUG reportado tras lanzar a producción: este modal nunca tuvo un
-    // campo de contraseña — siempre forzaba la automática (usuario +
-    // iniciales), sin forma de ponerle una a mano. passwordPersonalizada
-    // (capturado arriba) la sustituye cuando Admin escribió algo; si la
-    // deja vacía, el comportamiento es exactamente el de antes.
-    const passwordFinal = passwordPersonalizada || credenciales.passwordTemporal;
+    // La contraseña siempre es la automática (usuario MW#### + iniciales
+    // del nombre); si la persona quiere otra, se cambia después desde
+    // Cuentas y seguridad.
+    const passwordFinal = credenciales.passwordTemporal;
 
     const nuevaPersona = crearPersonaEjemplo({
       id: `persona-${Date.now()}`,
@@ -1709,7 +1700,7 @@ function abrirModalCrearCuentaPersona(lideresParaSelect) {
       <p class="modal-sub">${escapeHTMLPersonas(nombreCompleto)} — ${tipo === 'lider' ? 'Líder' : 'Emprendedora'}</p>
       <div class="cfg-form-grid" style="margin-top:10px;">
         <label class="cfg-span-2">Usuario<input type="text" readonly value="${escapeAttributePersonas(credenciales.usuario)}"></label>
-        <label class="cfg-span-2">Contraseña${passwordPersonalizada ? '' : ' temporal'}<input type="text" readonly value="${escapeAttributePersonas(passwordFinal)}"></label>
+        <label class="cfg-span-2">Contraseña temporal<input type="text" readonly value="${escapeAttributePersonas(passwordFinal)}"></label>
       </div>
       <div class="modal-note">Anótalo o compártelo ahora — puedes volver a consultarlo/restablecerlo después desde su perfil en Emprendedoras/Líderes.</div>
       <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="cfgCerrarCredencialesPersonaBtn" type="button">Listo</button>
@@ -1780,7 +1771,7 @@ function abrirModalRenombrarCuentaInterna(id) {
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     <h3>Corregir nombre</h3>
-    <p class="modal-sub">El nombre nuevo se aplica en todo el portal: su cuenta, Nómina, Actividades del Staff, Actividad, historial de Apartados, Lista de deseos, Calendario y Catálogo — también en lo que ya está registrado con el nombre anterior.</p>
+    <p class="modal-sub">El nombre nuevo se aplica en todo el portal: su cuenta, Nómina, Actividades del Staff, Actividad, historial de Pedidos, Lista de deseos, Calendario y Catálogo — también en lo que ya está registrado con el nombre anterior.</p>
     <label for="cfgRenombrarInput">Nombre</label>
     <input id="cfgRenombrarInput" type="text" maxlength="80" value="${escapeAttributePersonas(cuenta.nombre)}">
     <div id="cfgRenombrarError" class="auth-error" style="display:none;"></div>
@@ -1839,7 +1830,7 @@ function abrirModalPermisosEncargado(id) {
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     <h3>Permisos de ${escapeHTMLPersonas(cuenta.nombre)}</h3>
-    <p class="modal-sub">Qué módulos puede usar esta cuenta. Actividades del Staff, Catálogo, Apartados, Lista de deseos, Calendario y Actividad vienen habilitados por default — Nómina no.</p>
+    <p class="modal-sub">Qué módulos puede usar esta cuenta. Actividades del Staff, Catálogo, Pedidos, Lista de deseos, Calendario y Actividad vienen habilitados por default — Nómina no.</p>
     <div class="cfg-permisos-lista">
       ${Object.entries(MODULOS_PERMISO_ENCARGADO).map(([clave, label]) => `
         <label class="cfg-permiso-item">

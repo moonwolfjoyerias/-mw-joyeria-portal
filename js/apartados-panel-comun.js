@@ -180,7 +180,7 @@ function renderTabla() {
         <td colspan="6" class="empty-cell">
           <div class="empty-state">
             <div class="empty-icon"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z"/></svg></span></div>
-            <strong>No se encontraron ventanas de apartado</strong>
+            <strong>No se encontraron ventanas de pedido</strong>
             <span>Prueba con otro filtro o búsqueda.</span>
           </div>
         </td>
@@ -337,8 +337,8 @@ function confirmarNoDeposito(ventanaId) {
   pedirConfirmacionPanelRol({
     ventanaId,
     titulo: "No depositó",
-    mensaje: `Se cancelará el apartado de ${escapeHTML(v.usuarioNombre)} porque no se recibió su depósito. ${piezas === 1 ? "Su pieza regresa" : `Sus ${piezas} piezas regresan`} al inventario, desaparece${piezas === 1 ? "" : "n"} de su portal y le llegará una notificación con el motivo.`,
-    textoBoton: "Cancelar apartado",
+    mensaje: `Se cancelará el pedido de ${escapeHTML(v.usuarioNombre)} porque no se recibió su depósito. ${piezas === 1 ? "Su pieza regresa" : `Sus ${piezas} piezas regresan`} al inventario, desaparece${piezas === 1 ? "" : "n"} de su portal y le llegará una notificación con el motivo.`,
+    textoBoton: "Cancelar pedido",
     peligrosa: true,
     onConfirmar: (empleado) => ejecutarNoDeposito(ventanaId, empleado)
   });
@@ -363,14 +363,14 @@ function ejecutarNoDeposito(ventanaId, empleado) {
 
   registrarActividadApartadosRol({
     accion: "cancelar_por_no_deposito",
-    descripcion: `Canceló el apartado de ${v.usuarioNombre} porque no depositó (${piezas.length} pieza${piezas.length === 1 ? "" : "s"} regresaron al inventario)`
+    descripcion: `Canceló el pedido de ${v.usuarioNombre} porque no depositó (${piezas.length} pieza${piezas.length === 1 ? "" : "s"} regresaron al inventario)`
   }, empleado);
 
   filasExpandidas.delete(v.id);
   guardarVentanas();
   actualizarResumen();
   renderTabla();
-  mostrarToast(`Apartado de ${v.usuarioNombre} cancelado por falta de depósito.`);
+  mostrarToast(`Pedido de ${v.usuarioNombre} cancelado por falta de depósito.`);
 
 }
 
@@ -445,12 +445,12 @@ function abrirModalFechasVentana(ventanaId) {
   const fecha = (iso) => iso ? formatearFechaHora(iso) : "—";
   const fila = (titulo, valor, extra = "") => `<div class="fechas-fila"><span>${titulo}</span><strong>${valor}</strong>${extra ? `<small>${extra}</small>` : ""}</div>`;
   const nombrePago = { liquidacion: "Liquidación", excedente_aplicado: "Excedente aplicado", ajuste_descancelar: "Ajuste al descancelar" };
-  const estadoPieza = { activa: "Apartada", liquidada: "Liquidada", cancelada: "Quitada" };
+  const estadoPieza = { activa: "En pedido", liquidada: "Liquidada", cancelada: "Quitada" };
 
   const piezas = f.piezas.map(p => `
     <li class="fechas-pieza">
       <div class="fechas-pieza-cabeza"><strong>${escapeHTML(p.producto || "Pieza")}</strong><span class="status ${p.estado === "liquidada" ? "status-active" : p.estado === "cancelada" ? "status-cancelled" : "status-pending"}">${estadoPieza[p.estado] || escapeHTML(p.estado || "")}</span></div>
-      ${fila("Se apartó", fecha(p.apartada))}
+      ${fila("Se pidió", fecha(p.apartada))}
       ${p.pagos.map(x => fila(nombrePago[x.tipo] || "Pago", fecha(x.fecha), `$${Number(x.monto).toLocaleString("es-MX")} MXN${x.metodo ? ` · ${x.metodo === "transferencia" ? "transferencia" : x.metodo === "local" ? "en local" : escapeHTML(x.metodo)}` : ""}${x.referencia ? ` · ref. ${escapeHTML(x.referencia)}` : ""}`)).join("")}
       ${p.liquidada ? "" : p.estado === "activa" ? fila("Pago", "Pendiente") : ""}
       ${p.quitada ? fila("Se quitó", fecha(p.quitada)) : ""}
@@ -460,7 +460,7 @@ function abrirModalFechasVentana(ventanaId) {
   const box = document.getElementById("modalBox");
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
-    <h3>Fechas del apartado</h3>
+    <h3>Fechas del pedido</h3>
     <p class="modal-sub">${escapeHTML(v.usuarioNombre)} · ${obtenerReglaCategoria(v.categoria).etiqueta}</p>
     <div class="fechas-ventana">
       ${fila("Abrió su ventana", fecha(f.apertura))}
@@ -490,7 +490,7 @@ function abrirModalAgregarExcedente(ventanaId) {
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <h3>Agregar excedente</h3>
-    <p class="modal-sub">${escapeHTML(v.usuarioNombre)} ya tiene su apartado activo con $${Number(v.depositoApartadoDisponible || 0)} MXN de depósito. Anota el dinero que mandó de más: se suma a su depósito como excedente y después lo puedes aplicar a sus piezas con "Aplicar excedente". El vencimiento no cambia.</p>
+    <p class="modal-sub">${escapeHTML(v.usuarioNombre)} ya tiene su pedido activo con $${Number(v.depositoApartadoDisponible || 0)} MXN de depósito. Anota el dinero que mandó de más: se suma a su depósito como excedente y después lo puedes aplicar a sus piezas con "Aplicar excedente". El vencimiento no cambia.</p>
 
     <label for="excedenteMonto">Monto recibido</label>
     <input id="excedenteMonto" type="number" min="1" step="0.01" placeholder="Ej. 300">
@@ -598,7 +598,7 @@ function abrirModalCambiarVencimiento(ventanaId) {
     </div>
     <input type="date" id="vencimientoPersonalizado" min="${hoyISO}" style="display:none;margin-top:8px;">
 
-    <div class="modal-note" id="vencimientoNota" style="margin-top:12px;">Elegir plazo normal o foránea también cambia la categoría del apartado. Los días se cuentan desde que se confirmó el depósito.</div>
+    <div class="modal-note" id="vencimientoNota" style="margin-top:12px;">Elegir plazo normal o foránea también cambia la categoría del pedido. Los días se cuentan desde que se confirmó el depósito.</div>
     <div id="vencimientoError" class="auth-error" style="display:none;"></div>
 
     <div style="display:flex;gap:10px;margin-top:14px;">
@@ -629,7 +629,7 @@ function abrirModalCambiarVencimiento(ventanaId) {
     pedirConfirmacionPanelRol({
       ventanaId,
       titulo: "Cambiar fecha de vencimiento",
-      mensaje: `El apartado de ${escapeHTML(v.usuarioNombre)} vencerá el ${formato(nueva)}.`,
+      mensaje: `El pedido de ${escapeHTML(v.usuarioNombre)} vencerá el ${formato(nueva)}.`,
       textoBoton: "Cambiar fecha",
       sinConfirmacion: true, // Encargado/Admin ya confirmaron en este modal; Staff igual se identifica
       onConfirmar: (empleado) => ejecutarCambioVencimiento(ventanaId, { modo, fechaISO }, empleado)
@@ -655,7 +655,7 @@ function ejecutarCambioVencimiento(ventanaId, datos, empleado) {
       rolDestino: "emprendedora_lider"
     });
   }
-  registrarActividadApartadosRol({ accion: "cambiar_vencimiento", descripcion: `Cambió la fecha de vencimiento del apartado de ${v.usuarioNombre} al ${fechaTexto} (${resultado.motivo})` }, empleado);
+  registrarActividadApartadosRol({ accion: "cambiar_vencimiento", descripcion: `Cambió la fecha de vencimiento del pedido de ${v.usuarioNombre} al ${fechaTexto} (${resultado.motivo})` }, empleado);
 
   guardarVentanas();
   cerrarModal();
@@ -681,12 +681,12 @@ function confirmarDescancelarPieza(ventanaId, piezaId) {
   if (!pieza || !pieza.retiro || pieza.estado !== "cancelada") return;
 
   const reabre = v.estado === "cerrada"
-    ? " El apartado estaba cerrado: se reabre y, si su depósito quedó como crédito, vuelve a ser su depósito."
+    ? " El pedido estaba cerrado: se reabre y, si su depósito quedó como crédito, vuelve a ser su depósito."
     : "";
   pedirConfirmacionPanelRol({
     ventanaId,
     titulo: "Descancelar pieza",
-    mensaje: `"${escapeHTML(pieza.producto)}" vuelve al apartado de ${escapeHTML(v.usuarioNombre)} y se descuenta una pieza de la existencia del catálogo (primero súmala en el catálogo si acaba de llegar).${reabre} Le llegará un aviso.`,
+    mensaje: `"${escapeHTML(pieza.producto)}" vuelve al pedido de ${escapeHTML(v.usuarioNombre)} y se descuenta una pieza de la existencia del catálogo (primero súmala en el catálogo si acaba de llegar).${reabre} Le llegará un aviso.`,
     textoBoton: "Sí, descancelar",
     onConfirmar: (empleado) => ejecutarDescancelarPieza(ventanaId, piezaId, empleado)
   });
@@ -711,7 +711,7 @@ async function ejecutarDescancelarPieza(ventanaId, piezaId, empleado) {
   }
   registrarActividadApartadosRol({
     accion: "descancelar_pieza_apartado",
-    descripcion: `Descanceló ${r.pieza.producto} en el apartado de ${v.usuarioNombre}${r.reabierta ? " (apartado reabierto)" : ""}`
+    descripcion: `Descanceló ${r.pieza.producto} en el pedido de ${v.usuarioNombre}${r.reabierta ? " (pedido reabierto)" : ""}`
   }, empleado);
 
   guardarVentanas();
@@ -743,7 +743,7 @@ function confirmarOcultarPieza(ventanaId, piezaId) {
   pedirConfirmacionPanelRol({
     ventanaId,
     titulo: "Quitar de la vista",
-    mensaje: `¿Quitar de la vista "${escapeHTML(pieza.producto)}" (cancelada) del apartado de ${escapeHTML(v.usuarioNombre)}? Ya no aparecerá en la página ni en BRILLO para nadie; queda en el historial del apartado.`,
+    mensaje: `¿Quitar de la vista "${escapeHTML(pieza.producto)}" (cancelada) del pedido de ${escapeHTML(v.usuarioNombre)}? Ya no aparecerá en la página ni en BRILLO para nadie; queda en el historial del pedido.`,
     textoBoton: "Sí, quitar de la vista",
     onConfirmar: (empleado) => {
       const actual = ventanas.find(x => x.id === ventanaId);
@@ -751,7 +751,7 @@ function confirmarOcultarPieza(ventanaId, piezaId) {
       if (!p || p.estado !== "cancelada") return;
       p.ocultaDeLaVista = { fecha: new Date().toISOString(), usuario: empleado.nombre };
       actual.auditoria.push(registrarAuditoriaVentana(`${p.producto}: pieza cancelada quitada de la vista`, empleado));
-      registrarActividadApartadosRol({ accion: "ocultar_pieza_cancelada", descripcion: `Quitó de la vista ${p.producto} (cancelada) del apartado de ${actual.usuarioNombre}` }, empleado);
+      registrarActividadApartadosRol({ accion: "ocultar_pieza_cancelada", descripcion: `Quitó de la vista ${p.producto} (cancelada) del pedido de ${actual.usuarioNombre}` }, empleado);
       guardarVentanas();
       renderTabla();
       mostrarToast(`Pieza quitada de la vista por ${empleado.nombre}.`);
@@ -784,7 +784,7 @@ function marcarSacadaDeBolsita(ventanaId, piezaId, empleado) {
 
   pieza.sacadaDeBolsita = { fecha: new Date().toISOString(), usuario: empleado.nombre };
   v.auditoria.push(registrarAuditoriaVentana(`${pieza.producto}: se sacó de la bolsita física (pieza cancelada)`, empleado));
-  registrarActividadApartadosRol({ accion: "sacar_de_bolsita", descripcion: `Sacó ${pieza.producto} de la bolsita física (pieza cancelada del apartado de ${v.usuarioNombre})` }, empleado);
+  registrarActividadApartadosRol({ accion: "sacar_de_bolsita", descripcion: `Sacó ${pieza.producto} de la bolsita física (pieza cancelada del pedido de ${v.usuarioNombre})` }, empleado);
 
   guardarVentanas();
   renderTabla();
@@ -837,8 +837,8 @@ function abrirModalQuitarPieza(ventanaId, piezaId) {
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon danger">!</div>
-    <h3>Quitar pieza del apartado</h3>
-    <p class="modal-sub">"${escapeHTML(pieza.producto)}" se quitará del apartado de ${escapeHTML(v.usuarioNombre)} y le llegará una notificación con el motivo.${notaCierre}</p>
+    <h3>Quitar pieza del pedido</h3>
+    <p class="modal-sub">"${escapeHTML(pieza.producto)}" se quitará del pedido de ${escapeHTML(v.usuarioNombre)} y le llegará una notificación con el motivo.${notaCierre}</p>
 
     <label for="motivoQuitarPieza">Motivo</label>
     <textarea id="motivoQuitarPieza" rows="2" style="width:100%;">${escapeHTML(MOTIVO_QUITAR_PIEZA_DEFAULT)}</textarea>
@@ -887,11 +887,11 @@ function alternarBolsitaPieza(ventanaId, piezaId, empleado) {
   if (pieza.enBolsita) {
     delete pieza.enBolsita;
     v.auditoria.push(registrarAuditoriaVentana(`${pieza.producto}: se quitó la marca de "guardada en bolsita"`, empleado));
-    registrarActividadApartadosRol({ accion: "quitar_marca_bolsita", descripcion: `Quitó la marca de bolsita a ${pieza.producto} (apartado de ${v.usuarioNombre})` }, empleado);
+    registrarActividadApartadosRol({ accion: "quitar_marca_bolsita", descripcion: `Quitó la marca de bolsita a ${pieza.producto} (pedido de ${v.usuarioNombre})` }, empleado);
   } else {
     pieza.enBolsita = { fecha: new Date().toISOString(), usuario: empleado.nombre };
     v.auditoria.push(registrarAuditoriaVentana(`${pieza.producto}: guardada en la bolsita física`, empleado));
-    registrarActividadApartadosRol({ accion: "guardar_en_bolsita", descripcion: `Guardó ${pieza.producto} en la bolsita física (apartado de ${v.usuarioNombre})` }, empleado);
+    registrarActividadApartadosRol({ accion: "guardar_en_bolsita", descripcion: `Guardó ${pieza.producto} en la bolsita física (pedido de ${v.usuarioNombre})` }, empleado);
   }
 
   guardarVentanas();
@@ -971,7 +971,7 @@ function crearFilaVentana(v) {
       </td>
 
       <td>
-        <button type="button" class="vencimiento-fechas-btn" data-fechas-ventana="${v.id}" title="Ver las fechas del apartado">${obtenerTextoVencimiento(v)} <small>Ver fechas</small></button>
+        <button type="button" class="vencimiento-fechas-btn" data-fechas-ventana="${v.id}" title="Ver las fechas del pedido">${obtenerTextoVencimiento(v)} <small>Ver fechas</small></button>
         ${v.vencimientoAjustado ? `<small style="display:block;margin-top:3px;color:var(--mwv-766d83);">${v.vencimientoAjustado.modo === "personalizada" ? "Fecha personalizada" : `Plazo ${obtenerReglaCategoria(v.vencimientoAjustado.modo).etiqueta.toLowerCase()}`} · ${escapeHTML(v.vencimientoAjustado.usuario || "")}</small>` : ""}
         ${v.estado === "activa" ? `<button type="button" class="action-btn detail-action cambiar-vencimiento-btn" data-cambiar-vencimiento="${v.id}">Cambiar fecha</button>` : ""}
       </td>
@@ -1006,7 +1006,7 @@ function crearFilaDetalle(v) {
     // puede cambiar.
     const bolsita = p.estado === "activa"
       ? `<button type="button" class="action-btn ${p.enBolsita ? "primary-action" : "detail-action"} bolsita-btn" data-ventana="${v.id}" data-bolsita-pieza="${p.id}" title="${p.enBolsita ? "Clic para quitar la marca" : "Marcar cuando la pieza ya esté guardada en su bolsita en el local"}">${p.enBolsita ? "✓ En bolsita" : "Guardar en bolsita"}</button>
-         <button type="button" class="action-btn danger-action bolsita-btn" data-ventana="${v.id}" data-quitar-pieza="${p.id}" title="Quitar esta pieza del apartado (por ejemplo, si ya no hay existencia)">× Quitar pieza</button>`
+         <button type="button" class="action-btn danger-action bolsita-btn" data-ventana="${v.id}" data-quitar-pieza="${p.id}" title="Quitar esta pieza del pedido (por ejemplo, si ya no hay existencia)">× Quitar pieza</button>`
       : piezaPendienteDeSacarDeBolsita(p)
         ? `<button type="button" class="action-btn primary-action bolsita-btn" data-ventana="${v.id}" data-sacar-bolsita="${p.id}" title="Clic cuando la pieza ya se haya sacado de su bolsita física">Confirmar que se sacó de la bolsita</button>`
         : p.sacadaDeBolsita
@@ -1034,7 +1034,7 @@ function crearFilaDetalle(v) {
           ${p.enBolsita ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">En bolsita desde ${formatearFechaHora(p.enBolsita.fecha)} · ${escapeHTML(p.enBolsita.usuario || "")}</small>` : ""}
           ${piezaPendienteDeSacarDeBolsita(p) ? `<small style="display:block;margin-top:4px;color:#b94d4d;font-weight:600;">Se canceló y sigue en su bolsita: sácala y confirma aquí.</small>` : ""}
           ${p.sacadaDeBolsita ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">Sacada de la bolsita ${formatearFechaHora(p.sacadaDeBolsita.fecha)} · ${escapeHTML(p.sacadaDeBolsita.usuario || "")}</small>` : ""}
-          ${p.retiro ? `<small style="display:block;margin-top:4px;color:#b94d4d;">Quitada del apartado: ${escapeHTML(p.retiro.motivo)} · ${escapeHTML(p.retiro.usuario || "")} · ${formatearFechaHora(p.retiro.fecha)}</small>` : ""}
+          ${p.retiro ? `<small style="display:block;margin-top:4px;color:#b94d4d;">Quitada del pedido: ${escapeHTML(p.retiro.motivo)} · ${escapeHTML(p.retiro.usuario || "")} · ${formatearFechaHora(p.retiro.fecha)}</small>` : ""}
           ${p.retiro && p.estado === "cancelada" && v.estado !== "vencida" ? `<button class="action-btn descancelar-btn" data-descancelar-pieza="${p.id}" data-ventana="${v.id}" style="margin-top:6px;"><span>↺</span> Descancelar (llegó de nuevo)</button>` : ""}
           ${p.descancelada ? `<small style="display:block;margin-top:4px;color:var(--mwv-766d83);">Descancelada ${formatearFechaHora(p.descancelada.fecha)} · ${escapeHTML(p.descancelada.usuario || "")}</small>` : ""}
         </div>
@@ -1054,7 +1054,7 @@ function crearFilaDetalle(v) {
     <tr class="expand-row">
       <td colspan="6" style="padding:16px 20px;">
 
-        <div class="eyebrow" style="margin-bottom:8px;">Piezas del apartado</div>
+        <div class="eyebrow" style="margin-bottom:8px;">Piezas del pedido</div>
         ${piezas}
 
         <div class="eyebrow" style="margin:14px 0 8px;">Historial de la ventana</div>
@@ -1082,7 +1082,7 @@ function obtenerAccionesVentana(v) {
   }
 
   if (v.estado === "pendiente_aprobacion") {
-    html += `<button class="action-btn primary-action" data-aprobar-vip="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Aprobar apartado VIP</button>`;
+    html += `<button class="action-btn primary-action" data-aprobar-vip="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> Aprobar pedido VIP</button>`;
   }
 
   if (v.estado === "activa") {
@@ -1100,10 +1100,10 @@ function obtenerAccionesVentana(v) {
       const declaradas = v.fechaDeclaracionPago ? piezasDeclaradasActivas(v).length : 0;
       const activas = obtenerPiezasActivas(v).length;
       const etiquetaLiquidar = !v.fechaDeclaracionPago
-        ? 'Liquidar apartado'
+        ? 'Liquidar pedido'
         : (declaradas && declaradas < activas ? `Ya pagó ${declaradas} de ${activas} piezas` : 'Ya pagó todo');
       html += `<button class="action-btn primary-action" data-liquidar-ventana="${v.id}"><span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span> ${etiquetaLiquidar}</button>`;
-      html += `<button class="action-btn danger-action" data-cancelar-ventana="${v.id}"><span>×</span> Cancelar apartado</button>`;
+      html += `<button class="action-btn danger-action" data-cancelar-ventana="${v.id}"><span>×</span> Cancelar pedido</button>`;
       // LOG-06 de la auditoría: antes el excedente del depósito (lo que
       // pasa de $50) quedaba congelado junto con el piso hasta cerrar
       // toda la ventana. Si hay excedente Y saldo pendiente en alguna
@@ -1121,7 +1121,7 @@ function obtenerAccionesVentana(v) {
 
     if (ventanaEstaVencida(v)) {
       html += `<button class="action-btn detail-action" data-whatsapp-ventana="${v.id}"><span>↗</span> Contactar por Whatsapp</button>`;
-      html += `<button class="action-btn danger-action" data-desapartar-ventana="${v.id}"><span>×</span> Desapartar</button>`;
+      html += `<button class="action-btn danger-action" data-desapartar-ventana="${v.id}"><span>×</span> Liberar pedido</button>`;
     }
 
   }
@@ -1180,7 +1180,7 @@ function htmlEleccionPiezasLiquidar(v, piezasActivas) {
     <div class="liquidar-aviso-persona">
       <strong>${escapeHTML(v.usuarioNombre)} avisó que ya pagó el ${formatearFechaHora(v.fechaDeclaracionPago)}</strong>
       ${declaradas.length ? `
-        <span>Eligió pagar ${eligioTodo ? "todo su apartado" : `${declaradas.length} de ${piezasActivas.length} piezas`}:</span>
+        <span>Eligió pagar ${eligioTodo ? "todo su pedido" : `${declaradas.length} de ${piezasActivas.length} piezas`}:</span>
         <ul>${declaradas.map(p => `<li>${_textoPiezaLiquidar(p)} — $${p.saldo} MXN</li>`).join("")}</ul>
       ` : `<span>No indicó qué piezas.</span>`}
       ${Number(v.montoDeclaradoPago) > 0 ? `<span>Dice haber transferido: <strong>$${v.montoDeclaradoPago} MXN</strong></span>` : ""}
@@ -1196,7 +1196,7 @@ function htmlEleccionPiezasLiquidar(v, piezasActivas) {
     <div class="liquidar-opciones">
       <label class="liquidar-opcion">
         <input type="radio" name="alcanceLiquidar" value="todo" ${sugerida === "todo" ? "checked" : ""}>
-        <span><strong>Todo el apartado</strong><small>${piezasActivas.length} pieza${piezasActivas.length === 1 ? "" : "s"} · $${totalTodo} MXN</small></span>
+        <span><strong>Todo el pedido</strong><small>${piezasActivas.length} pieza${piezasActivas.length === 1 ? "" : "s"} · $${totalTodo} MXN</small></span>
       </label>
       <label class="liquidar-opcion${unaPieza ? " deshabilitada" : ""}">
         <input type="radio" name="alcanceLiquidar" value="algunas" ${sugerida === "algunas" ? "checked" : ""} ${unaPieza ? "disabled" : ""}>
@@ -1281,7 +1281,7 @@ function abrirContactoWhatsapp(v) {
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon">↗</div>
     <h3>Contactar por Whatsapp</h3>
-    <p class="modal-sub">El apartado de ${escapeHTML(v.usuarioNombre)} venció. Si no responde, usa "Desapartar" para cerrarlo y liberar las piezas.</p>
+    <p class="modal-sub">El pedido de ${escapeHTML(v.usuarioNombre)} venció. Si no responde, usa "Liberar pedido" para cerrarlo y liberar las piezas.</p>
     <div class="modal-context">
       <span>Emprendedora</span><strong>${escapeHTML(v.usuarioNombre)}</strong>
       <span>Teléfono</span><strong>${escapeHTML(v.telefono || "Sin teléfono")}</strong>
@@ -1401,7 +1401,7 @@ function actualizarResumen() {
 function actualizarContador(total) {
 
   const resultCount = document.getElementById("resultCount");
-  if (resultCount) resultCount.textContent = `${total} ventana${total === 1 ? "" : "s"} de apartado`;
+  if (resultCount) resultCount.textContent = `${total} ventana${total === 1 ? "" : "s"} de pedido`;
 
 }
 

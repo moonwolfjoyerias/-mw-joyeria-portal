@@ -130,7 +130,7 @@ function construirCatalogoActividadesStaffEjemplo() {
     ['Vitrina de exhibidores y refrigerador', [
       'Acomodo', 'Limpieza interna de vitrina',
       'Limpiar ventilador y parte superior del refrigerador',
-      'Revisar sección de apartados y retirar caducados',
+      'Revisar sección de pedidos y retirar caducados',
       'Revisión de charolas cafés', 'Limpieza debajo de las vitrinas (barrer)'
     ]],
     ['Exhibidores de Huggies y zona de collares', [

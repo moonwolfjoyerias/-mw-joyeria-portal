@@ -475,7 +475,7 @@ function controlCantidadCatalogo(p, disponibles) {
   const n = piezasPropiasDeProductoCatalogo(p.id).length;
   if (!n) {
     return disponibles.length
-      ? `<button class="btn btn-primary btn-apartar" data-apartar="${p.id}">Apartar</button>`
+      ? `<button class="btn btn-primary btn-apartar" data-apartar="${p.id}">Seleccionar</button>`
       : `<button class="btn btn-outline btn-apartar" disabled style="opacity:0.5;cursor:not-allowed;">No disponible</button>`;
   }
   const nombre = escapeAttribute(p.nombre);
@@ -484,7 +484,7 @@ function controlCantidadCatalogo(p, disponibles) {
     <div class="cp-cantidad" role="group" aria-label="Piezas de ${nombre} en tu apartado">
       <button type="button" data-cat-menos="${p.id}" aria-label="Quitar una pieza de tu apartado" title="Quitar una de tu apartado">−</button>
       <span class="cp-cantidad-num" title="${n} en tu apartado">${n}</span>
-      <button type="button" data-cat-mas="${p.id}" aria-label="Apartar otra pieza" ${hayMas ? '' : 'disabled'} title="${hayMas ? (disponibles.length > 1 ? 'Apartar otra (elige color/talla)' : 'Apartar otra') : 'Ya no hay más piezas disponibles'}">+</button>
+      <button type="button" data-cat-mas="${p.id}" aria-label="Seleccionar otra pieza" ${hayMas ? '' : 'disabled'} title="${hayMas ? (disponibles.length > 1 ? 'Seleccionar otra (elige color/talla)' : 'Seleccionar otra') : 'Ya no hay más piezas disponibles'}">+</button>
     </div>
     <small class="cp-cantidad-ayuda">${n === 1 ? 'Ya está en tu apartado' : `${n} en tu apartado`}</small>`;
 }
@@ -512,7 +512,7 @@ async function sumarPiezaCatalogo(productoId, boton) {
     const resultado = await agregarPiezaAVentana(ventana, datosPieza, null);
     if (!resultado.ok) { mostrarToast(resultado.error || 'Ya no hay más piezas de este modelo.'); return; }
     guardarVentanasApartado(obtenerVentanasApartado().map(v => v.id === ventana.id ? ventana : v));
-    notificarEquipoCatalogo(`${ventana.usuarioNombre || usuarioNombreActual} apartó otra pieza de "${producto.nombre}" (${datosPieza.variante}).`, ventana.usuarioNombre || usuarioNombreActual);
+    notificarEquipoCatalogo(`${ventana.usuarioNombre || usuarioNombreActual} pidió otra pieza de "${producto.nombre}" (${datosPieza.variante}).`, ventana.usuarioNombre || usuarioNombreActual);
     if (ventana.estado !== 'activa') notificarDisponibilidadCondicionadaADeposito(ventana);
     mostrarToast(ventana.estado === 'activa' ? 'Se apartó otra pieza' : 'Se apartó otra pieza. Sigue pendiente tu depósito.');
   } finally {
@@ -544,7 +544,7 @@ function quitarPiezaCatalogo(elegida) {
   ventana.cambioClienteSinRevisar = { texto: `Quitó "${real.producto}" (${real.variante}) · ${real.enBolsita ? 'estaba en bolsita' : 'no estaba en bolsita'}`, fecha: new Date().toISOString() };
   guardarVentanasApartado(ventanas);
   const textoBolsita = typeof textoBolsitaPiezasQuitadas === 'function' ? textoBolsitaPiezasQuitadas([real]) : '';
-  notificarEquipoCatalogo(`Se quitó "${real.producto}" (${real.variante}) del apartado de ${ventana.usuarioNombre}. ${textoBolsita}`.trim(), ventana.usuarioNombre);
+  notificarEquipoCatalogo(`Se quitó "${real.producto}" (${real.variante}) del pedido de ${ventana.usuarioNombre}. ${textoBolsita}`.trim(), ventana.usuarioNombre);
   aplicarFiltros();
   mostrarToast(`Se quitó 1 pieza (${real.variante}) de tu apartado. Se le avisó al equipo.`);
 }
@@ -632,7 +632,7 @@ function abrirModalDetalleProducto(productoId) {
               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>
               Compartir
             </button>` : ''}
-          ${disponibles.length ? `<button class="btn btn-primary" type="button" id="detalleApartarBtn" ${seleccionUnica ? '' : 'disabled'}>${seleccionUnica ? 'Apartar' : 'Elige color / talla'}</button>` : ''}
+          ${disponibles.length ? `<button class="btn btn-primary" type="button" id="detalleApartarBtn" ${seleccionUnica ? '' : 'disabled'}>${seleccionUnica ? 'Seleccionar' : 'Elige color / talla'}</button>` : ''}
         </div>
       </div>
     </div>
@@ -714,7 +714,7 @@ function abrirModalDetalleProducto(productoId) {
     if (!irAFotoDeVariante(variante) && img) img.src = variante ? fotoVarianteProducto(producto, variante) : normalizarImagenProducto(producto, true);
     if (apartarBtn) {
       apartarBtn.disabled = !select.value;
-      apartarBtn.textContent = select.value ? 'Apartar' : 'Elige color / talla';
+      apartarBtn.textContent = select.value ? 'Seleccionar' : 'Elige color / talla';
     }
   });
   // Los botones de color/talla solo mueven el <select> (que sigue
@@ -779,7 +779,7 @@ async function mostrarPasoConfirmarApartar(producto, variante) {
   aplicarFiltros(); // refresca el grid: la existencia de la variante ya bajó
 
   if (nuevaVentana.estado === 'activa') {
-    mostrarPasoExito('Ya tenías depósito guardado de una ventana anterior — esta pieza quedó apartada de una vez, sin volver a depositar.');
+    mostrarPasoExito('Ya tenías depósito guardado de una ventana anterior — esta pieza quedó seleccionada de una vez, sin volver a depositar.');
   } else {
     notificarDisponibilidadCondicionadaADeposito(nuevaVentana);
     mostrarPasoPedirDeposito(nuevaVentana);
@@ -810,7 +810,7 @@ function mostrarPasoExito(mensaje) {
       <div class="check-circle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
       </div>
-      <h3>¡Apartado!</h3>
+      <h3>¡Pieza seleccionada!</h3>
       <p class="modal-sub">${mensaje}</p>
       <button class="btn btn-primary" style="width:100%;" data-close>Cerrar</button>
     </div>
@@ -877,7 +877,7 @@ function mostrarPasoPedirDeposito(ventana) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
         </div>
         <h3>¡Listo!</h3>
-        <p class="modal-sub">Ya se notificó al equipo, en breve confirmarán tu depósito y se abrirá tu ventana para apartar.</p>
+        <p class="modal-sub">Ya se notificó al equipo, en breve confirmarán tu depósito y se abrirá tu ventana para seleccionar piezas.</p>
         <button class="btn btn-primary" style="width:100%;" data-close>Cerrar</button>
       </div>
     `;
