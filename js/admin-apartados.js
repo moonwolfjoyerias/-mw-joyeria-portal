@@ -15,7 +15,7 @@ let filtroEstado = "todos";
 let terminoBusqueda = "";
 const filasExpandidas = new Set();
 
-const MENSAJE_WHATSAPP_VENCIDO = "Tu apartado venció. Por favor contáctanos para revisar las opciones disponibles.";
+const MENSAJE_WHATSAPP_VENCIDO = "Tu pedido venció. Por favor contáctanos para revisar las opciones disponibles.";
 
 // "empleado" que esperan las funciones de apartados-modelo.js.
 const ADMIN_EMPLEADO = { nombre: ADMIN_IDENTIDAD.usuarioNombre };

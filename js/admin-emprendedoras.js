@@ -689,7 +689,7 @@ function guardarInformacionPersona(persona) {
           const etiqueta = (CATEGORIAS_PERSONA[cambios.categoria] || cambios.categoria);
           if (typeof agregarNotificacion === 'function') {
             agregarNotificacion({
-              texto: `Tu cuenta ahora es ${etiqueta}: ${cambiadas.length === 1 ? 'tu apartado se actualizó' : `tus ${cambiadas.length} apartados se actualizaron`} con las condiciones de ${etiqueta}.`,
+              texto: `Tu cuenta ahora es ${etiqueta}: ${cambiadas.length === 1 ? 'tu pedido se actualizó' : `tus ${cambiadas.length} pedidos se actualizaron`} con las condiciones de ${etiqueta}.`,
               link: 'apartados',
               paraId: actual.id,
               rolDestino: 'emprendedora_lider'

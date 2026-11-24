@@ -146,7 +146,7 @@ async function buscarMisTickets() {
     }
     const r = it.r;
     return `<li><div class="mis-ticket">
-      <span><strong>${_fechaMisTickets(it.fecha)} · Apartado liquidado</strong><small>${escapeHTML(r.producto || 'Pieza')}</small></span>
+      <span><strong>${_fechaMisTickets(it.fecha)} · Pedido liquidado</strong><small>${escapeHTML(r.producto || 'Pieza')}</small></span>
       <strong>${_dineroMisTickets(r.monto)}</strong></div></li>`;
   }).join('')}</ul>`;
 

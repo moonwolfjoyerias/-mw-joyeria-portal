@@ -40,7 +40,7 @@ function renderResumenApartados() {
     const proxima = activas.sort((a, b) => new Date(a.fechaVencimiento) - new Date(b.fechaVencimiento))[0] || null;
 
     if (!proxima) {
-      statVencimiento.textContent = 'No hay apartados';
+      statVencimiento.textContent = 'No hay pedidos';
     } else if (ventanaEstaVencida(proxima)) {
       statVencimiento.textContent = 'Vencido';
     } else {

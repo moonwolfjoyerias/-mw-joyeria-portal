@@ -47,8 +47,8 @@ function initMiCarritoForanea() {
 
 function aplicarNombreMiCarrito(foranea) {
   const cambiar = (texto) => foranea
-    ? texto.replace(/Mis apartados/g, 'Mi carrito').replace(/mis apartados/g, 'mi carrito')
-    : texto.replace(/Mi carrito/g, 'Mis apartados').replace(/mi carrito/g, 'mis apartados');
+    ? texto.replace(/Mi pedido/g, 'Mi carrito').replace(/mi pedido/g, 'mi carrito')
+    : texto.replace(/Mi carrito/g, 'Mi pedido').replace(/mi carrito/g, 'mi pedido');
   const enNodosDeTexto = (el) => {
     const recorrido = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     let nodo;

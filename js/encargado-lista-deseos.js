@@ -337,7 +337,7 @@ function abrirDetalleSolicitudDeseos(id) {
         <input id="ldProductoInput" type="text" autocomplete="off" placeholder="Empieza a escribir el nombre del producto">
         <div class="persona-autocomplete-list" id="ldProductoList" hidden></div>
       </div>
-      <small class="field-help">Así la notificación la lleva directo a apartarlo.</small>
+      <small class="field-help">Así la notificación la lleva directo a seleccionarlo.</small>
     </div>
 
     <input type="text" id="ldComentarioEstado" placeholder="Comentario (opcional)" style="margin-top:8px;">

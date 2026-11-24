@@ -116,8 +116,8 @@ function actualizarReloj() {
       const nota = box.querySelector('.countdown-note');
       if (label) label.textContent = 'Confirmando tu depósito';
       if (nota) nota.textContent = pendiente.estado === 'pendiente_deposito'
-        ? `Tu apartado ya se registró. Tu depósito mínimo es de $${depositoFaltanteVentana(pendiente)}; en cuanto lo confirmemos tus piezas quedarán aseguradas y empezará a correr el tiempo.`
-        : 'Tu apartado ya se registró. En cuanto confirmemos tu depósito tus piezas quedarán aseguradas y empezará a correr el tiempo.';
+        ? `Tu pedido ya se registró. Tu depósito mínimo es de $${depositoFaltanteVentana(pendiente)}; en cuanto lo confirmemos tus piezas quedarán aseguradas y empezará a correr el tiempo.`
+        : 'Tu pedido ya se registró. En cuanto confirmemos tu depósito tus piezas quedarán aseguradas y empezará a correr el tiempo.';
     } else {
       box.style.display = 'none';
     }
@@ -224,14 +224,14 @@ function piezasCanceladasRecientes() {
 }
 
 function textoDepositoCancelado(ventana) {
-  if (ventana.estado === 'activa' || ventana.estado === 'pendiente_deposito') return 'Tu apartado sigue abierto con tus otras piezas.';
+  if (ventana.estado === 'activa' || ventana.estado === 'pendiente_deposito') return 'Tu pedido sigue abierto con tus otras piezas.';
   if (ventana.resolucionDeposito === 'credito') {
     const monto = Number(ventana.creditoAlQuitarPieza ?? (typeof creditoDeCierreEnAuditoria === 'function' ? creditoDeCierreEnAuditoria(ventana) : 0)) || 0;
     return monto > 0
-      ? `Tu depósito de ${formatearPesos(monto)} quedó como crédito para tu próximo apartado.`
-      : 'Tu depósito quedó como crédito para tu próximo apartado.';
+      ? `Tu depósito de ${formatearPesos(monto)} quedó como crédito para tu próximo pedido.`
+      : 'Tu depósito quedó como crédito para tu próximo pedido.';
   }
-  if (ventana.resolucionDeposito === 'perdido') return 'El depósito no se pudo conservar porque el apartado venció.';
+  if (ventana.resolucionDeposito === 'perdido') return 'El depósito no se pudo conservar porque el pedido venció.';
   return '';
 }
 
@@ -243,7 +243,7 @@ function renderCanceladasRecientes() {
   if (!lista.length) { cont.innerHTML = ''; return; }
   cont.innerHTML = `
     <h3>Canceladas recientemente</h3>
-    <p class="apartados-canceladas-ayuda">Piezas que se cancelaron de tus apartados en los últimos ${DIAS_CANCELADAS_RECIENTES} días y por qué.</p>
+    <p class="apartados-canceladas-ayuda">Piezas que se cancelaron de tus pedidos en los últimos ${DIAS_CANCELADAS_RECIENTES} días y por qué.</p>
     ${lista.map(({ pieza, ventana, causa }) => {
       const foto = fotoPiezaApartado(pieza);
       const fecha = new Date(causa.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
@@ -328,7 +328,7 @@ function renderApartados() {
       <div class="apartado-cantidad" role="group" aria-label="Cantidad de ${escapeAttribute(pieza.producto)}">
         <button type="button" data-menos="${i}" aria-label="Quitar una pieza">−</button>
         <span class="apartado-cantidad-num">${n}</span>
-        <button type="button" data-mas="${i}" aria-label="Apartar otra pieza" ${pieza.productoId && hayMas ? '' : 'disabled'} title="${pieza.productoId && hayMas ? 'Apartar otra pieza igual' : 'Ya no hay más piezas de esta variante'}">+</button>
+        <button type="button" data-mas="${i}" aria-label="Seleccionar otra pieza" ${pieza.productoId && hayMas ? '' : 'disabled'} title="${pieza.productoId && hayMas ? 'Seleccionar otra pieza igual' : 'Ya no hay más piezas de esta variante'}">+</button>
       </div>
       <div class="apartado-prices">
         ${etiqueta > unitario ? `<span class="price-public">$${etiqueta.toLocaleString('es-MX')} MXN</span>` : ''}
@@ -423,7 +423,7 @@ async function apartarOtraPieza(grupo, boton) {
   const variante = producto ? producto.variantes.find(v => v.id === pieza.varianteId) : null;
   if (!producto || !variante) { mostrarToast('Esa pieza ya no está en el catálogo.'); return; }
   const ventana = obtenerVentanasApartado().find(v => v.id === grupo.ventana.id);
-  if (!ventana || ventana.estado === 'cerrada' || ventana.estado === 'vencida') { mostrarToast('Este apartado ya no admite piezas nuevas.'); return; }
+  if (!ventana || ventana.estado === 'cerrada' || ventana.estado === 'vencida') { mostrarToast('Este pedido ya no admite piezas nuevas.'); return; }
 
   agregandoPieza = true;
   if (boton) boton.disabled = true;
@@ -436,7 +436,7 @@ async function apartarOtraPieza(grupo, boton) {
     if (!resultado.ok) { mostrarToast(resultado.error || 'Ya no hay más piezas de esta variante.'); return; }
     guardarVentanasApartado(obtenerVentanasApartado().map(v => v.id === ventana.id ? ventana : v));
     notificarEquipoOperativo(`${ventana.usuarioNombre} pidió otra pieza de "${producto.nombre}" (${datosPieza.variante}).`, ventana.usuarioNombre);
-    mostrarToast('Se apartó otra pieza');
+    mostrarToast('Se agregó otra pieza a tu pedido');
   } finally {
     agregandoPieza = false;
     renderApartados();
@@ -631,10 +631,10 @@ function mostrarModalPagoConMonto(ventana, piezas, totalFinal, notaExtra, decisi
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
     <h3>${pagaTodo
-      ? `Pagar tu apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'})`
-      : `Pagar ${piezas.length} de ${totalActivas} piezas de tu apartado`}</h3>
+      ? `Pagar tu pedido completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'})`
+      : `Pagar ${piezas.length} de ${totalActivas} piezas de tu pedido`}</h3>
     <p class="modal-sub">Total a pagar: <strong style="color:var(--mw-accent-text)">$${totalFinal} MXN</strong></p>
-    ${!pagaTodo ? `<p class="modal-sub" style="margin-top:-.35rem;">Las piezas que no elegiste se quedan apartadas con normalidad, con el mismo plazo de siempre.</p>` : ''}
+    ${!pagaTodo ? `<p class="modal-sub" style="margin-top:-.35rem;">Las piezas que no elegiste se quedan en tu pedido con normalidad, con el mismo plazo de siempre.</p>` : ''}
     ${notaExtra ? `<p class="modal-sub" style="margin-top:-.35rem; color:var(--mw-accent-text); font-weight:600;">${notaExtra}</p>` : ''}
 
     <div class="bank-details-box">
@@ -690,8 +690,8 @@ function mostrarModalPagoConMonto(ventana, piezas, totalFinal, notaExtra, decisi
       v.piezasDeclaradasPago = piezas.map(p => p.id);
     });
     const descripcionPiezas = pagaTodo
-      ? `su apartado completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'})`
-      : `${piezas.length} de ${totalActivas} piezas de su apartado`;
+      ? `su pedido completo (${piezas.length} pieza${piezas.length === 1 ? '' : 's'})`
+      : `${piezas.length} de ${totalActivas} piezas de su pedido`;
     notificarEquipoOperativo(`${nombrePersona} avisó que ya transfirió el pago de ${descripcionPiezas} ($${totalFinal} MXN)${notaDeposito} — confirma el depósito y liquida en el sistema.`, nombrePersona);
     box.innerHTML = `
       <button class="modal-close" data-close>&times;</button>
@@ -731,7 +731,7 @@ function abrirModalPago() {
   const pagaTodo = piezas.length === piezasActivas.length;
 
   if (esVip || !ventana.depositoApartadoDisponible || !pagaTodo) {
-    mostrarModalPagoConMonto(ventana, piezas, total, esVip ? 'Este apartado es VIP, así que no aplica depósito.' : null, null, pagaTodo);
+    mostrarModalPagoConMonto(ventana, piezas, total, esVip ? 'Este pedido es VIP, así que no aplica depósito.' : null, null, pagaTodo);
     return;
   }
 
@@ -747,7 +747,7 @@ function abrirModalPago() {
     <div style="display:grid;gap:12px;">
       <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #ddd5e3;border-radius:10px;cursor:pointer;">
         <input type="radio" name="decisionDeposito" value="guardar" checked>
-        <span><strong>Guardar mi depósito</strong><br><small>Se mantiene como crédito para tu próximo apartado y pago el total completo.</small></span>
+        <span><strong>Guardar mi depósito</strong><br><small>Se mantiene como crédito para tu próximo pedido y pago el total completo.</small></span>
       </label>
       <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #ddd5e3;border-radius:10px;cursor:pointer;">
         <input type="radio" name="decisionDeposito" value="usar">
