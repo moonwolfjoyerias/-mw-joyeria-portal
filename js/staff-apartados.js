@@ -15,7 +15,7 @@ const filasExpandidas = new Set();
 
 let accionPendiente = null; // { tipo, ventanaId, datos, decisionDeposito }
 
-const MENSAJE_WHATSAPP_VENCIDO = "Tu apartado venció. Por favor contáctanos para revisar las opciones disponibles.";
+const MENSAJE_WHATSAPP_VENCIDO = "Tu pedido venció. Por favor contáctanos para revisar las opciones disponibles.";
 
 
 // ============================================================
@@ -740,7 +740,7 @@ async function ejecutarAccion(personal) {
     // quedaron apartadas.
     if (typeof agregarNotificacion === 'function') {
       agregarNotificacion({
-        texto: `¡Tus piezas ya quedaron apartadas! Confirmamos tu apartado VIP.`,
+        texto: `¡Tus piezas ya quedaron aseguradas! Confirmamos tu pedido VIP.`,
         link: 'apartados',
         paraId: v.usuarioId,
         rolDestino: 'emprendedora_lider'

@@ -179,7 +179,7 @@ function actualizarEstadoListaDeseos(id, nuevoEstado, { usuarioId, usuarioNombre
       ? (piezas.length === 1 ? piezas[0].producto : `${piezas[0].producto} (+${piezas.length - 1} más)`)
       : 'tu pieza';
     agregarNotificacion({
-      texto: `¡Buena noticia! Ya está disponible lo que pediste en tu lista de deseos: ${resumen}. Toca aquí para apartarlo.`,
+      texto: `¡Buena noticia! Ya está disponible lo que pediste en tu lista de deseos: ${resumen}. Toca aquí para seleccionarlo.`,
       link: 'catalogo',
       productoId,
       paraId: solicitud.personaId,

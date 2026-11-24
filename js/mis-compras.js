@@ -32,13 +32,13 @@ function htmlComprasBrilloMisCompras() {
       return `<div class="compra-quincena-desglose"><span>${fechaTexto} · Compra en tienda (ticket ${escapeHTML(String(r.folio || ''))})</span><strong>${fmtMoneyMisCompras(monto)}</strong></div>`;
     }
     const estado = r.estado === 'confirmada' ? '' : ' <span class="no-cuenta">(no se confirmó, no cuenta)</span>';
-    return `<div class="compra-quincena-desglose"><span>${fechaTexto} · Apartado: ${escapeHTML(String(r.producto || 'Pieza'))}${estado}</span><strong>${fmtMoneyMisCompras(r.monto)}</strong></div>`;
+    return `<div class="compra-quincena-desglose"><span>${fechaTexto} · Pedido: ${escapeHTML(String(r.producto || 'Pieza'))}${estado}</span><strong>${fmtMoneyMisCompras(r.monto)}</strong></div>`;
   });
   return `
     <div class="compra-quincena" style="margin-top:14px;">
       <div class="compra-quincena-cabeza"><h3>Confirmadas en la tienda</h3></div>
       ${filas.join('') || '<div class="compra-quincena-desglose"><span>Todavía no hay compras confirmadas en la tienda.</span></div>'}
-      <div class="compra-quincena-desglose"><span>Tus apartados liquidados aparecen aquí cuando la tienda los confirma; desde ese momento cuentan para tu rango, comisiones, rifa y constancia.</span></div>
+      <div class="compra-quincena-desglose"><span>Tus pedidos liquidados aparecen aquí cuando la tienda los confirma; desde ese momento cuentan para tu rango, comisiones, rifa y constancia.</span></div>
     </div>`;
 }
 

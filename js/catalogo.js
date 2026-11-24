@@ -481,12 +481,12 @@ function controlCantidadCatalogo(p, disponibles) {
   const nombre = escapeAttribute(p.nombre);
   const hayMas = disponibles.length > 0;
   return `
-    <div class="cp-cantidad" role="group" aria-label="Piezas de ${nombre} en tu apartado">
-      <button type="button" data-cat-menos="${p.id}" aria-label="Quitar una pieza de tu apartado" title="Quitar una de tu apartado">−</button>
-      <span class="cp-cantidad-num" title="${n} en tu apartado">${n}</span>
+    <div class="cp-cantidad" role="group" aria-label="Piezas de ${nombre} en tu pedido">
+      <button type="button" data-cat-menos="${p.id}" aria-label="Quitar una pieza de tu pedido" title="Quitar una de tu pedido">−</button>
+      <span class="cp-cantidad-num" title="${n} en tu pedido">${n}</span>
       <button type="button" data-cat-mas="${p.id}" aria-label="Seleccionar otra pieza" ${hayMas ? '' : 'disabled'} title="${hayMas ? (disponibles.length > 1 ? 'Seleccionar otra (elige color/talla)' : 'Seleccionar otra') : 'Ya no hay más piezas disponibles'}">+</button>
     </div>
-    <small class="cp-cantidad-ayuda">${n === 1 ? 'Ya está en tu apartado' : `${n} en tu apartado`}</small>`;
+    <small class="cp-cantidad-ayuda">${n === 1 ? 'Ya está en tu pedido' : `${n} en tu pedido`}</small>`;
 }
 
 let sumandoPiezaCatalogo = false;
@@ -514,7 +514,7 @@ async function sumarPiezaCatalogo(productoId, boton) {
     guardarVentanasApartado(obtenerVentanasApartado().map(v => v.id === ventana.id ? ventana : v));
     notificarEquipoCatalogo(`${ventana.usuarioNombre || usuarioNombreActual} pidió otra pieza de "${producto.nombre}" (${datosPieza.variante}).`, ventana.usuarioNombre || usuarioNombreActual);
     if (ventana.estado !== 'activa') notificarDisponibilidadCondicionadaADeposito(ventana);
-    mostrarToast(ventana.estado === 'activa' ? 'Se apartó otra pieza' : 'Se apartó otra pieza. Sigue pendiente tu depósito.');
+    mostrarToast(ventana.estado === 'activa' ? 'Se agregó otra pieza a tu pedido' : 'Se agregó otra pieza a tu pedido. Sigue pendiente tu depósito.');
   } finally {
     sumandoPiezaCatalogo = false;
     aplicarFiltros();
@@ -546,7 +546,7 @@ function quitarPiezaCatalogo(elegida) {
   const textoBolsita = typeof textoBolsitaPiezasQuitadas === 'function' ? textoBolsitaPiezasQuitadas([real]) : '';
   notificarEquipoCatalogo(`Se quitó "${real.producto}" (${real.variante}) del pedido de ${ventana.usuarioNombre}. ${textoBolsita}`.trim(), ventana.usuarioNombre);
   aplicarFiltros();
-  mostrarToast(`Se quitó 1 pieza (${real.variante}) de tu apartado. Se le avisó al equipo.`);
+  mostrarToast(`Se quitó 1 pieza (${real.variante}) de tu pedido. Se le avisó al equipo.`);
 }
 
 // Mismo aviso que manda Mis apartados (js/apartados.js
@@ -758,7 +758,7 @@ async function mostrarPasoConfirmarApartar(producto, variante) {
       mostrarPasoExito('Esta pieza se agregó a tu ventana activa — no necesitas volver a depositar.');
     } else {
       notificarDisponibilidadCondicionadaADeposito(ventanaExistente);
-      mostrarPasoExito('Esta pieza se agregó a tu apartado. Sigue pendiente tu depósito — deposita pronto: mientras no se confirme, tu pieza no está garantizada.');
+      mostrarPasoExito('Esta pieza se agregó a tu pedido. Sigue pendiente tu depósito — deposita pronto: mientras no se confirme, tu pieza no está garantizada.');
     }
     return;
   }

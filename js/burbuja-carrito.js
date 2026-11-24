@@ -44,7 +44,7 @@
       colocar();
     }
     const n = contar();
-    const nombre = document.body.dataset.miCarrito === '1' || /Mi carrito/.test(document.querySelector('.sidebar-nav, nav')?.textContent || '') ? 'Mi carrito' : 'Mis apartados';
+    const nombre = document.body.dataset.miCarrito === '1' || /Mi carrito/.test(document.querySelector('.sidebar-nav, nav')?.textContent || '') ? 'Mi carrito' : 'Mi pedido';
     boton.querySelector('.burbuja-carrito-num').textContent = n > 99 ? '99+' : String(n);
     boton.classList.toggle('vacia', n === 0);
     boton.setAttribute('aria-label', `${nombre}: ${n} pieza${n === 1 ? '' : 's'} lista${n === 1 ? '' : 's'} para pagar`);

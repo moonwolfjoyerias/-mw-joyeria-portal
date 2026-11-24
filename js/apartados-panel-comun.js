@@ -266,7 +266,7 @@ function numeroWhatsapp(telefono) {
 
 function mensajeComprobanteDeposito(v) {
   const nombre = String(v.usuarioNombre || "").trim().split(/\s+/)[0];
-  return `¡Hola${nombre ? `, ${nombre}` : ""}! Vimos que apartaste piezas en la página, pero todavía no recibimos tu comprobante de depósito. Te recordamos que, para asegurar tus piezas, es necesario un depósito mínimo de $${depositoFaltanteVentana(v)}. Cuando lo tengas, envíanos tu comprobante por aquí. ¡Quedamos al pendiente!`;
+  return `¡Hola${nombre ? `, ${nombre}` : ""}! Vimos que seleccionaste piezas en la página, pero todavía no recibimos tu comprobante de depósito. Te recordamos que, para asegurar tus piezas, es necesario un depósito mínimo de $${depositoFaltanteVentana(v)}. Cuando lo tengas, envíanos tu comprobante por aquí. ¡Quedamos al pendiente!`;
 }
 
 // Staff se identifica primero (cuenta compartida); Encargado/Admin pasan
@@ -354,7 +354,7 @@ function ejecutarNoDeposito(ventanaId, empleado) {
 
   if (typeof agregarNotificacion === "function") {
     agregarNotificacion({
-      texto: `Cancelamos tu apartado porque no recibimos tu depósito mínimo de $${depositoMinimoVentana(v)}. Tus piezas quedaron liberadas; si todavía las quieres, puedes volver a apartarlas desde el catálogo.`,
+      texto: `Cancelamos tu pedido porque no recibimos tu depósito mínimo de $${depositoMinimoVentana(v)}. Tus piezas quedaron liberadas; si todavía las quieres, puedes volver a seleccionarlas desde el catálogo.`,
       link: "apartados",
       paraId: v.usuarioId,
       rolDestino: "emprendedora_lider"
@@ -543,7 +543,7 @@ function ejecutarAgregarExcedente(ventanaId, datos, empleado) {
 
   if (typeof agregarNotificacion === "function") {
     agregarNotificacion({
-      texto: `Recibimos $${r.monto} más para tu apartado: ya quedaron en tu depósito.`,
+      texto: `Recibimos $${r.monto} más para tu pedido: ya quedaron en tu depósito.`,
       link: "apartados",
       paraId: v.usuarioId,
       rolDestino: "emprendedora_lider"
@@ -649,7 +649,7 @@ function ejecutarCambioVencimiento(ventanaId, datos, empleado) {
   const fechaTexto = new Date(resultado.nueva).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
   if (typeof agregarNotificacion === "function") {
     agregarNotificacion({
-      texto: `La fecha de vencimiento de tu apartado cambió: ahora vence el ${fechaTexto}.`,
+      texto: `La fecha de vencimiento de tu pedido cambió: ahora vence el ${fechaTexto}.`,
       link: "apartados",
       paraId: v.usuarioId,
       rolDestino: "emprendedora_lider"
@@ -703,7 +703,7 @@ async function ejecutarDescancelarPieza(ventanaId, piezaId, empleado) {
 
   if (typeof agregarNotificacion === "function") {
     agregarNotificacion({
-      texto: `¡Buenas noticias! "${r.pieza.producto}" volvió a tu apartado.`,
+      texto: `¡Buenas noticias! "${r.pieza.producto}" volvió a tu pedido.`,
       link: "apartados",
       paraId: v.usuarioId,
       rolDestino: "emprendedora_lider"
@@ -871,7 +871,7 @@ function abrirModalQuitarPieza(ventanaId, piezaId) {
 function notificarPiezaQuitada(v, pieza, motivo) {
   if (typeof agregarNotificacion !== "function") return;
   agregarNotificacion({
-    texto: `Quitamos "${pieza.producto}" de tu apartado. Motivo: ${motivo.replace(/[.\s]+$/, "")}.`,
+    texto: `Quitamos "${pieza.producto}" de tu pedido. Motivo: ${motivo.replace(/[.\s]+$/, "")}.`,
     link: "apartados",
     paraId: v.usuarioId,
     rolDestino: "emprendedora_lider"

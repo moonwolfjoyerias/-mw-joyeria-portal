@@ -609,7 +609,7 @@ function confirmarDepositoVentana(ventana, { monto, metodo, referencia }, emplea
   // cuándo quedaban apartadas sus piezas hasta volver a entrar.
   if (typeof agregarNotificacion === 'function') {
     agregarNotificacion({
-      texto: `Confirmamos tu depósito de $${montoFinal}: tus piezas ya quedaron apartadas.`,
+      texto: `Confirmamos tu depósito de $${montoFinal}: tus piezas ya quedaron aseguradas en tu pedido.`,
       link: 'apartados',
       paraId: ventana.usuarioId,
       rolDestino: 'emprendedora_lider'
@@ -1047,9 +1047,9 @@ function motivoCancelacionPieza(pieza, ventana) {
   if (pieza.retiro) return { motivo: pieza.retiro.motivo, fecha: pieza.retiro.fecha };
   if (pieza.cancelacion) return pieza.cancelacion;
   const fecha = ((ventana.auditoria || []).slice(-1)[0] || {}).fecha || null;
-  if (ventana.estado === 'vencida') return { motivo: 'El apartado venció sin liquidarse', fecha };
-  if (ventana.resolucionDeposito === 'sin_deposito') return { motivo: 'No se recibió el depósito del apartado', fecha };
-  if (ventana.estado === 'cerrada') return { motivo: 'La tienda canceló el apartado', fecha };
+  if (ventana.estado === 'vencida') return { motivo: 'El pedido venció sin liquidarse', fecha };
+  if (ventana.resolucionDeposito === 'sin_deposito') return { motivo: 'No se recibió el depósito del pedido', fecha };
+  if (ventana.estado === 'cerrada') return { motivo: 'La tienda canceló el pedido', fecha };
   return null;
 }
 
@@ -1216,7 +1216,7 @@ function verificarApartadosPorVencerPendientes() {
       huboCambios = true;
       if (typeof agregarNotificacion === 'function') {
         agregarNotificacion({
-          texto: `Tu apartado de ${piezas} pieza${piezas === 1 ? '' : 's'} vence en menos de 1 día — si no se liquida o renueva, se pierde.`,
+          texto: `Tu pedido de ${piezas} pieza${piezas === 1 ? '' : 's'} vence en menos de 1 día — si no se liquida o renueva, se pierde.`,
           link: 'apartados',
           paraId: ventana.usuarioId,
           rolDestino: 'emprendedora_lider',
@@ -1230,7 +1230,7 @@ function verificarApartadosPorVencerPendientes() {
       huboCambios = true;
       if (typeof agregarNotificacion === 'function') {
         agregarNotificacion({
-          texto: `Tu apartado de ${piezas} pieza${piezas === 1 ? '' : 's'} vence en menos de 2 horas.`,
+          texto: `Tu pedido de ${piezas} pieza${piezas === 1 ? '' : 's'} vence en menos de 2 horas.`,
           link: 'apartados',
           paraId: ventana.usuarioId,
           rolDestino: 'emprendedora_lider',
@@ -1287,7 +1287,7 @@ function confirmarQuitarPiezasEL(piezas, onConfirmar) {
   const box = document.getElementById('modalBox');
   const lista = (piezas || []).filter(Boolean);
   if (!lista.length) return;
-  if (!overlay || !box) { if (window.confirm('¿Quitar de tu apartado?')) onConfirmar(); return; }
+  if (!overlay || !box) { if (window.confirm('¿Quitar de tu pedido?')) onConfirmar(); return; }
   const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const enBolsita = lista.filter(p => p.enBolsita).length;
   const n = lista.length;
@@ -1300,8 +1300,8 @@ function confirmarQuitarPiezasEL(piezas, onConfirmar) {
   box.classList.remove('modal-box-xwide');
   box.innerHTML = `
     <button class="modal-close" data-close>&times;</button>
-    <h3>¿Quitar de tu apartado?</h3>
-    <p class="modal-sub">Vas a quitar ${nombre}. Ya no quedará apartada para ti.</p>
+    <h3>¿Quitar de tu pedido?</h3>
+    <p class="modal-sub">Vas a quitar ${nombre}. Ya no quedará en tu pedido.</p>
     ${aviso}
     <div class="modal-actions">
       <button type="button" class="btn btn-outline" data-close>No, dejarla</button>
