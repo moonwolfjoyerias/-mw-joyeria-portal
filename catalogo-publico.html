@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Catálogo — MW Joyería</title>
   <meta name="description" content="Catálogo público de joyería MW con piezas en oro laminado y acero inoxidable.">
-  <link rel="stylesheet" href="css/styles.css?v=83">
+  <link rel="stylesheet" href="css/styles.css?v=84">
   <link rel="icon" type="image/png" href="assets/images/favicon.png">
 </head>
 <body>
@@ -130,7 +130,8 @@
   <script src="js/staff-catalogo-ejemplo.js?v=6"></script>
   <script src="js/catalogo-firestore-sync.js?v=7"></script>
   <script src="js/dom-utils.js?v=7"></script>
-  <script src="js/catalogo-variantes-modelo.js?v=12"></script>
+  <script src="js/catalogo-variantes-modelo.js?v=13"></script>
+  <script src="js/paginas-catalogo.js?v=1"></script>
   <script>
     // Antes este bloque traía un arreglo fijo CATALOGO_PUBLICO con 8
     // piezas inventadas (sin conexión al catálogo real) — ver misma
@@ -279,14 +280,19 @@
 
     function aplicarFiltros() {
       const resultado = CATALOGO_PUBLICO.filter(productoCoincideFiltro);
-      renderProductos(ordenarProductosMasRecientes(resultado));
+      const firma = JSON.stringify([[...filtro.materiales], [...filtro.categorias], [...filtro.coloresOro], filtro.talla || '']);
+      renderProductos(ordenarProductosMasRecientes(resultado), firma);
     }
 
-    function renderProductos(productos) {
+    let paginasPublico = null;
+    function renderProductos(todos, firma) {
       const grid = document.getElementById('catalogGrid');
       const count = document.getElementById('resultCount');
       if (!grid) return;
-      if (count) count.textContent = `${productos.length} pieza${productos.length === 1 ? '' : 's'}`;
+      if (count) count.textContent = `${todos.length} pieza${todos.length === 1 ? '' : 's'}`;
+      if (!paginasPublico) paginasPublico = crearPaginasCatalogo({ grid, alCambiar: aplicarFiltros });
+      const productos = paginasPublico.cortar(todos, firma);
+      paginasPublico.pintar(todos.length);
 
       if (productos.length === 0) {
         grid.innerHTML = '<div class="catalog-empty">No hay piezas que coincidan con estos filtros.</div>';

@@ -214,12 +214,17 @@ function productoCoincideVivo(p) {
 }
 
 function aplicarFiltrosVivo() {
-  renderProductosVivo(ordenarProductosMasRecientes(CATALOGO_VIVO.filter(productoCoincideVivo)));
+  const firma = JSON.stringify([filtroVivo.texto || '', [...filtroVivo.materiales], [...filtroVivo.categorias], [...filtroVivo.coloresOro], filtroVivo.talla || '']);
+  renderProductosVivo(ordenarProductosMasRecientes(CATALOGO_VIVO.filter(productoCoincideVivo)), firma);
 }
 
-function renderProductosVivo(productos) {
+let paginasVivo = null;
+function renderProductosVivo(todos, firma) {
   const grid = document.getElementById('catalogGrid');
-  document.getElementById('resultCount').textContent = `${productos.length} pieza${productos.length === 1 ? '' : 's'}`;
+  document.getElementById('resultCount').textContent = `${todos.length} pieza${todos.length === 1 ? '' : 's'}`;
+  if (!paginasVivo && typeof crearPaginasCatalogo === 'function') paginasVivo = crearPaginasCatalogo({ grid, alCambiar: aplicarFiltrosVivo });
+  const productos = paginasVivo ? paginasVivo.cortar(todos, firma) : todos;
+  if (paginasVivo) paginasVivo.pintar(todos.length);
 
   if (!productos.length) {
     grid.innerHTML = '<div class="catalog-empty">No hay piezas que coincidan con tu búsqueda.</div>';
