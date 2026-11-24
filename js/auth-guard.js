@@ -51,7 +51,7 @@ function obtenerSesionActiva() {
 
 function cerrarSesion() {
   if (typeof authFirebase !== 'undefined' && authFirebase) {
-    cerrarSesionFirebase(); // async, no se espera — la navegación a login.html ya está en curso
+    cerrarSesionFirebase(); // async, no se espera — la navegación a login ya está en curso
   }
   try {
     sessionStorage.removeItem(SESION_ACTIVA_STORAGE_KEY);
@@ -86,11 +86,11 @@ function obtenerCarpetaPortalActual() {
 // mientras la guardia todavía no decide.
 function exigirSesionPortal() {
   const carpeta = obtenerCarpetaPortalActual();
-  if (!carpeta) { mostrarDocumento(); return; } // No es una página de portal (ej. login.html).
+  if (!carpeta) { mostrarDocumento(); return; } // No es una página de portal (ej. login).
 
   const sesion = obtenerSesionActiva();
   if (!sesion || sesion.rol !== carpeta) {
-    window.location.replace('../../login.html');
+    window.location.replace('../../login');
     return; // La página está navegando fuera — no hace falta mostrarla.
   }
   mostrarDocumento();
@@ -143,7 +143,7 @@ function aplicarIdentidadSesionEnHeader() {
 // navegar, sin tener que tocar ese link en cada archivo.
 function wireCerrarSesionLinks() {
   document.querySelectorAll('a.danger').forEach(enlace => {
-    if ((enlace.getAttribute('href') || '').includes('login.html')) {
+    if ((enlace.getAttribute('href') || '').includes('login')) {
       enlace.addEventListener('click', () => cerrarSesion());
     }
   });

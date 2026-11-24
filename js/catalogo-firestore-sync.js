@@ -127,7 +127,7 @@ function catalogoDesdeLocalStorage() {
 // visita). Ahí se leen solo esos productos, uno por uno. En cualquier
 // otra página regresa null y se carga el catálogo completo como siempre.
 async function _productosDeMisApartados() {
-  if (!/\/portal\/(emprendedora|lider)\/(emprendedora|lider)-apartados\.html$/.test(window.location.pathname)) return null;
+  if (!/\/portal\/(emprendedora|lider)\/(emprendedora|lider)-apartados(\.html)?$/.test(window.location.pathname)) return null;
   if (typeof apartadosRepoListo === 'undefined' || typeof obtenerVentanasApartado !== 'function') return null;
   await apartadosRepoListo;
   // En una pestaña nueva la sesión llega un momento después de cargar.
@@ -147,7 +147,7 @@ async function _productosDeMisApartados() {
 // Catálogo de Staff/Encargado/Admin: ahí sí se lee la colección completa
 // (para editarla) y, de paso, se mantiene al día el resumen.
 function _esPaginaGestionCatalogo() {
-  return /\/portal\/(admin|encargado|staff)\/(admin|encargado|staff)-catalogo\.html$/.test(window.location.pathname);
+  return /\/portal\/(admin|encargado|staff)\/(admin|encargado|staff)-catalogo(\.html)?$/.test(window.location.pathname);
 }
 
 async function _leerCatalogoCompleto() {

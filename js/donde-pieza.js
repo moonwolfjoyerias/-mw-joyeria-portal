@@ -69,7 +69,7 @@
   }
 
   function ligaApartados(ventanaId) {
-    const ruta = window.location.pathname.replace(/-catalogo\.html$/, '-apartados.html');
+    const ruta = window.location.pathname.replace(/-catalogo(\.html)?$/, '-apartados');
     return `${ruta}?ventana=${encodeURIComponent(ventanaId)}`;
   }
 

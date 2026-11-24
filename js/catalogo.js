@@ -95,7 +95,7 @@ let tituloCatalogoActual = '';
 const TITULO_CATALOGO_MAX = 60;
 
 function urlCatalogoClientas() {
-  return new URL(`../../catalogo-vivo.html?e=${encodeURIComponent(usuarioIdActual)}`, window.location.href).href;
+  return new URL(`../../catalogo-vivo?e=${encodeURIComponent(usuarioIdActual)}`, window.location.href).href;
 }
 
 function datosTarjetaCatalogo() {

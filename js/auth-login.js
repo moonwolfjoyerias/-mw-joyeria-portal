@@ -16,11 +16,11 @@
 // MODO_DEMO es false — Firebase Auth nunca expone contraseñas.
 
 const RUTA_PORTAL_POR_ROL = {
-  admin: 'portal/admin/admin-portal.html',
-  encargado: 'portal/encargado/encargado-portal.html',
-  staff: 'portal/staff/staff-portal.html',
-  emprendedora: 'portal/emprendedora/emprendedora-portal.html',
-  lider: 'portal/lider/lider-portal.html',
+  admin: 'portal/admin/admin-portal',
+  encargado: 'portal/encargado/encargado-portal',
+  staff: 'portal/staff/staff-portal',
+  emprendedora: 'portal/emprendedora/emprendedora-portal',
+  lider: 'portal/lider/lider-portal',
 };
 
 async function iniciarSesion(usuario, password) {
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     errorBox.style.display = 'none';
-    window.location.href = RUTA_PORTAL_POR_ROL[resultado.sesion.rol] || 'index.html';
+    window.location.href = RUTA_PORTAL_POR_ROL[resultado.sesion.rol] || './';
   });
 
 });

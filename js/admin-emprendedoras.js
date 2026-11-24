@@ -1322,7 +1322,7 @@ function renderSeccionEquipoPersona(persona) {
       </div>
     ` : ''}
 
-    <a class="btn btn-outline" style="display:inline-block;margin-top:16px;" href="admin-comisiones.html">Ver comisiones →</a>
+    <a class="btn btn-outline" style="display:inline-block;margin-top:16px;" href="admin-comisiones">Ver comisiones →</a>
   `;
 
   renderNivelesEquipoAdmin(persona);
