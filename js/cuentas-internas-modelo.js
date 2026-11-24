@@ -56,7 +56,7 @@ const MODULOS_PERMISO_ENCARGADO = {
   nomina: 'Nómina',
   actividadesStaff: 'Actividades del Staff',
   catalogo: 'Catálogo',
-  apartados: 'Apartados',
+  apartados: 'Pedidos',
   listaDeseos: 'Lista de deseos',
   calendario: 'Calendario',
   actividad: 'Actividad'

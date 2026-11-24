@@ -4,7 +4,7 @@
 
 const MODULOS_ACTIVIDAD = {
   catalogo: 'Catálogo',
-  apartados: 'Apartados',
+  apartados: 'Pedidos',
   calendario: 'Calendario',
   lista_deseos: 'Lista de deseos',
   personas: 'Personas',

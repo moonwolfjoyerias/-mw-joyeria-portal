@@ -317,7 +317,7 @@ function renderDetallePersona() {
     <div class="profile-tabs" id="profileTabs">
       <button type="button" class="profile-tab-btn active" data-tab="info">Información</button>
       <button type="button" class="profile-tab-btn" data-tab="compras">Compras</button>
-      <button type="button" class="profile-tab-btn" data-tab="apartados">Apartados</button>
+      <button type="button" class="profile-tab-btn" data-tab="apartados">Pedidos</button>
       <button type="button" class="profile-tab-btn" data-tab="planmw">Plan MW</button>
       ${esLider ? `<button type="button" class="profile-tab-btn" data-tab="equipo">Equipo y Rango</button>` : ''}
     </div>
@@ -1057,7 +1057,7 @@ function renderSeccionComprasPersona(persona) {
       <h4 class="profile-section-title">Compras</h4>
       <div class="catalog-empty-cell" style="padding:2rem 1rem;">
         <strong>Sin compras registradas todavía</strong>
-        <span>Aquí aparecerán las piezas que ${escapeHTMLPersonas(persona.nombre)} liquide en Apartados.</span>
+        <span>Aquí aparecerán las piezas que ${escapeHTMLPersonas(persona.nombre)} liquide en Pedidos.</span>
       </div>
     `;
     return;
@@ -1094,7 +1094,7 @@ function renderSeccionComprasPersona(persona) {
     abrirAutorizacionAdmin({
       titulo: 'Limpiar historial de compras',
       peligrosa: true,
-      mensaje: `Se quitarán las ${compras.length} compra${compras.length === 1 ? '' : 's'} de ${escapeHTMLPersonas(nombreCompletoPersona(persona))} ($${formatearDineroPersonas(totalAcumulado)} MXN). Dejarán de contar para su rango, comisiones, rifa y constancia. Sus apartados no se borran: siguen apareciendo en la pestaña Apartados.`,
+      mensaje: `Se quitarán las ${compras.length} compra${compras.length === 1 ? '' : 's'} de ${escapeHTMLPersonas(nombreCompletoPersona(persona))} ($${formatearDineroPersonas(totalAcumulado)} MXN). Dejarán de contar para su rango, comisiones, rifa y constancia. Sus pedidos no se borran: siguen apareciendo en la pestaña Pedidos.`,
       onConfirmar: () => limpiarHistorialComprasPersona(persona)
     });
   });
@@ -1152,17 +1152,17 @@ function renderSeccionApartadosPersona(persona) {
 
   if (!ventanas.length) {
     sec.innerHTML = `
-      <h4 class="profile-section-title">Apartados</h4>
+      <h4 class="profile-section-title">Pedidos</h4>
       <div class="catalog-empty-cell" style="padding:2rem 1rem;">
-        <strong>Sin apartados registrados</strong>
-        <span>${escapeHTMLPersonas(persona.nombre)} no tiene ventanas de apartado activas ni anteriores.</span>
+        <strong>Sin pedidos registrados</strong>
+        <span>${escapeHTMLPersonas(persona.nombre)} no tiene ventanas de pedido activas ni anteriores.</span>
       </div>
     `;
     return;
   }
 
   sec.innerHTML = `
-    <h4 class="profile-section-title">Apartados</h4>
+    <h4 class="profile-section-title">Pedidos</h4>
     ${ventanas.map(v => `
       <div class="apartado-item">
         <div class="apartado-item-head">

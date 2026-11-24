@@ -1614,7 +1614,7 @@ function abrirModalCargaMasivaPuntos() {
   abrirModalConAncho(`
     <button class="modal-close" data-close>&times;</button>
     <h3>Carga masiva de puntos</h3>
-    <p class="modal-sub">Cada fila crea una compra liquidada real a nombre de esa persona — cuenta para Constancia, Rifa, Rango y Comisiones igual que cualquier compra hecha desde Apartados.</p>
+    <p class="modal-sub">Cada fila crea una compra liquidada real a nombre de esa persona — cuenta para Constancia, Rifa, Rango y Comisiones igual que cualquier compra hecha desde Pedidos.</p>
     <button class="btn btn-outline" id="descargarPlantillaPuntosBtn" type="button" style="margin-bottom:14px;">Descargar plantilla</button>
     <label for="archivoPuntosInput">Archivo (.csv)</label>
     <input type="file" id="archivoPuntosInput" accept=".csv">

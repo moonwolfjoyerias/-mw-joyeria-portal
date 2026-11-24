@@ -68,7 +68,7 @@ function abrirModalNuevaVentana() {
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon">+</div>
-    <h3>Nueva ventana de apartado</h3>
+    <h3>Nueva ventana de pedido</h3>
     <p class="modal-sub">Si la persona ya tiene crédito guardado de una ventana anterior, se usará automáticamente y no se pedirá otro depósito.</p>
 
     <label for="nvNombre">Nombre completo</label>
@@ -196,8 +196,8 @@ function abrirModalNuevaVentana() {
     abrirAutorizacionAdmin({
       titulo: "Autorizar nueva ventana",
       mensaje: tieneCredito
-        ? `Estás a punto de abrir una nueva ventana de apartado para "${nombre}", reutilizando su crédito guardado.`
-        : `Estás a punto de abrir una nueva ventana de apartado para "${nombre}" con la pieza "${producto}".`,
+        ? `Estás a punto de abrir una nueva ventana de pedido para "${nombre}", reutilizando su crédito guardado.`
+        : `Estás a punto de abrir una nueva ventana de pedido para "${nombre}" con la pieza "${producto}".`,
       onConfirmar: () => ejecutarNuevaVentana({ nombre, telefono, categoria, producto, variante, colorOro, total, productoId, varianteId, personaId })
     });
 
@@ -442,7 +442,7 @@ function abrirModalLiquidar(v) {
   box.innerHTML = `
     <button class="modal-close" onclick="cerrarModal()">×</button>
     <div class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></div>
-    <h3>Liquidar apartado</h3>
+    <h3>Liquidar pedido</h3>
     <p class="modal-sub">${escapeHTML(v.usuarioNombre)} · ${piezasActivas.length} pieza${piezasActivas.length === 1 ? "" : "s"}</p>
 
     ${htmlEleccionPiezasLiquidar(v, piezasActivas)}
@@ -452,7 +452,7 @@ function abrirModalLiquidar(v) {
       <div class="auth-warning">
         <span class="icon-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12l5 5L20 6"/></svg></span>
         <div>
-          <strong>Esta selección paga TODO el apartado — ¿qué hacer con el depósito de $${v.depositoApartadoDisponible} MXN?</strong>
+          <strong>Esta selección paga TODO el pedido — ¿qué hacer con el depósito de $${v.depositoApartadoDisponible} MXN?</strong>
           <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:400;">
             <input type="radio" name="decisionDepositoLiquidar" value="aplicar" checked> Aplicarlo a esta compra
           </label>
@@ -522,7 +522,7 @@ function abrirModalLiquidar(v) {
 
     if (!alcanceLiquidarElegido(box)) {
       error.style.display = "block";
-      error.textContent = "Elige si está pagando todo el apartado o solo algunas piezas.";
+      error.textContent = "Elige si está pagando todo el pedido o solo algunas piezas.";
       return;
     }
 
@@ -547,8 +547,8 @@ function abrirModalLiquidar(v) {
     }
 
     let mensaje = cubreTodo
-      ? `Estás a punto de liquidar el apartado completo de "${v.usuarioNombre}" por $${montoEsperado} MXN.`
-      : `Estás a punto de liquidar ${idsSeleccionados.length} de ${piezasActivas.length} piezas de "${v.usuarioNombre}" por $${montoEsperado} MXN — el resto sigue apartado con normalidad.`;
+      ? `Estás a punto de liquidar el pedido completo de "${v.usuarioNombre}" por $${montoEsperado} MXN.`
+      : `Estás a punto de liquidar ${idsSeleccionados.length} de ${piezasActivas.length} piezas de "${v.usuarioNombre}" por $${montoEsperado} MXN — el resto sigue pedido con normalidad.`;
     if (decision === "aplicar") mensaje += ` Se aplicará su depósito de $${v.depositoApartadoDisponible} MXN a la compra.`;
     if (decision === "credito") mensaje += ` Su depósito de $${v.depositoApartadoDisponible} MXN se guardará como crédito.`;
 
@@ -578,8 +578,8 @@ function ejecutarLiquidar(ventanaId, piezaIds, datos, decisionDeposito) {
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaAdmin({ modulo: "apartados", accion: "liquidar_ventana", descripcion: `Apartado de ${v.usuarioNombre} liquidado por $${datos.monto} (${piezaIds.length} pieza${piezaIds.length === 1 ? '' : 's'})` });
-  mostrarToast(`Apartado liquidado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaAdmin({ modulo: "apartados", accion: "liquidar_ventana", descripcion: `Pedido de ${v.usuarioNombre} liquidado por $${datos.monto} (${piezaIds.length} pieza${piezaIds.length === 1 ? '' : 's'})` });
+  mostrarToast(`Pedido liquidado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
 
 }
 
@@ -594,8 +594,8 @@ function confirmarCancelarVentana(ventanaId) {
   if (!v) return;
 
   const mensaje = v.depositoApartadoDisponible > 0
-    ? `Estás a punto de cancelar el apartado de "${v.usuarioNombre}". Su depósito de $${v.depositoApartadoDisponible} MXN se guardará como crédito para su próximo apartado.`
-    : `Estás a punto de cancelar el apartado de "${v.usuarioNombre}".`;
+    ? `Estás a punto de cancelar el pedido de "${v.usuarioNombre}". Su depósito de $${v.depositoApartadoDisponible} MXN se guardará como crédito para su próximo pedido.`
+    : `Estás a punto de cancelar el pedido de "${v.usuarioNombre}".`;
 
   abrirAutorizacionAdmin({
     titulo: "Autorizar cancelación",
@@ -618,8 +618,8 @@ function ejecutarCancelar(ventanaId) {
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaAdmin({ modulo: "apartados", accion: "cancelar_ventana", descripcion: `Apartado de ${v.usuarioNombre} cancelado` });
-  mostrarToast(`Apartado cancelado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaAdmin({ modulo: "apartados", accion: "cancelar_ventana", descripcion: `Pedido de ${v.usuarioNombre} cancelado` });
+  mostrarToast(`Pedido cancelado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
 
 }
 
@@ -641,7 +641,7 @@ function confirmarQuitarPiezaRol(ventanaId, piezaId, motivo) {
   if (!v) return;
 
   const resultado = quitarPiezaDeApartado(v, piezaId, motivo, ADMIN_EMPLEADO);
-  if (!resultado) { cerrarModal(); mostrarToast("Esa pieza ya no está activa en el apartado."); return; }
+  if (!resultado) { cerrarModal(); mostrarToast("Esa pieza ya no está activa en el pedido."); return; }
 
   notificarPiezaQuitada(v, resultado.pieza, motivo);
   guardarVentanas();
@@ -649,8 +649,8 @@ function confirmarQuitarPiezaRol(ventanaId, piezaId, motivo) {
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaAdmin({ modulo: "apartados", accion: "quitar_pieza_apartado", descripcion: `Pieza ${resultado.pieza.producto} quitada del apartado de ${v.usuarioNombre} — motivo: ${motivo}` });
-  mostrarToast(`Pieza quitada del apartado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaAdmin({ modulo: "apartados", accion: "quitar_pieza_apartado", descripcion: `Pieza ${resultado.pieza.producto} quitada del pedido de ${v.usuarioNombre} — motivo: ${motivo}` });
+  mostrarToast(`Pieza quitada del pedido por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
 
 }
 
@@ -660,8 +660,8 @@ function confirmarAprobarVip(ventanaId) {
   if (!v) return;
 
   abrirAutorizacionAdmin({
-    titulo: "Aprobar apartado VIP",
-    mensaje: `Estás a punto de aprobar el apartado VIP de "${v.usuarioNombre}".`,
+    titulo: "Aprobar pedido VIP",
+    mensaje: `Estás a punto de aprobar el pedido VIP de "${v.usuarioNombre}".`,
     onConfirmar: () => ejecutarAprobarVip(ventanaId)
   });
 
@@ -710,8 +710,8 @@ function ejecutarAprobarVip(ventanaId) {
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaAdmin({ modulo: "apartados", accion: "aprobar_vip_ventana", descripcion: `Apartado VIP de ${v.usuarioNombre} aprobado` });
-  mostrarToast(`Apartado VIP aprobado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaAdmin({ modulo: "apartados", accion: "aprobar_vip_ventana", descripcion: `Pedido VIP de ${v.usuarioNombre} aprobado` });
+  mostrarToast(`Pedido VIP aprobado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
 
 }
 
@@ -728,11 +728,11 @@ function confirmarDesapartarVentana(ventanaId) {
   if (!v) return;
 
   const mensaje = v.depositoApartadoDisponible > 0
-    ? `Estás a punto de desapartar el apartado vencido de "${v.usuarioNombre}". Esto cancelará sus piezas restantes y perderá su depósito de $${v.depositoApartadoDisponible} MXN de forma definitiva.`
-    : `Estás a punto de desapartar el apartado vencido de "${v.usuarioNombre}". Esto cancelará sus piezas restantes.`;
+    ? `Estás a punto de liberar el pedido vencido de "${v.usuarioNombre}". Esto cancelará sus piezas restantes y perderá su depósito de $${v.depositoApartadoDisponible} MXN de forma definitiva.`
+    : `Estás a punto de liberar el pedido vencido de "${v.usuarioNombre}". Esto cancelará sus piezas restantes.`;
 
   abrirAutorizacionAdmin({
-    titulo: "Autorizar desapartar",
+    titulo: "Autorizar liberar pedido",
     mensaje,
     peligrosa: true,
     onConfirmar: () => ejecutarDesapartar(ventanaId)
@@ -752,7 +752,7 @@ function ejecutarDesapartar(ventanaId) {
   renderTabla();
   cerrarModal();
 
-  registrarAuditoriaAdmin({ modulo: "apartados", accion: "desapartar_ventana", descripcion: `Apartado vencido de ${v.usuarioNombre} desapartado` });
-  mostrarToast(`Apartado desapartado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
+  registrarAuditoriaAdmin({ modulo: "apartados", accion: "desapartar_ventana", descripcion: `Pedido vencido de ${v.usuarioNombre} liberado` });
+  mostrarToast(`Pedido liberado por ${ADMIN_IDENTIDAD.usuarioNombre}.`);
 
 }
