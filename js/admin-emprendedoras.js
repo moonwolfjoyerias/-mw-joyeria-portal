@@ -141,6 +141,7 @@ function renderResultadosPersonas(personas) {
   const todas = obtenerPersonas();
 
   lista.innerHTML = personas.map(p => crearTarjetaResultadoPersona(p, todas)).join('');
+  window.MWFotoPerfil?.pintarEn(lista);
 
   lista.querySelectorAll('.persona-result-card[data-ver-perfil]').forEach(card => {
     card.addEventListener('click', () => seleccionarPersonaAdmin(card.getAttribute('data-ver-perfil')));
@@ -163,7 +164,7 @@ function crearTarjetaResultadoPersona(p, todas) {
 
   return `
     <div class="persona-result-card ${activa ? 'active' : ''}" data-ver-perfil="${p.id}">
-      <span class="persona-result-avatar">${escapeHTMLPersonas(inicial)}</span>
+      <span class="persona-result-avatar" data-foto-persona="${escapeHTMLPersonas(p.id)}">${escapeHTMLPersonas(inicial)}</span>
       <span class="persona-result-body">
         <strong>${escapeHTMLPersonas(nombreCompletoPersona(p))}</strong>
         <span class="persona-result-meta">
@@ -276,6 +277,40 @@ function seleccionarPersonaAdmin(id) {
 
 }
 
+// Foto de perfil de la persona (la sube ella desde Mi cuenta). Admin solo
+// puede quitarla si no es apropiada — no subir otra por ella.
+async function conectarFotoPerfilAdmin(persona) {
+  const F = window.MWFotoPerfil;
+  const caja = document.getElementById('fotoPerfilAdminAcciones');
+  if (!F || !caja) return;
+  const url = await F.obtener(persona.id);
+  const avatar = caja.closest('.people-detail-header')?.querySelector('.people-detail-avatar');
+  if (avatar && url) F.pintar(avatar, url, '', `Foto de ${nombreCompletoPersona(persona)}`);
+  if (!url || !caja.isConnected) { caja.hidden = true; return; }
+  caja.hidden = false;
+  caja.innerHTML = '<button type="button" class="btn btn-outline btn-sm" data-quitar-foto>Quitar foto de perfil</button>';
+  caja.querySelector('[data-quitar-foto]').addEventListener('click', () => {
+    caja.innerHTML = `<span>¿Quitar la foto de ${escapeHTMLPersonas(persona.nombre)}? Ella podrá subir otra.</span>
+      <button type="button" class="btn btn-outline btn-sm" data-no>No</button>
+      <button type="button" class="btn btn-primary btn-sm" data-si>Sí, quitar</button>`;
+    caja.querySelector('[data-no]').addEventListener('click', () => conectarFotoPerfilAdmin(persona));
+    caja.querySelector('[data-si]').addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      try {
+        await F.quitar(persona.id);
+        if (avatar) F.pintar(avatar, '', (persona.nombre || '?').trim().charAt(0).toUpperCase(), '');
+        caja.hidden = true;
+        if (typeof registrarAuditoriaAdmin === 'function') registrarAuditoriaAdmin({ modulo: 'personas', accion: 'quitar_foto_perfil', descripcion: `Foto de perfil de ${nombreCompletoPersona(persona)} quitada por Admin` });
+        document.querySelectorAll(`.persona-result-avatar[data-foto-persona="${CSS.escape(String(persona.id))}"]`).forEach(el => F.pintar(el, '', (persona.nombre || '?').trim().charAt(0).toUpperCase(), ''));
+        mostrarToast('Se quitó la foto de perfil.');
+      } catch (err) {
+        mostrarToast('No se pudo quitar la foto: ' + (err && err.message ? err.message : 'intenta de nuevo.'));
+        conectarFotoPerfilAdmin(persona);
+      }
+    });
+  });
+}
+
 function renderDetallePersona() {
 
   const empty = document.getElementById('personaDetailEmpty');
@@ -298,9 +333,10 @@ function renderDetallePersona() {
 
   content.innerHTML = `
     <div class="people-detail-header">
-      <span class="people-detail-avatar">${escapeHTMLPersonas(inicial)}</span>
+      <span class="people-detail-avatar" data-foto-persona="${escapeHTMLPersonas(persona.id)}">${escapeHTMLPersonas(inicial)}</span>
       <div>
         <h3>${escapeHTMLPersonas(nombreCompletoPersona(persona))}</h3>
+        <div class="fp-quitar-admin" id="fotoPerfilAdminAcciones" hidden></div>
         <div class="people-detail-badges">
           <span class="badge">${esLider ? 'Líder' : 'Emprendedora'}</span>
           <span class="badge estado-badge ${persona.estado}">${ESTADOS_CUENTA_PERSONA[persona.estado] || persona.estado}</span>
@@ -330,6 +366,7 @@ function renderDetallePersona() {
 
     <div class="profile-actions" id="profileActions"></div>
   `;
+  conectarFotoPerfilAdmin(persona);
 
   document.getElementById('cerrarPerfilBtn')?.addEventListener('click', () => {
     personaSeleccionadaId = null;

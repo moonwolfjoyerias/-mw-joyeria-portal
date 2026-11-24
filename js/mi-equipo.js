@@ -445,6 +445,7 @@ function renderArbolVisual() {
     const nombre = nombreCompletoPersona(persona);
     const nodeHtml = `
       <div class="org-node ${lvlClass}" data-nombre="${escapeHTMLMiEquipo(nombre.toLowerCase())}">
+        <span class="on-foto" data-foto-persona="${escapeHTMLMiEquipo(persona.id)}" aria-hidden="true">${escapeHTMLMiEquipo(nombre.split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase())}</span>
         <span class="on-name">${escapeHTMLMiEquipo(nombre)}</span>
         <span class="on-tag">${isSelf ? 'Tú' : `Nivel ${depth}`}</span>
         <span class="on-points">${total.toLocaleString('es-MX')} pts</span>
@@ -455,6 +456,7 @@ function renderArbolVisual() {
   }
 
   contenedor.innerHTML = `<div class="org-tree"><ul>${renderNode(lider, true, 0)}</ul></div>`;
+  window.MWFotoPerfil?.pintarEn(contenedor);
   aplicarZoomEquipo();
 
   // En pantallas angostas el árbol es más ancho que la ventana y queda

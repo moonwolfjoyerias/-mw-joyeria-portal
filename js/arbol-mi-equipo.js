@@ -149,6 +149,7 @@
     if (!overlay || !box) return;
     box.className = 'modal-box modal-box-xwide' + (extra ? ' ' + extra : '');
     box.innerHTML = `<button type="button" class="modal-close" id="arbolMeCerrar" aria-label="Cerrar">×</button>${html}`;
+    window.MWFotoPerfil?.pintarEn(box);
     overlay.classList.add('open');
     const cerrar = () => { overlay.classList.remove('open'); box.className = 'modal-box'; };
     document.getElementById('arbolMeCerrar').addEventListener('click', cerrar);
@@ -214,7 +215,7 @@
       <div class="lm-encabezado" aria-hidden="true"><span>Persona</span><span>P1</span><span>P2</span><span>Total</span></div>
       <ul class="lm-lista">${filas.map(f => `
         <li class="lm-fila${f.total ? '' : ' sin-compra'}">
-          <span class="lm-avatar" aria-hidden="true">${esc(iniciales(f.m.fullName))}</span>
+          <span class="lm-avatar" aria-hidden="true"${f.m.portalPersonaId ? ` data-foto-persona="${esc(f.m.portalPersonaId)}"` : ''}${(separarCodigo(f.m.fullName).codigo || f.m.clientCode) ? ` data-foto-usuario="${esc(separarCodigo(f.m.fullName).codigo || f.m.clientCode)}"` : ''}>${esc(iniciales(f.m.fullName))}</span>
           <span class="lm-persona">
             <span class="lm-nombre">${esc(separarCodigo(f.m.fullName).nombre)}${(separarCodigo(f.m.fullName).codigo || f.m.clientCode) ? ` <span class="lm-codigo">${esc(separarCodigo(f.m.fullName).codigo || f.m.clientCode)}</span>` : ''}</span>
             <span class="lm-barra" aria-hidden="true"><span style="width:${Math.round((f.total / maximo) * 100)}%"></span></span>
