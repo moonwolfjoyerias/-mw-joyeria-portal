@@ -16,6 +16,7 @@
   const pesos = n => `$${Number(n || 0).toLocaleString('es-MX', { maximumFractionDigits: 2 })}`;
   const FILTROS = {
     activos: { texto: 'En curso', f: p => !ESTADOS_PEDIDO_TERMINADOS.includes(p.estado) },
+    esperando_bolsita: { texto: 'Esperando bolsita', f: p => p.estado === 'esperando_bolsita' },
     por_confirmar: { texto: 'Por confirmar pago', f: p => p.estado === 'por_confirmar' || p.estado === 'rechazado' },
     por_preparar: { texto: 'Por preparar', f: p => p.estado === 'confirmado' || p.estado === 'empaquetado' },
     en_bolsita: { texto: 'En caja de pagados', f: p => p.estado === 'en_bolsita' },
@@ -52,6 +53,7 @@
       .filter(p => !q || [p.personaNombre, p.usuario, p.id, ...(p.piezas || []).map(x => x.producto)].join(' ').toLowerCase().includes(q));
 
     const resumen = [
+      ['Esperando bolsita', cuenta(p => p.estado === 'esperando_bolsita'), 'esperando_bolsita'],
       ['Por confirmar pago', cuenta(p => p.estado === 'por_confirmar'), 'por_confirmar'],
       ['Por preparar', cuenta(p => p.estado === 'confirmado' || p.estado === 'empaquetado'), 'por_preparar'],
       ['En caja de pagados', cuenta(p => p.estado === 'en_bolsita'), 'en_bolsita'],
@@ -80,6 +82,9 @@
     const info = ESTADOS_PEDIDO_PAGADO[p.estado] || { texto: p.estado, clase: '' };
     const foranea = p.categoria === 'foranea';
     const acciones = [];
+    if (p.estado === 'esperando_bolsita') {
+      acciones.push(`<button type="button" class="action-btn primary-action" data-pagado-accion="confirmar_bolsita" data-pagado-id="${esc(p.id)}">Confirmar todas en bolsita</button>`);
+    }
     if (p.estado === 'por_confirmar') {
       acciones.push(`<button type="button" class="action-btn primary-action" data-pagado-accion="confirmar" data-pagado-id="${esc(p.id)}" ${puedeConfirmarPagos() ? '' : 'disabled title="Lo confirma Encargado o Administración"'}>Revisar y confirmar pago</button>`);
       acciones.push(`<button type="button" class="action-btn danger-action" data-pagado-accion="rechazar" data-pagado-id="${esc(p.id)}">Rechazar comprobante</button>`);
@@ -132,6 +137,11 @@
     const p = obtenerPedidosPagados().find(x => x.id === id);
     if (!p) return;
     if (que === 'confirmar') return revisarPago(p);
+    if (que === 'confirmar_bolsita') {
+      const r = await confirmarPiezasEnBolsitaPedido(p);
+      toast(r.ok ? 'Todas las piezas quedaron confirmadas en bolsita. Se habilitó el pago.' : r.error);
+      return;
+    }
     if (que === 'ver') return verComprobante(p);
     if (que === 'rechazar') return rechazar(p);
     if (que === 'enviado') return marcarEnviado(p);

@@ -26,6 +26,8 @@ const COMPROBANTES_PEDIDOS_COLECCION = 'comprobantesPedidos';
 
 // Estados de un pedido pagado (mismo texto en BRILLO: src/pedidos/pagados.ts).
 const ESTADOS_PEDIDO_PAGADO = {
+  esperando_bolsita: { texto: 'Esperando confirmación en bolsita', clase: 'status-pending' },
+  pago_disponible: { texto: 'Listo para pagar', clase: 'status-active' },
   por_confirmar: { texto: 'Por confirmar pago', clase: 'status-pending' },
   rechazado: { texto: 'Comprobante rechazado', clase: 'status-cancelled' },
   confirmado: { texto: 'Pago confirmado', clase: 'status-active' },
@@ -225,6 +227,7 @@ const pedidosPagadosRepoListo = (async () => {
         .sort((a, b) => String(b.creadoEn || '').localeCompare(String(a.creadoEn || '')));
       if (primera) { primera = false; resolve(); }
       _avisarCambioPedidos('mw:pedidos-pagados-actualizados');
+      if (typeof verificarPagoDisponiblePedido === 'function') verificarPagoDisponiblePedido();
       revisarPedidosVencidos();
     }, () => { if (primera) { primera = false; resolve(); } });
   });
@@ -232,6 +235,113 @@ const pedidosPagadosRepoListo = (async () => {
 
 function obtenerPedidosPagados() {
   return PEDIDOS_PAGADOS_CACHE;
+}
+
+let _pedidoPagoModalId = '';
+
+function verificarPagoDisponiblePedido() {
+  const personaId = _miPersonaIdPedidos();
+  if (!personaId || typeof document === 'undefined') return;
+  const pedido = PEDIDOS_PAGADOS_CACHE.find(p => p.personaId === personaId && p.estado === 'pago_disponible');
+  if (!pedido || pedido.id === _pedidoPagoModalId) return;
+  _pedidoPagoModalId = pedido.id;
+  abrirModalPagoDisponiblePedido(pedido);
+}
+
+function datosBancariosPedidoHTML(concepto) {
+  const d = typeof DATOS_BANCARIOS_EJEMPLO !== 'undefined'
+    ? DATOS_BANCARIOS_EJEMPLO
+    : { banco: '', titular: '', clabe: '' };
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return `
+    <div class="bank-details-box">
+      <div class="copy-field"><span><span class="cf-label">Banco</span><span class="cf-value">${esc(d.banco)}</span></span></div>
+      <div class="copy-field"><span><span class="cf-label">Titular</span><span class="cf-value">${esc(d.titular)}</span></span></div>
+      <div class="copy-field"><span><span class="cf-label">CLABE</span><span class="cf-value">${esc(d.clabe)}</span></span><button type="button" data-copy-pedido="${esc(d.clabe)}">Copiar</button></div>
+      <div class="copy-field"><span><span class="cf-label">Concepto</span><span class="cf-value">${esc(concepto)}</span></span></div>
+    </div>`;
+}
+
+function abrirModalPagoDisponiblePedido(pedido) {
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  if (!overlay || !box) return;
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  box.innerHTML = `
+    <button class="modal-close" data-close-pedido aria-label="Cerrar">&times;</button>
+    <div class="confirm-box">
+      <div class="check-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <h3>¡Tus piezas ya están confirmadas!</h3>
+      <p class="modal-sub">Todas las piezas de este pedido están guardadas en tu bolsita. Ya puedes realizar tu pago.</p>
+    </div>
+    <div class="pago-resumen">
+      <div><span>Piezas</span><span>${_montoTexto(pedido.subtotal)}</span></div>
+      ${Number(pedido.envio) > 0 ? `<div><span>Envío</span><span>${_montoTexto(pedido.envio)}</span></div>` : ''}
+      <div class="pago-total"><span>Total a pagar</span><strong>${_montoTexto(pedido.total)}</strong></div>
+    </div>
+    ${datosBancariosPedidoHTML(pedido.personaNombre || 'Tu nombre completo')}
+    <label class="comprobante-foto" for="pagoDisponibleFoto">
+      <input type="file" id="pagoDisponibleFoto" accept="image/*">
+      <span class="comprobante-foto-vista" id="pagoDisponibleFotoVista">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        <span>Subir foto o captura de tu comprobante</span>
+      </span>
+    </label>
+    <label class="comprobante-ref">Número de referencia o rastreo (opcional)
+      <input type="text" id="pagoDisponibleRef" maxlength="60" autocomplete="off" placeholder="Ej. 0123456789">
+    </label>
+    <p class="error-comprobante" id="pagoDisponibleError" hidden></p>
+    <button type="button" class="btn btn-primary" style="width:100%;" id="pagoDisponibleEnviar" disabled>Enviar comprobante</button>`;
+  overlay.classList.add('open');
+  box.querySelector('[data-close-pedido]').addEventListener('click', () => overlay.classList.remove('open'));
+  box.querySelectorAll('[data-copy-pedido]').forEach(btn => btn.addEventListener('click', () => {
+    navigator.clipboard?.writeText(btn.getAttribute('data-copy-pedido')).catch(() => {});
+    const texto = btn.textContent;
+    btn.textContent = 'Copiado';
+    setTimeout(() => { btn.textContent = texto; }, 1500);
+  }));
+  let foto = '';
+  const input = box.querySelector('#pagoDisponibleFoto');
+  const vista = box.querySelector('#pagoDisponibleFotoVista');
+  const error = box.querySelector('#pagoDisponibleError');
+  const enviar = box.querySelector('#pagoDisponibleEnviar');
+  input.addEventListener('change', async () => {
+    error.hidden = true;
+    try {
+      foto = await prepararFotoComprobante(input.files[0]);
+      vista.innerHTML = `<img src="${esc(foto)}" alt="Tu comprobante"><span>Cambiar foto</span>`;
+      enviar.disabled = false;
+    } catch (e) {
+      foto = '';
+      error.textContent = e.message;
+      error.hidden = false;
+      enviar.disabled = true;
+    }
+  });
+  enviar.addEventListener('click', async () => {
+    if (!foto) return;
+    enviar.disabled = true;
+    enviar.textContent = 'Enviando…';
+    const ahora = new Date().toISOString();
+    const ref = String(box.querySelector('#pagoDisponibleRef').value || '').trim().slice(0, 60);
+    try {
+      const lote = dbFirestore.batch();
+      lote.set(dbFirestore.collection(COMPROBANTES_PEDIDOS_COLECCION).doc(pedido.id), { personaId: pedido.personaId, fotoUrl: foto, subidoEn: ahora });
+      lote.update(dbFirestore.collection(PEDIDOS_PAGADOS_COLECCION).doc(pedido.id), {
+        estado: 'por_confirmar',
+        comprobante: { referencia: ref, subidoEn: ahora },
+        historial: [...(pedido.historial || []), { estado: 'por_confirmar', por: pedido.personaNombre, rol: 'emprendedora_lider', en: ahora, nota: 'Envío el comprobante después de confirmar su bolsita' }],
+        actualizadoEn: ahora
+      });
+      await lote.commit();
+      overlay.classList.remove('open');
+    } catch (e) {
+      error.textContent = 'No se pudo enviar. Revisa tu conexión e inténtalo otra vez.';
+      error.hidden = false;
+      enviar.disabled = false;
+      enviar.textContent = 'Enviar comprobante';
+    }
+  });
 }
 
 function _historial(estado, nota) {
@@ -300,7 +410,6 @@ async function crearPedidoPagado({ piezas, fotoUrl, referencia }) {
   const personaId = _miPersonaIdPedidos();
   if (!personaId) return { ok: false, error: 'No se pudo identificar tu cuenta. Vuelve a iniciar sesión.' };
   if (!piezas.length) return { ok: false, error: 'Tu carrito está vacío.' };
-  if (!esComprobanteValido(fotoUrl)) return { ok: false, error: 'Sube la foto de tu comprobante.' };
   const persona = typeof obtenerPersonaPorId === 'function' ? obtenerPersonaPorId(personaId) : null;
   const categoria = persona?.categoria || 'normal';
   const subtotal = Math.round(piezas.reduce((s, p) => s + Number(p.total || 0), 0) * 100) / 100;
@@ -338,24 +447,20 @@ async function crearPedidoPagado({ piezas, fotoUrl, referencia }) {
     envioGratis: envio.gratis,
     envioPorConfirmar: envio.sinConfigurar,
     total: Math.round((subtotal + envio.envio) * 100) / 100,
-    estado: 'por_confirmar',
-    comprobante: { referencia: String(referencia || '').trim().slice(0, 60), subidoEn: ahora },
-    historial: [{ estado: 'por_confirmar', por: nombre, rol: 'emprendedora_lider', en: ahora }],
+    estado: categoria === 'foranea' ? 'por_confirmar' : 'esperando_bolsita',
+    historial: [{ estado: categoria === 'foranea' ? 'por_confirmar' : 'esperando_bolsita', por: nombre, rol: 'emprendedora_lider', en: ahora, nota: 'Piezas reservadas desde el carrito' }],
     dia: hoyTiendaISO(),
     creadoEn: ahora,
     actualizadoEn: ahora
   };
   try {
-    const lote = dbFirestore.batch();
-    lote.set(dbFirestore.collection(PEDIDOS_PAGADOS_COLECCION).doc(id), pedido);
-    lote.set(dbFirestore.collection(COMPROBANTES_PEDIDOS_COLECCION).doc(id), { personaId, fotoUrl, subidoEn: ahora });
-    await lote.commit();
+    await dbFirestore.collection(PEDIDOS_PAGADOS_COLECCION).doc(id).set(pedido);
   } catch (error) {
     for (const g of guardadas) if (typeof restaurarStockVariante === 'function') await restaurarStockVariante(g.productoId, g.varianteId);
     return { ok: false, error: 'No se pudo enviar tu pago. Revisa tu conexión e inténtalo de nuevo; tus piezas siguen en tu carrito.' };
   }
   await quitarDelCarrito(piezas.map(p => p.id));
-  _notificarEquipoPedidos(`${nombre} pagó ${piezas.length} pieza${piezas.length === 1 ? '' : 's'} (${_montoTexto(pedido.total)}) y subió su comprobante — revisa y confirma el pago.`, nombre);
+  _notificarEquipoPedidos(`${nombre} apartó ${piezas.length} pieza${piezas.length === 1 ? '' : 's'} para pagar (${_montoTexto(pedido.total)}) — confírmalas en bolsita antes de habilitar el pago.`, nombre);
   return { ok: true, pedido };
 }
 
@@ -465,6 +570,30 @@ function pasosDisponiblesPedido(pedido) {
     .filter(([, paso]) => paso.desde.includes(pedido.estado))
     .filter(([, paso]) => !paso.soloCategoria || (paso.soloCategoria === 'foranea') === foranea)
     .map(([estado, paso]) => ({ estado, ...paso }));
+}
+
+async function confirmarPiezasEnBolsitaPedido(pedido) {
+  if (pedido.estado !== 'esperando_bolsita') return { ok: false, error: 'Este pedido todavía no está esperando confirmación en bolsita.' };
+  if (!dbFirestore) return { ok: false, error: 'No se pudo guardar. Revisa tu conexión.' };
+  const ahora = new Date().toISOString();
+  const ref = dbFirestore.collection(PEDIDOS_PAGADOS_COLECCION).doc(pedido.id);
+  try {
+    await dbFirestore.runTransaction(async (tx) => {
+      const actual = await tx.get(ref);
+      if (!actual.exists || actual.data().estado !== 'esperando_bolsita') throw new Error('CAMBIO');
+      tx.update(ref, {
+        estado: 'pago_disponible',
+        bolsitaConfirmadaEn: ahora,
+        historial: [...(actual.data().historial || []), _historial('pago_disponible', 'Todas las piezas fueron confirmadas en bolsita')],
+        actualizadoEn: ahora
+      });
+    });
+  } catch (e) {
+    if (e && e.message === 'CAMBIO') return { ok: false, error: 'Este pedido cambió. Revisa la lista.' };
+    return { ok: false, error: 'No se pudo guardar. Revisa tu conexión.' };
+  }
+  _notificarPersonaPedido(pedido, `¡Todas tus piezas ya están confirmadas en bolsita! Puedes pagar ${_montoTexto(pedido.total)} ahora.`);
+  return { ok: true };
 }
 
 async function avanzarPedidoPagado(pedido, estado, datos = {}) {

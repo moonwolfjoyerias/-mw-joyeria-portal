@@ -265,49 +265,33 @@
 
   function abrirPagoCarrito(piezas) {
     if (!piezas.length) return;
-    const subtotal = piezas.reduce((s, p) => s + Number(p.total || 0), 0);
-    const envio = calcularEnvioPedido(categoria(), subtotal);
-    const total = subtotal + envio.envio;
-    let foto = '';
-    const box = abrirModal(`
-      <h3>Pagar ${piezas.length} pieza${piezas.length === 1 ? '' : 's'}</h3>
-      <div class="pago-resumen">
-        <div><span>Piezas</span><span>${pesos(subtotal)}</span></div>
-        ${envio.aplica ? `<div><span>Envío</span><span>${envio.gratis ? 'Gratis' : envio.sinConfigurar ? 'Por confirmar' : pesos(envio.envio)}</span></div>` : ''}
-        <div class="pago-total"><span>Total a transferir</span><strong>${pesos(total)}</strong></div>
-      </div>
-      ${envio.sinConfigurar ? '<p class="modal-sub">El equipo te confirmará el costo del envío.</p>' : ''}
-      <p class="modal-sub">1. Transfiere el total a esta cuenta:</p>
-      ${datosBancariosHTML(nombrePropio() || 'Tu nombre completo')}
-      <p class="modal-sub">2. Sube tu comprobante:</p>
-      ${formularioComprobante('pago')}
-      <button class="btn btn-primary" style="width:100%;" id="enviarPagoBtn" disabled>Enviar comprobante</button>
-      <p class="carrito-nota">Al enviarlo, tus piezas se guardan para ti mientras el equipo revisa tu pago.</p>`);
-    const enviar = box.querySelector('#enviarPagoBtn');
-    conectarFoto(box, 'pago', (url) => { foto = url; enviar.disabled = !url; });
-    enviar.addEventListener('click', async () => {
-      if (enviando || !foto) return;
-      enviando = true;
-      enviar.disabled = true; enviar.textContent = 'Enviando…';
-      const r = await crearPedidoPagado({ piezas, fotoUrl: foto, referencia: box.querySelector('#pagoRef').value });
+    if (enviando) return;
+    enviando = true;
+    const boton = $('carritoPagarBtn');
+    if (boton) { boton.disabled = true; boton.textContent = 'Reservando…'; }
+    (async () => {
+      const r = await crearPedidoPagado({ piezas });
       enviando = false;
       if (!r.ok) {
-        const err = box.querySelector('#pagoError');
-        err.textContent = r.error; err.hidden = false;
-        enviar.disabled = false; enviar.textContent = 'Enviar comprobante';
+        mostrarToast(r.error);
+        renderTodo();
         return;
       }
-      exito('¡Recibimos tu pago!', 'Tus piezas ya están guardadas para ti. El equipo revisa tu comprobante y te avisa en cuanto lo confirme.', 'pagados');
+      exito(
+        '¡Piezas reservadas!',
+        'Tus piezas pasaron a Pagados. Aún no están guardadas en la bolsita: espera a que el equipo confirme todas las piezas. Cuando estén listas, te aparecerá automáticamente el monto y los datos para pagar.',
+        'pagados'
+      );
       renderTodo();
-    });
+    })();
   }
 
   // ---------------- Pagados ----------------
   const PASOS_VISIBLES = {
-    normal: ['por_confirmar', 'confirmado', 'en_bolsita', 'entregado'],
+    normal: ['esperando_bolsita', 'pago_disponible', 'por_confirmar', 'confirmado', 'en_bolsita', 'entregado'],
     foranea: ['por_confirmar', 'confirmado', 'empaquetado', 'enviado', 'entregado']
   };
-  const NOMBRE_PASO = { por_confirmar: 'Pago enviado', confirmado: 'Pago confirmado', en_bolsita: 'En tu bolsita (caja de pagados)', empaquetado: 'Empaquetado', enviado: 'Enviado', entregado: 'Entregado' };
+  const NOMBRE_PASO = { esperando_bolsita: 'Esperando confirmación en bolsita', pago_disponible: 'Listo para pagar', por_confirmar: 'Pago enviado', confirmado: 'Pago confirmado', en_bolsita: 'En tu bolsita (caja de pagados)', empaquetado: 'Empaquetado', enviado: 'Enviado', entregado: 'Entregado' };
 
   function lineaTiempo(p) {
     const pasos = PASOS_VISIBLES[p.categoria === 'foranea' ? 'foranea' : 'normal'];
@@ -321,6 +305,8 @@
   function estadoPiezaPagada(p) {
     const foranea = p.categoria === 'foranea';
     switch (p.estado) {
+      case 'esperando_bolsita': return { texto: 'Aún no están confirmadas en tu bolsita. Espera a que el equipo confirme todas las piezas.', ok: false };
+      case 'pago_disponible': return { texto: '✓ Todas están confirmadas en tu bolsita. Ya puedes pagar.', ok: true };
       case 'por_confirmar': return { texto: 'Separada para ti. Se guarda en tu bolsita en cuanto se confirme tu pago.', ok: false };
       case 'rechazado': return { texto: 'Separada para ti. Sube otro comprobante para que se guarde en tu bolsita.', ok: false };
       case 'confirmado': return foranea ? { texto: 'Pago confirmado. El equipo está preparando tu paquete.', ok: false } : { texto: 'Pago confirmado. El equipo la está guardando en tu bolsita.', ok: false };
