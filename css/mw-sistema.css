@@ -704,6 +704,16 @@ body.mw2 .carrito-pieza {
   padding: 10px 12px; background: var(--surface); border: 1px solid var(--mw-border); border-radius: var(--mw2-r-tarjeta);
 }
 body.mw2 .carrito-pieza.no-disponible { opacity: 0.6; }
+/* Elegir piezas del carrito (Apartar o Pagar solo las marcadas) */
+body.mw2 .carrito-pieza { grid-template-columns: 24px 64px minmax(0, 1fr) auto; }
+body.mw2 .carrito-pieza[data-elegir-carrito] { cursor: pointer; }
+body.mw2 .carrito-pieza.elegida { border-color: var(--mw-purple); box-shadow: inset 0 0 0 1px var(--mw-purple); }
+body.mw2 .carrito-check { width: 22px; height: 22px; margin: 0; accent-color: var(--mw-purple); cursor: pointer; }
+body.mw2 .carrito-check-vacio { width: 22px; }
+body.mw2 .carrito-todas { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 0 0 6px; padding: 0 12px; font-weight: 600; cursor: pointer; }
+body.mw2 .carrito-todas input { width: 22px; height: 22px; accent-color: var(--mw-purple); }
+/* Mis apartados: tocar el renglón elige la pieza */
+body.mw2 .apartado-row[data-grupo] { cursor: pointer; }
 body.mw2 .carrito-foto { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; background: var(--mw-lilac-soft); }
 body.mw2 .carrito-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
 body.mw2 .carrito-datos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
