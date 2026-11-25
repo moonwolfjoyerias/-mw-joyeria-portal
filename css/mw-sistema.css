@@ -315,6 +315,7 @@ body.mw2 .apartado-photo { border-radius: 10px; }
 body.mw2 .apartado-info h4 { font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; line-height: 1.3; color: var(--mw-text); margin: 0 0 2px; }
 body.mw2 .apartado-info .variant { font-size: 0.8rem; }
 body.mw2 .apartado-aviso-bolsita { display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: var(--mw2-r-campo); font-size: 0.75rem; max-width: none; }
+body.mw2 .apartado-estado-bolsita { display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: var(--mw2-r-campo); font-size: 0.75rem; max-width: none; }
 body.mw2 .apartado-prices .price-emprendedora { font-family: var(--font-body); font-size: 1.05rem; }
 body.mw2 .apartado-cantidad { border-color: var(--mw-border-d); }
 body.mw2 .apartado-cantidad button { width: 40px; height: 40px; transition: background-color 150ms ease, transform 120ms var(--mw2-ease); }
@@ -770,6 +771,8 @@ body.mw2 .pagado-piezas { margin-top: 8px; font-size: 0.88rem; }
 body.mw2 .pagado-piezas summary { cursor: pointer; color: var(--mw-accent-text); font-weight: 600; min-height: 32px; display: flex; align-items: center; }
 body.mw2 .pagado-piezas ul { list-style: none; margin: 6px 0 0; padding: 0; }
 body.mw2 .pagado-piezas li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; border-bottom: 1px dashed var(--mw-border); }
+body.mw2 .pagado-piezas li > span:first-child { min-width: 0; }
+body.mw2 .pagado-piezas li > span:last-child { flex: none; white-space: nowrap; }
 
 /* ---------- Pedidos (s/e/a): Apartados | Pagados ---------- */
 body.mw2 .pedidos-sea-tabs { margin: 0 0 20px; }

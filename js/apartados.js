@@ -315,15 +315,27 @@ function renderApartados() {
     const unitario = Number(pieza.total) || 0;
     const seleccionadas = grupo.piezas.filter(p => seleccionCarrito.has(p.id)).length;
     const hayMas = existenciaDisponibleApartado(pieza) > 0;
-    const pendienteBolsita = !grupo.pagable && idsPendientesBolsita.has(pieza.id);
+    // Cada pieza dice si ya está guardada en su bolsita y, si todavía no se
+    // puede pagar, por qué (la casilla siempre se ve, desactivada).
+    const enBolsita = grupo.piezas.every(piezaEnBolsitaApartado);
+    const esperaDeposito = grupo.ventana && grupo.ventana.estado === 'pendiente_deposito';
+    const motivoNoPagable = grupo.pagable ? '' : esperaDeposito
+      ? 'Podrás pagarla en cuanto se confirme tu depósito.'
+      : !enBolsita ? 'Podrás pagarla en cuanto el equipo la guarde.' : 'Todavía no se puede pagar.';
+    const pendienteBolsita = !grupo.pagable;
+    const plural = n > 1;
+    const estadoBolsita = enBolsita
+      ? `<span class="apartado-estado-bolsita apartado-estado-bolsita--ok">✓ ${plural ? 'Ya están guardadas' : 'Ya está guardada'} en tu bolsita.</span>`
+      : `<span class="apartado-aviso-bolsita">${plural ? 'Aún no están guardadas' : 'Aún no está guardada'} en tu bolsita.${motivoNoPagable ? ` ${motivoNoPagable}` : ''}</span>`;
     return `
     <div class="apartado-row${pendienteBolsita ? ' apartado-row--sin-bolsita' : ''}" data-grupo="${i}">
-      ${grupo.pagable ? `<input type="checkbox" data-seleccionar-grupo="${i}" ${seleccionadas === n ? 'checked' : ''} title="Pagar ${n === 1 ? 'esta pieza' : 'estas piezas'} ahora">` : (pendienteBolsita ? `<input type="checkbox" disabled title="Todavía no se puede pagar: falta que el equipo la guarde en tu bolsita">` : '')}
+      ${grupo.pagable ? `<input type="checkbox" data-seleccionar-grupo="${i}" ${seleccionadas === n ? 'checked' : ''} title="Pagar ${n === 1 ? 'esta pieza' : 'estas piezas'} ahora" aria-label="Pagar ${escapeAttribute(pieza.producto)}">` : `<input type="checkbox" disabled title="${escapeAttribute(motivoNoPagable)}" aria-label="${escapeAttribute(`${pieza.producto}: ${motivoNoPagable}`)}">`}
       <div class="apartado-photo"><img src="${foto}" alt="${escapeAttribute(pieza.producto)}" class="${generica ? 'foto-generica' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(pieza.producto)}"`}></div>
       <div class="apartado-info">
         <h4>${escapeHTML(pieza.producto)}</h4>
         <span class="variant">${escapeHTML([pieza.colorOro, pieza.variante].filter(Boolean).join(' · '))}</span>
-        ${pendienteBolsita ? `<span class="apartado-aviso-bolsita">Aún no está guardada en tu bolsita. Podrás pagarla en cuanto el equipo la guarde.</span>` : ''}
+        ${estadoBolsita}
+        ${enBolsita && motivoNoPagable ? `<span class="apartado-aviso-bolsita">${motivoNoPagable}</span>` : ''}
       </div>
       <div class="apartado-cantidad" role="group" aria-label="Cantidad de ${escapeAttribute(pieza.producto)}">
         <button type="button" data-menos="${i}" aria-label="Quitar una pieza">−</button>
@@ -390,7 +402,7 @@ function agruparPiezasApartado(items, idsPagables) {
   const grupos = new Map();
   items.forEach(({ pieza, ventana }) => {
     const pagable = idsPagables.has(pieza.id);
-    const clave = [ventana.id, pieza.productoId || `nombre:${pieza.producto}`, pieza.varianteId || pieza.variante || '', Number(pieza.total) || 0, pagable].join('|');
+    const clave = [ventana.id, pieza.productoId || `nombre:${pieza.producto}`, pieza.varianteId || pieza.variante || '', Number(pieza.total) || 0, pagable, piezaEnBolsitaApartado(pieza)].join('|');
     if (!grupos.has(clave)) grupos.set(clave, { ventana, pagable, piezas: [] });
     grupos.get(clave).piezas.push(pieza);
   });
@@ -476,8 +488,14 @@ function actualizarResumen() {
   }
   if (aviso) {
     const pendientes = idsPendientesBolsita.size;
-    aviso.hidden = pendientes === 0;
-    aviso.textContent = pendientes ? `${pendientes} pieza${pendientes === 1 ? '' : 's'} aún no ${pendientes === 1 ? 'está guardada' : 'están guardadas'} en tu bolsita; ${pendientes === 1 ? 'podrás pagarla' : 'podrás pagarlas'} en cuanto el equipo ${pendientes === 1 ? 'la guarde' : 'las guarde'}.` : '';
+    // Piezas en una ventana que todavía espera que se confirme el depósito.
+    const esperanDeposito = items.filter(({ ventana }) => ventana && ventana.estado === 'pendiente_deposito').length;
+    aviso.hidden = pendientes === 0 && esperanDeposito === 0;
+    aviso.textContent = pendientes
+      ? `${pendientes} pieza${pendientes === 1 ? '' : 's'} aún no ${pendientes === 1 ? 'está guardada' : 'están guardadas'} en tu bolsita; ${pendientes === 1 ? 'podrás pagarla' : 'podrás pagarlas'} en cuanto el equipo ${pendientes === 1 ? 'la guarde' : 'las guarde'}.`
+      : esperanDeposito
+        ? `Tu depósito está por confirmarse; podrás pagar ${esperanDeposito === 1 ? 'tu pieza' : 'tus piezas'} en cuanto se confirme.`
+        : '';
   }
   const btn = document.getElementById('pagarSeleccionadasBtn');
   if (btn) {
