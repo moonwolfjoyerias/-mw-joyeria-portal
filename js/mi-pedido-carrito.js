@@ -289,6 +289,22 @@
     return `<ol class="pedido-pasos">${pasos.map((paso, k) => `<li class="${k < i ? 'hecho' : k === i ? 'actual' : ''}">${NOMBRE_PASO[paso]}</li>`).join('')}</ol>`;
   }
 
+  // Debajo de cada pieza: si ya está guardada en su bolsita (o empaquetada,
+  // enviada, entregada) según en qué va el pedido.
+  function estadoPiezaPagada(p) {
+    const foranea = p.categoria === 'foranea';
+    switch (p.estado) {
+      case 'por_confirmar': return { texto: 'Separada para ti. Se guarda en tu bolsita en cuanto se confirme tu pago.', ok: false };
+      case 'rechazado': return { texto: 'Separada para ti. Sube otro comprobante para que se guarde en tu bolsita.', ok: false };
+      case 'confirmado': return foranea ? { texto: 'Pago confirmado. El equipo está preparando tu paquete.', ok: false } : { texto: 'Pago confirmado. El equipo la está guardando en tu bolsita.', ok: false };
+      case 'en_bolsita': return { texto: '✓ Ya está guardada en tu bolsita (caja de pagados).', ok: true };
+      case 'empaquetado': return { texto: '✓ Ya está empaquetada para envío.', ok: true };
+      case 'enviado': return { texto: '✓ Ya va en camino.', ok: true };
+      case 'entregado': return { texto: '✓ Entregada.', ok: true };
+      default: return null;
+    }
+  }
+
   function renderPagados() {
     const panel = $('pedidoPanel-pagados');
     if (!panel) return;
@@ -300,6 +316,7 @@
     panel.innerHTML = `<ul class="pagados-lista">${pedidos.map(p => {
       const info = ESTADOS_PEDIDO_PAGADO[p.estado] || { texto: p.estado, clase: '' };
       const rechazado = p.estado === 'rechazado';
+      const estado = estadoPiezaPagada(p);
       return `
       <li class="pagado-tarjeta">
         <div class="pagado-cabeza">
@@ -312,7 +329,7 @@
         ${['vencido', 'cancelado'].includes(p.estado) ? '' : lineaTiempo(p)}
         ${rechazado ? `<div class="pagado-rechazo"><strong>No se pudo validar tu comprobante:</strong> ${esc(p.rechazo?.motivo || '')}<br>Sube otro hoy antes de las 11:59 p.m.; si no, tus piezas regresan al catálogo.<button type="button" class="btn btn-primary" data-reenviar="${esc(p.id)}">Subir otro comprobante</button></div>` : ''}
         ${p.envioInfo ? `<p class="pagado-guia">Guía ${esc(p.envioInfo.paqueteria)} <strong>${esc(p.envioInfo.guia)}</strong></p>` : ''}
-        <details class="pagado-piezas"><summary>Ver piezas</summary><ul>${p.piezas.map(x => `<li><span>${esc(x.producto)}${x.variante && x.variante !== 'Única' ? ` · ${esc(x.variante)}` : ''}</span><span>${pesos(x.total)}</span></li>`).join('')}${Number(p.envio) > 0 ? `<li><span>Envío</span><span>${pesos(p.envio)}</span></li>` : ''}</ul></details>
+        <details class="pagado-piezas"${['vencido', 'cancelado', 'entregado'].includes(p.estado) ? '' : ' open'}><summary>Piezas</summary><ul>${p.piezas.map(x => `<li><span>${esc(x.producto)}${x.variante && x.variante !== 'Única' ? ` · ${esc(x.variante)}` : ''}${estado ? `<small class="pagado-pieza-estado${estado.ok ? ' pagado-pieza-estado--ok' : ''}">${esc(estado.texto)}</small>` : ''}</span><span>${pesos(x.total)}</span></li>`).join('')}${Number(p.envio) > 0 ? `<li><span>Envío</span><span>${pesos(p.envio)}</span></li>` : ''}</ul></details>
       </li>`;
     }).join('')}</ul>`;
     panel.querySelectorAll('[data-reenviar]').forEach(b => b.addEventListener('click', () => {

@@ -515,7 +515,7 @@ async function aprobarSolicitud(solicitudId, { adminId, adminNombre, liderId }) 
     apellidos,
     tipo: 'emprendedora', // SIEMPRE Emprendedora, aunque el solicitante sea Líder
     // Si contestó que NO vive en San Luis Potosí o zonas cercanas, la
-    // cuenta nace foránea (15 días de apartado, envío gratis desde $4,000).
+    // cuenta nace foránea (5 días de apartado, envío gratis desde $4,000).
     categoria: solicitud.viveEnSLP === false ? 'foranea' : 'normal',
     viveEnSLP: typeof solicitud.viveEnSLP === 'boolean' ? solicitud.viveEnSLP : null,
     estado: 'activa',

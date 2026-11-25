@@ -45,7 +45,7 @@ let DEPOSITO_FORANEA = 200;
 
 const CATEGORIAS_APARTADO = {
   normal: { etiqueta: 'Normal', dias: 3, requiereDeposito: true },
-  foranea: { etiqueta: 'Foránea', dias: 15, requiereDeposito: true },
+  foranea: { etiqueta: 'Foránea', dias: 5, requiereDeposito: true },
   vip: { etiqueta: 'VIP', dias: null, requiereDeposito: false, requiereAprobacion: true }
 };
 

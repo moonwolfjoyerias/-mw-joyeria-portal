@@ -77,7 +77,7 @@ function abrirModalNuevaVentana() {
     <label for="nvCategoria">Categoría</label>
     <select id="nvCategoria" style="width:100%;height:42px;border:1px solid #ddd5e3;border-radius:7px;padding:0 12px;color:var(--mw-heading-d);">
       <option value="normal">Emprendedora normal (3 días)</option>
-      <option value="foranea">Emprendedora foránea (15 días)</option>
+      <option value="foranea">Emprendedora foránea (5 días)</option>
       <option value="vip">Líder VIP (sin depósito, sin vencimiento)</option>
     </select>
 
