@@ -73,6 +73,13 @@ function aplicarNombreMiCarrito(foranea) {
 // portal que cargan este archivo) un botón de hamburguesa que colapsa
 // <nav> dentro de .sidebar; la regla de qué se ve en cada ancho vive en
 // css/styles.css (.sidebar nav / .sidebar.sidebar-abierta nav).
+// Celular, o tablet en vertical: menú arriba y tablas como tarjetas
+// (mismo media que css/styles.css).
+const MEDIA_COMPACTA_PORTAL = '(max-width: 720px), (max-width: 1100px) and (orientation: portrait)';
+function esPantallaCompactaPortal() {
+  return typeof window.matchMedia === 'function' ? window.matchMedia(MEDIA_COMPACTA_PORTAL).matches : window.innerWidth <= 720;
+}
+
 function initSidebarMovil() {
   const sidebar = document.querySelector('.sidebar');
   const nav = sidebar?.querySelector('nav');
@@ -94,7 +101,7 @@ function initSidebarMovil() {
   // Si cambia de tamaño (o al navegar a otra página del portal) nunca
   // debe quedar "abierta" heredada en un ancho donde ya no aplica.
   window.addEventListener('resize', () => {
-    if (window.innerWidth > 720) sidebar.classList.remove('sidebar-abierta');
+    if (!esPantallaCompactaPortal()) sidebar.classList.remove('sidebar-abierta');
   });
 }
 
@@ -116,7 +123,7 @@ function initTablasMovil() {
   let pendiente = false;
   const etiquetarTodas = () => {
     pendiente = false;
-    if (window.innerWidth > ANCHO_MAX_TABLAS_TARJETA) return;
+    if (!esPantallaCompactaPortal()) return;
     document.querySelectorAll('.main-content table:not(.sin-tarjetas):not(.tabla-tarjetas)').forEach(etiquetarTablaMovil);
     document.querySelectorAll('.main-content table.tabla-tarjetas').forEach(etiquetarFilasTablaMovil);
   };
@@ -139,7 +146,10 @@ function etiquetarTablaMovil(tabla) {
   // scrollWidth del contenedor: en tablas de ancho fijo (Apartados) la
   // tabla mide lo mismo que su contenedor y lo que se sale son las celdas.
   const anchoContenido = Math.max(tabla.offsetWidth, contenedor.scrollWidth);
-  if (anchoContenido <= contenedor.clientWidth + 2) return;
+  // Con 6 columnas o más se pasa a tarjetas aunque "quepa": en tablet
+  // vertical las palabras se partían letra por letra para caber.
+  const columnas = tabla.tHead?.rows[0]?.cells.length || tabla.rows[0]?.cells.length || 0;
+  if (columnas < 6 && anchoContenido <= contenedor.clientWidth + 2) return;
   tabla.classList.add('tabla-tarjetas');
   etiquetarFilasTablaMovil(tabla);
 }
