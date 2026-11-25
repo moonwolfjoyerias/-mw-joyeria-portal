@@ -17,6 +17,7 @@
   const FILTROS = {
     activos: { texto: 'En curso', f: p => !ESTADOS_PEDIDO_TERMINADOS.includes(p.estado) },
     esperando_bolsita: { texto: 'Esperando bolsita', f: p => p.estado === 'esperando_bolsita' },
+    pago_disponible: { texto: 'Listo para pagar', f: p => p.estado === 'pago_disponible' },
     por_confirmar: { texto: 'Por confirmar pago', f: p => p.estado === 'por_confirmar' || p.estado === 'rechazado' },
     por_preparar: { texto: 'Por preparar', f: p => p.estado === 'confirmado' || p.estado === 'empaquetado' },
     en_bolsita: { texto: 'En caja de pagados', f: p => p.estado === 'en_bolsita' },
@@ -54,6 +55,7 @@
 
     const resumen = [
       ['Esperando bolsita', cuenta(p => p.estado === 'esperando_bolsita'), 'esperando_bolsita'],
+      ['Listo para pagar', cuenta(p => p.estado === 'pago_disponible'), 'pago_disponible'],
       ['Por confirmar pago', cuenta(p => p.estado === 'por_confirmar'), 'por_confirmar'],
       ['Por preparar', cuenta(p => p.estado === 'confirmado' || p.estado === 'empaquetado'), 'por_preparar'],
       ['En caja de pagados', cuenta(p => p.estado === 'en_bolsita'), 'en_bolsita'],
