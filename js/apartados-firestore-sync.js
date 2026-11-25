@@ -311,6 +311,9 @@ async function guardarVentanasRepo(ventanas) {
   }
   APARTADOS_CACHE = ventanas;
   try { localStorage.setItem(APARTADOS_STORAGE_KEY, JSON.stringify(ventanas)); } catch (error) { /* noop */ }
+  // Actualización inmediata en la misma página: el caché ya contiene el
+  // apartado nuevo antes de esperar la escritura a Firestore.
+  _avisarApartadosActualizados();
 
   if (!dbFirestore) return;
 

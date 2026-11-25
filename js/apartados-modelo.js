@@ -139,7 +139,7 @@ function obtenerVentanasApartado() {
 }
 
 function guardarVentanasApartado(ventanas) {
-  guardarVentanasRepo(ventanas);
+  return guardarVentanasRepo(ventanas);
 }
 
 function obtenerCreditosApartado() {

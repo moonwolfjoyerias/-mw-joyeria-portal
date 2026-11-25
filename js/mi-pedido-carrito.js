@@ -420,6 +420,10 @@
       elegirTab(hayPagados && !hayApartado ? 'pagados' : hayApartado ? 'apartado' : 'carrito');
     }
     window.addEventListener('mw:carrito-actualizado', renderTodo);
+    window.addEventListener('mw:apartados-actualizados', () => {
+      if (typeof renderApartados === 'function') renderApartados();
+      renderTodo();
+    });
     window.addEventListener('mw:pedidos-pagados-actualizados', renderTodo);
     window.addEventListener('mw:catalogo-actualizado', renderCarrito);
   });
