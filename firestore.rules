@@ -609,6 +609,18 @@ service cloud.firestore {
     function esMiPersona(personaId) {
       return estaAutenticado() && !esInterno() && personaId == miPerfil().get('personaId', request.auth.uid);
     }
+    // comisionesDestino/{personaId} — cómo quiere recibir sus comisiones la
+    // líder: 'pago' (dinero) o 'saldo' (saldo a favor). Ella lo elige en
+    // Mi equipo; Administración lo confirma o lo cambia en BRILLO al pagar.
+    match /comisionesDestino/{personaId} {
+      allow read: if esInterno() || esMiPersona(personaId);
+      allow write: if esAdmin()
+        || (esMiPersona(personaId)
+            && request.resource.data.personaId == personaId
+            && request.resource.data.destino in ['pago', 'saldo']
+            && request.resource.data.keys().hasOnly(['personaId', 'nombre', 'destino', 'actualizadoEn']));
+    }
+
     match /carritos/{personaId} {
       allow read: if esMiPersona(personaId) || esInterno();
       allow write: if esMiPersona(personaId)

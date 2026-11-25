@@ -804,3 +804,12 @@ body.mw2 .comprobante-ref select { min-height: var(--mw2-toque); border-radius: 
   body.mw2 .pagados-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body.mw2 .pagados-equipo { grid-template-columns: 1fr; }
 }
+
+/* Líder → Mi equipo: cómo recibir sus comisiones (js/comision-destino.js) */
+.comision-destino-opciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin: 12px 0; }
+.comision-destino-opcion { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--mw-border, #ddd5e3); border-radius: 10px; padding: 12px 14px; cursor: pointer; min-height: 44px; }
+.comision-destino-opcion:has(input:checked) { border-color: var(--mw-purple, #5E1A8A); background: rgba(94, 26, 138, .05); }
+.comision-destino-opcion input { margin-top: 4px; accent-color: var(--mw-purple, #5E1A8A); }
+.comision-destino-opcion span { display: flex; flex-direction: column; gap: 2px; }
+.comision-destino-opcion small { color: var(--mw-text-muted, #6b6175); }
+.comision-destino-pie { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
