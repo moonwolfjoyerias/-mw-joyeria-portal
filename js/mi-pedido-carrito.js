@@ -54,6 +54,12 @@
     return typeof normalizarImagenApartado === 'function' ? normalizarImagenApartado(f) : f;
   }
 
+  // Piezas del carrito elegidas para Apartar o Pagar. Toda pieza nueva nace
+  // elegida; la que la persona desmarca se queda así mientras siga en el
+  // carrito. Lo que no se elige se queda en el carrito (hasta fin del día).
+  const elegidasCarrito = new Set();
+  const vistasCarrito = new Set();
+
   function renderCarrito() {
     const panel = $('pedidoPanel-carrito');
     if (!panel) return;
@@ -69,15 +75,23 @@
       return;
     }
     const disponibles = piezas.filter(p => p.disponible);
-    const subtotal = disponibles.reduce((s, p) => s + Number(p.total || 0), 0);
+    disponibles.forEach(p => { if (!vistasCarrito.has(p.id)) { vistasCarrito.add(p.id); elegidasCarrito.add(p.id); } });
+    [...elegidasCarrito].forEach(id => { if (!disponibles.some(p => p.id === id)) elegidasCarrito.delete(id); });
+    [...vistasCarrito].forEach(id => { if (!piezas.some(p => p.id === id)) vistasCarrito.delete(id); });
+    const elegidas = disponibles.filter(p => elegidasCarrito.has(p.id));
+    const todas = disponibles.length > 0 && elegidas.length === disponibles.length;
+    const subtotal = elegidas.reduce((s, p) => s + Number(p.total || 0), 0);
     const envio = calcularEnvioPedido(categoria(), subtotal);
     panel.innerHTML = `
       <p class="carrito-aviso">Estas piezas <strong>todavía no están guardadas</strong>: otra persona podría ganártelas. Apártalas o págalas para asegurarlas. Tu carrito se vacía al terminar el día.</p>
+      ${disponibles.length > 1 ? `<label class="carrito-todas"><input type="checkbox" id="carritoTodas" ${todas ? 'checked' : ''}> Seleccionar todas (${disponibles.length})</label>` : ''}
       <ul class="carrito-lista">
         ${piezas.map(p => {
           const foto = fotoPieza(p);
+          const marcada = p.disponible && elegidasCarrito.has(p.id);
           return `
-          <li class="carrito-pieza ${p.disponible ? '' : 'no-disponible'}">
+          <li class="carrito-pieza ${p.disponible ? '' : 'no-disponible'}${marcada ? ' elegida' : ''}" ${p.disponible ? `data-elegir-carrito="${esc(p.id)}"` : ''}>
+            ${p.disponible ? `<input type="checkbox" class="carrito-check" data-check-carrito="${esc(p.id)}" ${marcada ? 'checked' : ''} aria-label="Elegir ${esc(p.producto)}">` : '<span class="carrito-check-vacio"></span>'}
             <span class="carrito-foto">${foto ? `<img src="${esc(foto)}" alt="">` : ''}</span>
             <span class="carrito-datos">
               <strong>${esc(p.producto)}</strong>
@@ -89,18 +103,31 @@
         }).join('')}
       </ul>
       <div class="carrito-totales">
-        <div><span>${disponibles.length} pieza${disponibles.length === 1 ? '' : 's'}</span><strong>${pesos(subtotal)}</strong></div>
+        <div><span>${elegidas.length} de ${disponibles.length} pieza${disponibles.length === 1 ? '' : 's'} elegida${elegidas.length === 1 ? '' : 's'}</span><strong>${pesos(subtotal)}</strong></div>
         ${envio.aplica ? `<div class="carrito-envio"><span>Envío si pagas</span><span>${envio.gratis ? 'Gratis' : envio.sinConfigurar ? 'El equipo te confirma el costo' : pesos(envio.envio)}</span></div>` : ''}
         ${envio.aplica && !envio.gratis ? `<p class="carrito-nota">Tu envío sale gratis desde ${pesos(envioGratisDesde())} de compra.</p>` : ''}
       </div>
       <div class="carrito-acciones">
-        <button type="button" class="btn btn-outline" id="carritoApartarBtn" ${disponibles.length ? '' : 'disabled'}>Apartar</button>
-        <button type="button" class="btn btn-primary" id="carritoPagarBtn" ${disponibles.length ? '' : 'disabled'}>Pagar ${pesos(subtotal + envio.envio)}</button>
+        <button type="button" class="btn btn-outline" id="carritoApartarBtn" ${elegidas.length ? '' : 'disabled'}>Apartar${elegidas.length && elegidas.length < disponibles.length ? ` ${elegidas.length}` : ''}</button>
+        <button type="button" class="btn btn-primary" id="carritoPagarBtn" ${elegidas.length ? '' : 'disabled'}>Pagar ${pesos(subtotal + envio.envio)}</button>
       </div>
+      ${elegidas.length && elegidas.length < disponibles.length ? `<p class="carrito-nota">${disponibles.length - elegidas.length === 1 ? 'La pieza que no elegiste se queda' : `Las ${disponibles.length - elegidas.length} piezas que no elegiste se quedan`} en tu carrito.</p>` : ''}
+      ${!elegidas.length && disponibles.length ? '<p class="carrito-nota">Elige las piezas que quieres apartar o pagar.</p>' : ''}
       <p class="carrito-nota carrito-explica"><strong>Apartar:</strong> se guardan con tu depósito y tienes tu plazo de siempre para pagarlas. <strong>Pagar:</strong> transfieres hoy el total, subes tu comprobante y el equipo prepara tu pedido.</p>`;
-    panel.querySelectorAll('[data-quitar-carrito]').forEach(b => b.addEventListener('click', () => quitarDelCarrito(b.dataset.quitarCarrito)));
-    $('carritoApartarBtn')?.addEventListener('click', () => apartarCarrito(disponibles));
-    $('carritoPagarBtn')?.addEventListener('click', () => abrirPagoCarrito(disponibles));
+    panel.querySelectorAll('[data-quitar-carrito]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); quitarDelCarrito(b.dataset.quitarCarrito); }));
+    // Tocar el renglón (foto, nombre o casilla) elige o quita la pieza.
+    panel.querySelectorAll('[data-elegir-carrito]').forEach(li => li.addEventListener('click', e => {
+      if (e.target.closest('button')) return;
+      const id = li.dataset.elegirCarrito;
+      if (elegidasCarrito.has(id)) elegidasCarrito.delete(id); else elegidasCarrito.add(id);
+      renderCarrito();
+    }));
+    $('carritoTodas')?.addEventListener('change', e => {
+      if (e.target.checked) disponibles.forEach(p => elegidasCarrito.add(p.id)); else elegidasCarrito.clear();
+      renderCarrito();
+    });
+    $('carritoApartarBtn')?.addEventListener('click', () => apartarCarrito(elegidas));
+    $('carritoPagarBtn')?.addEventListener('click', () => abrirPagoCarrito(elegidas));
   }
 
   function abrirModal(html) {

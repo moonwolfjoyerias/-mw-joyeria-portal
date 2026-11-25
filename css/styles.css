@@ -5956,7 +5956,7 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
 /* Mis apartados: pieza que aún no está guardada en la bolsita (no se puede pagar). */
 .apartado-aviso-bolsita { display: block; margin-top: 0.35rem; font-size: 0.78rem; line-height: 1.35; color: #8a5a12; background: var(--mw-gold-soft); border-radius: var(--radius-sm); padding: 0.3rem 0.55rem; max-width: 34ch; }
 :root[data-theme="dark"] .apartado-aviso-bolsita { color: #F0D58A; }
-.apartado-row--sin-bolsita input[type="checkbox"][disabled] { opacity: 0.4; cursor: not-allowed; }
+.apartado-row--sin-bolsita input[type="checkbox"][disabled], .apartado-row input.casilla-bloqueada { opacity: 0.45; cursor: not-allowed; }
 /* Pieza ya guardada en su bolsita (Mis apartados y Pagados de e/l) */
 .apartado-estado-bolsita { display: block; margin-top: 0.35rem; font-size: 0.78rem; line-height: 1.35; border-radius: var(--radius-sm); padding: 0.3rem 0.55rem; max-width: 34ch; }
 .apartado-estado-bolsita--ok { color: #1f6b3a; background: #e6f4ea; }

@@ -329,8 +329,8 @@ function renderApartados() {
       : `<span class="apartado-aviso-bolsita">${plural ? 'Aún no están guardadas' : 'Aún no está guardada'} en tu bolsita.${motivoNoPagable ? ` ${motivoNoPagable}` : ''}</span>`;
     return `
     <div class="apartado-row${pendienteBolsita ? ' apartado-row--sin-bolsita' : ''}" data-grupo="${i}">
-      ${grupo.pagable ? `<input type="checkbox" data-seleccionar-grupo="${i}" ${seleccionadas === n ? 'checked' : ''} title="Pagar ${n === 1 ? 'esta pieza' : 'estas piezas'} ahora" aria-label="Pagar ${escapeAttribute(pieza.producto)}">` : `<input type="checkbox" disabled title="${escapeAttribute(motivoNoPagable)}" aria-label="${escapeAttribute(`${pieza.producto}: ${motivoNoPagable}`)}">`}
-      <div class="apartado-photo"><img src="${foto}" alt="${escapeAttribute(pieza.producto)}" class="${generica ? 'foto-generica' : ''}" ${generica ? '' : `data-zoom="${escapeAttribute(foto)}" data-zoom-alt="${escapeAttribute(pieza.producto)}"`}></div>
+      ${grupo.pagable ? `<input type="checkbox" data-seleccionar-grupo="${i}" ${seleccionadas === n ? 'checked' : ''} title="Pagar ${n === 1 ? 'esta pieza' : 'estas piezas'} ahora" aria-label="Pagar ${escapeAttribute(pieza.producto)}">` : `<input type="checkbox" class="casilla-bloqueada" aria-disabled="true" data-motivo-grupo="${i}" title="${escapeAttribute(motivoNoPagable)}" aria-label="${escapeAttribute(`${pieza.producto}: ${motivoNoPagable}`)}">`}
+      <div class="apartado-photo"><img src="${foto}" alt="${escapeAttribute(pieza.producto)}" class="${generica ? 'foto-generica' : ''}"></div>
       <div class="apartado-info">
         <h4>${escapeHTML(pieza.producto)}</h4>
         <span class="variant">${escapeHTML([pieza.colorOro, pieza.variante].filter(Boolean).join(' · '))}</span>
@@ -390,8 +390,37 @@ function renderApartados() {
       actualizarResumen();
     });
   });
+  // Pieza que todavía no se puede pagar: la casilla no se marca y dice por qué.
+  list.querySelectorAll('[data-motivo-grupo]').forEach(cb => {
+    cb.addEventListener('click', e => {
+      e.preventDefault();
+      avisarNoPagable(gruposActuales[Number(cb.getAttribute('data-motivo-grupo'))]);
+    });
+  });
+  // Tocar el renglón (foto, nombre o precio) hace lo mismo que la casilla.
+  list.querySelectorAll('.apartado-row[data-grupo]').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('button, input, a, .apartado-cantidad, .apartado-actions')) return;
+      const cb = row.querySelector('input[type="checkbox"]');
+      if (!cb) return;
+      if (cb.hasAttribute('data-motivo-grupo')) { avisarNoPagable(gruposActuales[Number(row.getAttribute('data-grupo'))]); return; }
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event('change'));
+    });
+  });
 
   actualizarResumen();
+}
+
+// Explica por qué una pieza todavía no se puede pagar.
+function avisarNoPagable(grupo) {
+  if (!grupo) return;
+  const n = grupo.piezas.length;
+  const esperaDeposito = grupo.ventana && grupo.ventana.estado === 'pendiente_deposito';
+  const msg = esperaDeposito
+    ? `Todavía no puedes pagar ${n === 1 ? 'esta pieza' : 'estas piezas'}: tu depósito está por confirmarse.`
+    : `No puedes pagar ${n === 1 ? 'esta pieza' : 'estas piezas'} todavía porque aún no ${n === 1 ? 'está guardada' : 'están guardadas'} en tu bolsita. Podrás pagar${n === 1 ? 'la' : 'las'} en cuanto el equipo ${n === 1 ? 'la guarde' : 'las guarde'}.`;
+  if (typeof mostrarToast === 'function') mostrarToast(msg);
 }
 
 // ---------- Cantidad (piezas iguales agrupadas) ----------
