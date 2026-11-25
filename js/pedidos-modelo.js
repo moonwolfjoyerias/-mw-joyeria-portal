@@ -639,8 +639,8 @@ async function crearPagadoDesdeApartado(ventana, piezas) {
     categoria, origen: 'apartado', ventanaId: ventana.id,
     piezas: piezas.map(p => ({ id: p.id, productoId: p.productoId || null, varianteId: p.varianteId || null, producto: p.producto || '', variante: p.variante || '', colorOro: p.colorOro || '', material: p.material || '', precioEtiqueta: Number(p.precioEtiqueta) || 0, total: Number(p.total) || 0 })),
     subtotal, envio: 0, envioGratis: false, total: subtotal,
-    // Para pagar un apartado las piezas ya debían estar en su bolsita.
-    estado: categoria === 'foranea' ? 'confirmado' : 'en_bolsita',
+    // Normal: directo a la caja de pagados solo si todas ya estaban en su bolsita.
+    estado: categoria === 'foranea' ? 'confirmado' : piezas.every(p => !!p.enBolsita) ? 'en_bolsita' : 'confirmado',
     historial: [{ estado: 'confirmado', por: q.nombre, rol: q.rol, en: ahora, nota: `Apartado ${ventana.id} liquidado` }],
     dia: hoyTiendaISO(), creadoEn: ahora, actualizadoEn: ahora
   };
