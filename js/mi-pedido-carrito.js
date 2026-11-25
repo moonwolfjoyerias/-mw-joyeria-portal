@@ -292,12 +292,18 @@
     foranea: ['esperando_bolsita', 'pago_disponible', 'por_confirmar', 'confirmado', 'empaquetado', 'enviado', 'entregado']
   };
   const NOMBRE_PASO = { esperando_bolsita: 'Esperando confirmación en bolsita', pago_disponible: 'Listo para pagar', por_confirmar: 'Pago enviado', confirmado: 'Pago confirmado', en_bolsita: 'En tu bolsita (caja de pagados)', empaquetado: 'Empaquetado', enviado: 'Enviado', entregado: 'Entregado' };
+  const NOMBRE_PASO_CORTO = { esperando_bolsita: 'Esperando bolsita', pago_disponible: 'Listo para pagar', por_confirmar: 'Pago enviado', confirmado: 'Pago confirmado', en_bolsita: 'En bolsita', empaquetado: 'Empaquetado', enviado: 'Enviado', entregado: 'Entregado' };
 
   function lineaTiempo(p) {
     const pasos = PASOS_VISIBLES[p.categoria === 'foranea' ? 'foranea' : 'normal'];
     const estado = p.estado === 'rechazado' ? 'por_confirmar' : p.estado;
     const i = pasos.indexOf(estado);
-    return `<ol class="pedido-pasos">${pasos.map((paso, k) => `<li class="${k < i ? 'hecho' : k === i ? 'actual' : ''}">${NOMBRE_PASO[paso]}</li>`).join('')}</ol>`;
+    const resumenMovil = i >= 0 ? `
+      <div class="pedido-pasos-resumen-movil">
+        <div><small>Estado actual</small><strong>${esc(NOMBRE_PASO_CORTO[estado])}</strong></div>
+        ${pasos[i + 1] ? `<div><small>Siguiente</small><strong>${esc(NOMBRE_PASO_CORTO[pasos[i + 1]])}</strong></div>` : ''}
+      </div>` : '';
+    return `${resumenMovil}<ol class="pedido-pasos">${pasos.map((paso, k) => `<li class="${k < i ? 'hecho' : k === i ? 'actual' : k === i + 1 ? 'siguiente' : ''}"><span class="pedido-paso-numero">${k + 1}</span><span class="pedido-paso-etiqueta">${esc(NOMBRE_PASO[paso])}</span></li>`).join('')}</ol>`;
   }
 
   // Debajo de cada pieza: si ya está guardada en su bolsita (o empaquetada,
