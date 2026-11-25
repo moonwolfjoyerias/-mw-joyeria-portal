@@ -2293,13 +2293,17 @@ img.zoomable-photo { cursor: zoom-in; }
 .sidebar-toggle svg { width: 20px; height: 20px; }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 720px) {
+/* Portal en celular y en tablet vertical: la barra lateral se vuelve
+   barra de arriba con menú hamburguesa (mismo media que js/portal-common.js). */
+@media (max-width: 720px), (max-width: 1100px) and (orientation: portrait) {
   .layout-portal { flex-direction: column; }
   .sidebar { width: 100%; position: relative; }
   .sidebar-toggle { display: flex; }
   /* Colapsada por default: solo se ve el logo + el botón. */
   .sidebar nav { display: none; }
   .sidebar.sidebar-abierta nav { display: block; margin-top: 0.75rem; }
+}
+@media (max-width: 720px) {
   .topbar { flex-wrap: wrap; align-items: center; }
   .nav-toggle { display: flex; }
   #publicNav { display: none; width: 100%; }
@@ -5338,6 +5342,8 @@ h1 .icon-inline, h2 .icon-inline, h3 .icon-inline { width: 0.75em; height: 0.75e
   .footer-logo img { height: 38px; }
   .footer-social a { width: 40px; height: 40px; }
 
+}
+@media (max-width: 720px), (max-width: 1100px) and (orientation: portrait) {
   /* ---------- Barra lateral del portal ----------
      Antes ocupaba ~145 px de franja morada casi vacía (logo con
      margin-bottom de escritorio). Ahora es una barra delgada fija

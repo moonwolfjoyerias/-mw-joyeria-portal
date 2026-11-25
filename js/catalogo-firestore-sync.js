@@ -150,6 +150,14 @@ function _esPaginaGestionCatalogo() {
   return /\/portal\/(admin|encargado|staff)\/(admin|encargado|staff)-catalogo(\.html)?$/.test(window.location.pathname);
 }
 
+// Revisión completa del catálogo: como mucho una vez al día (la hace la
+// primera persona de Staff/Encargado/Admin que abre su Catálogo).
+const CATALOGO_REVISION_CADA_MS = 24 * 60 * 60 * 1000;
+function _tocaRevisionCompletaCatalogo(resumen) {
+  const t = Date.parse(resumen && resumen.generadoEn);
+  return !Number.isFinite(t) || Date.now() - t > CATALOGO_REVISION_CADA_MS;
+}
+
 async function _leerCatalogoCompleto() {
   const snap = await dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE).get();
   if (!snap.empty) return snap.docs.map(d => ({ ...d.data(), id: d.id }));
@@ -174,6 +182,17 @@ async function cargarCatalogoRepo() {
         return CATALOGO_CACHE;
       }
       if (_esPaginaGestionCatalogo()) {
+        // Lo normal: leer el resumen (~12 lecturas). La lectura completa de
+        // `productos` (una por producto) solo se hace si el resumen no
+        // existe o lleva más de un día sin revisarse; esa revisión corrige
+        // el resumen y saca fotos que vengan dentro del producto.
+        const resumenGestion = await _leerMetaResumenCatalogo();
+        if (resumenGestion && !_tocaRevisionCompletaCatalogo(resumenGestion)) {
+          _resumenCatalogo = resumenGestion;
+          CATALOGO_CACHE = await _leerCatalogoDesdeResumen(resumenGestion);
+          _recordarCatalogoEnServidor(CATALOGO_CACHE);
+          return CATALOGO_CACHE;
+        }
         const inicioLectura = new Date().toISOString();
         CATALOGO_CACHE = await _leerCatalogoCompleto();
         _recordarCatalogoEnServidor(CATALOGO_CACHE);
