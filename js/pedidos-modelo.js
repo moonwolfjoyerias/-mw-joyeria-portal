@@ -435,11 +435,16 @@ async function rechazarPagoPedido(pedido, motivo) {
   const ahora = new Date().toISOString();
   const q = _quienPedidos();
   const rechazo = { motivo: String(motivo || '').trim().slice(0, 200) || 'El comprobante no es válido', por: q.nombre, en: ahora, plazo: hoyTiendaISO() };
+  // En transacción: si mientras tanto se confirmó (aquí o en BRILLO), no se pisa.
+  const ref = dbFirestore.collection(PEDIDOS_PAGADOS_COLECCION).doc(pedido.id);
   try {
-    await dbFirestore.collection(PEDIDOS_PAGADOS_COLECCION).doc(pedido.id).update({
-      estado: 'rechazado', rechazo, historial: [...(pedido.historial || []), _historial('rechazado', rechazo.motivo)], actualizadoEn: ahora
+    await dbFirestore.runTransaction(async (tx) => {
+      const d = await tx.get(ref);
+      if (!d.exists || d.data().estado !== 'por_confirmar') throw new Error('YA_REVISADO');
+      tx.update(ref, { estado: 'rechazado', rechazo, historial: [...(d.data().historial || []), _historial('rechazado', rechazo.motivo)], actualizadoEn: ahora });
     });
   } catch (e) {
+    if (e && e.message === 'YA_REVISADO') return { ok: false, error: 'Este pago ya se revisó (quizá desde BRILLO). Recarga la lista.' };
     return { ok: false, error: 'No se pudo guardar. Revisa tu conexión.' };
   }
   _notificarPersonaPedido(pedido, `Tu comprobante de pago (${_montoTexto(pedido.total)}) no se pudo validar: ${rechazo.motivo}. Sube otro hoy antes de las 11:59 p.m. o tus piezas regresarán al catálogo.`);
@@ -475,10 +480,17 @@ async function avanzarPedidoPagado(pedido, estado, datos = {}) {
     cambios.envioInfo = { paqueteria, guia, en: ahora, por: _quienPedidos().nombre };
     nota = `${paqueteria} ${guia}`.trim();
   }
-  cambios.historial = [...(pedido.historial || []), _historial(estado, nota)];
+  // En transacción: solo si sigue en el estado que se ve en pantalla.
+  const ref = dbFirestore.collection(PEDIDOS_PAGADOS_COLECCION).doc(pedido.id);
   try {
-    await dbFirestore.collection(PEDIDOS_PAGADOS_COLECCION).doc(pedido.id).update(cambios);
+    await dbFirestore.runTransaction(async (tx) => {
+      const d = await tx.get(ref);
+      if (!d.exists || d.data().estado !== pedido.estado) throw new Error('CAMBIO');
+      cambios.historial = [...(d.data().historial || []), _historial(estado, nota)];
+      tx.update(ref, cambios);
+    });
   } catch (e) {
+    if (e && e.message === 'CAMBIO') return { ok: false, error: 'Este pedido cambió (quizá desde BRILLO). Revisa la lista.' };
     return { ok: false, error: 'No se pudo guardar. Revisa tu conexión.' };
   }
   if (estado === 'en_bolsita') _notificarPersonaPedido(pedido, paso.aviso);
