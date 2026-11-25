@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await catalogoRepoListo; // FASE 2 (Firebase): espera a que obtenerCatalogoReal() tenga datos reales, no un caché vacío
   await apartadosRepoListo; // ídem para obtenerVentanasApartado() — el botón "Apartar" lo necesita listo
+  if (typeof carritoRepoListo !== 'undefined') await carritoRepoListo; // las − N + cuentan lo que hay en su carrito
 
   renderFiltroMateriales();
   renderFiltroCategorias();
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Los − N + de cada pieza siguen en vivo lo que cambie en su apartado
   // (desde Mis apartados en otra pestaña, o lo que haga el equipo).
   let refrescoApartadosCatalogo = null;
+  window.addEventListener('mw:carrito-actualizado', () => aplicarFiltros());
   window.addEventListener('mw:apartados-actualizados', () => {
     clearTimeout(refrescoApartadosCatalogo);
     refrescoApartadosCatalogo = setTimeout(aplicarFiltros, 150);
@@ -427,7 +429,7 @@ function renderProductos(todos, firma) {
   }).join('');
 
   grid.querySelectorAll('[data-cat-mas]').forEach(btn => {
-    btn.addEventListener('click', () => sumarPiezaCatalogo(btn.getAttribute('data-cat-mas'), btn));
+    btn.addEventListener('click', () => sumarPiezaCatalogo(btn.getAttribute('data-cat-mas')));
   });
   grid.querySelectorAll('[data-cat-menos]').forEach(btn => {
     btn.addEventListener('click', () => restarPiezaCatalogo(btn.getAttribute('data-cat-menos')));
@@ -460,7 +462,7 @@ function renderProductos(todos, firma) {
       if (!producto) return;
       const disponibles = variantesDisponibles(producto);
       if (!disponibles.length) { mostrarToast('Ya no hay existencia de esta pieza.'); return; }
-      if (disponibles.length === 1) { mostrarPasoConfirmarApartar(producto, disponibles[0]); return; }
+      if (disponibles.length === 1) { agregarAlCarritoCatalogo(producto, disponibles[0]); return; }
       abrirModalDetalleProducto(productoId);
     });
   });
@@ -472,13 +474,11 @@ function renderProductos(todos, firma) {
 // "− N +": el − quita la última que apartó de ese modelo (como en Mis
 // apartados) y el + aparta otra al momento si solo hay una opción
 // disponible, o abre el elegir color/talla si hay varias.
+// Ahora cuenta las de su CARRITO (js/pedidos-modelo.js): elegir ya no
+// aparta ni avisa a nadie; eso pasa al Apartar o Pagar en Mi pedido.
 function piezasPropiasDeProductoCatalogo(productoId) {
-  if (!usuarioIdActual || typeof obtenerVentanasApartado !== 'function') return [];
-  return obtenerVentanasApartado()
-    .filter(v => v.usuarioId === usuarioIdActual && v.estado !== 'cerrada' && Array.isArray(v.apartados))
-    .flatMap(ventana => ventana.apartados
-      .filter(p => p.estado === 'activa' && p.productoId === productoId)
-      .map(pieza => ({ pieza, ventana })));
+  if (typeof obtenerCarrito !== 'function') return [];
+  return obtenerCarrito().filter(p => p.productoId === productoId);
 }
 
 function controlCantidadCatalogo(p, disponibles) {
@@ -491,76 +491,65 @@ function controlCantidadCatalogo(p, disponibles) {
   const nombre = escapeAttribute(p.nombre);
   const hayMas = disponibles.length > 0;
   return `
-    <div class="cp-cantidad" role="group" aria-label="Piezas de ${nombre} en tu pedido">
-      <button type="button" data-cat-menos="${p.id}" aria-label="Quitar una pieza de tu pedido" title="Quitar una de tu pedido">−</button>
-      <span class="cp-cantidad-num" title="${n} en tu pedido">${n}</span>
+    <div class="cp-cantidad" role="group" aria-label="Piezas de ${nombre} en tu carrito">
+      <button type="button" data-cat-menos="${p.id}" aria-label="Quitar una pieza de tu carrito" title="Quitar una de tu carrito">−</button>
+      <span class="cp-cantidad-num" title="${n} en tu carrito">${n}</span>
       <button type="button" data-cat-mas="${p.id}" aria-label="Seleccionar otra pieza" ${hayMas ? '' : 'disabled'} title="${hayMas ? (disponibles.length > 1 ? 'Seleccionar otra (elige color/talla)' : 'Seleccionar otra') : 'Ya no hay más piezas disponibles'}">+</button>
     </div>
-    <small class="cp-cantidad-ayuda">${n === 1 ? 'Ya está en tu pedido' : `${n} en tu pedido`}</small>`;
+    <small class="cp-cantidad-ayuda">${n === 1 ? 'En tu carrito' : `${n} en tu carrito`}</small>`;
 }
 
-let sumandoPiezaCatalogo = false;
-async function sumarPiezaCatalogo(productoId, boton) {
-  if (sumandoPiezaCatalogo) return;
+function sumarPiezaCatalogo(productoId) {
   const producto = obtenerCatalogoReal().find(p => p.id === productoId);
   if (!producto) return;
   const disponibles = variantesDisponibles(producto);
   if (!disponibles.length) { mostrarToast('Ya no hay más piezas disponibles de este modelo.'); return; }
   if (disponibles.length > 1) { abrirModalDetalleProducto(productoId); return; }
-  const ventana = buscarVentanaParaApartar(obtenerVentanasApartado(), usuarioIdActual);
-  // Sin ventana abierta (p. ej. ya venció) sigue el camino normal, que
-  // pide el depósito si hace falta.
-  if (!ventana) { mostrarPasoConfirmarApartar(producto, disponibles[0]); return; }
-  const variante = disponibles[0];
-  const datosPieza = {
-    producto: producto.nombre, variante: etiquetaVariante(variante), colorOro: producto.colorOro || '',
-    total: precioConDescuento(producto), productoId: producto.id, varianteId: variante.id
-  };
-  sumandoPiezaCatalogo = true;
-  if (boton) boton.disabled = true;
-  try {
-    const resultado = await agregarPiezaAVentana(ventana, datosPieza, null);
-    if (!resultado.ok) { mostrarToast(resultado.error || 'Ya no hay más piezas de este modelo.'); return; }
-    guardarVentanasApartado(obtenerVentanasApartado().map(v => v.id === ventana.id ? ventana : v));
-    notificarEquipoCatalogo(`${ventana.usuarioNombre || usuarioNombreActual} pidió otra pieza de "${producto.nombre}" (${datosPieza.variante}).`, ventana.usuarioNombre || usuarioNombreActual);
-    if (ventana.estado !== 'activa') notificarDisponibilidadCondicionadaADeposito(ventana);
-    mostrarToast(ventana.estado === 'activa' ? 'Se agregó otra pieza a tu pedido' : 'Se agregó otra pieza a tu pedido. Sigue pendiente tu depósito.');
-  } finally {
-    sumandoPiezaCatalogo = false;
-    aplicarFiltros();
-  }
+  agregarAlCarritoCatalogo(producto, disponibles[0], { sinModal: true });
 }
 
 function restarPiezaCatalogo(productoId) {
-  const propias = piezasPropiasDeProductoCatalogo(productoId);
-  if (!propias.length) { aplicarFiltros(); return; }
-  // La última que apartó, de preferencia una sin abonos (igual que Mis apartados).
-  const elegida = propias.slice().reverse().find(({ pieza }) => !(pieza.pagos || []).length) || propias[propias.length - 1];
-  const { pieza } = elegida;
-  // Pide confirmación y le dice si ya estaba guardada en su bolsita.
-  if (typeof confirmarQuitarPiezasEL === 'function') confirmarQuitarPiezasEL([pieza], () => quitarPiezaCatalogo(elegida));
-  else quitarPiezaCatalogo(elegida);
-}
-
-function quitarPiezaCatalogo(elegida) {
-  const { pieza } = elegida;
-  const ventanas = obtenerVentanasApartado();
-  const ventana = ventanas.find(v => v.id === elegida.ventana.id);
-  const real = ventana && ventana.apartados.find(x => x.id === pieza.id && x.estado === 'activa');
-  if (!real) { aplicarFiltros(); return; }
-  real.estado = 'cancelada';
-  real.cancelacion = { motivo: 'La quitaste tú', fecha: new Date().toISOString(), propia: true };
-  if (typeof restaurarStockVariante === 'function') restaurarStockVariante(real.productoId, real.varianteId);
-  ventana.cambioClienteSinRevisar = { texto: `Quitó "${real.producto}" (${real.variante}) · ${real.enBolsita ? 'estaba en bolsita' : 'no estaba en bolsita'}`, fecha: new Date().toISOString() };
-  guardarVentanasApartado(ventanas);
-  const textoBolsita = typeof textoBolsitaPiezasQuitadas === 'function' ? textoBolsitaPiezasQuitadas([real]) : '';
-  notificarEquipoCatalogo(`Se quitó "${real.producto}" (${real.variante}) del pedido de ${ventana.usuarioNombre}. ${textoBolsita}`.trim(), ventana.usuarioNombre);
+  if (typeof quitarUnaDelCarrito !== 'function') return;
+  const quitada = quitarUnaDelCarrito(productoId);
   aplicarFiltros();
-  mostrarToast(`Se quitó 1 pieza (${real.variante}) de tu pedido. Se le avisó al equipo.`);
+  if (quitada) mostrarToast(`Se quitó 1 pieza (${quitada.variante || quitada.producto}) de tu carrito.`);
 }
 
-// Mismo aviso que manda Mis apartados (js/apartados.js
-// notificarEquipoOperativo), que no se carga en esta página.
+// Agrega al carrito. Sin avisos al equipo ni existencia guardada: eso pasa
+// al Apartar o Pagar en Mi pedido.
+function agregarAlCarritoCatalogo(producto, variante, { sinModal = false } = {}) {
+  if (typeof agregarAlCarrito !== 'function') { mostrarToast('No se pudo abrir tu carrito. Recarga la página.'); return; }
+  const r = agregarAlCarrito(producto, variante);
+  aplicarFiltros();
+  if (!r.ok) { mostrarToast(r.error); return; }
+  if (sinModal) { mostrarToast('Se agregó otra pieza a tu carrito.'); return; }
+  mostrarPasoEnCarrito(producto, r.pieza);
+}
+
+function mostrarPasoEnCarrito(producto, pieza) {
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  box.classList.remove('modal-box-xwide');
+  const n = typeof obtenerCarrito === 'function' ? obtenerCarrito().length : 1;
+  const miPedido = window.location.pathname.includes('/portal/lider/') ? 'lider-apartados' : 'emprendedora-apartados';
+  box.innerHTML = `
+    <button class="modal-close" data-close>&times;</button>
+    <div class="confirm-box">
+      <div class="check-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <h3>Agregada a tu carrito</h3>
+      <p class="modal-sub">${escapeHTMLCatalogoVariantes(producto.nombre)}${pieza.variante && pieza.variante !== 'Única' ? ` · ${escapeHTMLCatalogoVariantes(pieza.variante)}` : ''}. Llevas ${n} pieza${n === 1 ? '' : 's'}.</p>
+      <p class="modal-sub" style="margin-top:-.35rem;">Todavía no está guardada: cuando termines de elegir, ve a tu carrito y elige <strong>Apartar</strong> o <strong>Pagar</strong>. Tu carrito se vacía al terminar el día.</p>
+      <div class="carrito-paso-botones">
+        <button class="btn btn-outline" type="button" data-close>Seguir eligiendo</button>
+        <a class="btn btn-primary" href="${miPedido}">Ir a mi carrito</a>
+      </div>
+    </div>
+  `;
+  overlay.classList.add('open');
+}
+
 function notificarEquipoCatalogo(texto, nombrePersona) {
   if (typeof agregarNotificacion !== 'function') return;
   const query = nombrePersona ? `?buscar=${encodeURIComponent(nombrePersona)}` : '';
@@ -740,7 +729,7 @@ function abrirModalDetalleProducto(productoId) {
   apartarBtn?.addEventListener('click', () => {
     const variante = buscarVariante(producto, select.value);
     if (!variante) return;
-    mostrarPasoConfirmarApartar(producto, variante);
+    agregarAlCarritoCatalogo(producto, variante);
   });
 }
 

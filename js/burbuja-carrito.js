@@ -1,23 +1,24 @@
 // MW JOYERÍA — Burbuja del carrito (Emprendedoras y Líderes)
 //
-// Un botón arriba (junto a la campana en PC, en la barra en celular), en todas sus pantallas menos en "Mis
-// apartados", con el número de piezas LISTAS PARA PAGAR (las que el equipo
-// ya guardó en su bolsita). Al tocarlo lleva a Mis apartados, sin tener que
-// abrir el menú. Se actualiza en vivo.
+// Un botón arriba (junto a la campana en PC, en la barra en celular), en
+// todas sus pantallas menos en Mi pedido, con el número de piezas que
+// lleva en su CARRITO (lo que eligió en el Catálogo y todavía no aparta ni
+// paga — ver js/pedidos-modelo.js). Al tocarlo lleva a Mi pedido. Se
+// actualiza en vivo.
 //
-// En las páginas que ya cargan Apartados (apartados-modelo.js) usa esos
-// datos; en las demás lee solo sus propias ventanas (ventanasApartado donde
-// usuarioId es ella), igual que lo permite la regla de Firestore.
+// Si la página ya carga pedidos-modelo.js usa ese carrito; si no, escucha
+// solo su propio documento carritos/{personaId}, como lo permite la regla.
 (function () {
   if (/-apartados(\.html)?$/.test(window.location.pathname)) return;
   const esLider = window.location.pathname.includes('/portal/lider/');
   const DESTINO = esLider ? '../lider/lider-apartados' : '../emprendedora/emprendedora-apartados';
   let boton = null;
-  let ventanasPropias = null;
+  let piezasPropias = null;
 
-  const listas = ventanas => ventanas
-    .filter(v => v && v.estado === 'activa' && Array.isArray(v.apartados))
-    .reduce((s, v) => s + v.apartados.filter(p => p.estado === 'activa' && p.enBolsita).length, 0);
+  const hoy = () => {
+    try { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' }); }
+    catch (e) { return new Date().toISOString().slice(0, 10); }
+  };
 
   function personaActual() {
     const s = typeof obtenerSesionActiva === 'function' ? obtenerSesionActiva() : null;
@@ -25,12 +26,8 @@
   }
 
   function contar() {
-    if (ventanasPropias) return listas(ventanasPropias);
-    if (typeof obtenerVentanasApartado === 'function') {
-      const id = personaActual();
-      return listas(obtenerVentanasApartado().filter(v => !id || v.usuarioId === id));
-    }
-    return 0;
+    if (typeof obtenerCarrito === 'function') return obtenerCarrito().length;
+    return piezasPropias || 0;
   }
 
   function pintar() {
@@ -44,11 +41,10 @@
       colocar();
     }
     const n = contar();
-    const nombre = document.body.dataset.miCarrito === '1' || /Mi carrito/.test(document.querySelector('.sidebar-nav, nav')?.textContent || '') ? 'Mi carrito' : 'Mi pedido';
     boton.querySelector('.burbuja-carrito-num').textContent = n > 99 ? '99+' : String(n);
     boton.classList.toggle('vacia', n === 0);
-    boton.setAttribute('aria-label', `${nombre}: ${n} pieza${n === 1 ? '' : 's'} lista${n === 1 ? '' : 's'} para pagar`);
-    boton.title = n ? `${n} pieza${n === 1 ? '' : 's'} lista${n === 1 ? '' : 's'} para pagar` : nombre;
+    boton.setAttribute('aria-label', `Mi carrito: ${n} pieza${n === 1 ? '' : 's'}`);
+    boton.title = n ? `${n} pieza${n === 1 ? '' : 's'} en tu carrito` : 'Mi carrito';
   }
 
   // En PC va junto a la campana (sin tapar su nombre); al bajar en la
@@ -70,26 +66,27 @@
     }).observe(centinela);
   }
 
-  // Páginas sin Apartados: escucha solo sus propias ventanas.
-  async function escucharPropias() {
+  // Páginas sin pedidos-modelo.js: escucha solo su carrito.
+  async function escucharPropio() {
     if (typeof dbFirestore === 'undefined' || !dbFirestore) return;
     let id = null;
     for (let i = 0; i < 100 && !id; i++) { id = personaActual(); if (!id) await new Promise(r => setTimeout(r, 150)); }
     if (!id) return;
-    dbFirestore.collection('ventanasApartado').where('usuarioId', '==', id).onSnapshot(s => {
-      ventanasPropias = s.docs.map(d => d.data());
+    dbFirestore.collection('carritos').doc(id).onSnapshot(d => {
+      const datos = d.exists ? d.data() : null;
+      piezasPropias = datos && datos.dia === hoy() && Array.isArray(datos.piezas) ? datos.piezas.length : 0;
       pintar();
     }, () => { /* sin acceso: se queda en 0 */ });
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
     pintar();
-    if (typeof obtenerVentanasApartado === 'function') {
-      if (typeof apartadosRepoListo !== 'undefined') { try { await apartadosRepoListo; } catch (e) { /* sigue */ } }
+    if (typeof obtenerCarrito === 'function') {
+      if (typeof carritoRepoListo !== 'undefined') { try { await carritoRepoListo; } catch (e) { /* sigue */ } }
       pintar();
-      window.addEventListener('mw:apartados-actualizados', pintar);
+      window.addEventListener('mw:carrito-actualizado', pintar);
     } else {
-      escucharPropias();
+      escucharPropio();
     }
   });
 })();

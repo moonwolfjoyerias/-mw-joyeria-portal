@@ -6,7 +6,7 @@
   <title>Portal — Encargado MW</title>
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="../../css/styles.css?v=85">
-  <link rel="stylesheet" href="../../css/mw-sistema.css?v=16">
+  <link rel="stylesheet" href="../../css/mw-sistema.css?v=19">
   <link rel="icon" type="image/png" href="../../assets/images/favicon.png">
   <!-- Fase 2: SDK compat de Firebase — solo se activa si js/firebase-config.js tiene MODO_DEMO=false y credenciales reales; si no, no hace nada. -->
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
@@ -219,6 +219,12 @@
         </div>
       </header>
 
+      <nav class="pestanas pedidos-sea-tabs" role="tablist" aria-label="Pedidos">
+        <button type="button" class="pestana" role="tab" data-sea-tab="apartados">Apartados</button>
+        <button type="button" class="pestana" role="tab" data-sea-tab="pagados">Pagados <span class="pestana-num" hidden>0</span></button>
+      </nav>
+      <div id="seaPanel-apartados">
+
 
       <div class="section-head"><h2>Resumen operativo</h2><div class="date-pill"><span>▣</span><span id="summaryDate"></span></div></div>
       <section class="stat-cards apartados-summary">
@@ -281,6 +287,8 @@
         <div class="guide-item"><strong><i class="guide-dot" style="background:#e67575"></i>Vencida</strong><small>Solo aviso: nada se pierde hasta que se "Desaparte" por falta de respuesta</small></div>
         <div class="guide-item"><strong><i class="guide-dot" style="background:#aa8ad1"></i>Cerrada</strong><small>Sin piezas activas: depósito aplicado o guardado como crédito</small></div>
       </section>
+      </div>
+      <div id="seaPanel-pagados" hidden></div>
     </main>
   </div>
 
@@ -288,7 +296,8 @@
 
   <script src="../../js/configuracion-modelo.js?v=4"></script>
   <script src="../../js/apartados-firestore-sync.js?v=6"></script>
-  <script src="../../js/apartados-modelo.js?v=23"></script>
+  <script src="../../js/apartados-modelo.js?v=24"></script>
+  <script src="../../js/pedidos-modelo.js?v=1"></script>
   <script src="../../js/dom-utils.js?v=7"></script>
   <script src="../../js/apartados-panel-comun.js?v=28"></script>
   <script src="../../js/staff-catalogo-ejemplo.js?v=6"></script>
@@ -317,5 +326,6 @@
   <script src="../../js/notificaciones-ejemplo.js?v=2"></script>
   <script src="../../js/notificaciones-firestore-sync.js?v=9"></script>
   <script src="../../js/notificaciones-modelo.js?v=12"></script>
+  <script src="../../js/pedidos-pagados-panel.js?v=1"></script>
 </body>
 </html>

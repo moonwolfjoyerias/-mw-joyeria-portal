@@ -602,6 +602,47 @@ service cloud.firestore {
         && (clave == 'interna-' + request.auth.uid
             || (!esInterno() && clave == miPerfil().get('personaId', request.auth.uid)));
     }
+    // carritos/{personaId} — lo que la e/l va eligiendo en el Catálogo
+    // antes de Apartar o Pagar (ver js/pedidos-modelo.js). Solo ella lo
+    // lee y escribe; no descuenta existencia ni avisa a nadie. El equipo
+    // puede leerlo (para ayudarle si pregunta).
+    function esMiPersona(personaId) {
+      return estaAutenticado() && !esInterno() && personaId == miPerfil().get('personaId', request.auth.uid);
+    }
+    match /carritos/{personaId} {
+      allow read: if esMiPersona(personaId) || esInterno();
+      allow write: if esMiPersona(personaId)
+        && (request.method == 'delete' || (request.resource.data.personaId == personaId && request.resource.data.piezas is list && request.resource.data.piezas.size() <= 200));
+    }
+
+    // pedidosPagados/{id} — pedidos que la e/l pagó por transferencia
+    // (o apartados ya liquidados). Ella crea el suyo "por confirmar", y
+    // solo puede mandar otro comprobante si se lo rechazaron (o marcarlo
+    // vencido cuando se le acabó el plazo). Todo lo demás (confirmar,
+    // rechazar, bolsita, envío, entrega) es del equipo.
+    match /pedidosPagados/{id} {
+      allow read: if esInterno() || (estaAutenticado() && resource.data.personaId == miPerfil().get('personaId', request.auth.uid));
+      allow create: if esInterno()
+        || (esMiPersona(request.resource.data.personaId) && request.resource.data.estado == 'por_confirmar' && request.resource.data.origen == 'carrito');
+      allow update: if esInterno()
+        || (esMiPersona(resource.data.personaId)
+            && resource.data.estado == 'rechazado'
+            && request.resource.data.estado in ['por_confirmar', 'vencido']
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'comprobante', 'historial', 'actualizadoEn']));
+      allow delete: if esAdmin();
+    }
+
+    // comprobantesPedidos/{id} — foto del comprobante de cada pedido pagado.
+    match /comprobantesPedidos/{id} {
+      allow read: if esInterno() || (estaAutenticado() && resource.data.personaId == miPerfil().get('personaId', request.auth.uid));
+      allow create, update: if (esInterno() || esMiPersona(request.resource.data.personaId))
+        && request.resource.data.keys().hasOnly(['personaId', 'fotoUrl', 'subidoEn'])
+        && request.resource.data.fotoUrl is string
+        && request.resource.data.fotoUrl.size() < 250000
+        && request.resource.data.fotoUrl.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+');
+      allow delete: if esAdmin();
+    }
+
     match /fotosPerfil/{clave} {
       allow read: if estaAutenticado();
       allow create, update: if esMiFotoPerfil(clave)
