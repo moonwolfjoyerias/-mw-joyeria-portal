@@ -140,6 +140,15 @@ async function _productosDeMisApartados() {
   obtenerVentanasApartado()
     .filter(v => v.usuarioId === miId)
     .forEach(v => (v.apartados || []).forEach(p => { if (p.productoId) ids.add(String(p.productoId)); }));
+  // Y las de su CARRITO (js/pedidos-modelo.js): sin esto, Mi pedido no
+  // encontraba esos productos y marcaba todo el carrito "Ya no está
+  // disponible" aunque sí hubiera existencia.
+  if (miId) {
+    try {
+      const carrito = await dbFirestore.collection('carritos').doc(String(miId)).get();
+      if (carrito.exists) (carrito.data().piezas || []).forEach(p => { if (p && p.productoId) ids.add(String(p.productoId)); });
+    } catch (error) { /* sin carrito: solo lo apartado */ }
+  }
   const docs = await Promise.all([...ids].map(id => dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE).doc(id).get()));
   return docs.filter(d => d.exists).map(d => ({ ...d.data(), id: d.id }));
 }
