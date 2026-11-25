@@ -935,6 +935,19 @@ function renderSeccionApartadosConfig() {
         </table>
       </div>
     </div>
+    <div class="cfg-card">
+      <h3 class="cfg-card-title">Envío de foráneas (pedidos pagados)</h3>
+      <p class="cfg-card-sub">Cuando una foránea paga su carrito por transferencia, se le suma este costo de envío (Estafeta/FedEx), salvo que su compra llegue al monto de envío gratis. Si el costo no está configurado, se le dice que el equipo le confirma el envío.</p>
+      <div class="catalog-table-wrap cfg-tabla-wrap">
+        <table class="catalog-table">
+          <thead><tr><th>Costo de envío</th><th>Envío gratis desde</th></tr></thead>
+          <tbody><tr>
+            ${construirCeldaVersionada({ tipo: 'pedidos', parametro: 'envio_foranea', seccion: 'Pedidos', etiqueta: 'Costo de envío foránea', tipoValor: 'moneda' })}
+            ${construirCeldaVersionada({ tipo: 'pedidos', parametro: 'envio_gratis_desde', seccion: 'Pedidos', etiqueta: 'Envío gratis desde', tipoValor: 'moneda' })}
+          </tr></tbody>
+        </table>
+      </div>
+    </div>
   `;
 
   wireEventosConfigTabla(cont);

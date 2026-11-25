@@ -836,6 +836,10 @@ function liquidarPiezasSeleccionadas(ventana, piezaIds, { monto, metodo, referen
     empleado
   ));
 
+  // Lo liquidado pasa a Pedidos → Pagados (bolsita/empaque y entrega) —
+  // ver crearPagadoDesdeApartado en js/pedidos-modelo.js.
+  if (typeof crearPagadoDesdeApartado === 'function') crearPagadoDesdeApartado(ventana, piezasElegidas);
+
   if (siguenActivas > 0) {
     return { requiereResolucionDeposito: false, ventanaCerrada: false };
   }

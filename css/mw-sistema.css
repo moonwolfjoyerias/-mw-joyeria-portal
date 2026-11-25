@@ -677,3 +677,130 @@ body.mw2 .main-content .tabs button { min-height: 40px; }
   body.mw2 .comm-toolbar-field input,
   body.mw2 .main-content label > select { width: 100%; max-width: none; }
 }
+
+/* =====================================================================
+   MI PEDIDO: Carrito · Apartado · Pagados (js/mi-pedido-carrito.js)
+   ===================================================================== */
+body.mw2 .pedido-tabs { margin-bottom: 18px; }
+body.mw2 .pestana .pestana-num {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; margin-left: 6px;
+  border-radius: 999px; background: var(--mw-purple); color: #fff; font-size: 0.75rem; font-weight: 600;
+}
+body.mw2 .pestana .pestana-num[hidden] { display: none; }
+/* La barra de "Pagar piezas seleccionadas" es solo del apartado. */
+body.mw2:not(.pedido-tab-apartado) .cart-summary-bar { display: none; }
+
+body.mw2 .carrito-vacio { text-align: center; padding: 2.5rem 1rem; color: var(--mw-text-muted); }
+body.mw2 .carrito-vacio p { margin: 0 0 6px; }
+body.mw2 .carrito-vacio .btn { margin-top: 12px; }
+body.mw2 .carrito-aviso {
+  margin: 0 0 14px; padding: 12px 14px; border-radius: var(--mw2-r-campo);
+  background: var(--mw-gold-soft); color: var(--mw-aviso-texto, #6d4f12); font-size: 0.9rem; line-height: 1.45;
+}
+body.mw2 .carrito-lista, body.mw2 .pagados-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+body.mw2 .carrito-pieza {
+  display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 10px 12px; background: var(--surface); border: 1px solid var(--mw-border); border-radius: var(--mw2-r-tarjeta);
+}
+body.mw2 .carrito-pieza.no-disponible { opacity: 0.6; }
+body.mw2 .carrito-foto { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; background: var(--mw-lilac-soft); }
+body.mw2 .carrito-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+body.mw2 .carrito-datos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+body.mw2 .carrito-datos strong { font-weight: 600; overflow-wrap: anywhere; }
+body.mw2 .carrito-datos small { color: var(--mw-text-muted); font-size: 0.82rem; }
+body.mw2 .carrito-precio { font-weight: 600; color: var(--mw-accent-text); }
+body.mw2 .carrito-agotada { font-size: 0.82rem; font-weight: 600; color: var(--mw-error-texto, #b94d4d); }
+body.mw2 .carrito-quitar {
+  min-height: 40px; padding: 0 12px; border: 1px solid var(--mw-border-d); border-radius: var(--mw2-r-campo);
+  background: var(--surface); color: var(--mw-text); font: inherit; font-size: 0.85rem; cursor: pointer;
+}
+body.mw2 .carrito-quitar:active { transform: scale(0.97); }
+body.mw2 .carrito-totales {
+  margin-top: 14px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--mw-border); border-radius: var(--mw2-r-tarjeta);
+}
+body.mw2 .carrito-totales > div { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+body.mw2 .carrito-totales strong { font-size: 1.15rem; color: var(--mw-accent-text); }
+body.mw2 .carrito-envio { font-size: 0.9rem; color: var(--mw-text-muted); }
+body.mw2 .carrito-nota { margin: 8px 0 0; font-size: 0.85rem; color: var(--mw-text-muted); line-height: 1.45; }
+body.mw2 .carrito-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+body.mw2 .carrito-acciones .btn { min-height: 48px; font-size: 1rem; }
+body.mw2 .carrito-paso-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+body.mw2 .carrito-paso-botones .btn { min-height: var(--mw2-toque); display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 420px) { body.mw2 .carrito-paso-botones { grid-template-columns: 1fr; } }
+
+/* Pagar: resumen y comprobante */
+body.mw2 .pago-resumen { margin: 4px 0 14px; padding: 12px 14px; border-radius: var(--mw2-r-campo); background: var(--mw-surface-soft, #f7f2fb); }
+body.mw2 .pago-resumen > div { display: flex; justify-content: space-between; padding: 2px 0; }
+body.mw2 .pago-resumen .pago-total { margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--mw-border); }
+body.mw2 .pago-resumen .pago-total strong { font-size: 1.2rem; color: var(--mw-accent-text); }
+body.mw2 .comprobante-campos { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+body.mw2 .comprobante-foto { position: relative; display: block; cursor: pointer; }
+body.mw2 .comprobante-foto input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+body.mw2 .comprobante-foto-vista {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 120px; padding: 12px;
+  border: 1.5px dashed var(--mw-border-d); border-radius: var(--mw2-r-tarjeta); color: var(--mw-accent-text); font-weight: 600; text-align: center;
+}
+body.mw2 .comprobante-foto:focus-within .comprobante-foto-vista { border-color: var(--mw-purple); box-shadow: var(--mw2-enfoque); }
+body.mw2 .comprobante-foto-vista svg { width: 28px; height: 28px; }
+body.mw2 .comprobante-foto-vista img { max-height: 220px; max-width: 100%; border-radius: 8px; }
+body.mw2 .comprobante-ref { display: flex; flex-direction: column; gap: 4px; font-size: 0.875rem; font-weight: 600; }
+body.mw2 .comprobante-ref input { min-height: var(--mw2-toque); border-radius: var(--mw2-r-campo); border: 1.5px solid var(--mw-border-d); padding: 0 12px; font: inherit; font-weight: 400; }
+body.mw2 .error-comprobante { margin: 0; color: var(--mw-error-texto, #b94d4d); font-size: 0.875rem; font-weight: 600; }
+
+/* Pagados: seguimiento */
+body.mw2 .pagado-tarjeta { padding: 14px 16px; background: var(--surface); border: 1px solid var(--mw-border); border-radius: var(--mw2-r-tarjeta); }
+body.mw2 .pagado-cabeza { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 6px 10px; }
+body.mw2 .pagado-cabeza > div { flex: 1 1 180px; min-width: 0; }
+body.mw2 .pagado-cabeza small { display: block; color: var(--mw-text-muted); font-size: 0.82rem; margin-top: 2px; }
+body.mw2 .pedido-pasos { list-style: none; display: flex; gap: 4px; margin: 14px 0 6px; padding: 0; counter-reset: paso; }
+body.mw2 .pedido-pasos li {
+  flex: 1; position: relative; padding-top: 18px; font-size: 0.72rem; line-height: 1.25; color: var(--mw-text-muted); text-align: center;
+}
+body.mw2 .pedido-pasos li::before {
+  content: ''; position: absolute; top: 4px; left: 0; right: 0; height: 4px; border-radius: 999px; background: var(--mw-border);
+}
+body.mw2 .pedido-pasos li.hecho::before, body.mw2 .pedido-pasos li.actual::before { background: var(--mw-purple); }
+body.mw2 .pedido-pasos li.actual { color: var(--mw-accent-text); font-weight: 600; }
+body.mw2 .pagado-rechazo {
+  margin-top: 10px; padding: 12px 14px; border-radius: var(--mw2-r-campo); background: #fdecec; color: #8a2f2f; font-size: 0.88rem; line-height: 1.45;
+}
+body.mw2 .pagado-rechazo .btn { display: block; width: 100%; margin-top: 10px; min-height: var(--mw2-toque); }
+body.mw2 .pagado-guia { margin: 8px 0 0; font-size: 0.9rem; }
+body.mw2 .pagado-piezas { margin-top: 8px; font-size: 0.88rem; }
+body.mw2 .pagado-piezas summary { cursor: pointer; color: var(--mw-accent-text); font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+body.mw2 .pagado-piezas ul { list-style: none; margin: 6px 0 0; padding: 0; }
+body.mw2 .pagado-piezas li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; border-bottom: 1px dashed var(--mw-border); }
+
+/* ---------- Pedidos (s/e/a): Apartados | Pagados ---------- */
+body.mw2 .pedidos-sea-tabs { margin: 0 0 20px; }
+body.mw2 .pagado-cabeza .status {
+  flex: none; display: inline-block; padding: 0.3em 0.8em; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+  background: var(--mw-lilac-soft); color: var(--mw-accent-text); max-width: 100%;
+}
+body.mw2 .pagado-cabeza .status-pending { background: var(--mw-gold-soft); color: #7a5a12; }
+body.mw2 .pagado-cabeza .status-cancelled { background: #fdecec; color: #a33d3d; }
+body.mw2 .pagado-cabeza .status-active { background: #e3f3e8; color: #24683f; }
+body.mw2 .pagado-cabeza .status-closed { background: var(--mw-surface-soft, #f3eef6); color: var(--mw-text-muted); }
+body.mw2 .pagados-resumen { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
+body.mw2 .pagados-stat { text-align: left; cursor: pointer; font: inherit; color: inherit; border: 1px solid var(--mw-border); background: var(--surface); }
+body.mw2 .pagados-stat small { display: block; color: var(--mw-text-muted); font-size: 0.82rem; }
+body.mw2 .pagados-stat.activo { border-color: var(--mw-purple); box-shadow: var(--mw2-enfoque); }
+body.mw2 .pagados-stat:active { transform: scale(0.98); }
+body.mw2 .pagados-equipo { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; margin-top: 14px; }
+body.mw2 .pagado-etiquetas { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+body.mw2 .pagado-piezas-lista { list-style: none; margin: 0; padding: 0; font-size: 0.9rem; }
+body.mw2 .pagado-piezas-lista li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px dashed var(--mw-border); }
+body.mw2 .pagado-piezas-lista .pagado-total { border-bottom: 0; padding-top: 8px; }
+body.mw2 .pagado-piezas-lista .pagado-total strong { color: var(--mw-accent-text); font-size: 1.05rem; }
+body.mw2 .pagado-ref { margin: 8px 0 0; font-size: 0.88rem; color: var(--mw-text-muted); }
+body.mw2 .pagado-acciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; }
+body.mw2 .pagado-acciones .action-btn { width: 100%; min-height: var(--mw2-toque); }
+body.mw2 .pagado-acciones .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+body.mw2 .pagados-vacio, body.mw2 .pagados-nota { color: var(--mw-text-muted); font-size: 0.9rem; margin-top: 14px; }
+body.mw2 .comprobante-grande { margin: 10px 0 14px; text-align: center; color: var(--mw-text-muted); }
+body.mw2 .comprobante-grande img { max-width: 100%; max-height: 60vh; border-radius: 10px; border: 1px solid var(--mw-border); }
+body.mw2 .comprobante-ref select { min-height: var(--mw2-toque); border-radius: var(--mw2-r-campo); border: 1.5px solid var(--mw-border-d); padding: 0 12px; font: inherit; font-weight: 400; }
+@media (max-width: 720px), (max-width: 1100px) and (orientation: portrait) {
+  body.mw2 .pagados-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.mw2 .pagados-equipo { grid-template-columns: 1fr; }
+}
