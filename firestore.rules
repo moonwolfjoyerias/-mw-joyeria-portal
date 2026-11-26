@@ -628,21 +628,26 @@ service cloud.firestore {
     }
 
     // pedidosPagados/{id} — pedidos que la e/l pagó por transferencia
-    // (o apartados ya liquidados). Ella crea el suyo "por confirmar", y
-    // solo puede mandar otro comprobante si se lo rechazaron (o marcarlo
-    // vencido cuando se le acabó el plazo). Todo lo demás (confirmar,
-    // rechazar, bolsita, envío, entrega) es del equipo.
+    // (o apartados ya liquidados). Para pedidos del carrito, primero crea
+    // una reserva esperando confirmación en bolsita; después solo puede
+    // enviar el comprobante desde pago_disponible o volver a enviarlo si
+    // se lo rechazaron. Todo lo demás es del equipo.
     match /pedidosPagados/{id} {
       allow read: if esInterno() || (estaAutenticado() && resource.data.personaId == miPerfil().get('personaId', request.auth.uid));
       allow create: if esInterno()
-        || (esMiPersona(request.resource.data.personaId) && request.resource.data.estado in ['por_confirmar', 'esperando_bolsita'] && request.resource.data.origen == 'carrito');
-      // La e/l: reenvía comprobante si se lo rechazaron, o sube su comprobante
-      // cuando el equipo ya confirmó sus piezas en bolsita (pago_disponible).
+        || (esMiPersona(request.resource.data.personaId)
+            && request.resource.data.estado in ['esperando_bolsita', 'por_confirmar']
+            && request.resource.data.origen == 'carrito');
       allow update: if esInterno()
         || (esMiPersona(resource.data.personaId)
-            && (resource.data.estado == 'rechazado' || (resource.data.estado == 'pago_disponible' && request.resource.data.estado == 'por_confirmar'))
-            && request.resource.data.estado in ['por_confirmar', 'vencido']
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'comprobante', 'historial', 'actualizadoEn']));
+            && (
+              (resource.data.estado == 'rechazado'
+                && request.resource.data.estado in ['por_confirmar', 'vencido']
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'comprobante', 'historial', 'actualizadoEn']))
+              || (resource.data.estado == 'pago_disponible'
+                && request.resource.data.estado == 'por_confirmar'
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'comprobante', 'historial', 'actualizadoEn']))
+            ));
       allow delete: if esAdmin();
     }
 

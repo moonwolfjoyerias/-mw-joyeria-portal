@@ -767,11 +767,13 @@ body.mw2 .pedido-pasos { list-style: none; display: flex; gap: 4px; margin: 14px
 body.mw2 .pedido-pasos li {
   flex: 1; position: relative; padding-top: 18px; font-size: 0.72rem; line-height: 1.25; color: var(--mw-text-muted); text-align: center;
 }
+body.mw2 .pedido-paso-numero { display: none; }
 body.mw2 .pedido-pasos li::before {
   content: ''; position: absolute; top: 4px; left: 0; right: 0; height: 4px; border-radius: 999px; background: var(--mw-border);
 }
 body.mw2 .pedido-pasos li.hecho::before, body.mw2 .pedido-pasos li.actual::before { background: var(--mw-purple); }
 body.mw2 .pedido-pasos li.actual { color: var(--mw-accent-text); font-weight: 600; }
+body.mw2 .pedido-pasos-resumen-movil { display: none; }
 body.mw2 .pagado-rechazo {
   margin-top: 10px; padding: 12px 14px; border-radius: var(--mw2-r-campo); background: #fdecec; color: #8a2f2f; font-size: 0.88rem; line-height: 1.45;
 }
@@ -816,6 +818,22 @@ body.mw2 .comprobante-ref select { min-height: var(--mw2-toque); border-radius: 
 @media (max-width: 720px), (max-width: 1100px) and (orientation: portrait) {
   body.mw2 .pagados-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body.mw2 .pagados-equipo { grid-template-columns: 1fr; }
+  body.mw2 .pedido-pasos { gap: 0; margin: 14px 2px 6px; }
+  body.mw2 .pedido-pasos li { min-width: 0; padding-top: 0; font-size: 0; line-height: 1; }
+  body.mw2 .pedido-pasos li::before { top: 9px; height: 3px; }
+  body.mw2 .pedido-paso-numero {
+    position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center;
+    width: 21px; height: 21px; border: 1px solid var(--mw-border); border-radius: 50%;
+    background: var(--surface); color: var(--mw-text-muted); font-size: 0.68rem; font-weight: 600;
+  }
+  body.mw2 .pedido-pasos li.hecho .pedido-paso-numero { border-color: var(--mw-purple); color: var(--mw-purple); }
+  body.mw2 .pedido-pasos li.actual .pedido-paso-numero { border-color: var(--mw-purple); background: var(--mw-purple); color: #fff; }
+  body.mw2 .pedido-pasos-resumen-movil { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+  body.mw2 .pedido-pasos-resumen-movil > div { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+  body.mw2 .pedido-pasos-resumen-movil small { color: var(--mw-text-muted); font-size: 0.68rem; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.04em; }
+  body.mw2 .pedido-pasos-resumen-movil strong { color: var(--mw-text); font-size: 0.82rem; line-height: 1.25; font-weight: 600; overflow-wrap: normal; word-break: normal; }
+  body.mw2 .pedido-pasos-resumen-movil > div:first-child strong { color: var(--mw-accent-text); }
+  body.mw2 .pedido-pasos-resumen-movil > div:only-child { grid-column: 1 / -1; }
 }
 
 /* Líder → Mi equipo: cómo recibir sus comisiones (js/comision-destino.js) */

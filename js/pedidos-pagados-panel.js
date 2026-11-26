@@ -17,6 +17,7 @@
   const FILTROS = {
     activos: { texto: 'En curso', f: p => !ESTADOS_PEDIDO_TERMINADOS.includes(p.estado) },
     esperando_bolsita: { texto: 'Esperando bolsita', f: p => p.estado === 'esperando_bolsita' },
+    pago_disponible: { texto: 'Listo para pagar', f: p => p.estado === 'pago_disponible' },
     por_confirmar: { texto: 'Por confirmar pago', f: p => p.estado === 'por_confirmar' || p.estado === 'rechazado' },
     por_preparar: { texto: 'Por preparar', f: p => p.estado === 'confirmado' || p.estado === 'empaquetado' },
     en_bolsita: { texto: 'En caja de pagados', f: p => p.estado === 'en_bolsita' },
@@ -50,10 +51,18 @@
     const q = busqueda.trim().toLowerCase();
     const lista = obtenerPedidosPagados()
       .filter(FILTROS[filtro].f)
-      .filter(p => !q || [p.personaNombre, p.usuario, p.id, ...(p.piezas || []).map(x => x.producto)].join(' ').toLowerCase().includes(q));
+      .filter(p => !q || [p.personaNombre, p.usuario, p.id, ...(p.piezas || []).map(x => x.producto)].join(' ').toLowerCase().includes(q))
+      .sort((a, b) => {
+        const prioridad = Number(b.estado === 'esperando_bolsita') - Number(a.estado === 'esperando_bolsita');
+        if (prioridad) return prioridad;
+        const ordenFecha = String(b.creadoEn || '').localeCompare(String(a.creadoEn || ''));
+        return a.estado === 'esperando_bolsita' ? -ordenFecha : ordenFecha;
+      });
+    const pendientesBolsita = cuenta(p => p.estado === 'esperando_bolsita');
 
     const resumen = [
       ['Esperando bolsita', cuenta(p => p.estado === 'esperando_bolsita'), 'esperando_bolsita'],
+      ['Listo para pagar', cuenta(p => p.estado === 'pago_disponible'), 'pago_disponible'],
       ['Por confirmar pago', cuenta(p => p.estado === 'por_confirmar'), 'por_confirmar'],
       ['Por preparar', cuenta(p => p.estado === 'confirmado' || p.estado === 'empaquetado'), 'por_preparar'],
       ['En caja de pagados', cuenta(p => p.estado === 'en_bolsita'), 'en_bolsita'],
@@ -64,6 +73,7 @@
         ${resumen.map(([t, n, f]) => `<button type="button" class="stat-card pagados-stat ${filtro === f ? 'activo' : ''}" data-filtro-rapido="${f}"><span><small>${t}</small><strong class="stat-num">${n}</strong></span></button>`).join('')}
       </section>
       <div class="section-head"><h2>Pedidos pagados</h2></div>
+      ${pendientesBolsita ? `<p class="pagados-nota"><strong>Prioridad:</strong> hay ${pendientesBolsita} pedido${pendientesBolsita === 1 ? '' : 's'} esperando confirmación en bolsita. Estas reservas no vencen; confirma todas sus piezas lo antes posible.</p>` : ''}
       <div class="toolbar">
         <select class="filter-select" id="pagadosFiltro">${Object.entries(FILTROS).map(([k, v]) => `<option value="${k}" ${k === filtro ? 'selected' : ''}>${v.texto}</option>`).join('')}</select>
         <input class="search" id="pagadosBuscar" type="search" placeholder="Buscar por nombre, pieza o folio..." value="${esc(busqueda)}">
@@ -106,6 +116,7 @@
           <span class="status ${info.clase}">${esc(info.texto)}</span>
         </div>
         <div class="pagado-etiquetas">
+          ${p.estado === 'esperando_bolsita' ? '<span class="badge" style="background:#fff1d6;color:#805600;font-weight:700;">Prioridad · confirmar bolsita</span>' : ''}
           ${foranea ? '<span class="badge">Foránea · envío</span>' : '<span class="badge">Recoge en tienda</span>'}
           <span class="badge">${p.origen === 'apartado' ? 'De su apartado' : 'Pagó su carrito'}</span>
           ${p.venta ? `<span class="badge">Ticket ${esc(p.venta.folio)}</span>` : ''}

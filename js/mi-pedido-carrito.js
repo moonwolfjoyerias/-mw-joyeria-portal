@@ -292,12 +292,18 @@
     foranea: ['esperando_bolsita', 'pago_disponible', 'por_confirmar', 'confirmado', 'empaquetado', 'enviado', 'entregado']
   };
   const NOMBRE_PASO = { esperando_bolsita: 'Esperando confirmación en bolsita', pago_disponible: 'Listo para pagar', por_confirmar: 'Pago enviado', confirmado: 'Pago confirmado', en_bolsita: 'En tu bolsita (caja de pagados)', empaquetado: 'Empaquetado', enviado: 'Enviado', entregado: 'Entregado' };
+  const NOMBRE_PASO_CORTO = { esperando_bolsita: 'Esperando bolsita', pago_disponible: 'Listo para pagar', por_confirmar: 'Pago enviado', confirmado: 'Pago confirmado', en_bolsita: 'En bolsita', empaquetado: 'Empaquetado', enviado: 'Enviado', entregado: 'Entregado' };
 
   function lineaTiempo(p) {
     const pasos = PASOS_VISIBLES[p.categoria === 'foranea' ? 'foranea' : 'normal'];
     const estado = p.estado === 'rechazado' ? 'por_confirmar' : p.estado;
     const i = pasos.indexOf(estado);
-    return `<ol class="pedido-pasos">${pasos.map((paso, k) => `<li class="${k < i ? 'hecho' : k === i ? 'actual' : ''}">${NOMBRE_PASO[paso]}</li>`).join('')}</ol>`;
+    const resumenMovil = i >= 0 ? `
+      <div class="pedido-pasos-resumen-movil">
+        <div><small>Estado actual</small><strong>${esc(NOMBRE_PASO_CORTO[estado])}</strong></div>
+        ${pasos[i + 1] ? `<div><small>Siguiente</small><strong>${esc(NOMBRE_PASO_CORTO[pasos[i + 1]])}</strong></div>` : ''}
+      </div>` : '';
+    return `${resumenMovil}<ol class="pedido-pasos">${pasos.map((paso, k) => `<li class="${k < i ? 'hecho' : k === i ? 'actual' : k === i + 1 ? 'siguiente' : ''}"><span class="pedido-paso-numero">${k + 1}</span><span class="pedido-paso-etiqueta">${esc(NOMBRE_PASO[paso])}</span></li>`).join('')}</ol>`;
   }
 
   // Debajo de cada pieza: si ya está guardada en su bolsita (o empaquetada,
@@ -341,14 +347,14 @@
         </div>
         ${['vencido', 'cancelado'].includes(p.estado) ? '' : lineaTiempo(p)}
         ${rechazado ? `<div class="pagado-rechazo"><strong>No se pudo validar tu comprobante:</strong> ${esc(p.rechazo?.motivo || '')}<br>Sube otro hoy antes de las 11:59 p.m.; si no, tus piezas regresan al catálogo.<button type="button" class="btn btn-primary" data-reenviar="${esc(p.id)}">Subir otro comprobante</button></div>` : ''}
-        ${p.estado === 'pago_disponible' ? `<button type="button" class="btn btn-primary" style="width:100%;margin-top:10px;" data-pagar-ahora="${esc(p.id)}">Pagar ahora ${pesos(p.total)}</button>` : ''}
+        ${p.estado === 'pago_disponible' ? `<button type="button" class="btn btn-primary" data-pago-disponible="${esc(p.id)}">Ver datos y pagar ${pesos(p.total)}</button>` : ''}
         ${p.envioInfo ? `<p class="pagado-guia">Guía ${esc(p.envioInfo.paqueteria)} <strong>${esc(p.envioInfo.guia)}</strong></p>` : ''}
         <details class="pagado-piezas"${['vencido', 'cancelado', 'entregado'].includes(p.estado) ? '' : ' open'}><summary>Piezas</summary><ul>${p.piezas.map(x => `<li><span>${esc(x.producto)}${x.variante && x.variante !== 'Única' ? ` · ${esc(x.variante)}` : ''}${estado ? `<small class="pagado-pieza-estado${estado.ok ? ' pagado-pieza-estado--ok' : ''}">${esc(estado.texto)}</small>` : ''}</span><span>${pesos(x.total)}</span></li>`).join('')}${Number(p.envio) > 0 ? `<li><span>Envío</span><span>${pesos(p.envio)}</span></li>` : ''}</ul></details>
       </li>`;
     }).join('')}</ul>`;
-    panel.querySelectorAll('[data-pagar-ahora]').forEach(b => b.addEventListener('click', () => {
-      const p = pedidos.find(x => x.id === b.dataset.pagarAhora);
-      if (p && typeof abrirModalPagoDisponiblePedido === 'function') abrirModalPagoDisponiblePedido(p);
+    panel.querySelectorAll('[data-pago-disponible]').forEach(b => b.addEventListener('click', () => {
+      const p = pedidos.find(x => x.id === b.dataset.pagoDisponible);
+      if (p && p.estado === 'pago_disponible') abrirModalPagoDisponiblePedido(p);
     }));
     panel.querySelectorAll('[data-reenviar]').forEach(b => b.addEventListener('click', () => {
       const p = pedidos.find(x => x.id === b.dataset.reenviar);

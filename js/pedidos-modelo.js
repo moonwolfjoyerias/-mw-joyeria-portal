@@ -239,11 +239,13 @@ function obtenerPedidosPagados() {
 
 let _pedidoPagoModalId = '';
 
-function verificarPagoDisponiblePedido() {
+async function verificarPagoDisponiblePedido() {
   const personaId = _miPersonaIdPedidos();
   if (!personaId || typeof document === 'undefined') return;
   const pedido = PEDIDOS_PAGADOS_CACHE.find(p => p.personaId === personaId && p.estado === 'pago_disponible');
   if (!pedido || pedido.id === _pedidoPagoModalId) return;
+  if (typeof configuracionListo !== 'undefined') await configuracionListo;
+  if (!PEDIDOS_PAGADOS_CACHE.some(p => p.id === pedido.id && p.estado === 'pago_disponible')) return;
   _pedidoPagoModalId = pedido.id;
   abrirModalPagoDisponiblePedido(pedido);
 }
@@ -279,6 +281,7 @@ function abrirModalPagoDisponiblePedido(pedido) {
       ${Number(pedido.envio) > 0 ? `<div><span>Envío</span><span>${_montoTexto(pedido.envio)}</span></div>` : ''}
       <div class="pago-total"><span>Total a pagar</span><strong>${_montoTexto(pedido.total)}</strong></div>
     </div>
+    ${pedido.envioPorConfirmar ? '<p class="modal-sub">El equipo te confirmará el costo del envío.</p>' : ''}
     ${datosBancariosPedidoHTML(pedido.personaNombre || 'Tu nombre completo')}
     <label class="comprobante-foto" for="pagoDisponibleFoto">
       <input type="file" id="pagoDisponibleFoto" accept="image/*">
@@ -406,7 +409,7 @@ function prepararFotoComprobante(archivo) {
 // una — las reglas solo dejan a una e/l tocar un producto a la vez) y
 // crea el pedido. Si alguna ya no está, se regresan las que sí se
 // guardaron y no se crea nada.
-async function crearPedidoPagado({ piezas, fotoUrl, referencia }) {
+async function crearPedidoPagado({ piezas }) {
   const personaId = _miPersonaIdPedidos();
   if (!personaId) return { ok: false, error: 'No se pudo identificar tu cuenta. Vuelve a iniciar sesión.' };
   if (!piezas.length) return { ok: false, error: 'Tu carrito está vacío.' };
@@ -447,7 +450,6 @@ async function crearPedidoPagado({ piezas, fotoUrl, referencia }) {
     envioGratis: envio.gratis,
     envioPorConfirmar: envio.sinConfigurar,
     total: Math.round((subtotal + envio.envio) * 100) / 100,
-    // Normales y foráneas: el equipo confirma las piezas y luego se paga (así toda foránea también sube su comprobante).
     estado: 'esperando_bolsita',
     historial: [{ estado: 'esperando_bolsita', por: nombre, rol: 'emprendedora_lider', en: ahora, nota: 'Piezas reservadas desde el carrito' }],
     dia: hoyTiendaISO(),
@@ -499,7 +501,7 @@ function pedidoRechazoVencido(pedido) {
 // equipo); la transacción evita regresarlas dos veces.
 let _revisandoVencidos = false;
 async function revisarPedidosVencidos() {
-  if (_revisandoVencidos || typeof dbFirestore === 'undefined' || !dbFirestore) return;
+  if (_revisandoVencidos || typeof dbFirestore === 'undefined' || !dbFirestore || typeof restaurarStockVariante !== 'function') return;
   const vencidos = PEDIDOS_PAGADOS_CACHE.filter(pedidoRechazoVencido);
   if (!vencidos.length) return;
   _revisandoVencidos = true;
