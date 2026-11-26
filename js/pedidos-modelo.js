@@ -447,8 +447,9 @@ async function crearPedidoPagado({ piezas, fotoUrl, referencia }) {
     envioGratis: envio.gratis,
     envioPorConfirmar: envio.sinConfigurar,
     total: Math.round((subtotal + envio.envio) * 100) / 100,
-    estado: categoria === 'foranea' ? 'por_confirmar' : 'esperando_bolsita',
-    historial: [{ estado: categoria === 'foranea' ? 'por_confirmar' : 'esperando_bolsita', por: nombre, rol: 'emprendedora_lider', en: ahora, nota: 'Piezas reservadas desde el carrito' }],
+    // Normales y foráneas: el equipo confirma las piezas y luego se paga (así toda foránea también sube su comprobante).
+    estado: 'esperando_bolsita',
+    historial: [{ estado: 'esperando_bolsita', por: nombre, rol: 'emprendedora_lider', en: ahora, nota: 'Piezas reservadas desde el carrito' }],
     dia: hoyTiendaISO(),
     creadoEn: ahora,
     actualizadoEn: ahora

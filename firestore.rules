@@ -635,10 +635,12 @@ service cloud.firestore {
     match /pedidosPagados/{id} {
       allow read: if esInterno() || (estaAutenticado() && resource.data.personaId == miPerfil().get('personaId', request.auth.uid));
       allow create: if esInterno()
-        || (esMiPersona(request.resource.data.personaId) && request.resource.data.estado == 'por_confirmar' && request.resource.data.origen == 'carrito');
+        || (esMiPersona(request.resource.data.personaId) && request.resource.data.estado in ['por_confirmar', 'esperando_bolsita'] && request.resource.data.origen == 'carrito');
+      // La e/l: reenvía comprobante si se lo rechazaron, o sube su comprobante
+      // cuando el equipo ya confirmó sus piezas en bolsita (pago_disponible).
       allow update: if esInterno()
         || (esMiPersona(resource.data.personaId)
-            && resource.data.estado == 'rechazado'
+            && (resource.data.estado == 'rechazado' || (resource.data.estado == 'pago_disponible' && request.resource.data.estado == 'por_confirmar'))
             && request.resource.data.estado in ['por_confirmar', 'vencido']
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'comprobante', 'historial', 'actualizadoEn']));
       allow delete: if esAdmin();

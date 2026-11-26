@@ -289,7 +289,7 @@
   // ---------------- Pagados ----------------
   const PASOS_VISIBLES = {
     normal: ['esperando_bolsita', 'pago_disponible', 'por_confirmar', 'confirmado', 'en_bolsita', 'entregado'],
-    foranea: ['por_confirmar', 'confirmado', 'empaquetado', 'enviado', 'entregado']
+    foranea: ['esperando_bolsita', 'pago_disponible', 'por_confirmar', 'confirmado', 'empaquetado', 'enviado', 'entregado']
   };
   const NOMBRE_PASO = { esperando_bolsita: 'Esperando confirmación en bolsita', pago_disponible: 'Listo para pagar', por_confirmar: 'Pago enviado', confirmado: 'Pago confirmado', en_bolsita: 'En tu bolsita (caja de pagados)', empaquetado: 'Empaquetado', enviado: 'Enviado', entregado: 'Entregado' };
 
@@ -341,10 +341,15 @@
         </div>
         ${['vencido', 'cancelado'].includes(p.estado) ? '' : lineaTiempo(p)}
         ${rechazado ? `<div class="pagado-rechazo"><strong>No se pudo validar tu comprobante:</strong> ${esc(p.rechazo?.motivo || '')}<br>Sube otro hoy antes de las 11:59 p.m.; si no, tus piezas regresan al catálogo.<button type="button" class="btn btn-primary" data-reenviar="${esc(p.id)}">Subir otro comprobante</button></div>` : ''}
+        ${p.estado === 'pago_disponible' ? `<button type="button" class="btn btn-primary" style="width:100%;margin-top:10px;" data-pagar-ahora="${esc(p.id)}">Pagar ahora ${pesos(p.total)}</button>` : ''}
         ${p.envioInfo ? `<p class="pagado-guia">Guía ${esc(p.envioInfo.paqueteria)} <strong>${esc(p.envioInfo.guia)}</strong></p>` : ''}
         <details class="pagado-piezas"${['vencido', 'cancelado', 'entregado'].includes(p.estado) ? '' : ' open'}><summary>Piezas</summary><ul>${p.piezas.map(x => `<li><span>${esc(x.producto)}${x.variante && x.variante !== 'Única' ? ` · ${esc(x.variante)}` : ''}${estado ? `<small class="pagado-pieza-estado${estado.ok ? ' pagado-pieza-estado--ok' : ''}">${esc(estado.texto)}</small>` : ''}</span><span>${pesos(x.total)}</span></li>`).join('')}${Number(p.envio) > 0 ? `<li><span>Envío</span><span>${pesos(p.envio)}</span></li>` : ''}</ul></details>
       </li>`;
     }).join('')}</ul>`;
+    panel.querySelectorAll('[data-pagar-ahora]').forEach(b => b.addEventListener('click', () => {
+      const p = pedidos.find(x => x.id === b.dataset.pagarAhora);
+      if (p && typeof abrirModalPagoDisponiblePedido === 'function') abrirModalPagoDisponiblePedido(p);
+    }));
     panel.querySelectorAll('[data-reenviar]').forEach(b => b.addEventListener('click', () => {
       const p = pedidos.find(x => x.id === b.dataset.reenviar);
       if (p) abrirReenvio(p);
