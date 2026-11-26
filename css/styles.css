@@ -6134,3 +6134,16 @@ button.mis-ticket:hover { border-color: var(--mw-lilac); }
   .catalogo-paginas-botones { gap: 0.25rem; }
   .catalogo-paginas .catalogo-pagina-flecha { padding: 0 0.7rem; }
 }
+
+/* Aviso de privacidad (aviso-de-privacidad.html) */
+.aviso-legal { max-width: 760px; margin: 0 auto; padding: 1rem 1.25rem 4rem; color: var(--mw-text); line-height: 1.7; }
+.aviso-legal h2 { font-family: var(--font-heading, 'Cinzel', serif); color: var(--mw-purple-dark, #5E1A8A); font-size: 1.15rem; margin: 2.4rem 0 0.8rem; text-wrap: balance; }
+.aviso-legal h3 { font-size: 1rem; margin: 1.4rem 0 0.5rem; }
+.aviso-legal p { margin: 0 0 0.9rem; overflow-wrap: anywhere; }
+.aviso-legal a { color: var(--mw-purple, #5E1A8A); text-decoration: underline; }
+:root[data-theme="dark"] .aviso-legal h2 { color: #C5ABF6; }
+:root[data-theme="dark"] .aviso-legal a { color: #C5ABF6; }
+.page-hero--legal { min-height: 0; }
+.cuenta-aviso-privacidad { margin-top: 1.5rem; text-align: center; font-size: 0.9rem; }
+.cuenta-aviso-privacidad a { color: var(--mw-accent-text, #5E1A8A); text-decoration: underline; }
+.footer-bottom a { color: inherit; text-decoration: underline; }
