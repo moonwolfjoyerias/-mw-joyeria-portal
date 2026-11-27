@@ -13,7 +13,8 @@
 
 const PIEZAS_POR_PAGINA_CATALOGO = 24;
 
-function crearPaginasCatalogo({ grid, alCambiar, porPagina = PIEZAS_POR_PAGINA_CATALOGO }) {
+// ancla: después de qué elemento van los botones (por omisión el grid; en tablas, la tabla).
+function crearPaginasCatalogo({ grid, alCambiar, porPagina = PIEZAS_POR_PAGINA_CATALOGO, ancla = grid }) {
   let pagina = 1;
   let firmaAnterior = null;
   let nav = null;
@@ -34,7 +35,7 @@ function crearPaginasCatalogo({ grid, alCambiar, porPagina = PIEZAS_POR_PAGINA_C
   function ir(n) {
     pagina = n;
     alCambiar();
-    const arriba = grid.closest('.catalog-grid-wrap') || grid;
+    const arriba = grid.closest('.catalog-grid-wrap, .catalog-table-card') || grid;
     const y = arriba.getBoundingClientRect().top + window.scrollY - 90;
     if (window.scrollY > y) window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
   }
@@ -56,7 +57,7 @@ function crearPaginasCatalogo({ grid, alCambiar, porPagina = PIEZAS_POR_PAGINA_C
       nav = document.createElement('nav');
       nav.className = 'catalogo-paginas';
       nav.setAttribute('aria-label', 'Páginas del catálogo');
-      grid.insertAdjacentElement('afterend', nav);
+      ancla.insertAdjacentElement('afterend', nav);
       nav.addEventListener('click', (e) => {
         const b = e.target.closest('button[data-pagina]');
         if (b && !b.disabled) ir(Number(b.dataset.pagina));
