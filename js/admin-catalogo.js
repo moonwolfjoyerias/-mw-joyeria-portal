@@ -100,7 +100,7 @@ function renderCatalogo() {
   const estado = document.getElementById('filterEstado')?.value || '';
 
   // Lo más nuevo hasta arriba (ver ordenarProductosMasRecientes).
-  const productos = ordenarProductosMasRecientes(catalogoAdmin).filter(p => {
+  const filtrados = ordenarProductosMasRecientes(catalogoAdmin).filter(p => {
 
     if (
       search &&
@@ -120,6 +120,12 @@ function renderCatalogo() {
 
   });
 
+  // Vista "Catálogo" o "Inventario e incompletos", y solo la página de 24 que toca.
+  const vista = window.MWVistasCatalogo
+    ? MWVistasCatalogo.preparar(grid, filtrados, [search, material, categoria, estado].join('|'), renderCatalogo)
+    : { todos: filtrados, pagina: filtrados };
+  const productos = vista.todos;
+
   const count = document.getElementById('resultCount');
   if (count) count.textContent = `${productos.length} producto${productos.length === 1 ? '' : 's'}`;
 
@@ -135,7 +141,7 @@ function renderCatalogo() {
     return;
   }
 
-  grid.innerHTML = productos.map(renderProducto).join('');
+  grid.innerHTML = vista.pagina.map(renderProducto).join('');
 
   wirearZoomFotos(grid);
 
@@ -158,11 +164,13 @@ function renderCatalogo() {
 }
 
 function actualizarResumenCatalogo() {
+  // Solo lo que está en el catálogo (lo de solo tienda va en "Inventario e incompletos").
+  const enCatalogoResumen = window.MWVistasCatalogo ? catalogoAdmin.filter(MWVistasCatalogo.enCatalogo) : catalogoAdmin;
 
-  const total = catalogoAdmin.length;
-  const disponibles = catalogoAdmin.filter(productoDisponible).length;
-  const oro = catalogoAdmin.filter(p => p.material === 'oro-laminado').length;
-  const promedio = total ? catalogoAdmin.reduce((suma, p) => suma + Number(p.precioEtiqueta || 0), 0) / total : 0;
+  const total = enCatalogoResumen.length;
+  const disponibles = enCatalogoResumen.filter(productoDisponible).length;
+  const oro = enCatalogoResumen.filter(p => p.material === 'oro-laminado').length;
+  const promedio = total ? enCatalogoResumen.reduce((suma, p) => suma + Number(p.precioEtiqueta || 0), 0) / total : 0;
 
   const valores = {
     totalProductos: total,
@@ -206,7 +214,7 @@ function renderProducto(p) {
 
   return `
     <tr>
-      <td><span class="catalog-product-id">${escapeHTML(p.codigo || p.id)}</span>${p.mostrarEnCatalogo === false ? '<small class="chip-solo-tienda">Solo en tienda</small>' : ''}</td>
+      <td><span class="catalog-product-id">${escapeHTML(p.codigo || p.id)}</span>${p.mostrarEnCatalogo === false ? '<small class="chip-solo-tienda">Solo en tienda</small>' : ''}${window.MWVistasCatalogo ? MWVistasCatalogo.chipFaltantes(p) : ''}</td>
       <td>
         <div class="catalog-product-cell">
           <img src="${imagen}" alt="${escapeHTML(p.nombre)}" ${/isotipo-morado\.png/.test(imagen) ? '' : `data-zoom="${escapeAttribute(imagen)}" data-zoom-alt="${escapeAttribute(p.nombre)}"`}>

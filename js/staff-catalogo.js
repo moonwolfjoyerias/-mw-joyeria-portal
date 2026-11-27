@@ -181,7 +181,7 @@ function renderCatalogo() {
 
 
   // Lo más nuevo hasta arriba (ver ordenarProductosMasRecientes).
-  const productos = ordenarProductosMasRecientes(catalogoStaff).filter(p => {
+  const filtrados = ordenarProductosMasRecientes(catalogoStaff).filter(p => {
 
     if (
       search &&
@@ -219,6 +219,12 @@ function renderCatalogo() {
 
   });
 
+  // Vista "Catálogo" o "Inventario e incompletos", y solo la página de 24 que toca.
+  const vista = window.MWVistasCatalogo
+    ? MWVistasCatalogo.preparar(grid, filtrados, [search, material, categoria, estado].join('|'), renderCatalogo)
+    : { todos: filtrados, pagina: filtrados };
+  const productos = vista.todos;
+
 
   const count = document.getElementById('resultCount');
 
@@ -242,7 +248,7 @@ function renderCatalogo() {
   }
 
 
-  grid.innerHTML = productos.map(renderProducto).join('');
+  grid.innerHTML = vista.pagina.map(renderProducto).join('');
 
   wirearZoomFotos(grid);
 
@@ -297,11 +303,13 @@ function renderCatalogo() {
 }
 
 function actualizarResumenCatalogo() {
-  const total = catalogoStaff.length;
-  const disponibles = catalogoStaff.filter(productoDisponible).length;
-  const oro = catalogoStaff.filter(producto => producto.material === 'oro-laminado').length;
+  // Solo lo que está en el catálogo (lo de solo tienda va en "Inventario e incompletos").
+  const enCatalogoResumen = window.MWVistasCatalogo ? catalogoStaff.filter(MWVistasCatalogo.enCatalogo) : catalogoStaff;
+  const total = enCatalogoResumen.length;
+  const disponibles = enCatalogoResumen.filter(productoDisponible).length;
+  const oro = enCatalogoResumen.filter(producto => producto.material === 'oro-laminado').length;
   const promedio = total
-    ? catalogoStaff.reduce((suma, producto) => suma + Number(producto.precioEtiqueta || 0), 0) / total
+    ? enCatalogoResumen.reduce((suma, producto) => suma + Number(producto.precioEtiqueta || 0), 0) / total
     : 0;
 
   const valores = {
@@ -354,7 +362,7 @@ function renderProducto(p) {
 
   return `
     <tr>
-      <td><span class="catalog-product-id">${escapeHTML(p.codigo || p.id)}</span>${p.mostrarEnCatalogo === false ? '<small class="chip-solo-tienda">Solo en tienda</small>' : ''}</td>
+      <td><span class="catalog-product-id">${escapeHTML(p.codigo || p.id)}</span>${p.mostrarEnCatalogo === false ? '<small class="chip-solo-tienda">Solo en tienda</small>' : ''}${window.MWVistasCatalogo ? MWVistasCatalogo.chipFaltantes(p) : ''}</td>
       <td>
         <div class="catalog-product-cell">
           <img src="${imagen}" alt="${escapeHTML(p.nombre)}" ${/isotipo-morado\.png/.test(imagen) ? '' : `data-zoom="${escapeAttribute(imagen)}" data-zoom-alt="${escapeAttribute(p.nombre)}"`}>
