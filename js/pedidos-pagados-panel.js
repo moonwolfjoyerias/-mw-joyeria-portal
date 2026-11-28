@@ -86,6 +86,8 @@
     buscar.addEventListener('input', e => { busqueda = e.target.value; render(); const b = $('pagadosBuscar'); b.focus(); b.setSelectionRange(b.value.length, b.value.length); });
     panel.querySelectorAll('[data-filtro-rapido]').forEach(b => b.addEventListener('click', () => { filtro = filtro === b.dataset.filtroRapido ? 'activos' : b.dataset.filtroRapido; render(); }));
     panel.querySelectorAll('[data-pagado-accion]').forEach(b => b.addEventListener('click', () => accion(b.dataset.pagadoId, b.dataset.pagadoAccion)));
+    panel.querySelectorAll('[data-pieza-accion]').forEach(b => b.addEventListener('click', () => { b.disabled = true; revisarPieza(b.dataset.pagadoId, b.dataset.piezaId, b.dataset.piezaAccion); }));
+    cargarFotos(panel);
   }
 
   function tarjeta(p) {
@@ -93,7 +95,8 @@
     const foranea = p.categoria === 'foranea';
     const acciones = [];
     if (p.estado === 'esperando_bolsita') {
-      acciones.push(`<button type="button" class="action-btn primary-action" data-pagado-accion="confirmar_bolsita" data-pagado-id="${esc(p.id)}">Confirmar todas en bolsita</button>`);
+      const faltan = (p.piezas || []).filter(x => !x.bolsita).length;
+      if (faltan > 1) acciones.push(`<button type="button" class="action-btn detail-action" data-pagado-accion="confirmar_bolsita" data-pagado-id="${esc(p.id)}">Confirmar las ${faltan} que faltan</button>`);
     }
     if (p.estado === 'por_confirmar') {
       acciones.push(`<button type="button" class="action-btn primary-action" data-pagado-accion="confirmar" data-pagado-id="${esc(p.id)}" ${puedeConfirmarPagos() ? '' : 'disabled title="Lo confirma Encargado o Administración"'}>Revisar y confirmar pago</button>`);
@@ -122,16 +125,90 @@
           ${p.venta ? `<span class="badge">Ticket ${esc(p.venta.folio)}</span>` : ''}
         </div>
         <ul class="pagado-piezas-lista">
-          ${(p.piezas || []).map(x => `<li><span>${esc(x.producto)}${x.variante && x.variante !== 'Única' ? ` · ${esc(x.variante)}` : ''}</span><span>${pesos(x.total)}</span></li>`).join('')}
-          ${Number(p.envio) > 0 ? `<li><span>Envío</span><span>${pesos(p.envio)}</span></li>` : ''}
-          ${p.envioPorConfirmar ? '<li><span>Envío</span><span>Sin costo configurado</span></li>' : ''}
-          <li class="pagado-total"><span>Total</span><strong>${pesos(p.total)}</strong></li>
+          ${(p.piezas || []).map(x => piezaHtml(p, x)).join('')}
+          ${(p.piezasQuitadas || []).map(x => `<li class="pagado-pieza pieza-quitada"><span class="pagado-pieza-foto" data-foto-producto="${esc(x.productoId || '')}"></span><span class="pagado-pieza-texto"><s>${esc(x.producto)}</s><small>No estaba disponible · se quitó del pedido</small></span><span></span></li>`).join('')}
+          ${totalesHtml(p)}
         </ul>
         ${p.comprobante?.referencia ? `<p class="pagado-ref">Referencia: <strong>${esc(p.comprobante.referencia)}</strong></p>` : ''}
         ${p.estado === 'rechazado' ? `<p class="pagado-ref">Rechazado: ${esc(p.rechazo?.motivo || '')}. Puede mandar otro comprobante hoy; si no, las piezas regresan al catálogo.</p>` : ''}
         ${p.envioInfo ? `<p class="pagado-ref">Guía ${esc(p.envioInfo.paqueteria)} <strong>${esc(p.envioInfo.guia)}</strong></p>` : ''}
         ${acciones.length ? `<div class="pagado-acciones">${acciones.join('')}</div>` : ''}
       </li>`;
+  }
+
+  // Cada pieza: foto (se agranda), nombre, precio etiqueta (para buscarla) y,
+  // si espera bolsita, sus botones para confirmarla una por una.
+  function piezaHtml(p, x) {
+    const variante = x.variante && x.variante !== 'Única' ? ` · ${esc(x.variante)}` : '';
+    const datos = [x.codigo, x.colorOro].filter(Boolean).map(esc).join(' · ');
+    let estado = '';
+    if (p.estado === 'esperando_bolsita') {
+      if (x.bolsita?.estado === 'ok') estado = '<span class="status status-active">En bolsita</span>';
+      else if (x.bolsita?.estado === 'no') estado = '<span class="status status-cancelled">No la tenemos</span>';
+      else estado = `<span class="pagado-pieza-botones"><button type="button" class="action-btn primary-action" data-pieza-accion="ok" data-pagado-id="${esc(p.id)}" data-pieza-id="${esc(x.id)}">En bolsita</button><button type="button" class="action-btn danger-action" data-pieza-accion="no" data-pagado-id="${esc(p.id)}" data-pieza-id="${esc(x.id)}">No la tenemos</button></span>`;
+    }
+    return `<li class="pagado-pieza">
+      <span class="pagado-pieza-foto" data-foto-producto="${esc(x.productoId || '')}" data-foto-alt="${esc(x.producto)}"></span>
+      <span class="pagado-pieza-texto"><strong>${esc(x.producto)}${variante}</strong>${datos ? `<small>${datos}</small>` : ''}${estado}</span>
+      <span class="pagado-pieza-precio" title="Precio etiqueta">${pesos(x.precioEtiqueta || x.total)}<small>etiqueta</small></span>
+    </li>`;
+  }
+
+  // Piezas a precio etiqueta; el total ya con su descuento (y envío).
+  function totalesHtml(p) {
+    const etiqueta = (p.piezas || []).reduce((s, x) => s + (Number(x.precioEtiqueta) || Number(x.total) || 0), 0);
+    const subtotal = Number(p.subtotal ?? (p.piezas || []).reduce((s, x) => s + (Number(x.total) || 0), 0));
+    const descuento = Math.round((etiqueta - subtotal) * 100) / 100;
+    return `
+      ${descuento > 0 ? `<li class="pagado-subtotal"><span>Precio etiqueta</span><span>${pesos(etiqueta)}</span></li><li class="pagado-subtotal"><span>Su descuento</span><span>−${pesos(descuento)}</span></li>` : ''}
+      ${Number(p.envio) > 0 ? `<li class="pagado-subtotal"><span>Envío</span><span>${pesos(p.envio)}</span></li>` : ''}
+      ${p.envioPorConfirmar ? '<li class="pagado-subtotal"><span>Envío</span><span>Sin costo configurado</span></li>' : ''}
+      <li class="pagado-total"><span>Total a pagar</span><strong>${pesos(p.total)}</strong></li>`;
+  }
+
+  // Fotos: miniatura de cada producto; al tocarla se ve en grande.
+  function cargarFotos(panel) {
+    if (typeof cargarMiniaturaProducto !== 'function') return;
+    panel.querySelectorAll('[data-foto-producto]').forEach(el => {
+      const id = el.dataset.fotoProducto;
+      if (!id) return;
+      cargarMiniaturaProducto(id).then(src => {
+        if (!src || !el.isConnected) return;
+        el.innerHTML = `<img src="${src}" alt="${el.dataset.fotoAlt || ''}" data-zoom="${src}" data-zoom-alt="${el.dataset.fotoAlt || ''}" loading="lazy">`;
+        const img = el.querySelector('img');
+        img.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          let grande = src;
+          try { if (typeof cargarGaleriaProducto === 'function') grande = (await cargarGaleriaProducto(id))[0]?.src || src; } catch (_) { /* se queda la chica */ }
+          if (typeof abrirImagenEnGrande === 'function') abrirImagenEnGrande(grande, el.dataset.fotoAlt || '');
+        });
+      }).catch(() => {});
+    });
+  }
+
+  async function revisarPieza(id, piezaId, decision) {
+    const p = obtenerPedidosPagados().find(x => x.id === id);
+    const pieza = p && (p.piezas || []).find(x => x.id === piezaId);
+    if (!p || !pieza) return;
+    const r = await revisarPiezaBolsitaPedido(p, piezaId, decision);
+    if (!r.ok) { toast(r.error); return; }
+    if (r.terminado) toast(r.estado === 'cancelado' ? 'Ninguna pieza estaba disponible: el pedido se canceló y se le avisó.' : 'Pedido revisado: se habilitó el pago y se le avisó.');
+    // Solo Admin decide qué pasa con la existencia de la pieza que no estaba.
+    if (decision === 'no' && typeof esAdminPedidos === 'function' && esAdminPedidos()) {
+      const box = modal(`
+        <h2>¿Qué hacemos con su existencia?</h2>
+        <p><strong>${esc(pieza.producto)}</strong>${pieza.codigo ? ` (${esc(pieza.codigo)})` : ''} no se encontró al preparar el pedido.</p>
+        <p class="muted">Si de verdad ya no hay, déjala en 0 para que nadie más la aparte. Si sí existe pero no la tenían a la mano, deja la existencia como está.</p>
+        <div class="modal-actions">
+          <button type="button" class="action-btn detail-action" data-close>Dejar la existencia como está</button>
+          <button type="button" class="action-btn primary-action" data-stock-cero>Dejar en 0</button>
+        </div>`);
+      box.querySelector('[data-stock-cero]').addEventListener('click', async () => {
+        const r2 = await dejarStockEnCeroPorFaltante(pieza);
+        cerrar();
+        toast(r2.ok ? 'Listo: la existencia quedó en 0.' : r2.error);
+      });
+    }
   }
 
   function modal(html) {
@@ -150,7 +227,7 @@
     if (que === 'confirmar') return revisarPago(p);
     if (que === 'confirmar_bolsita') {
       const r = await confirmarPiezasEnBolsitaPedido(p);
-      toast(r.ok ? 'Todas las piezas quedaron confirmadas en bolsita. Se habilitó el pago.' : r.error);
+      toast(r.ok ? (r.estado === 'cancelado' ? 'Ninguna pieza estaba disponible: el pedido se canceló.' : 'Piezas confirmadas en bolsita. Se habilitó el pago.') : r.error);
       return;
     }
     if (que === 'ver') return verComprobante(p);

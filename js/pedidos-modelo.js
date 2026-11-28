@@ -575,28 +575,110 @@ function pasosDisponiblesPedido(pedido) {
     .map(([estado, paso]) => ({ estado, ...paso }));
 }
 
-async function confirmarPiezasEnBolsitaPedido(pedido) {
-  if (pedido.estado !== 'esperando_bolsita') return { ok: false, error: 'Este pedido todavía no está esperando confirmación en bolsita.' };
+// ============================================================
+// CONFIRMAR EN BOLSITA, PIEZA POR PIEZA
+// ============================================================
+// Cada pieza se marca "en bolsita" o "no la tenemos". Cuando ya se revisaron
+// todas: las que no estaban salen del pedido, se recalculan subtotal, envío y
+// total, y se habilita el pago (o se cancela si no quedó ninguna).
+function _terminarRevisionBolsita(datos, ahora) {
+  const piezas = datos.piezas || [];
+  if (piezas.some(x => !x.bolsita)) return { piezas };
+  const quedan = piezas.filter(x => x.bolsita.estado === 'ok');
+  const quitadas = piezas.filter(x => x.bolsita.estado === 'no');
+  const subtotal = r2Pedidos(quedan.reduce((s, x) => s + (Number(x.total) || 0), 0));
+  const envio = quedan.length ? calcularEnvioPedido(datos.categoria, subtotal) : { envio: 0, gratis: false, sinConfigurar: false };
+  const total = r2Pedidos(subtotal + envio.envio);
+  const nota = quitadas.length ? `No estaban: ${quitadas.map(x => x.producto).join(', ')}` : 'Todas las piezas fueron confirmadas en bolsita';
+  const estado = quedan.length ? 'pago_disponible' : 'cancelado';
+  return {
+    piezas: quedan,
+    terminado: true,
+    cambios: {
+      estado,
+      piezas: quedan,
+      ...(quitadas.length ? { piezasQuitadas: [...(datos.piezasQuitadas || []), ...quitadas] } : {}),
+      subtotal, envio: envio.envio, envioGratis: !!envio.gratis, envioPorConfirmar: !!envio.sinConfigurar, total,
+      bolsitaConfirmadaEn: ahora,
+      historial: [...(datos.historial || []), _historial(estado, nota)]
+    },
+    quitadas, total, estado
+  };
+}
+
+async function _revisarPiezasBolsita(pedido, decidir) {
+  if (pedido.estado !== 'esperando_bolsita') return { ok: false, error: 'Este pedido ya no está esperando confirmación en bolsita.' };
   if (!dbFirestore) return { ok: false, error: 'No se pudo guardar. Revisa tu conexión.' };
   const ahora = new Date().toISOString();
+  const q = _quienPedidos();
   const ref = dbFirestore.collection(PEDIDOS_PAGADOS_COLECCION).doc(pedido.id);
+  let fin = null;
   try {
     await dbFirestore.runTransaction(async (tx) => {
       const actual = await tx.get(ref);
       if (!actual.exists || actual.data().estado !== 'esperando_bolsita') throw new Error('CAMBIO');
-      tx.update(ref, {
-        estado: 'pago_disponible',
-        bolsitaConfirmadaEn: ahora,
-        historial: [...(actual.data().historial || []), _historial('pago_disponible', 'Todas las piezas fueron confirmadas en bolsita')],
-        actualizadoEn: ahora
+      const datos = actual.data();
+      const piezas = (datos.piezas || []).map(x => {
+        const d = decidir(x);
+        return d && !x.bolsita ? { ...x, bolsita: { estado: d, por: q.nombre, en: ahora } } : x;
       });
+      fin = _terminarRevisionBolsita({ ...datos, piezas }, ahora);
+      tx.update(ref, fin.terminado ? { ...fin.cambios, actualizadoEn: ahora } : { piezas, actualizadoEn: ahora });
     });
   } catch (e) {
     if (e && e.message === 'CAMBIO') return { ok: false, error: 'Este pedido cambió. Revisa la lista.' };
     return { ok: false, error: 'No se pudo guardar. Revisa tu conexión.' };
   }
-  _notificarPersonaPedido(pedido, `¡Todas tus piezas ya están confirmadas en bolsita! Puedes pagar ${_montoTexto(pedido.total)} ahora.`);
-  return { ok: true };
+  if (fin && fin.terminado) {
+    const quitadasTexto = fin.quitadas.length ? ` ${fin.quitadas.length === 1 ? 'Esta pieza no estaba disponible y se quitó' : 'Estas piezas no estaban disponibles y se quitaron'} de tu pedido: ${fin.quitadas.map(x => x.producto).join(', ')}.` : '';
+    _notificarPersonaPedido(pedido, fin.estado === 'cancelado'
+      ? `Lo sentimos: ninguna de las piezas de tu pedido estaba disponible, así que se canceló.${quitadasTexto}`
+      : `¡Tus piezas ya están confirmadas en bolsita! Puedes pagar ${_montoTexto(fin.total)} ahora.${quitadasTexto}`);
+  }
+  return { ok: true, terminado: !!(fin && fin.terminado), estado: fin && fin.estado };
+}
+
+/** Confirma una pieza en bolsita ('ok') o la marca como no disponible ('no'). */
+function revisarPiezaBolsitaPedido(pedido, piezaId, decision) {
+  return _revisarPiezasBolsita(pedido, x => (x.id === piezaId ? decision : null));
+}
+
+/** "Confirmar todas en bolsita": las que falten por revisar quedan confirmadas. */
+function confirmarPiezasEnBolsitaPedido(pedido) {
+  return _revisarPiezasBolsita(pedido, () => 'ok');
+}
+
+/** Solo Admin: deja en 0 la existencia de una pieza que no se encontró al preparar un pedido. */
+async function dejarStockEnCeroPorFaltante(pieza) {
+  if (!dbFirestore || !pieza.productoId || !pieza.varianteId) return { ok: false, error: 'Esta pieza no está ligada a un producto.' };
+  try {
+    return await dbFirestore.runTransaction(async (tx) => {
+      const ref = dbFirestore.collection(CATALOGO_COLECCION_FIRESTORE).doc(String(pieza.productoId));
+      const doc = await tx.get(ref);
+      if (!doc.exists) return { ok: false, error: 'Ese producto ya no existe.' };
+      const datos = doc.data();
+      const variantes = Array.isArray(datos.variantes) ? datos.variantes : [];
+      const v = variantes.find(x => x.id === pieza.varianteId);
+      if (!v) return { ok: false, error: 'Esa variante ya no existe.' };
+      const antes = Number(v.stock) || 0;
+      if (antes <= 0) return { ok: true };
+      const nuevas = variantes.map(x => (x.id === pieza.varianteId ? { ...x, stock: 0 } : x));
+      const cambio = { variantes: nuevas, disponible: nuevas.some(x => (Number(x.stock) || 0) > 0) };
+      tx.update(ref, cambio);
+      const quien = (typeof obtenerSesionActiva === 'function' && obtenerSesionActiva()?.nombre) || 'Página';
+      const ahora = new Date();
+      tx.set(dbFirestore.collection('brilloMovimientosStock').doc(`${ahora.getTime()}_${pieza.productoId}_${pieza.varianteId}_${Math.random().toString(36).slice(2, 7)}`), {
+        productoId: String(pieza.productoId), varianteId: String(pieza.varianteId), producto: String(datos.nombre || ''),
+        variante: typeof etiquetaVariante === 'function' ? etiquetaVariante(v) : '', codigo: String(datos.codigo || ''),
+        tipo: 'ajuste', cantidad: -antes, antes, despues: 0, motivo: 'Conteo físico', nota: 'No se encontró al preparar un pedido pagado', por: quien, fecha: ahora.toISOString()
+      });
+      if (typeof escribirProductoEnResumenDesdeTransaccion === 'function') escribirProductoEnResumenDesdeTransaccion(tx, pieza.productoId, { ...datos, ...cambio });
+      if (typeof actualizarVarianteEnCacheLocal === 'function') actualizarVarianteEnCacheLocal(pieza.productoId, pieza.varianteId, 0);
+      return { ok: true };
+    });
+  } catch (e) {
+    return { ok: false, error: 'No se pudo cambiar la existencia. Revisa tu conexión.' };
+  }
 }
 
 async function avanzarPedidoPagado(pedido, estado, datos = {}) {
@@ -684,6 +766,11 @@ function compraDeVentaPedido(lineas) {
     if (l.material === 'souvenirs') souvenir += l.importe; else normal += l.importe;
   });
   return { normal: r2Pedidos(normal), souvenir: r2Pedidos(souvenir) };
+}
+
+function esAdminPedidos() {
+  const s = _sesionPedidos();
+  return !!(s && s.tipo === 'interna' && s.rol === 'admin');
 }
 
 function puedeConfirmarPagos() {
