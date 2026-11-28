@@ -844,3 +844,22 @@ body.mw2 .comprobante-ref select { min-height: var(--mw2-toque); border-radius: 
 .comision-destino-opcion span { display: flex; flex-direction: column; gap: 2px; }
 .comision-destino-opcion small { color: var(--mw-text-muted, #6b6175); }
 .comision-destino-pie { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+
+/* Pagados: piezas con foto, precio etiqueta y confirmación una por una */
+body.mw2 .pagado-piezas-lista .pagado-pieza { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 0; }
+body.mw2 .pagado-pieza-foto { width: 56px; height: 56px; border-radius: 10px; overflow: hidden; background: var(--mw-surface-2, #f3edf8); display: block; }
+body.mw2 .pagado-pieza-foto img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; }
+body.mw2 .pagado-pieza-texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+body.mw2 .pagado-pieza-texto small { color: var(--mw-muted, #6b6b6b); }
+body.mw2 .pagado-pieza-texto .status { align-self: flex-start; }
+body.mw2 .pagado-pieza-botones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+body.mw2 .pagado-pieza-botones .action-btn { min-height: 40px; padding: 6px 12px; }
+body.mw2 .pagado-pieza-precio { text-align: right; font-weight: 700; white-space: nowrap; }
+body.mw2 .pagado-pieza-precio small { display: block; font-weight: 400; color: var(--mw-muted, #6b6b6b); font-size: 0.72rem; }
+body.mw2 .pagado-piezas-lista .pieza-quitada { opacity: 0.65; }
+body.mw2 .pagado-piezas-lista .pagado-subtotal { color: var(--mw-muted, #6b6b6b); }
+body.mw2 .pagado-pieza-texto .status-cancelled { background: #fdecec; color: #a33d3d; }
+body.mw2 .pagado-pieza-texto .status-active { background: #e6f5ec; color: #1f7a45; }
+@media (max-width: 520px) { body.mw2 .pagado-piezas-lista .pagado-pieza { grid-template-columns: 48px minmax(0, 1fr); } body.mw2 .pagado-pieza-precio { grid-column: 2; text-align: left; } body.mw2 .pagado-pieza-foto { width: 48px; height: 48px; } }
+body.mw2 .pagado-pieza-botones { flex-wrap: nowrap; }
+body.mw2 .pagado-pieza-botones .action-btn { width: auto; flex: 1 1 0; min-height: 36px; padding: 4px 10px; font-size: 0.8rem; white-space: nowrap; }
